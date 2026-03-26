@@ -5,7 +5,7 @@ import type React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { useRouter, usePathname, useParams } from "next/navigation"
+import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
 import PitchDetailsPilot from "@/app/components/PitchDetailsPilot"
@@ -284,7 +284,7 @@ const careerStats = [
   },
 ]
 
-function PlayerPageClient({ layout }: { layout: ViewportLayout }) {
+function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; forceMobile?: boolean }) {
   const isMobile = layout === "mobile"
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
   const BUILD_MARKER = "sugano-season-ui-20260326-01"
@@ -541,7 +541,7 @@ function PlayerPageClient({ layout }: { layout: ViewportLayout }) {
       <main
         className={
           isMobile
-            ? "container mx-auto px-5 py-8 max-w-[800px]"
+            ? `container mx-auto px-5 py-8 ${forceMobile ? "max-w-[420px]" : "max-w-[800px]"}`
             : "max-w-6xl mx-auto px-8 py-10"
         }
         style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
@@ -627,7 +627,18 @@ function PlayerPageClient({ layout }: { layout: ViewportLayout }) {
         </div>
 
         {/* Profile Table */}
-        <div className="mb-12" style={showSuganoSeasonUI ? { zoom: 0.7 } : undefined}>
+        <div
+          className="mb-12"
+          style={
+            showSuganoSeasonUI
+              ? {
+                  transform: "scale(0.7)",
+                  transformOrigin: "top left",
+                  width: "142.857%",
+                }
+              : undefined
+          }
+        >
           <table className="w-full border-collapse" style={{ border: "1px solid #333333" }}>
             <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
               <tr>
@@ -2217,7 +2228,13 @@ function PlayerPageClient({ layout }: { layout: ViewportLayout }) {
 
             {/* 菅野智之: 青柳ページの「今季の成績」UIのみ（値は表示しない） */}
             {showSuganoSeasonUI && (
-              <div style={{ zoom: 0.7 }}>
+              <div
+                style={{
+                  transform: "scale(0.7)",
+                  transformOrigin: "top left",
+                  width: "142.857%",
+                }}
+              >
                 {/* Detail Tab Buttons */}
                 <div
                   className="relative flex shrink-0 overflow-hidden mb-6"
@@ -3259,8 +3276,29 @@ function PlayerPageClient({ layout }: { layout: ViewportLayout }) {
 
 export default function PlayerPage() {
   const isDesktop = useIsDesktop()
+  const sp = useSearchParams()
+
   if (isDesktop === undefined) {
     return <div className="min-h-screen bg-black" aria-busy="true" />
   }
-  return <PlayerPageClient layout={isDesktop ? "desktop" : "mobile"} />
+
+  const forceMobile =
+    sp.get("mobile") === "1" ||
+    sp.get("view") === "mobile" ||
+    sp.has("mobile=1") ||
+    sp.has("view=mobile") ||
+    (typeof window !== "undefined" &&
+      (() => {
+        const raw = window.location.search || ""
+        try {
+          const decoded = decodeURIComponent(raw)
+          return decoded.includes("mobile=1") || decoded.includes("view=mobile")
+        } catch {
+          return raw.includes("mobile%3D1") || raw.includes("view%3Dmobile")
+        }
+      })())
+
+  return (
+    <PlayerPageClient layout={isDesktop ? "desktop" : "mobile"} forceMobile={forceMobile} />
+  )
 }
