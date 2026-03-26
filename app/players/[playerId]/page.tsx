@@ -100,6 +100,8 @@ function stripQueryHash(s: string): string {
 /** NPB 公式 player_id（master CSV / ランキングリンクでパスが数値のみになることがある） */
 const AOYAGI_NPB_ID = "71175132"
 const SUGANO_NPB_ID = "41745137"
+const KIKUCHI_NPB_ID = "61565135"
+const KIKUCHI_YAHOO_ID = "1100082"
 
 const careerStats = [
   {
@@ -422,7 +424,20 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
     compactPlayerName(playerIdNormalized).includes("菅野")
   /** 菅野ページ: 青柳のUIのみ（数値・URL表記ゆれ対策済み）。成績データはコピーしない */
   const showSuganoSeasonUI = isSuganoPage || isSuganoUrlMatch
-  const isKikuchiPage = displayName === "菊池涼介" || playerSegmentCore === "61565135"
+  const kikuchiNameKey = compactPlayerName("菊池涼介")
+  const seasonPilotPlayerId =
+    playerIdNormalized || playerSegmentCore || (playerSegmentClean || "").replace(/^player-/, "") || displayName
+  const isKikuchiPage =
+    compactPlayerName(displayName) === kikuchiNameKey ||
+    compactPlayerName(displayName).includes("菊池") ||
+    playerSegmentCore === "菊池涼介" ||
+    playerIdNormalized === "菊池涼介" ||
+    playerSegmentCore === KIKUCHI_NPB_ID ||
+    playerIdNormalized === KIKUCHI_NPB_ID ||
+    playerSegmentCore === KIKUCHI_YAHOO_ID ||
+    playerIdNormalized === KIKUCHI_YAHOO_ID ||
+    compactPlayerName(playerIdNormalized) === kikuchiNameKey ||
+    compactPlayerName(playerIdNormalized).includes("菊池")
   useEffect(() => {
     if (!showAoyagiPitchPilotSeasonUI) return
     fetch("/api/games/2021040084/pitchers/2103788/pitch-types")
@@ -451,6 +466,12 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
       setStatsTab("season")
     }
   }, [showSuganoSeasonUI, playerIdNormalized])
+
+  useEffect(() => {
+    if (isKikuchiPage) {
+      setStatsTab("season")
+    }
+  }, [isKikuchiPage, playerIdNormalized])
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year)
@@ -550,11 +571,18 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
         <div
           className={
             isMobile
-              ? "flex flex-col gap-4 mb-8"
+              ? "flex flex-row items-center justify-between gap-3 mb-8"
               : "flex flex-row items-center justify-between gap-4 mb-8"
           }
         >
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2"
+            style={
+              showSuganoSeasonUI
+                ? { transform: "scale(0.9)", transformOrigin: "left center" }
+                : undefined
+            }
+          >
             {/* Team Color Bar */}
             <div
               className="w-1.5 h-12 flex-shrink-0"
@@ -606,7 +634,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
             <button
               type="button"
               onClick={() => setStatsTab("season")}
-              className="relative z-10 flex flex-1 min-w-[88px] items-center justify-center px-5 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50 whitespace-nowrap"
+              className="relative z-10 flex flex-1 min-w-[80px] items-center justify-center px-4 py-1.5 font-bold text-[11px] transition-colors duration-150 hover:bg-[#2a2a2a]/50 whitespace-nowrap"
               style={{
                 color: statsTab === "season" ? "#000000" : "#9ca3af",
               }}
@@ -616,7 +644,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
             <button
               type="button"
               onClick={() => setStatsTab("career")}
-              className="relative z-10 flex flex-1 min-w-[88px] items-center justify-center px-5 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+              className="relative z-10 flex flex-1 min-w-[80px] items-center justify-center px-4 py-1.5 font-bold text-[11px] transition-colors duration-150 hover:bg-[#2a2a2a]/50"
               style={{
                 color: statsTab === "career" ? "#000000" : "#9ca3af",
               }}
@@ -628,9 +656,9 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
 
         {/* Profile Table */}
         <div
-          className="mb-12"
+          className={showSuganoSeasonUI || isKikuchiPage ? "mb-6" : "mb-12"}
           style={
-            showSuganoSeasonUI
+            showSuganoSeasonUI || isKikuchiPage
               ? {
                   transform: "scale(0.7)",
                   transformOrigin: "top left",
@@ -761,88 +789,104 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
         {/* 今季の成績（Phase 4: 菊池涼介のみパイロットデータ表示） */}
         {statsTab === "season" && (
           <div>
-            {isKikuchiPage && (
+            {!showSuganoSeasonUI && isKikuchiPage ? (
               <div
-                className="relative flex shrink-0 overflow-hidden mb-6"
                 style={{
-                  border: "1px solid #555",
-                  backgroundColor: "#1a1a1a",
+                  transform: "scale(0.7)",
+                  transformOrigin: "top left",
+                  width: "142.857%",
                 }}
               >
                 <div
-                  className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
+                  className="relative flex shrink-0 overflow-hidden mb-6"
                   style={{
-                    backgroundColor: "#FFFF44",
-                    transform:
-                      kikuchiSeasonDetailTab === "basic"
-                        ? "translateX(0)"
-                        : kikuchiSeasonDetailTab === "pitch"
-                          ? "translateX(100%)"
-                          : kikuchiSeasonDetailTab === "situation"
-                            ? "translateX(200%)"
-                            : "translateX(300%)",
+                    border: "1px solid #555",
+                    backgroundColor: "#1a1a1a",
                   }}
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
+                    style={{
+                      backgroundColor: "#FFFF44",
+                      transform:
+                        kikuchiSeasonDetailTab === "basic"
+                          ? "translateX(0)"
+                          : kikuchiSeasonDetailTab === "pitch"
+                            ? "translateX(100%)"
+                            : kikuchiSeasonDetailTab === "situation"
+                              ? "translateX(200%)"
+                              : "translateX(300%)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setKikuchiSeasonDetailTab("basic")}
+                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    style={{
+                      color: kikuchiSeasonDetailTab === "basic" ? "#000000" : "#9ca3af",
+                    }}
+                  >
+                    基本成績
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKikuchiSeasonDetailTab("pitch")}
+                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    style={{
+                      color: kikuchiSeasonDetailTab === "pitch" ? "#000000" : "#9ca3af",
+                    }}
+                  >
+                    球種情報
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKikuchiSeasonDetailTab("situation")}
+                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    style={{
+                      color: kikuchiSeasonDetailTab === "situation" ? "#000000" : "#9ca3af",
+                    }}
+                  >
+                    状況別
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setKikuchiSeasonDetailTab("period")}
+                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    style={{
+                      color: kikuchiSeasonDetailTab === "period" ? "#000000" : "#9ca3af",
+                    }}
+                  >
+                    期間別
+                  </button>
+                </div>
+                <SeasonStatsPilot
+                  playerId={seasonPilotPlayerId}
+                  seasonDetailTab={kikuchiSeasonDetailTab}
+                  layout={layout}
                 />
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("basic")}
-                  className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "basic" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  基本成績
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("pitch")}
-                  className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "pitch" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  球種情報
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("situation")}
-                  className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "situation" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  状況別
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("period")}
-                  className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "period" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  期間別
-                </button>
+                {kikuchiSeasonDetailTab === "pitch" && (
+                  <PitchDetailsPilot
+                    playerId={seasonPilotPlayerId}
+                    layout={layout}
+                  />
+                )}
               </div>
-            )}
-            <SeasonStatsPilot
-              playerId={
-                (playerSegmentClean || "").startsWith("player-")
-                  ? displayName
-                  : playerSegmentClean || displayName
-              }
-              seasonDetailTab={isKikuchiPage ? kikuchiSeasonDetailTab : undefined}
-              layout={layout}
-            />
-            {(!isKikuchiPage || kikuchiSeasonDetailTab === "pitch") && (
-              <PitchDetailsPilot
-                playerId={
-                  (playerSegmentClean || "").startsWith("player-")
-                    ? displayName
-                    : playerSegmentClean || displayName
-                }
-                layout={layout}
-              />
+            ) : (
+              <>
+                {!showSuganoSeasonUI && (
+                  <SeasonStatsPilot
+                    playerId={seasonPilotPlayerId}
+                    seasonDetailTab={isKikuchiPage ? kikuchiSeasonDetailTab : undefined}
+                    layout={layout}
+                  />
+                )}
+                {!showSuganoSeasonUI && (!isKikuchiPage || kikuchiSeasonDetailTab === "pitch") && (
+                  <PitchDetailsPilot
+                    playerId={seasonPilotPlayerId}
+                    layout={layout}
+                  />
+                )}
+              </>
             )}
 
             {/* 青柳晃洋: 今季基本成績（同一UI・同一成績データ） */}
