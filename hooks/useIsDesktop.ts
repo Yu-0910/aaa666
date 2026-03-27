@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 /**
  * デスクトップ判定
@@ -17,8 +17,11 @@ import { useSearchParams } from "next/navigation"
 const DESKTOP_MEDIA_PRIMARY = "(min-width: 1024px)"
 const DESKTOP_MEDIA_SECONDARY = "(min-width: 768px) and (min-height: 700px)"
 
-/** URL に `?mobile=1` または `?view=mobile` があると PC 幅でもスマホ版 UI を表示（確認用） */
+/** `/mobile/players/...` または URL に `?mobile=1` / `?view=mobile` があると PC 幅でもスマホ版 UI（確認用） */
 function useForceMobileFromSearch(): boolean {
+  const pathname = usePathname()
+  if (pathname.startsWith("/mobile/players")) return true
+
   const searchParams = useSearchParams()
   // 正常系: ?mobile=1 / ?view=mobile
   if (searchParams.get("mobile") === "1" || searchParams.get("view") === "mobile") return true

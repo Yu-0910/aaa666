@@ -656,13 +656,14 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
 
         {/* Profile Table */}
         <div
-          className={showSuganoSeasonUI || isKikuchiPage ? "mb-6" : "mb-12"}
+          className={showSuganoSeasonUI ? "mb-6" : isKikuchiPage ? "mb-6" : "mb-12"}
           style={
             showSuganoSeasonUI || isKikuchiPage
               ? {
                   transform: "scale(0.7)",
                   transformOrigin: "top left",
                   width: "142.857%",
+                  marginBottom: showSuganoSeasonUI ? "-2.5rem" : undefined,
                 }
               : undefined
           }
@@ -2270,7 +2271,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
               </>
             )}
 
-            {/* 菅野智之: 青柳ページの「今季の成績」UIのみ（値は表示しない） */}
+            {/* 菅野智之: 青柳ページと同じ「今季の成績」見出し・表構成（未連携は「—」「ー」） */}
             {showSuganoSeasonUI && (
               <div
                 style={{
@@ -2355,7 +2356,6 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       基本成績
                     </h2>
 
-                    {/* 以降、値は出さずUIのみ（青柳と同じ見出し＋表構造） */}
                     <div className="overflow-hidden overflow-x-auto mb-4">
                       <table
                         className="text-xs"
@@ -2518,19 +2518,70 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                           </tr>
                         </thead>
                         <tbody>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                            <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                              style={{ backgroundColor: "#1a1a1a" }}
-                            >
-                              —
-                            </td>
-                            {Array.from({ length: 8 }, (_, i) => (
-                              <td key={i} className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                —
+                          {[
+                            { team: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "阪神", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { team: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                          ].map((row) => (
+                            <tr key={row.team} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                              <td
+                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                style={{ backgroundColor: "#1a1a1a" }}
+                              >
+                                <div className="flex items-center gap-1 min-h-[1.25rem]">
+                                  <div
+                                    className="w-1 h-4 flex-shrink-0"
+                                    style={{
+                                      backgroundColor:
+                                        row.team === "巨人"
+                                          ? "#ff6600"
+                                          : row.team === "阪神"
+                                            ? "#ffde00"
+                                            : row.team === "ＤｅＮＡ"
+                                              ? "#0067c0"
+                                              : row.team === "ヤクルト"
+                                                ? "#2bbb3f"
+                                                : row.team === "中日"
+                                                  ? "#004ea2"
+                                                  : row.team === "広島"
+                                                    ? "#d60718"
+                                                    : row.team === "日本ハム"
+                                                      ? "#0077c8"
+                                                      : row.team === "楽天"
+                                                        ? "#7a0019"
+                                                        : row.team === "西武"
+                                                          ? "#004098"
+                                                          : row.team === "ロッテ"
+                                                            ? "#222222"
+                                                            : row.team === "オリックス"
+                                                              ? "#b79e51"
+                                                              : row.team === "ソフトバンク"
+                                                                ? "#ffdb00"
+                                                                : "#666666",
+                                    }}
+                                  />
+                                  <span>{row.team}</span>
+                                </div>
                               </td>
-                            ))}
-                          </tr>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -2601,6 +2652,240 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                         </tbody>
                       </table>
                     </div>
+
+                    <h2
+                      className={`${tb} mb-4 pl-4 mt-8`}
+                      style={{
+                        borderLeft: "6px solid #FF4444",
+                        fontWeight: 900,
+                      }}
+                    >
+                      投球指標
+                    </h2>
+                    <div className="overflow-hidden overflow-x-auto mb-4">
+                      <table
+                        className="text-xs"
+                        style={{
+                          fontVariantNumeric: "tabular-nums",
+                          borderCollapse: "collapse",
+                          border: "1px solid #555",
+                          width: "100%",
+                          tableLayout: "fixed",
+                        }}
+                      >
+                        <tbody>
+                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HQS率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">SQS率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被BABIP</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被出塁率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被長打率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K-BB％</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K％</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB％</th>
+                          </tr>
+                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
+                            {Array.from({ length: 9 }, (_, i) => (
+                              <td
+                                key={i}
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                              >
+                                —
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="overflow-hidden overflow-x-auto mb-4">
+                      <table
+                        className="text-xs"
+                        style={{
+                          fontVariantNumeric: "tabular-nums",
+                          borderCollapse: "collapse",
+                          border: "1px solid #555",
+                          width: "100%",
+                          tableLayout: "fixed",
+                        }}
+                      >
+                        <tbody>
+                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HR/9</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">GO/AO</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IPR</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB%</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">FIP</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">LOB%</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSAA</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSWIN</th>
+                          </tr>
+                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
+                            {Array.from({ length: 9 }, (_, i) => (
+                              <td
+                                key={i}
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                              >
+                                —
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="overflow-hidden overflow-x-auto mb-4">
+                      <table
+                        className="text-xs"
+                        style={{
+                          fontVariantNumeric: "tabular-nums",
+                          borderCollapse: "collapse",
+                          border: "1px solid #555",
+                          width: "100%",
+                          tableLayout: "fixed",
+                        }}
+                      >
+                        <tbody>
+                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">PR</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">KD</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">失点時回数</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護回</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護点</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時回数</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時失点</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">無失点</th>
+                          </tr>
+                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
+                            {Array.from({ length: 9 }, (_, i) => (
+                              <td
+                                key={i}
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                              >
+                                —
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <h2
+                      className={`${tb} mb-4 pl-4 mt-8`}
+                      style={{
+                        borderLeft: "6px solid #FF4444",
+                        fontWeight: 900,
+                      }}
+                    >
+                      コース別の投球成績（対右打者）
+                    </h2>
+                    <div className="overflow-x-auto flex justify-center mb-4">
+                      <div
+                        className="inline-grid grid-cols-5 gap-0"
+                        style={{
+                          border: "0.5px solid #888888",
+                          background: "#000000",
+                          minWidth: "min(95vw, 380px)",
+                        }}
+                      >
+                        {[1, 2, 3, 4, 5].map((row) =>
+                          [1, 2, 3, 4, 5].map((col) => {
+                            const z = (row - 1) * 5 + col
+                            const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
+                            const stat = zoneStats?.vsRight?.find((s) => s.zoneId === z)
+                            const opsVal = stat?.ops ?? "ー"
+                            const avgVal = stat?.avg ?? "ー"
+                            const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
+                            return (
+                              <div
+                                key={z}
+                                className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
+                                style={{
+                                  border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
+                                  backgroundColor: "#000000",
+                                  color: "#e5e5e5",
+                                }}
+                              >
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被OPS</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被打率</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被本</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 latin">
+                      5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
+                    </p>
+
+                    <h2
+                      className={`${tb} mb-4 pl-4 mt-8`}
+                      style={{
+                        borderLeft: "6px solid #FF4444",
+                        fontWeight: 900,
+                      }}
+                    >
+                      コース別の投球成績（対左打者）
+                    </h2>
+                    <div className="overflow-x-auto flex justify-center mb-4">
+                      <div
+                        className="inline-grid grid-cols-5 gap-0"
+                        style={{
+                          border: "0.5px solid #888888",
+                          background: "#000000",
+                          minWidth: "min(95vw, 380px)",
+                        }}
+                      >
+                        {[1, 2, 3, 4, 5].map((row) =>
+                          [1, 2, 3, 4, 5].map((col) => {
+                            const z = (row - 1) * 5 + col
+                            const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
+                            const stat = zoneStats?.vsLeft?.find((s) => s.zoneId === z)
+                            const opsVal = stat?.ops ?? "ー"
+                            const avgVal = stat?.avg ?? "ー"
+                            const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
+                            return (
+                              <div
+                                key={z}
+                                className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
+                                style={{
+                                  border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
+                                  backgroundColor: "#000000",
+                                  color: "#e5e5e5",
+                                }}
+                              >
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被OPS</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被打率</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[10px] latin">
+                                  <span className="opacity-70">被本</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 latin">
+                      5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
+                    </p>
                   </>
                 )}
 
@@ -2613,8 +2898,9 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                         fontWeight: 900,
                       }}
                     >
-                      球種情報
+                      球種一覧
                     </h2>
+                    <p className="text-sm text-gray-400 mb-4">（今季の球種データは未連携）</p>
                     <div className="overflow-x-auto overflow-y-hidden mb-12">
                       <table
                         className="text-xs"
@@ -2624,30 +2910,53 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                           borderSpacing: 0,
                           border: "1px solid #555",
                           width: "100%",
+                          minWidth: "473px",
                           tableLayout: "fixed",
                         }}
                       >
+                        <colgroup>
+                          <col style={{ width: "102px" }} />
+                          <col style={{ width: "95px" }} />
+                          <col style={{ width: "57px" }} />
+                          <col style={{ width: "57px" }} />
+                          <col style={{ width: "57px" }} />
+                          <col style={{ width: "48px" }} />
+                          <col style={{ width: "57px" }} />
+                        </colgroup>
                         <thead>
                           <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                               球種
                             </th>
-                            {["投球", "割合", "平均球速", "空振", "見逃", "ファウル", "ボール", "スト率", "空振率", "被打率"].map((h) => (
-                              <th key={h} className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 whitespace-nowrap">
-                                {h}
-                              </th>
-                            ))}
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              平均球速
+                            </th>
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              割合
+                            </th>
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              Strike％
+                            </th>
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              空振り％
+                            </th>
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              被打率
+                            </th>
+                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                              被OPS
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                             <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                              className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
                               style={{ backgroundColor: "#1a1a1a" }}
                             >
                               —
                             </td>
-                            {Array.from({ length: 10 }, (_, i) => (
+                            {Array.from({ length: 6 }, (_, i) => (
                               <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
                                 —
                               </td>
@@ -2709,22 +3018,71 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                           </tr>
                         </thead>
                         <tbody>
-                          <tr key="venue-dummy" style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                            <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                              style={{ backgroundColor: "#1a1a1a" }}
-                            >
-                              —
-                            </td>
-                            {Array.from({ length: 8 }, (_, i) => (
+                          {[
+                            { venue: "エスコンＦ", teamLabel: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "楽天モバイル", teamLabel: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "ベルーナD", teamLabel: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "ZOZOマリン", teamLabel: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "京セラD大阪", teamLabel: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "みずほPayPay", teamLabel: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "東京ドーム", teamLabel: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "神宮球場", teamLabel: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "横浜スタジアム", teamLabel: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "バンテリンD", teamLabel: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "甲子園球場", teamLabel: "阪神", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "マツダ", teamLabel: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { venue: "地方球場", teamLabel: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                          ].map((row) => (
+                            <tr key={row.venue} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                               <td
-                                key={i}
-                                className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                style={{ backgroundColor: "#1a1a1a" }}
                               >
-                                —
+                                <div className="flex items-center gap-1 min-h-[1.25rem]">
+                                  <div
+                                    className="w-1 h-4 flex-shrink-0"
+                                    style={{
+                                      backgroundColor:
+                                        row.teamLabel === "日本ハム"
+                                          ? "#0077c8"
+                                          : row.teamLabel === "楽天"
+                                            ? "#7a0019"
+                                            : row.teamLabel === "西武"
+                                              ? "#004098"
+                                              : row.teamLabel === "ロッテ"
+                                                ? "#222222"
+                                                : row.teamLabel === "オリックス"
+                                                  ? "#b79e51"
+                                                  : row.teamLabel === "ソフトバンク"
+                                                    ? "#ffdb00"
+                                                    : row.teamLabel === "巨人"
+                                                      ? "#ff6600"
+                                                      : row.teamLabel === "ヤクルト"
+                                                        ? "#2bbb3f"
+                                                        : row.teamLabel === "ＤｅＮＡ" || row.teamLabel === "横浜"
+                                                          ? "#0067c0"
+                                                          : row.teamLabel === "中日"
+                                                            ? "#004ea2"
+                                                            : row.teamLabel === "阪神"
+                                                              ? "#ffde00"
+                                                              : row.teamLabel === "広島"
+                                                                ? "#d60718"
+                                                                : "#666666",
+                                    }}
+                                  />
+                                  <span>{row.venue}</span>
+                                </div>
                               </td>
-                            ))}
-                          </tr>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -3056,19 +3414,33 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                           </tr>
                         </thead>
                         <tbody>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                            <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                              style={{ backgroundColor: "#1a1a1a" }}
-                            >
-                              —
-                            </td>
-                            {Array.from({ length: 8 }, (_, i) => (
-                              <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                —
+                          {[
+                            { month: "～4月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "5月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "6月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "7月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "8月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "9月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "10月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                            { month: "11月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
+                          ].map((row) => (
+                            <tr key={row.month} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                              <td
+                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                style={{ backgroundColor: "#1a1a1a" }}
+                              >
+                                {row.month}
                               </td>
-                            ))}
-                          </tr>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                              <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -3123,7 +3495,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                               className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
                               style={{ backgroundColor: "#1a1a1a" }}
                             >
-                              —
+                              3/10〜3/15
                             </td>
                             {Array.from({ length: 8 }, (_, i) => (
                               <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
@@ -3321,12 +3693,14 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
 export default function PlayerPage() {
   const isDesktop = useIsDesktop()
   const sp = useSearchParams()
+  const pathname = usePathname()
 
   if (isDesktop === undefined) {
     return <div className="min-h-screen bg-black" aria-busy="true" />
   }
 
   const forceMobile =
+    pathname.startsWith("/mobile/players") ||
     sp.get("mobile") === "1" ||
     sp.get("view") === "mobile" ||
     sp.has("mobile=1") ||
