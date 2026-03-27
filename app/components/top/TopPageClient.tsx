@@ -23,6 +23,7 @@ export type TopPageClientProps = {
 
 export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClientProps) {
   const isMobile = layout === "mobile"
+  const isTop2025 = initialYear === 2025
   const [activeMainTab, setActiveMainTab] = useState(0)
   const [activeSubTab, setActiveSubTab] = useState(0)
   const [selectedYear, setSelectedYear] = useState(initialYear)
@@ -150,7 +151,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
   const contentPadding = activeMainTab === 0 && isMobile ? "pb-16" : ""
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className={`min-h-screen bg-black text-white ${isTop2025 ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
