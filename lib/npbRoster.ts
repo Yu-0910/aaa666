@@ -5,11 +5,20 @@
 
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "node:url"
+import { compactPlayerName } from "@/lib/playerNameNormalize"
+import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
+import { getProjectRoot } from "@/lib/projectRoot"
+import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export interface NpbRosterPlayer {
   npb_player_id: string
   name_ja: string
   name_en: string
+  /** 英字フル（Western order 例: Suguru Iwazaki）。個人ページ表示用 */
+  name_en_full: string
+  /** ランキング用略式（例: S.Iwazaki）。空ならフルから導出可 */
+  name_en_short: string
   team: string
   team_code: string
   position: string
@@ -25,7 +34,10 @@ export interface NpbRosterPlayer {
 let cachedRoster: NpbRosterPlayer[] | null = null
 
 function getRosterPath(): string {
-  return path.join(process.cwd(), "_data", "npb_roster_2026.csv")
+  const fromRoot = path.join(getProjectRoot(), "_data", "npb_roster_2026.csv")
+  if (fs.existsSync(fromRoot)) return fromRoot
+  const libDir = path.dirname(fileURLToPath(import.meta.url))
+  return path.join(libDir, "..", "_data", "npb_roster_2026.csv")
 }
 
 /**
@@ -46,6 +58,8 @@ function parseRosterCsv(content: string): NpbRosterPlayer[] {
       npb_player_id: row.npb_player_id ?? "",
       name_ja: row.name_ja ?? "",
       name_en: row.name_en ?? "",
+      name_en_full: row.name_en_full ?? "",
+      name_en_short: row.name_en_short ?? "",
       team: row.team ?? "",
       team_code: row.team_code ?? "",
       position: row.position ?? "",
@@ -94,6 +108,22 @@ export function getNpbRoster2026(): NpbRosterPlayer[] {
   }
 }
 
+/** 個人ページ等: フル英字（name_en_full → 従来 name_en） */
+export function rosterEnglishFull(p: NpbRosterPlayer): string {
+  const a = (p.name_en_full ?? "").trim()
+  if (a) return a
+  return (p.name_en ?? "").trim()
+}
+
+/** ランキング用: name_en_short → なければフルから略式を導出 */
+export function rosterEnglishShortForRanking(p: NpbRosterPlayer): string {
+  const s = (p.name_en_short ?? "").trim()
+  if (s) return s
+  const full = rosterEnglishFull(p)
+  if (!full) return ""
+  return formatRomanNameForRanking(full, isJapaneseNpbListedNameJa(p.name_ja) ? { nameJa: p.name_ja } : undefined)
+}
+
 /**
  * 選手名（日本語）から利き手を取得
  */
@@ -129,4 +159,64 @@ export function getPlayerHandednessById(npbPlayerId: string): {
  */
 export function getNewPlayers2026(): NpbRosterPlayer[] {
   return getNpbRoster2026().filter((r) => r.is_new_2026 === "1")
+}
+
+/** 名簿の日本語名から「Ｓ．ファビアン」「Ｈ．メヒア」等の別表記キーを列挙 */
+function rosterJaNameLookupKeys(nameJa: string): string[] {
+  const c = compactPlayerName(nameJa)
+  const keys = new Set<string>([c])
+  const noInitial = c
+    .replace(/^[\uFF21-\uFF3A\uFF41-\uFF5A][．.]/u, "")
+    .replace(/^[A-Za-z][.]/u, "")
+  if (noInitial) keys.add(noInitial)
+  return [...keys]
+}
+
+/** 個人ページの playerId（数値＝NPB または Yahoo 橋渡し後の NPB、日本語名・英字名）から名簿行を解決 */
+export function findRosterPlayerByPublicId(raw: string): NpbRosterPlayer | null {
+  const roster = getNpbRoster2026()
+  let id = (raw || "").trim()
+  if (!id) return null
+  try {
+    id = decodeURIComponent(id).normalize("NFC")
+  } catch {
+    id = raw.trim()
+  }
+  if (/^\d+$/.test(id)) {
+    const lookupId = resolveNpbPlayerIdFromPublicId(id)
+    return roster.find((r) => r.npb_player_id === lookupId) ?? null
+  }
+  const key = compactPlayerName(id)
+  const direct = roster.find((r) => compactPlayerName(r.name_ja) === key)
+  if (direct) return direct
+  const byAltJa = roster.find((r) => rosterJaNameLookupKeys(r.name_ja).includes(key))
+  if (byAltJa) return byAltJa
+  const en = id.toLowerCase().replace(/\s+/g, " ").trim()
+  if (en.length >= 2) {
+    const byEn = roster.find((r) => {
+      const cands = [
+        (r.name_en || "").toLowerCase().trim(),
+        (r.name_en_full || "").toLowerCase().trim(),
+        (r.name_en_short || "").toLowerCase().trim(),
+      ]
+      return cands.includes(en)
+    })
+    if (byEn) return byEn
+  }
+  return null
+}
+
+/**
+ * Yahoo 数値 ID だけでは橋渡しに無い選手向けに、canonical の日本語表示名で名簿を再照会する。
+ * 投手のみデータに載る・外国籍の「Ｘ．苗字」表記差で ID 照合が外れる場合のフォールバック。
+ */
+export function findRosterPlayerByPublicIdOrJaName(
+  yahooId: string,
+  jaHint: string,
+): NpbRosterPlayer | null {
+  const byId = findRosterPlayerByPublicId(yahooId)
+  if (byId) return byId
+  const hint = (jaHint || "").trim()
+  if (!hint || /^\d+$/.test(hint)) return null
+  return findRosterPlayerByPublicId(hint)
 }

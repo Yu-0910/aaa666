@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "yahoo-phase4-manifest-v1",
+  "gameId": "2021038624",
+  "generatedAt": "2026-04-09T16:28:50.124Z",
+  "outputs": {
+    "battingMasterBridgeCsv": "_data\\scraped_games\\derived\\2021038624_batting_master_bridge.csv",
+    "rankingPocApi": "/api/rankings-yahoo-poc?season=2026&league=CL&metric=打率&gameId=2021038624",
+    "rankingPageHint": "/ranking/2026/CL?sort=avg&yahooPoc=1"
+  },
+  "pocRankingRowCountsByMetric": {
+    "打率": 28,
+    "OPS": 28,
+    "安打": 28,
+    "打点": 28
+  },
+  "notes": [
+    "CSV は master CSV への自動マージは行わない（差分の橋渡し用）",
+    "ランキングUIは ?yahooPoc=1 で API 経由の1試合データを表示"
+  ]
+}

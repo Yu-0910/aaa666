@@ -10,6 +10,7 @@ export const revalidate = 0
 
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
+import { FullPageLoading } from '@/components/ui/spinner'
 import RankingPageClient from './RankingPageClient'
 import { loadMetricsFromRecord } from '@/lib/ranking/record'
 import type { RankingViewModel } from '@/lib/ranking/types'
@@ -86,13 +87,7 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
     }
 
     return (
-      <Suspense fallback={
-        <div className="min-h-screen bg-black text-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-lg">読み込み中...</div>
-          </div>
-        </div>
-      }>
+      <Suspense fallback={<FullPageLoading />}>
         <RankingPageClient initialViewModel={viewModel} />
       </Suspense>
     )

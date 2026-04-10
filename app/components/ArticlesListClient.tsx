@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
+import { SectionLoadingSpinner } from "@/components/ui/spinner"
 
 export type Article = {
   id: number | string
@@ -289,9 +290,7 @@ export default function ArticlesListClient() {
 
   // 早期リターン（Hooksの後に配置）
   if (loading) {
-    return (
-      <div className="text-white text-center py-8">読み込み中...</div>
-    )
+    return <SectionLoadingSpinner />
   }
 
   if (error) {

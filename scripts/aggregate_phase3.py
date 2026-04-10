@@ -159,6 +159,12 @@ def main():
         return None
 
     def split_key_bat_order(r):
+        """スタメン1〜9番（lineup_slot）を優先。無い試合のみ従来どおりテキスト速報の bat_order（イニング内何番目）。"""
+        slot = (r.get("lineup_slot") or "").strip().rstrip("：")
+        if slot.isdigit():
+            n = int(slot)
+            if 1 <= n <= 9:
+                return ("bat_order", str(n))
         bo = (r.get("bat_order") or "").strip().rstrip("：")
         if bo and bo.isdigit():
             return ("bat_order", bo)

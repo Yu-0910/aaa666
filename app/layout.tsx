@@ -1,5 +1,4 @@
 import type React from "react"
-import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Inter, Noto_Sans_JP, Bebas_Neue } from "next/font/google"
 import AnalyticsWrapper from "@/components/AnalyticsWrapper"
@@ -63,9 +62,7 @@ export default function RootLayout({
         className={`font-sans antialiased ${_inter.variable} ${_notoSansJP.variable} ${_bebasNeue.variable}`}
         suppressHydrationWarning
       >
-        <Suspense fallback={<div className="min-h-screen bg-black" aria-busy="true" />}>
-          {children}
-        </Suspense>
+        {children}
         <AnalyticsWrapper />
       </body>
     </html>

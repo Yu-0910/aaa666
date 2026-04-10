@@ -7,10 +7,13 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { Spinner } from "@/components/ui/spinner"
 import { useRouter } from "next/navigation"
 import { formatStat } from "@/lib/formatStat"
 import metricMap from "@/config/metric_map.json"
 import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
+import { BATTING_TOP_2025_GRID_METRICS, battingTop2025GridReady } from "@/lib/topPageBatting2025Grid"
 
 type LeadersConfig = {
   top3Metrics: string[]
@@ -49,72 +52,100 @@ const leagueNames: Record<string, { ja: string; en: string }> = {
   PL: { ja: "パ・リーグ", en: "Pacific League" },
 }
 
-function formatRomanForUrl(leader: { romanName?: string; name: string }): string {
-  const playerRomanNames: Record<string, string> = {
-    佐藤輝明: "Sato Teruaki", 岡本和真: "Okamoto Kazuma", 村上宗隆: "Murakami Munetaka",
-    近本光司: "Chikamoto Koji", 牧秀悟: "Maki Shugo", 佐野恵太: "Sano Keita", 青柳晃洋: "Aoyagi Koyo",
-    菅野智之: "Sugano Tomoyuki", 大野雄大: "Ono Yudai", 岩崎優: "Iwasaki Yu", 伊勢大夢: "Ise Hiromu",
-    石田健大: "Ishida Kenta", 戸郷翔征: "Togou Shosei", 山川穂高: "Yamakawa Hotaka",
-    吉田正尚: "Yoshida Masataka", 中村晃: "Nakamura Akira", 源田壮亮: "Genda Sosuke",
-    柳田悠岐: "Yanagita Yuki", 浅村栄斗: "Asamura Hideto", 周東佑京: "Shuto Ukyo",
-    山本由伸: "Yamamoto Yoshinobu", 千賀滉大: "Senga Kodai", 佐々木朗希: "Sasaki Roki",
-    宮城大弥: "Miyagi Hiroya", 森唯斗: "Mori Yuito",
-  }
-  const raw = (leader.romanName || playerRomanNames[leader.name] || "").trim()
-  if (!raw) return ""
-  if (/^[A-Z]\.[A-Za-z]+$/.test(raw)) return raw
-  const parts = raw.split(/\s+/)
-  if (parts.length >= 2) return `${parts[0][0].toUpperCase()}.${parts[1]}`
-  if (parts[0].length > 0) return `${parts[0][0].toUpperCase()}.${parts[0]}`
-  return ""
-}
-
-const LeaderRow = ({ leader, stat, index }: { leader: any; index: number; stat: any }) => {
+const LeaderRow = ({
+  leader,
+  stat,
+  index,
+  year,
+}: {
+  leader: any
+  index: number
+  stat: any
+  year: number
+}) => {
   const formattedValue = formatStat(stat, leader.value)
-  const romanForUrl = formatRomanForUrl(leader)
-  const romanName = romanForUrl || leader.romanName || ""
-  
+  const romanShort = abbreviatedRomanForUrl(leader)
+  const isTop2025 = year === 2025
+
   return (
-    <div className="flex items-center gap-0.5 py-0.5">
-      <div className="w-4 h-4 rounded-full bg-[#2a2a2a] flex items-center justify-center">
+    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">{index + 1}</span>
       </div>
-      <div className="w-1 h-6 mr-1" style={{ backgroundColor: teamColors[leader.team] || "#666" }} />
+      <div
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
+        style={{ backgroundColor: teamColors[leader.team] || "#666" }}
+      />
       <Link
-        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanForUrl ? `&roman=${encodeURIComponent(romanForUrl)}` : ""}`}
-        className="flex-1 min-w-0 flex items-center gap-1 hover:opacity-80 transition-opacity"
+        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
-        <span className="text-white text-sm font-semibold leading-tight">{leader.name}</span>
-        {romanName && (
-          <span className="latin text-[10px] text-gray-400 leading-tight">{romanName}</span>
+        {isTop2025 ? (
+          <>
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <span className="text-white text-sm font-semibold leading-tight truncate">{leader.name}</span>
+              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+            </div>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="text-white text-sm font-semibold leading-tight">{leader.name}</span>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-tight">{romanShort}</span>
+            )}
+          </>
         )}
       </Link>
-      <div className="text-white text-base bebas tabular-nums font-normal">{formattedValue}</div>
+      {!isTop2025 && (
+        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+      )}
     </div>
   )
 }
 
-const MiniLeaderRow = ({ leader, stat }: { leader: any; stat: any }) => {
+const MiniLeaderRow = ({ leader, stat, year }: { leader: any; stat: any; year: number }) => {
   const formattedValue = formatStat(stat, leader.value)
-  const romanForUrl = formatRomanForUrl(leader)
-  const romanName = romanForUrl || leader.romanName || ""
-  
+  const romanShort = abbreviatedRomanForUrl(leader)
+  const isTop2025 = year === 2025
+
   return (
-    <div className="flex items-center gap-0.5 py-0.5">
-      <div className="w-4 h-4 rounded-full bg-[#2a2a2a] flex items-center justify-center">
+    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">1</span>
       </div>
-      <div className="w-1 h-10 mr-1" style={{ backgroundColor: teamColors[leader.team] || "#666" }} />
+      <div
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-8" : "h-10 self-center"}`}
+        style={{ backgroundColor: teamColors[leader.team] || "#666" }}
+      />
       <Link
-        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanForUrl ? `&roman=${encodeURIComponent(romanForUrl)}` : ""}`}
-        className="flex-1 min-w-0 flex flex-col hover:opacity-80 transition-opacity"
+        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
-        <span className="text-white text-sm font-semibold leading-tight">{leader.name}</span>
-        {romanName && (
-          <span className="latin text-[10px] text-gray-400 leading-tight">{romanName}</span>
+        {isTop2025 ? (
+          <>
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <span className="text-white text-sm font-semibold leading-tight truncate">{leader.name}</span>
+              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+            </div>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="text-white text-sm font-semibold leading-tight">{leader.name}</span>
+            {romanShort && (
+              <span className={`latin text-[10px] text-gray-400 leading-tight`}>{romanShort}</span>
+            )}
+          </>
         )}
       </Link>
-      <div className="text-white text-base bebas tabular-nums font-normal">{formattedValue}</div>
+      {!isTop2025 && (
+        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+      )}
     </div>
   )
 }
@@ -202,7 +233,9 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
             </div>
           </div>
         </div>
-        <div className="text-white text-sm text-center py-4">読み込み中...</div>
+        <div className="flex justify-center py-4" role="status" aria-busy="true" aria-label="読み込み中">
+          <Spinner className="size-7 text-[#FFFF44]" />
+        </div>
       </div>
     )
   }
@@ -236,69 +269,276 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
         </div>
       </div>
 
-      <div className={layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"}>
-        {data.top3Metrics.map((metric) => (
-          <div key={metric} className="bg-black border border-[#555] p-1 relative">
-            <div className="flex items-stretch justify-between mb-1">
-              <Link
-                href={getRankingUrl(metric)}
-                className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
-              >
-                <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
-              </Link>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  const url = getStatsListUrl()
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
-                  }
-                  router.push(url)
-                }}
-                className="bg-black py-0.5 px-1 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
-              >
-                成績一覧
-              </button>
-            </div>
-            <div className="space-y-0">
-              {data.leaders[metric]?.map((leader, leaderIndex) => (
-                <LeaderRow key={leader.rank} leader={leader} stat={metric} index={leaderIndex} />
-              ))}
-            </div>
+      {Number(year) === 2025 && battingTop2025GridReady(data.leaders) ? (
+        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
+          <div className="grid grid-cols-2 gap-1">
+            {BATTING_TOP_2025_GRID_METRICS.map((metric) =>
+              data.leaders[metric] ? (
+                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                  <div className="relative mb-1 flex min-h-[22px] items-center">
+                    <Link
+                      href={getRankingUrl(metric)}
+                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                    >
+                      <span
+                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                      >
+                        {metric}
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const url = getStatsListUrl()
+                        if (process.env.NODE_ENV === "development") {
+                          console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                        }
+                        router.push(url)
+                      }}
+                      className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                    >
+                      成績一覧
+                    </button>
+                  </div>
+                  <div className="space-y-0">
+                    {data.leaders[metric]?.map((leader, leaderIndex) => (
+                      <LeaderRow
+                        key={leader.rank}
+                        leader={leader}
+                        stat={metric}
+                        index={leaderIndex}
+                        year={Number(year)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
           </div>
-        ))}
-      </div>
-
-      <div className={layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"}>
-        {data.miniMetrics.map((metric) => {
-          const leader = data.leaders[metric]?.[0]
-          if (!leader) return null
-          return (
-            <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
-              <div className="flex items-stretch justify-between mb-1">
+        </div>
+      ) : Number(year) === 2025 && data.top3Metrics.length >= 3 ? (
+        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
+          <div className="grid grid-cols-2 gap-1">
+            {data.top3Metrics.slice(0, 2).map((metric) =>
+              data.leaders[metric] ? (
+                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                  <div className="relative mb-1 flex min-h-[22px] items-center">
+                    <Link
+                      href={getRankingUrl(metric)}
+                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                    >
+                      <span
+                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                      >
+                        {metric}
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const url = getStatsListUrl()
+                        if (process.env.NODE_ENV === "development") {
+                          console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                        }
+                        router.push(url)
+                      }}
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${Number(year) === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    >
+                      成績一覧
+                    </button>
+                  </div>
+                  <div className="space-y-0">
+                    {data.leaders[metric]?.map((leader, leaderIndex) => (
+                      <LeaderRow
+                        key={leader.rank}
+                        leader={leader}
+                        stat={metric}
+                        index={leaderIndex}
+                        year={Number(year)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
+          </div>
+          {data.leaders[data.top3Metrics[2]!] && (
+            <div className="bg-black border border-[#555] p-1 relative w-full">
+              <div className="relative mb-1 flex min-h-[22px] items-center">
                 <Link
-                  href={getRankingUrl(metric)}
-                  className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  href={getRankingUrl(data.top3Metrics[2]!)}
+                  className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
                 >
-                  <span className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}>{metric}</span>
+                  <span
+                    className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(data.top3Metrics[2]!) ? "latin" : ""}`}
+                  >
+                    {data.top3Metrics[2]}
+                  </span>
                 </Link>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
                     const url = getStatsListUrl()
-                    if (process.env.NODE_ENV === 'development') {
+                    if (process.env.NODE_ENV === "development") {
                       console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                     }
                     router.push(url)
                   }}
-                  className="bg-black py-0.5 px-0.5 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${Number(year) === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                 >
                   成績一覧
                 </button>
               </div>
-              <MiniLeaderRow leader={leader} stat={metric} />
+              <div className="space-y-0">
+                {data.leaders[data.top3Metrics[2]!]?.map((leader, leaderIndex) => (
+                  <LeaderRow
+                    key={leader.rank}
+                    leader={leader}
+                    stat={data.top3Metrics[2]!}
+                    index={leaderIndex}
+                    year={Number(year)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"}>
+          {data.top3Metrics.map((metric) => (
+            <div key={metric} className="bg-black border border-[#555] p-1 relative">
+              {Number(year) === 2025 ? (
+                <div className="relative mb-1 flex min-h-[22px] items-center">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const url = getStatsListUrl()
+                      if (process.env.NODE_ENV === "development") {
+                        console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                      }
+                      router.push(url)
+                    }}
+                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                  >
+                    成績一覧
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-stretch justify-between mb-1">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const url = getStatsListUrl()
+                      if (process.env.NODE_ENV === "development") {
+                        console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                      }
+                      router.push(url)
+                    }}
+                    className="bg-black py-0.5 px-1 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                  >
+                    成績一覧
+                  </button>
+                </div>
+              )}
+              <div className="space-y-0">
+                {data.leaders[metric]?.map((leader, leaderIndex) => (
+                  <LeaderRow
+                    key={leader.rank}
+                    leader={leader}
+                    stat={metric}
+                    index={leaderIndex}
+                    year={Number(year)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"}>
+        {(Number(year) === 2025 ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+          const leader = data.leaders[metric]?.[0]
+          if (!leader) return null
+          return (
+            <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
+              {Number(year) === 2025 ? (
+                <div className="relative mb-1 flex min-h-[22px] items-center">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-[13px] ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const url = getStatsListUrl()
+                      if (process.env.NODE_ENV === "development") {
+                        console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                      }
+                      router.push(url)
+                    }}
+                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                  >
+                    成績一覧
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-stretch justify-between mb-1">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const url = getStatsListUrl()
+                      if (process.env.NODE_ENV === "development") {
+                        console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
+                      }
+                      router.push(url)
+                    }}
+                    className="bg-black py-0.5 px-0.5 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer"
+                  >
+                    成績一覧
+                  </button>
+                </div>
+              )}
+              <MiniLeaderRow leader={leader} stat={metric} year={Number(year)} />
             </div>
           )
         })}

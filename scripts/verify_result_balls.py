@@ -39,7 +39,7 @@ def is_settlement_result(r):
     return False
 
 def is_walk(r):
-    return bool(re.search(r"四球|敬遠", (r or "").strip()))
+    return bool(re.search(r"四球|敬遠|故意四球", (r or "").strip()))
 
 def is_hbp(r):
     return "死球" in (r or "").strip()

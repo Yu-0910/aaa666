@@ -31,6 +31,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from scrape_yahoo_pitch_details import fetch_html, build_index, parse_pitch_details
 from fetch_game_pitch_types import parse_plate_appearances_from_html
+from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed
 
 BASE_URL = "https://baseball.yahoo.co.jp"
 
@@ -153,7 +154,7 @@ def get_total_bases(r: str) -> int:
 
 
 def is_walk(r: str) -> bool:
-    return bool(re.search(r"四球|敬遠", (r or "").strip()))
+    return bool(re.search(r"四球|敬遠|故意四球", (r or "").strip()))
 
 
 def is_hbp(r: str) -> bool:
@@ -306,6 +307,8 @@ def main():
     parser.add_argument("--from-debug", action="store_true", help="debug_pitches JSON から再集計（再取得なし）")
 
     args = parser.parse_args()
+
+    ensure_yahoo_network_fetch_allowed(skip_network=args.from_debug)
 
     root = Path(__file__).resolve().parent.parent
     out_dir = root / args.out_dir.strip()

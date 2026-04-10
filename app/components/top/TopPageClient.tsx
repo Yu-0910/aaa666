@@ -46,6 +46,11 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
 
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
   const rankingHref = `/ranking/${selectedYear}/PL`
+  const pitchingLeague =
+    activeMainTab === 0 && subTabs[activeSubTab]?.type === "combined"
+      ? subTabs[activeSubTab].league || "PL"
+      : "PL"
+  const pitchingRankingHref = `/ranking/pitching/2026/${pitchingLeague}`
 
   const mainTabButtons = (
     <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-black" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-black"}>
@@ -106,6 +111,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
                   year={selectedYear}
                   league={subTabs[activeSubTab].league || "CL"}
                   layout={layout}
+                  statsCategory="pitching"
                 />
               </div>
             </div>
@@ -195,7 +201,10 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
                 トップ
               </Link>
               <Link href={rankingHref} className="hover:text-[#ffff44] transition-colors">
-                成績一覧
+                打撃ランキング
+              </Link>
+              <Link href={pitchingRankingHref} className="hover:text-[#ffff44] transition-colors">
+                投手ランキング
               </Link>
               <span className="text-gray-500 cursor-not-allowed">ドラフト情報</span>
             </nav>
@@ -231,7 +240,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
       )}
 
       <div className={`${isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"} ${contentPadding}`}>
-        <div className="animate-in fade-in duration-300">{tabContentInner}</div>
+        <div>{tabContentInner}</div>
       </div>
     </div>
   )

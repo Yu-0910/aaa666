@@ -3,13 +3,16 @@
 import Link from "next/link"
 import { formatStat } from "@/lib/formatStat"
 import metricMap from "@/config/metric_map.json"
+import pitchingMetricMap from "@/config/pitching_metric_map.json"
+import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
 import {
   teamColors,
-  playerRomanNames,
   standingsCL,
   standingsPL,
   type LeadersConfig,
 } from "@/app/components/top/topPageConstants"
+import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
+import { BATTING_TOP_2025_GRID_METRICS, battingTop2025GridReady } from "@/lib/topPageBatting2025Grid"
 
 export type TopPageLayoutMode = "mobile" | "desktop"
 
@@ -21,100 +24,138 @@ type LeadersPanelProps = {
   year?: number
   league?: string
   layout: TopPageLayoutMode
+  /** 投球パネルは投手ランキング（下記年度固定）へ遷移 */
+  statsCategory?: "batting" | "pitching"
 }
 
-const LeaderRow = ({ leader, stat, index }: { leader: Record<string, unknown>; index: number; stat: unknown }) => {
-  const formattedValue = formatStat(stat, leader.value)
+/** 投手ランキング完成品は 2026 のみ（計画書 §3.1） */
+const PITCHING_RANKING_SEASON = 2026
 
-  const romanName = (() => {
-    if (leader.romanName && typeof leader.romanName === "string") {
-      const parts = leader.romanName.trim().split(/\s+/)
-      if (parts.length >= 2) {
-        const lastName = parts[0]
-        const firstName = parts[1]
-        const initial = firstName.length > 0 ? firstName[0].toUpperCase() : ""
-        return `${initial}.${lastName}`
-      }
-      if (parts.length === 1 && parts[0].length > 0) {
-        const name = parts[0]
-        return `${name[0].toUpperCase()}.${name}`
-      }
-      return ""
-    }
-    const name = typeof leader.name === "string" ? leader.name : ""
-    if (playerRomanNames[name]) {
-      const parts = playerRomanNames[name].split(/\s+/)
-      if (parts.length >= 2) {
-        const lastName = parts[0]
-        const firstName = parts[1]
-        const initial = firstName.length > 0 ? firstName[0].toUpperCase() : ""
-        return `${initial}.${lastName}`
-      }
-      if (parts.length === 1 && parts[0].length > 0) {
-        const n = parts[0]
-        return `${n[0].toUpperCase()}.${n}`
-      }
-    }
-    return ""
-  })()
+const LeaderRow = ({
+  leader,
+  stat,
+  index,
+  year,
+}: {
+  leader: Record<string, unknown>
+  index: number
+  stat: unknown
+  year: number
+}) => {
+  const formattedValue = formatStat(stat, leader.value)
+  const l = leader as { romanName?: string; name?: string; team?: string }
+  const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
+  const isTop2025 = year === 2025
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
 
   return (
-    <div className="flex items-center gap-0.5 py-0.5">
-      <div className="w-4 h-4 rounded-full bg-[#2a2a2a] flex items-center justify-center">
+    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">{index + 1}</span>
       </div>
-      <div className="w-1 h-6 mr-1" style={{ backgroundColor: teamColors[teamKey] || "#666" }} />
+      <div
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
+        style={{ backgroundColor: teamColors[teamKey] || "#666" }}
+      />
       <Link
-        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanName ? `&roman=${encodeURIComponent(romanName)}` : ""}`}
-        className="flex-1 min-w-0 flex items-center gap-1 hover:opacity-80 transition-opacity"
+        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
-        <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
-        {romanName && <span className="latin text-[10px] text-gray-400 leading-tight">{romanName}</span>}
+        {isTop2025 ? (
+          <>
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
+              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+            </div>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-tight">{romanShort}</span>
+            )}
+          </>
+        )}
       </Link>
-      <div className="text-white text-base bebas tabular-nums font-normal">{formattedValue}</div>
+      {!isTop2025 && (
+        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+      )}
     </div>
   )
 }
 
-const MiniLeaderRow = ({ leader, stat }: { leader: Record<string, unknown>; stat: unknown }) => {
+const MiniLeaderRow = ({
+  leader,
+  stat,
+  year,
+}: {
+  leader: Record<string, unknown>
+  stat: unknown
+  year: number
+}) => {
   const formattedValue = formatStat(stat, leader.value)
-  const romanName = (() => {
-    const name = typeof leader.name === "string" ? leader.name : ""
-    const raw = ((leader.romanName as string) || playerRomanNames[name] || "").trim()
-    if (!raw) return ""
-    if (/^[A-Z]\.[A-Za-z]+$/.test(raw)) return raw
-    const parts = raw.split(/\s+/)
-    if (parts.length >= 2) return `${parts[0][0].toUpperCase()}.${parts[1]}`
-    if (parts[0].length > 0) return `${parts[0][0].toUpperCase()}.${parts[0]}`
-    return ""
-  })()
+  const l = leader as { romanName?: string; name?: string; team?: string }
+  const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
+  const isTop2025 = year === 2025
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
 
   return (
-    <div className="flex items-center gap-0.5 py-0.5">
-      <div className="w-4 h-4 rounded-full bg-[#2a2a2a] flex items-center justify-center">
+    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">1</span>
       </div>
-      <div className="w-1 h-10 mr-1" style={{ backgroundColor: teamColors[teamKey] || "#666" }} />
+      <div
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-8" : "h-10 self-center"}`}
+        style={{ backgroundColor: teamColors[teamKey] || "#666" }}
+      />
       <Link
-        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanName ? `&roman=${encodeURIComponent(romanName)}` : ""}`}
-        className="flex-1 min-w-0 flex flex-col hover:opacity-80 transition-opacity"
+        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
-        <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
-        {romanName && <span className="latin text-[10px] text-gray-400 leading-tight">{romanName}</span>}
+        {isTop2025 ? (
+          <>
+            <div className="flex items-center justify-between gap-2 w-full min-w-0">
+              <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
+              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+            </div>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
+            {romanShort && (
+              <span className="latin text-[10px] text-gray-400 leading-tight">{romanShort}</span>
+            )}
+          </>
+        )}
       </Link>
-      <div className="text-white text-base bebas tabular-nums font-normal">{formattedValue}</div>
+      {!isTop2025 && (
+        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+      )}
     </div>
   )
 }
 
-export function LeadersPanel({ data, title, leagueName, leagueColor, year = 2025, league, layout }: LeadersPanelProps) {
-  const normalizeMetricKey = (metric: string): string => {
+export function LeadersPanel({
+  data,
+  title,
+  leagueName,
+  leagueColor,
+  year = 2025,
+  league,
+  layout,
+  statsCategory = "batting",
+}: LeadersPanelProps) {
+  const normalizeBattingMetricKey = (metric: string): string => {
     if (metric in metricMap) {
       return metricMap[metric as keyof typeof metricMap]
     }
@@ -127,9 +168,29 @@ export function LeadersPanel({ data, title, leagueName, leagueColor, year = 2025
     return metric.toLowerCase().replace("%", "pct").replace("/", "").replace("-", "")
   }
 
+  const normalizePitchingMetricKey = (metric: string): string => {
+    const map = pitchingMetricMap as Record<string, string>
+    if (metric in map && !metric.startsWith("_")) {
+      return map[metric]!
+    }
+    const lowerMetric = metric.toLowerCase()
+    for (const [key, value] of Object.entries(map)) {
+      if (key.startsWith("_")) continue
+      if (key.toLowerCase() === lowerMetric) {
+        return value
+      }
+    }
+    return metric.toLowerCase().replace("%", "pct").replace("/", "").replace("-", "")
+  }
+
   const getRankingUrl = (metric: string): string => {
+    if (statsCategory === "pitching" && league) {
+      const metricKey = normalizePitchingMetricKey(metric)
+      const order = getPitchingSortOrderForKey(metricKey)
+      return `/ranking/pitching/${PITCHING_RANKING_SEASON}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+    }
     if (year && league) {
-      const metricKey = normalizeMetricKey(metric)
+      const metricKey = normalizeBattingMetricKey(metric)
       const order = metricKey === "kpct" || metricKey === "k%" ? "asc" : "desc"
       return `/ranking/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
     }
@@ -137,6 +198,9 @@ export function LeadersPanel({ data, title, leagueName, leagueColor, year = 2025
   }
 
   const getStatsListUrl = (): string => {
+    if (statsCategory === "pitching" && league) {
+      return `/ranking/pitching/${PITCHING_RANKING_SEASON}/${league}`
+    }
     if (year && league) {
       return `/ranking/${year}/${league}`
     }
@@ -158,53 +222,220 @@ export function LeadersPanel({ data, title, leagueName, leagueColor, year = 2025
         </div>
       </div>
 
-      <div className={topGrid}>
-        {data.top3Metrics.map((metric) => (
-          <div key={metric} className="bg-black border border-[#555] p-1 relative">
-            <div className="flex items-stretch justify-between mb-1">
-              <Link
-                href={getRankingUrl(metric)}
-                className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
-              >
-                <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
-              </Link>
-              <Link
-                href={getStatsListUrl()}
-                className="bg-black py-0.5 px-1 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
-              >
-                成績一覧
-              </Link>
-            </div>
-            <div className="space-y-0">
-              {data.leaders[metric]?.map((leader, leaderIndex) => (
-                <LeaderRow key={leader.rank} leader={leader as Record<string, unknown>} stat={metric} index={leaderIndex} />
-              ))}
-            </div>
+      {year === 2025 && statsCategory === "batting" && battingTop2025GridReady(data.leaders) ? (
+        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
+          <div className="grid grid-cols-2 gap-1">
+            {BATTING_TOP_2025_GRID_METRICS.map((metric) =>
+              data.leaders[metric] ? (
+                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                  <div className="relative mb-1 flex min-h-[22px] items-center">
+                    <Link
+                      href={getRankingUrl(metric)}
+                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                    >
+                      <span
+                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                      >
+                        {metric}
+                      </span>
+                    </Link>
+                    <Link
+                      href={getStatsListUrl()}
+                      className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    >
+                      成績一覧
+                    </Link>
+                  </div>
+                  <div className="space-y-0">
+                    {data.leaders[metric]?.map((leader, leaderIndex) => (
+                      <LeaderRow
+                        key={leader.rank}
+                        leader={leader as Record<string, unknown>}
+                        stat={metric}
+                        index={leaderIndex}
+                        year={year}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
           </div>
-        ))}
-      </div>
-
-      <div className={miniGrid}>
-        {data.miniMetrics.map((metric) => {
-          const leader = data.leaders[metric]?.[0]
-          if (!leader) return null
-          return (
-            <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
-              <div className="flex items-stretch justify-between mb-1">
+        </div>
+      ) : year === 2025 && statsCategory === "batting" && data.top3Metrics.length >= 3 ? (
+        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
+          <div className="grid grid-cols-2 gap-1">
+            {data.top3Metrics.slice(0, 2).map((metric) =>
+              data.leaders[metric] ? (
+                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                  <div className="relative mb-1 flex min-h-[22px] items-center">
+                    <Link
+                      href={getRankingUrl(metric)}
+                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                    >
+                      <span
+                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                      >
+                        {metric}
+                      </span>
+                    </Link>
+                    <Link
+                      href={getStatsListUrl()}
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${year === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    >
+                      成績一覧
+                    </Link>
+                  </div>
+                  <div className="space-y-0">
+                    {data.leaders[metric]?.map((leader, leaderIndex) => (
+                      <LeaderRow
+                        key={leader.rank}
+                        leader={leader as Record<string, unknown>}
+                        stat={metric}
+                        index={leaderIndex}
+                        year={year}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
+          </div>
+          {data.leaders[data.top3Metrics[2]!] && (
+            <div className="bg-black border border-[#555] p-1 relative w-full">
+              <div className="relative mb-1 flex min-h-[22px] items-center">
                 <Link
-                  href={getRankingUrl(metric)}
-                  className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  href={getRankingUrl(data.top3Metrics[2]!)}
+                  className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
                 >
-                  <span className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}>{metric}</span>
+                  <span
+                    className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(data.top3Metrics[2]!) ? "latin" : ""}`}
+                  >
+                    {data.top3Metrics[2]}
+                  </span>
                 </Link>
                 <Link
                   href={getStatsListUrl()}
-                  className="bg-black py-0.5 px-0.5 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${year === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
                 </Link>
               </div>
-              <MiniLeaderRow leader={leader as Record<string, unknown>} stat={metric} />
+              <div className="space-y-0">
+                {data.leaders[data.top3Metrics[2]!]?.map((leader, leaderIndex) => (
+                  <LeaderRow
+                    key={leader.rank}
+                    leader={leader as Record<string, unknown>}
+                    stat={data.top3Metrics[2]!}
+                    index={leaderIndex}
+                    year={year}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={topGrid}>
+          {data.top3Metrics.map((metric) => (
+            <div key={metric} className="bg-black border border-[#555] p-1 relative">
+              {year === 2025 ? (
+                <div className="relative mb-1 flex min-h-[22px] items-center">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <Link
+                    href={getStatsListUrl()}
+                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                  >
+                    成績一覧
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-stretch justify-between mb-1">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
+                  </Link>
+                  <Link
+                    href={getStatsListUrl()}
+                    className="bg-black py-0.5 px-1 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                  >
+                    成績一覧
+                  </Link>
+                </div>
+              )}
+              <div className="space-y-0">
+                {data.leaders[metric]?.map((leader, leaderIndex) => (
+                  <LeaderRow
+                    key={leader.rank}
+                    leader={leader as Record<string, unknown>}
+                    stat={metric}
+                    index={leaderIndex}
+                    year={year}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={miniGrid}>
+        {(statsCategory === "batting" && year === 2025 ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+          const leader = data.leaders[metric]?.[0]
+          if (!leader) return null
+          return (
+            <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
+              {year === 2025 ? (
+                <div className="relative mb-1 flex min-h-[22px] items-center">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-[13px] ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <Link
+                    href={getStatsListUrl()}
+                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                  >
+                    成績一覧
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-stretch justify-between mb-1">
+                  <Link
+                    href={getRankingUrl(metric)}
+                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
+                    >
+                      {metric}
+                    </span>
+                  </Link>
+                  <Link
+                    href={getStatsListUrl()}
+                    className="bg-black py-0.5 px-0.5 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                  >
+                    成績一覧
+                  </Link>
+                </div>
+              )}
+              <MiniLeaderRow leader={leader as Record<string, unknown>} stat={metric} year={year} />
             </div>
           )
         })}

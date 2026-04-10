@@ -4,18 +4,25 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getYahooIdForPilot } from '@/lib/seasonStatsPilot'
-import { loadPitchDetails, loadPitchTypeStats, loadZoneStats } from '@/lib/pitchDetailsPilot'
+import { DERIVED_SEASON_YEAR_DEFAULT, getYahooIdForPilot } from '@/lib/seasonStatsPilot'
+import {
+  loadPhase14PitchBundle,
+  loadPitchDetails,
+  loadPitchTypeStats,
+  loadZoneStats,
+} from '@/lib/pitchDetailsPilot'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ playerId: string }> | { playerId: string } }
 ) {
   try {
     const { playerId } =
       context.params instanceof Promise ? await context.params : context.params
+    const year =
+      new URL(request.url).searchParams.get('year')?.trim() || DERIVED_SEASON_YEAR_DEFAULT
     const yahooId = getYahooIdForPilot(playerId)
     if (!yahooId) {
       return NextResponse.json({
@@ -26,13 +33,19 @@ export async function GET(
       })
     }
     const plateAppearances = loadPitchDetails(yahooId)
-    const pitchTypeStats = loadPitchTypeStats(yahooId)
-    const zoneStats = loadZoneStats(yahooId)
+    const pitchTypeStats = loadPitchTypeStats(yahooId, year)
+    const zoneStats = loadZoneStats(yahooId, year)
+    const fromCanonical = loadPhase14PitchBundle(yahooId, year)
+    const isPilot =
+      plateAppearances.length > 0 ||
+      fromCanonical != null ||
+      pitchTypeStats.length > 0 ||
+      zoneStats.length > 0
     return NextResponse.json({
       plateAppearances,
       pitchTypeStats,
       zoneStats,
-      isPilot: plateAppearances.length > 0,
+      isPilot,
     })
   } catch (error) {
     console.error('[pitch-details] Error:', error)

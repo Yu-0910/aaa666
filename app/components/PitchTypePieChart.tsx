@@ -64,7 +64,7 @@ export default function PitchTypePieChart({ rows }: Props) {
 
   return (
     <div
-      className="mt-4 mb-8 flex justify-center latin"
+      className="mt-2 mb-4 flex justify-center latin"
       style={{ minHeight: "280px", fontFamily: FONT_FAMILY }}
     >
       <ResponsiveContainer width="100%" height={280}>

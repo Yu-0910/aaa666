@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 let cachedMetricMap: Record<string, string> | null = null
+let cachedPitchingMetricMap: Record<string, string> | null = null
 
 /**
  * metric_map.jsonを読み込む（キャッシュ付き）
@@ -34,6 +35,41 @@ export function loadMetricMap(): Record<string, string> {
 export function getJsonKey(recordMetric: string): string {
   const metricMap = loadMetricMap()
   return metricMap[recordMetric] || recordMetric.toLowerCase().replace(/\s+/g, '_')
+}
+
+/**
+ * pitching_metric_map.json を読み込む（キャッシュ付き）
+ * `_comment` 等のアンダースコア始まりキーはマップから除外する。
+ */
+export function loadPitchingMetricMap(): Record<string, string> {
+  if (cachedPitchingMetricMap) {
+    return cachedPitchingMetricMap
+  }
+
+  const pitchingPath = path.join(process.cwd(), 'config', 'pitching_metric_map.json')
+  if (!fs.existsSync(pitchingPath)) {
+    cachedPitchingMetricMap = {}
+    return cachedPitchingMetricMap
+  }
+
+  const raw = JSON.parse(fs.readFileSync(pitchingPath, 'utf-8')) as Record<string, unknown>
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.startsWith('_')) continue
+    if (typeof v === 'string' && v.length > 0) out[k] = v
+  }
+  cachedPitchingMetricMap = out
+  return cachedPitchingMetricMap
+}
+
+/**
+ * Record_pitching.csv の列名・日本語ラベル → ランキング JSON のキー
+ */
+export function getPitchingJsonKey(recordMetric: string): string {
+  const map = loadPitchingMetricMap()
+  const t = (recordMetric || '').trim()
+  if (t && map[t]) return map[t]
+  return t.toLowerCase().replace(/\s+/g, '_').replace(/％/g, '%')
 }
 
 

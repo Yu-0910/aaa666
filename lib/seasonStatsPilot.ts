@@ -5,19 +5,44 @@
 
 import fs from 'fs'
 import path from 'path'
+import {
+  PILOT_FABIAN_NPB_PLAYER_ID,
+  PILOT_FABIAN_YAHOO_BATTER_ID,
+  PILOT_KIKUCHI_NPB_PLAYER_ID,
+  PILOT_KIKUCHI_YAHOO_BATTER_ID,
+} from '@/lib/pilotPlayerConstants'
+import { createFielderPlaceholderTotalRow } from '@/lib/fielderSeasonPlaceholderRow'
+import { findRosterPlayerByPublicId } from '@/lib/npbRoster'
+import { resolveYahooPilotIdForStats } from '@/lib/yahooNpbBatterIdMap'
+import { formatWeekRangeTueToSunFromTuesdayYmd } from '@/lib/yahooGame/jstPeriodKeys'
+import type { PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
+import { DERIVED_SEASON_YEAR_DEFAULT, enrichSeasonStatsRowSabermetrics } from '@/lib/seasonStatsPilotShared'
 
-/** パイロット対象選手の Yahoo ID (菊池涼介: 広島) */
-export const PILOT_PLAYER_YAHOO_ID = '1100082'
+/** クライアントは `@/lib/seasonStatsPilotShared` を参照（fs を引き込まない） */
+export type { PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
+export {
+  DERIVED_SEASON_YEAR_DEFAULT,
+  enrichSeasonStatsRowSabermetrics,
+  mergeSeasonStatsRows,
+} from '@/lib/seasonStatsPilotShared'
 
-/** NPB公式の player_id (master_csv / ランキングJSON で使用) */
-const PILOT_PLAYER_NPB_ID = '61565135'
+/** パイロット対象選手の Yahoo ID (菊池涼介: 広島) — 個人ページの問い合わせ ID と同一 */
+export const PILOT_PLAYER_YAHOO_ID = PILOT_KIKUCHI_YAHOO_BATTER_ID
+
+const PILOT_PLAYER_NPB_ID = PILOT_KIKUCHI_NPB_PLAYER_ID
 
 /** 選手名・ID → Yahoo ID マッピング（パイロットテスト用） */
 const NAME_TO_YAHOO_ID: Record<string, string> = {
   '菊池涼介': PILOT_PLAYER_YAHOO_ID,
   '菊池 涼介': PILOT_PLAYER_YAHOO_ID,
   '菊池　涼介': PILOT_PLAYER_YAHOO_ID,
+  'Kikuchi Ryosuke': PILOT_PLAYER_YAHOO_ID,
+  'KikuchiRyosuke': PILOT_PLAYER_YAHOO_ID,
   [PILOT_PLAYER_NPB_ID]: PILOT_PLAYER_YAHOO_ID,
+  ファビアン: PILOT_FABIAN_YAHOO_BATTER_ID,
+  'Ｓ．ファビアン': PILOT_FABIAN_YAHOO_BATTER_ID,
+  [PILOT_FABIAN_NPB_PLAYER_ID]: PILOT_FABIAN_YAHOO_BATTER_ID,
+  [PILOT_FABIAN_YAHOO_BATTER_ID]: PILOT_FABIAN_YAHOO_BATTER_ID,
 }
 
 /** 個人ページ表示項目整理 ブロックA・D 準拠 */
@@ -80,8 +105,20 @@ export function getYahooIdForPilot(playerIdOrName: string): string | null {
   if (trimmed === PILOT_PLAYER_NPB_ID) return PILOT_PLAYER_YAHOO_ID
   const norm = normalizeName(trimmed)
   if (norm === '菊池涼介') return PILOT_PLAYER_YAHOO_ID
+  if (norm === 'KikuchiRyosuke') return PILOT_PLAYER_YAHOO_ID
+  if (norm === 'ファビアン' || norm === 'Ｓ．ファビアン') return PILOT_FABIAN_YAHOO_BATTER_ID
   for (const [name, id] of Object.entries(NAME_TO_YAHOO_ID)) {
     if (normalizeName(name) === norm) return id
+  }
+  const fromBridge = resolveYahooPilotIdForStats(trimmed)
+  if (fromBridge) return fromBridge
+
+  // 数値以外の URL（日本語名・英字名など）→ 名簿で NPB ID に落とし、橋渡し CSV で Yahoo に変換
+  // （resolveYahooPilotIdForStats は数字のみのため、上記だけでは日本語パスが解決できなかった）
+  const rosterPlayer = findRosterPlayerByPublicId(trimmed)
+  if (rosterPlayer?.npb_player_id) {
+    const y = resolveYahooPilotIdForStats(rosterPlayer.npb_player_id)
+    if (y) return y
   }
   return null
 }
@@ -91,8 +128,227 @@ function formatSplitLabel(splitType: string, splitValue: string): string {
   if (splitType === 'day_night') return splitValue === 'day' ? 'デーゲーム' : 'ナイター'
   if (splitType === 'home_away') return splitValue === 'home' ? 'ホーム' : 'ビジター'
   if (splitType === 'vs_team') return splitValue.replace(/^vs_/, '')
-  if (splitType === 'bat_order') return `打順${splitValue.replace('bat_order_', '')}`
+  if (splitType === 'bat_order') {
+    const n = splitValue.replace('bat_order_', '')
+    return /^[1-9]$/.test(n) ? `${n}番` : `打順${n}`
+  }
+  if (splitType === 'stadium') return splitValue
+  if (splitType === 'vs_hand') {
+    if (splitValue === 'R') return '対右投手'
+    if (splitValue === 'L') return '対左投手'
+    return '対不明'
+  }
+  if (splitType === 'pa_round') {
+    if (splitValue === '1') return '1巡目'
+    if (splitValue === '2') return '2巡目'
+    if (splitValue === '3') return '3巡目'
+    if (splitValue === '4') return '4巡目'
+    if (splitValue === '5') return '5巡目以上'
+  }
+  if (splitType === 'base_sit') {
+    const m: Record<string, string> = {
+      none: '無し',
+      r1: '1塁',
+      r2: '2塁',
+      r3: '3塁',
+      r12: '1・2塁',
+      r13: '1・3塁',
+      r23: '2・3塁',
+      loaded: '満塁',
+      risp: '得点圏',
+      no_risp: '非得点圏',
+    }
+    return m[splitValue] ?? splitValue
+  }
+  if (splitType === 'calendar_month') {
+    const m = splitValue.match(/^(\d{4})-(\d{2})$/)
+    if (m) return `${parseInt(m[2], 10)}月`
+  }
+  if (splitType === 'calendar_week') {
+    return formatWeekRangeTueToSunFromTuesdayYmd(splitValue)
+  }
   return splitValue
+}
+
+function normalizeDerivedRowLabels(row: SeasonStatsRow): SeasonStatsRow {
+  if (row.split_type === 'calendar_month') {
+    try {
+      return {
+        ...row,
+        split_label: formatSplitLabel('calendar_month', row.split_value),
+      }
+    } catch {
+      return row
+    }
+  }
+  const label = (row.split_label || '').trim()
+  if (label) return row
+  try {
+    return {
+      ...row,
+      split_label: formatSplitLabel(row.split_type, row.split_value),
+    }
+  } catch {
+    return row
+  }
+}
+
+/** `_data/derived/player_season_batting/{year}/yahoo_*.json`（Phase 11） */
+export function loadPhase11DerivedBattingRows(yahooId: string, year: string): SeasonStatsRow[] {
+  const jsonPath = path.join(
+    process.cwd(),
+    '_data',
+    'derived',
+    'player_season_batting',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  if (!fs.existsSync(jsonPath)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
+    const rows = raw.rows ?? []
+    return rows.map(normalizeDerivedRowLabels)
+  } catch {
+    return []
+  }
+}
+
+/** `_data/derived/player_season_batting_context/{year}/yahoo_*.json`（Phase 13） */
+export function loadPhase13ContextBattingRows(yahooId: string, year: string): SeasonStatsRow[] {
+  const jsonPath = path.join(
+    process.cwd(),
+    '_data',
+    'derived',
+    'player_season_batting_context',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  if (!fs.existsSync(jsonPath)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
+    const rows = raw.rows ?? []
+    return rows.map(normalizeDerivedRowLabels)
+  } catch {
+    return []
+  }
+}
+
+/** `_data/derived/player_season_batting_splits/{year}/yahoo_*.json`（Phase 15: 打席別巡目等） */
+export function loadPhase15BattingSplitRows(yahooId: string, year: string): SeasonStatsRow[] {
+  const jsonPath = path.join(
+    process.cwd(),
+    '_data',
+    'derived',
+    'player_season_batting_splits',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  if (!fs.existsSync(jsonPath)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
+    const rows = raw.rows ?? []
+    return rows.map(normalizeDerivedRowLabels)
+  } catch {
+    return []
+  }
+}
+
+/** `_data/derived/player_season_batting_count/{year}/yahoo_*.json`（Phase 16: カウント別） */
+export function loadPhase16BattingCountRows(yahooId: string, year: string): SeasonStatsRow[] {
+  const jsonPath = path.join(
+    process.cwd(),
+    '_data',
+    'derived',
+    'player_season_batting_count',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  if (!fs.existsSync(jsonPath)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
+    const rows = raw.rows ?? []
+    return rows.map(normalizeDerivedRowLabels)
+  } catch {
+    return []
+  }
+}
+
+/** `_data/derived/player_season_batting_period/{year}/yahoo_*.json`（Phase 17: 月間・週間） */
+export function loadPhase17BattingPeriodRows(yahooId: string, year: string): SeasonStatsRow[] {
+  const jsonPath = path.join(
+    process.cwd(),
+    '_data',
+    'derived',
+    'player_season_batting_period',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  if (!fs.existsSync(jsonPath)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
+    const rows = raw.rows ?? []
+    return rows.map(normalizeDerivedRowLabels)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * パイロット CSV（batting_stats）を優先し、無いときは Phase 11 通算を補完。
+ * Phase 13 のコンテキスト行は CSV とキーが重ならない分だけ付与する。
+ * Phase 15 の打席別（巡目）・打順別行は CSV とキーが重なる場合は Phase 15 を優先する。
+ * Phase 16 のカウント別行も同様。
+ * Phase 17 の月間・週間行も同様。
+ */
+export function mergePilotSeasonStatsWithDerived(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): SeasonStatsRow[] {
+  const csv = loadPilotBattingStats(yahooId)
+  const csvKeys = new Set(csv.map((r) => `${r.split_type}\t${r.split_value}`))
+  const phase11 = loadPhase11DerivedBattingRows(yahooId, year)
+  const phase13 = loadPhase13ContextBattingRows(yahooId, year)
+  const phase15 = loadPhase15BattingSplitRows(yahooId, year)
+  const phase16 = loadPhase16BattingCountRows(yahooId, year)
+  const phase17 = loadPhase17BattingPeriodRows(yahooId, year)
+
+  let out: SeasonStatsRow[] = [...csv]
+  if (out.length === 0 && phase11.length > 0) {
+    out = [...phase11]
+  } else {
+    const hasTotal = out.some((r) => r.split_type === 'total' && r.split_value === 'total')
+    if (!hasTotal) {
+      const t = phase11.find((r) => r.split_type === 'total' && r.split_value === 'total')
+      if (t) out = [normalizeDerivedRowLabels(t), ...out]
+    }
+  }
+  const phase13KeySet = new Set(phase13.map((r) => `${r.split_type}\t${r.split_value}`))
+  out = out.filter((r) => !phase13KeySet.has(`${r.split_type}\t${r.split_value}`))
+  for (const row of phase13) {
+    out.push(normalizeDerivedRowLabels(row))
+  }
+  const phase15KeySet = new Set(phase15.map((r) => `${r.split_type}\t${r.split_value}`))
+  out = out.filter((r) => !phase15KeySet.has(`${r.split_type}\t${r.split_value}`))
+  for (const row of phase15) {
+    out.push(normalizeDerivedRowLabels(row))
+  }
+  for (const row of phase16) {
+    const k = `${row.split_type}\t${row.split_value}`
+    if (!csvKeys.has(k)) out.push(normalizeDerivedRowLabels(row))
+  }
+  for (const row of phase17) {
+    const k = `${row.split_type}\t${row.split_value}`
+    if (!csvKeys.has(k)) out.push(normalizeDerivedRowLabels(row))
+  }
+
+  const total = out.filter((r) => r.split_type === 'total' && r.split_value === 'total')
+  const rest = out
+    .filter((r) => !(r.split_type === 'total' && r.split_value === 'total'))
+    .sort((a, b) => {
+      if (a.split_type !== b.split_type) return a.split_type.localeCompare(b.split_type)
+      return a.split_value.localeCompare(b.split_value)
+    })
+  return [...total, ...rest].map((r) => enrichSeasonStatsRowSabermetrics(r))
 }
 
 function fmtSlash3(n: number | null): string {
@@ -140,7 +396,7 @@ function computeBattingFromPaRows(rows: Array<Record<string, string>>) {
   const obpDen = ab + bb + hbp + sf
   const obp = obpDen > 0 ? (h + bb + hbp) / obpDen : null
   const slg = ab > 0 ? tb / ab : null
-  const ops = obp != null && slg != null ? obp + slg : null
+  const ops = obp != null ? obp + (ab > 0 ? tb / ab : 0) : null
 
   return {
     g: gameIds.size,
@@ -288,43 +544,6 @@ export function loadPilotBattingStats(yahooId: string): SeasonStatsRow[] {
   return [...total, ...rest]
 }
 
-/** 菊池涼介 2026-03-04 ブロック集計データ（D,E,F,G,H,I,J） */
-export type PilotBlocksData = {
-  meta: { batter_id: string; batter_name: string; date: string; pa_count: number; game_ids: string[] }
-  blocks: {
-    D?: { source: string; rows: Record<string, unknown>[] }
-    E?: { source: string; available: boolean; note?: string }
-    F?: {
-      by_month: Record<string, number>
-      by_day_night: Record<string, number>
-      by_stadium: Record<string, number>
-      by_base_state: Record<string, number>
-      by_risp: Record<string, number>
-      by_risp_stats?: {
-        risp: { pa: number; ab: number; r: number; h: number; h2: number; h3: number; hr: number; tb: number; rbi: number; so: number; bb: number; ibb: number; hbp: number; sh: number; sf: number; sb: number; cs: number; g: number; avg: string; obp: string; slg: string; ops: string }
-        no_risp: { pa: number; ab: number; r: number; h: number; h2: number; h3: number; hr: number; tb: number; rbi: number; so: number; bb: number; ibb: number; hbp: number; sh: number; sf: number; sb: number; cs: number; g: number; avg: string; obp: string; slg: string; ops: string }
-      }
-    }
-    G?: {
-      hit_direction: Record<string, number>
-      course: Record<string, number>
-      pitch_type: Record<string, number>
-    }
-    H?: {
-      ground_fly: Record<string, number>
-      vs_left: number
-      vs_right: number
-      vs_unknown: number
-    }
-    I?: {
-      by_inning: Record<string, number>
-      by_outs: Record<string, number>
-      by_base_state: Record<string, number>
-    }
-    J?: { sb: number; cs: number; hr: number; clutch_hr_risp: number; recent_date: string }
-  }
-}
-
 export function loadPilotBlocksData(yahooId: string): PilotBlocksData | null {
   if (yahooId !== PILOT_PLAYER_YAHOO_ID) return null
   const jsonPath = path.join(process.cwd(), '_data', 'yahoo_games_pilot', 'kikuchi_20260304_blocks.json')
@@ -337,3 +556,7 @@ export function loadPilotBlocksData(yahooId: string): PilotBlocksData | null {
   }
 }
 
+/** 名簿野手で Yahoo パイロット未連携のとき、見出し・表用の空の通算行 */
+export function createPlaceholderTotalSeasonRow(): SeasonStatsRow {
+  return createFielderPlaceholderTotalRow() as SeasonStatsRow
+}

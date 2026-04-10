@@ -4,13 +4,16 @@
  */
 
 import { NextResponse } from "next/server"
-import { getNpbRoster2026 } from "@/lib/npbRoster"
+import { findRosterPlayerByPublicId, getNpbRoster2026 } from "@/lib/npbRoster"
 
-export async function GET() {
+export async function GET(request: Request) {
   const roster = getNpbRoster2026()
+  const publicId = new URL(request.url).searchParams.get("publicId")?.trim() ?? ""
+  const matchedPlayer = publicId ? findRosterPlayerByPublicId(publicId) : null
   return NextResponse.json({
     year: 2026,
     count: roster.length,
     players: roster,
+    matchedPlayer,
   })
 }

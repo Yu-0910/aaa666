@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "yahoo-npb-game-meta-v1",
+  "gameId": "2021038624",
+  "fetchedAt": "2026-04-07T08:30:21.930442+00:00",
+  "source": {
+    "url": "https://baseball.yahoo.co.jp/npb/game/2021038624/score",
+    "httpStatus": 200,
+    "htmlSha256": "42298cd798d8563c02195dff981649c8185c9d84e14a5b6938a55aa87a6b0d9c"
+  },
+  "meta": {
+    "documentTitle": "2026年3月27日 広島東洋カープvs.中日ドラゴンズ 一球速報 - プロ野球 - スポーツナビ",
+    "ogTitle": "2026年3月27日 広島東洋カープvs.中日ドラゴンズ 一球速報 - プロ野球 - スポーツナビ",
+    "gameDateYmd": "2026-03-27",
+    "titleHomeTeamName": "広島東洋カープ",
+    "titleVisitorTeamName": "中日ドラゴンズ",
+    "startTimeLocal": "18:00",
+    "stadiumName": "マツダスタジアム",
+    "dayNight": {
+      "kind": "night",
+      "source": "inferred_from_start_time",
+      "rule": "hour>=17"
+    },
+    "scoreboardTeamOrder": [
+      {
+        "role": "visitor",
+        "teamName": "中日",
+        "yahooTeamId": "4"
+      },
+      {
+        "role": "home",
+        "teamName": "広島",
+        "yahooTeamId": "6"
+      }
+    ],
+    "scoreboardTeams": [
+      {
+        "teamName": "中日",
+        "yahooTeamId": "4"
+      },
+      {
+        "teamName": "広島",
+        "yahooTeamId": "6"
+      }
+    ]
+  },
+  "notes": [
+    "Yahoo 表示順のスコア表は 1 行目がビジター、2 行目がホームの想定で role を付与。",
+    "タイトル側の vs は「ホーム vs ビジター」表記。スコア表と突き合わせて利用すること。",
+    "デー/ナイターはページに文言が無い場合は開始時刻から推定（公式区分と異なる場合あり）。"
+  ]
+}

@@ -6,6 +6,19 @@
 export type MetricFormat = "decimal3_no0" | "percent1" | "decimal2" | "decimal3_with0" | "int";
 
 /**
+ * 防御率（ERA）表示の統一ルール。
+ * - 常に「整数部 + . + 小数2桁」
+ * - 0 は "0.00"
+ * - 欠損は "—"
+ */
+export function formatEra(value: unknown): string {
+  if (value === null || value === undefined || value === "" || value === "-") return "—"
+  const numValue = typeof value === "number" ? value : Number(value)
+  if (Number.isNaN(numValue) || !Number.isFinite(numValue)) return "—"
+  return numValue.toFixed(2)
+}
+
+/**
  * 指標ラベル（日本語）から表示フォーマットを取得
  * @param metricLabel 指標ラベル（例: "OPS", "打率", "BB%"）
  * @returns 表示フォーマット種別
@@ -99,10 +112,35 @@ export function getMetricFormat(metricLabel: string): MetricFormat {
     'セーブ': 'int',
     '奪三振': 'int',
     '完投': 'int',
-    '防御率': 'decimal3_no0',
+    // 防御率はサイト全体で「0.00」「10.00」形式に統一する（先頭0省略しない）
+    '防御率': 'decimal2',
     'WHIP': 'decimal3_no0',
     '勝率': 'decimal3_no0',
     '投球回': 'decimal2',
+    'K-BB％': 'percent1',
+    '勝利': 'int',
+    '敗戦': 'int',
+    'HLD': 'int',
+    'Ｓ': 'int',
+    'ＨＰ': 'int',
+    '試合': 'int',
+    '先発': 'int',
+    '完封': 'int',
+    '回数': 'decimal2',
+    '被打者': 'int',
+    '投球数': 'int',
+    'P/IP': 'decimal2',
+    '被安': 'int',
+    '被本': 'int',
+    'K％': 'percent1',
+    'BB％': 'percent1',
+    'QS率': 'percent1',
+    'HQS率': 'percent1',
+    'SQS率': 'percent1',
+    '被打率': 'decimal3_no0',
+    '被BABIP': 'decimal3_no0',
+    '被出塁率': 'decimal3_no0',
+    '被長打率': 'decimal3_no0',
   };
 
   const format = formatMap[metricLabel];

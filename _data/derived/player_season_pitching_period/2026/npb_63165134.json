@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "phase7-player-season-pitching-period-v0",
+  "seasonYear": "2026",
+  "npbPlayerId": "63165134",
+  "generatedAt": "2026-04-06T18:52:25.459Z",
+  "meta": {
+    "gameDateSource": "game.meta.documentTitle / ogTitle（YYYY年M月D日）",
+    "weekRule": "火曜始まり・日曜終わり（jstPeriodKeys、phase17 と同一）"
+  },
+  "source": {
+    "canonicalGames": [
+      "2021038624"
+    ]
+  },
+  "rows": [
+    {
+      "split_type": "calendar_month",
+      "split_value": "2026-03",
+      "split_label": "2026年3月",
+      "g": 1,
+      "ip": "6",
+      "ipOuts": 18,
+      "era": 1.5,
+      "bf": 25,
+      "h": 6,
+      "hr": 0,
+      "so": 5,
+      "bb": 1,
+      "hbp": 0,
+      "bk": 0,
+      "r": 1,
+      "er": 1,
+      "pitches": 91,
+      "whip": 1.167,
+      "avgAgainstApprox": ".125"
+    },
+    {
+      "split_type": "calendar_week",
+      "split_value": "2026-03-24",
+      "split_label": "3/24〜3/29",
+      "g": 1,
+      "ip": "6",
+      "ipOuts": 18,
+      "era": 1.5,
+      "bf": 25,
+      "h": 6,
+      "hr": 0,
+      "so": 5,
+      "bb": 1,
+      "hbp": 0,
+      "bk": 0,
+      "r": 1,
+      "er": 1,
+      "pitches": 91,
+      "whip": 1.167,
+      "avgAgainstApprox": ".125"
+    }
+  ]
+}

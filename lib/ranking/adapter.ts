@@ -66,9 +66,9 @@ function calculateDerivedValue(row: BattingCsvRow, csvKey: string): number | nul
       }
     }
     
-    // 両方が計算できた場合のみOPSを返す
-    if (obp !== null && slg !== null) {
-      return obp + slg
+    // AB=0 でも OBP は定義され得る。SLG 未定義時は 0 とみなして OPS = OBP + SLG
+    if (obp !== null) {
+      return obp + (slg ?? 0)
     }
   } else if (csvKey === '長打率' || csvKey === 'SLG') {
     // 長打率 = TB / AB
@@ -252,8 +252,8 @@ function calculateDerivedValue(row: BattingCsvRow, csvKey: string): number | nul
         slg = tb / ab
       }
     }
-    if (obp !== null && slg !== null) {
-      return (obp + slg / 3) * 1000
+    if (obp !== null) {
+      return (obp + (slg ?? 0) / 3) * 1000
     }
   } else if (csvKey === 'GPA' || csvKey === 'gpa') {
     // GPA = (1.8 * OBP + SLG) / 4
@@ -277,8 +277,8 @@ function calculateDerivedValue(row: BattingCsvRow, csvKey: string): number | nul
         slg = tb / ab
       }
     }
-    if (obp !== null && slg !== null) {
-      return (1.8 * obp + slg) / 4
+    if (obp !== null) {
+      return (1.8 * obp + (slg ?? 0)) / 4
     }
   } else if (csvKey === '単打' || csvKey === '1B' || csvKey === 'singles') {
     // 単打 = H - 2B - 3B - HR

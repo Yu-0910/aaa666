@@ -4,16 +4,68 @@ import type React from "react"
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useEffect } from "react"
-import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation"
+import { useState, useEffect, useLayoutEffect, useMemo } from "react"
+import { useRouter, usePathname, useParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
 import PitchDetailsPilot from "@/app/components/PitchDetailsPilot"
 import type { ViewportLayout } from "@/lib/viewportLayout"
-import { useIsDesktop } from "@/hooks/useIsDesktop"
+import { useClientSearchString, useViewportLayout } from "@/hooks/useIsDesktop"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
+import {
+  isFabianPlayerPage,
+  isKikuchiPlayerPage,
+  pathMatchesKikuchiPilot,
+  resolveSeasonStatsPilotQueryId,
+} from "@/lib/resolveSeasonPilotQueryId"
+import { compactPlayerName } from "@/lib/playerNameNormalize"
+import {
+  isFielderRegistrationPosition,
+  isPitcherRegistrationPosition,
+} from "@/lib/rosterPitcher"
+import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
+import { rosterEnglishAliasKeys, rosterEnglishFullFromCsvRow } from "@/lib/rosterEnglishDisplay"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
+import type {
+  PitcherSeasonPocPayload,
+  PitcherSeasonPitchingApiResponse,
+  PitcherSeasonPitchingPeriodApiResponse,
+  PitcherSeasonPitchingPeriodPayload,
+} from "@/lib/pitcherSeasonPocTypes"
+import {
+  EMPTY_TEAM_VS_ROWS,
+  pitcherPocBasicRow1,
+  pitcherPocBasicRow2,
+  pitcherPocBasicRow3,
+  pitcherPocDayNightRows,
+  pitcherPocHomeAwayRows,
+  pitcherPocHandCells,
+  pitcherPocCatcherRows,
+  pitcherPocInningRow,
+  pitcherPocMetricRow1,
+  pitcherPocMetricRow2,
+  pitcherPocMetricRow3,
+  pitcherPocSituationRows,
+  pitcherPocTeamVsRows,
+  pitcherPocStadiumRows,
+  EMPTY_STADIUM_VS_ROWS,
+} from "@/lib/pitcherSeasonPocUi"
+import { formatEra } from "@/lib/formatStat"
+import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327 } from "@/lib/yahooGame/pitcherPocDefaults"
+import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
+import { SectionLoadingSpinner } from "@/components/ui/spinner"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
+
+/** Phase 7 期間タブ: BF ベースの率表示 */
+function pctOfBf(num: number, bf: number): string {
+  if (bf <= 0) return "—"
+  return `${((100 * num) / bf).toFixed(1)}%`
+}
+function kMinusBbPctOfBf(so: number, bb: number, bf: number): string {
+  if (bf <= 0) return "—"
+  return `${((100 * (so - bb)) / bf).toFixed(1)}%`
+}
 
 // チーム色の定義
 const teamColors: Record<string, string> = {
@@ -24,7 +76,7 @@ const teamColors: Record<string, string> = {
   D: "#004ea2", // 中日
   S: "#2bbb3f", // ヤクルト
   Bs: "#b79e51", // オリックス
-  M: "#222", // ロッテ
+  M: "#6b7280", // ロッテ（帯はグレー基調）
   F: "#0077c8", // 日本ハム
   E: "#7a0019", // 楽天
   L: "#004098", // 西武
@@ -88,21 +140,12 @@ const careerHighs = [
   { title: "長打率", value: ".618", year: "2023年", 足: "" },
 ]
 
-/** NFC 後に半角・全角の空白を除いた名前比較（CSVやクエリの「姓　名」表記の差を吸収） */
-function compactPlayerName(s: string): string {
-  return (s || "").normalize("NFC").replace(/[\s\u3000]+/g, "")
-}
-
 function stripQueryHash(s: string): string {
   return (s || "").split("?")[0]?.split("#")[0] || ""
 }
 
 /** NPB 公式 player_id（master CSV / ランキングリンクでパスが数値のみになることがある） */
 const AOYAGI_NPB_ID = "71175132"
-const SUGANO_NPB_ID = "41745137"
-const KIKUCHI_NPB_ID = "61565135"
-const KIKUCHI_YAHOO_ID = "1100082"
-
 const careerStats = [
   {
     year: 2019,
@@ -286,21 +329,42 @@ const careerStats = [
   },
 ]
 
-function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; forceMobile?: boolean }) {
+function PlayerPageClient({
+  layout,
+  forceMobile,
+}: {
+  layout: ViewportLayout
+  forceMobile?: boolean
+}) {
   const isMobile = layout === "mobile"
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
   const BUILD_MARKER = "sugano-season-ui-20260326-01"
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedYear, setSelectedYear] = useState(2025)
-  const [statsTab, setStatsTab] = useState<"season" | "career">("career")
-  const [detailTab, setDetailTab] = useState<"basic" | "pitch" | "situation" | "period">("basic")
-  const [suganoDetailTab, setSuganoDetailTab] = useState<"basic" | "pitch" | "situation" | "period">("basic")
-  const [isSuganoUrlMatch, setIsSuganoUrlMatch] = useState(false)
+  /** 既定は今季。名簿照合前は showSeasonCareerTabs が偽でも通算は (!showSeasonCareerTabs || …) で出るため、career 固定より安全 */
+  const [statsTab, setStatsTab] = useState<"season" | "career">("season")
+  /** 投手「今季の成績」4タブ（PoC シェル）。将来のAPI連携で値を差し替え可能 */
+  const [pitcherSeasonSubTab, setPitcherSeasonSubTab] = useState<
+    "basic" | "pitch" | "situation" | "period"
+  >("basic")
+  // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。初期 pitch だと showPilotTab("situation") が偽になり
+  // 「状況別」の表が DOM に存在しない（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] = useState<
     "basic" | "pitch" | "situation" | "period"
   >("basic")
   const [displayName, setDisplayName] = useState(playerData.name)
   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  const [rosterStripeKey, setRosterStripeKey] = useState("")
+  /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  const [rosterMainReady, setRosterMainReady] = useState(false)
   type GamePitchTypeRow = {
     pitch_type: string
     pitches: number
@@ -313,6 +377,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
     strike_pct: string
     whiff_pct: string
     avg: string
+    ops?: string
     ab: number
     h: number
     hr: number
@@ -330,8 +395,19 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
   const [gamePitchTypes, setGamePitchTypes] = useState<GamePitchTypesData | null>(null)
   type ZoneStat = { zoneId: number; pitches: number; ab: number; h: number; hr: number; ops: string; avg: string }
   const [zoneStats, setZoneStats] = useState<{ vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null>(null)
+  /** Phase 2: `_data/derived/player_season_pitching_poc` を API 経由で取得 */
+  const [pitcherSeasonPocPayload, setPitcherSeasonPocPayload] =
+    useState<PitcherSeasonPocPayload | null>(null)
+  /** Phase 7: `_data/derived/player_season_pitching_period` を API 経由で取得 */
+  const [pitcherSeasonPitchingPeriodPayload, setPitcherSeasonPitchingPeriodPayload] =
+    useState<PitcherSeasonPitchingPeriodPayload | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+  const clientSearch = useClientSearchString()
+  const yahooGameIdParam = useMemo(() => {
+    const q = clientSearch.replace(/^\?/, "")
+    return (new URLSearchParams(q).get("yahooGameId") ?? "").trim()
+  }, [clientSearch])
   const params = useParams()
   const playerIdFromPath = (params?.playerId as string) || ""
   const lastSegmentFromPathname = pathname.split("/").filter(Boolean).pop() || ""
@@ -354,6 +430,97 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
       return playerSegmentCore.normalize("NFC")
     }
   })()
+
+  useLayoutEffect(() => {
+    setRosterMainReady(false)
+  }, [playerIdNormalized])
+
+  useEffect(() => {
+    let cancelled = false
+    const id = playerIdNormalized.trim()
+    const qs =
+      id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+    fetch(`/api/roster/2026${qs}`)
+      .then((r) => r.json())
+      .then(
+        (data: {
+          players: Array<{
+            npb_player_id: string
+            name_ja: string
+            name_en: string
+            name_en_full?: string
+            name_en_short?: string
+            team?: string
+            team_code?: string
+            position?: string
+          }>
+          matchedPlayer?: {
+            npb_player_id: string
+            name_ja: string
+            name_en: string
+            name_en_full?: string
+            name_en_short?: string
+            team?: string
+            team_code?: string
+            position?: string
+          } | null
+        }) => {
+          if (cancelled) return
+          const players = data.players || []
+          /** 表示名は初期値が近本などプレースホルダのままのフレームがある。URL セグメント（日本語名）を先に名簿照合する */
+          const byId =
+            id && /^\d+$/.test(id)
+              ? players.find((p) => String(p.npb_player_id) === id)
+              : undefined
+          const pathNameKey = id && !/^\d+$/.test(id) ? compactPlayerName(playerIdNormalized) : ""
+          const byPathSegment =
+            pathNameKey.length > 0
+              ? players.find((p) => compactPlayerName(p.name_ja) === pathNameKey)
+              : undefined
+          const c = compactPlayerName(displayName)
+          const byName = players.find((p) => compactPlayerName(p.name_ja) === c)
+          /** URL が Yahoo 打者 ID のとき、クライアントでも NPB に落として名簿行を探す（byId は raw===npb のみのため 1600124 等で失敗し得る） */
+          const npbFromYahooManual =
+            id && /^\d+$/.test(id) ? MANUAL_YAHOO_TO_NPB[id] : undefined
+          const byYahooBridge = npbFromYahooManual
+            ? players.find((p) => String(p.npb_player_id) === npbFromYahooManual)
+            : undefined
+          /** サーバー側 findRosterPlayerByPublicId（Yahoo→NPB 橋渡し・Ｓ．省略 等）を最優先 */
+          const matched =
+            data.matchedPlayer ?? byId ?? byPathSegment ?? byName ?? byYahooBridge
+          setIsRosterPlayer(!!matched)
+          setRosterMatchedPosition((matched?.position ?? "").trim())
+          setRosterMatchedNpbId((matched?.npb_player_id ?? "").trim())
+          if (matched) {
+            const stripeKey =
+              (matched.team_code ?? "").trim() || (matched.team ?? "").trim()
+            setRosterStripeKey(stripeKey)
+          } else {
+            setRosterStripeKey("")
+          }
+          const extra: Record<string, string> = {}
+          for (const p of players) {
+            const full = rosterEnglishFullFromCsvRow(p)
+            if (!full) continue
+            Object.assign(extra, rosterEnglishAliasKeys(p.name_ja, full))
+          }
+          setRosterRomanExtra(extra)
+        }
+      )
+      .catch(() => {
+        if (cancelled) return
+        setIsRosterPlayer(false)
+        setRosterMatchedPosition("")
+        setRosterMatchedNpbId("")
+        setRosterStripeKey("")
+      })
+      .finally(() => {
+        if (!cancelled) setRosterMainReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [displayName, playerIdNormalized])
 
   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
   useEffect(() => {
@@ -389,21 +556,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
     }
   }, [pathname])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const rawPath = window.location.pathname || ""
-    let decoded = rawPath
-    try {
-      decoded = decodeURIComponent(rawPath)
-    } catch {
-      // ignore
-    }
-    const key = compactPlayerName(decoded)
-    setIsSuganoUrlMatch(key.includes("菅野") || key.includes(SUGANO_NPB_ID))
-  }, [pathname])
-
   // 青柳: 「今季の成績」投球パイロット（3/15 試合・pitcher 2103788 のデータを表示）
-  const displayNameNorm = displayName.normalize("NFC")
   const isAoyagiPage =
     compactPlayerName(displayName) === compactPlayerName("青柳晃洋") ||
     playerSegmentCore === "2103788" ||
@@ -411,67 +564,199 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
     playerSegmentCore === AOYAGI_NPB_ID ||
     playerIdNormalized === AOYAGI_NPB_ID ||
     compactPlayerName(playerIdNormalized) === compactPlayerName("青柳晃洋")
-  const showAoyagiPitchPilotSeasonUI = isAoyagiPage
-  const suganoNameKey = compactPlayerName("菅野智之")
-  const isSuganoPage =
-    compactPlayerName(displayName) === suganoNameKey ||
-    compactPlayerName(displayName).includes("菅野") ||
-    playerSegmentCore === "菅野智之" ||
-    playerIdNormalized === "菅野智之" ||
-    playerSegmentCore === SUGANO_NPB_ID ||
-    playerIdNormalized === SUGANO_NPB_ID ||
-    compactPlayerName(playerIdNormalized) === suganoNameKey ||
-    compactPlayerName(playerIdNormalized).includes("菅野")
-  /** 菅野ページ: 青柳のUIのみ（数値・URL表記ゆれ対策済み）。成績データはコピーしない */
-  const showSuganoSeasonUI = isSuganoPage || isSuganoUrlMatch
-  const kikuchiNameKey = compactPlayerName("菊池涼介")
-  const seasonPilotPlayerId =
-    playerIdNormalized || playerSegmentCore || (playerSegmentClean || "").replace(/^player-/, "") || displayName
-  const isKikuchiPage =
-    compactPlayerName(displayName) === kikuchiNameKey ||
-    compactPlayerName(displayName).includes("菊池") ||
-    playerSegmentCore === "菊池涼介" ||
-    playerIdNormalized === "菊池涼介" ||
-    playerSegmentCore === KIKUCHI_NPB_ID ||
-    playerIdNormalized === KIKUCHI_NPB_ID ||
-    playerSegmentCore === KIKUCHI_YAHOO_ID ||
-    playerIdNormalized === KIKUCHI_YAHOO_ID ||
-    compactPlayerName(playerIdNormalized) === kikuchiNameKey ||
-    compactPlayerName(playerIdNormalized).includes("菊池")
-  useEffect(() => {
-    if (!showAoyagiPitchPilotSeasonUI) return
-    fetch("/api/games/2021040084/pitchers/2103788/pitch-types")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: GamePitchTypesData | null) => data && setGamePitchTypes(data))
-      .catch(() => {})
-  }, [showAoyagiPitchPilotSeasonUI])
+  /** 菊池今季パイロット: 判定・API 用 playerId は lib/resolveSeasonPilotQueryId に集約（再発防止） */
+  const isKikuchiPage = isKikuchiPlayerPage({
+    pathname,
+    playerIdNormalized,
+    playerSegmentCore,
+    displayName,
+    displayRomanName,
+  })
+  const isFabianPage = isFabianPlayerPage({
+    pathname,
+    playerIdNormalized,
+    playerSegmentCore,
+    displayName,
+    displayRomanName,
+  })
+  /**
+   * 投手の「今季の成績」PoC シェル（未連携は「—」「ー」）。
+   * 菊池（打者パイロット）は除外。名簿のポジションが空欄の場合は投手扱い（rosterPitcher.ts 参照）。
+   */
+  const showPitcherSeasonSuganoUi =
+    !isKikuchiPage &&
+    !pathMatchesKikuchiPilot(pathname) &&
+    (isAoyagiPage ||
+      (isRosterPlayer &&
+        isPitcherRegistrationPosition(rosterMatchedPosition, {
+          rosterNpbPlayerId: rosterMatchedNpbId,
+        })))
+  /**
+   * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
+   * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
+   */
+  const showFielderSeasonPilotUi =
+    !showPitcherSeasonSuganoUi &&
+    ((isRosterPlayer &&
+      isFielderRegistrationPosition(rosterMatchedPosition, {
+        rosterNpbPlayerId: rosterMatchedNpbId,
+      })) ||
+      isFabianPage ||
+      isKikuchiPage)
+  const seasonPilotPlayerId = resolveSeasonStatsPilotQueryId({
+    pathname,
+    playerIdNormalized,
+    playerSegmentCore,
+    playerSegmentClean,
+    displayName,
+    displayRomanName,
+  })
+  /** 名簿にいる選手・パイロット対象のみ「今季／通算」タブと今季ブロックを出す */
+  const showSeasonCareerTabs =
+    isRosterPlayer ||
+    isAoyagiPage ||
+    isKikuchiPage ||
+    isFabianPage
 
+  /**
+   * 今季ブロックは statsTab === "season" のときだけ描画。名簿照合が遅いと一時的に showSeasonCareerTabs が偽になるが、
+   * ここで career に落とすと照合成功後も通算のまま残り得た（初期 career との組み合わせ）。
+   * 非名簿ページは通算表示が (!showSeasonCareerTabs || statsTab === "career") で担保されるため、既定は season のまま維持する。
+   */
   useEffect(() => {
-    if (!showAoyagiPitchPilotSeasonUI) return
-    fetch("/api/games/2021040084/pitchers/2103788/zone-stats")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null) => data && setZoneStats(data))
-      .catch(() => {})
-  }, [showAoyagiPitchPilotSeasonUI])
-
-  // 初期表示が「通算成績」のままだと投球パイロット（基本成績タブ）に気づかない／本番URLだけ一致しないとブロック非表示に見えるため、該当選手では「今季の成績」を開く
-  useEffect(() => {
-    if (showAoyagiPitchPilotSeasonUI) {
+    if (
+      showSeasonCareerTabs &&
+      (showPitcherSeasonSuganoUi || showFielderSeasonPilotUi)
+    ) {
       setStatsTab("season")
     }
-  }, [showAoyagiPitchPilotSeasonUI, playerIdNormalized])
+  }, [
+    showSeasonCareerTabs,
+    showPitcherSeasonSuganoUi,
+    showFielderSeasonPilotUi,
+    playerIdNormalized,
+  ])
 
+  /** Phase 3: ?yahooGameId= で試合切替。未指定時は広島中日 PoC 既定（青柳のみ別試合 2021040084） */
   useEffect(() => {
-    if (showSuganoSeasonUI) {
-      setStatsTab("season")
+    if (!showPitcherSeasonSuganoUi) {
+      setGamePitchTypes(null)
+      setZoneStats(null)
+      return
     }
-  }, [showSuganoSeasonUI, playerIdNormalized])
+    const gid =
+      yahooGameIdParam ||
+      (isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327)
+    const npb = rosterMatchedNpbId.trim() || (isAoyagiPage ? AOYAGI_NPB_ID : "")
+    if (!gid || !npb) {
+      setGamePitchTypes(null)
+      setZoneStats(null)
+      return
+    }
+    let cancelled = false
+    const base = `/api/games/${encodeURIComponent(gid)}/pitchers/npb/${encodeURIComponent(npb)}`
+    setGamePitchTypes(null)
+    setZoneStats(null)
+    Promise.all([
+      fetch(`${base}/pitch-types`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${base}/zone-stats`).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([pt, zs]) => {
+        if (cancelled) return
+        setGamePitchTypes(pt as GamePitchTypesData | null)
+        setZoneStats(zs as { vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGamePitchTypes(null)
+          setZoneStats(null)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    showPitcherSeasonSuganoUi,
+    yahooGameIdParam,
+    isAoyagiPage,
+    rosterMatchedNpbId,
+    pitcherSeasonPocPayload,
+  ])
 
+  /** Phase 2/6: `_data/derived/player_season_pitching_poc` を API 経由で取得（捕手別含む） */
   useEffect(() => {
-    if (isKikuchiPage) {
-      setStatsTab("season")
+    if (!showPitcherSeasonSuganoUi) {
+      setPitcherSeasonPocPayload(null)
+      return
     }
-  }, [isKikuchiPage, playerIdNormalized])
+    const id = playerIdNormalized.trim()
+    if (!id) {
+      setPitcherSeasonPocPayload(null)
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/season-pitching?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: PitcherSeasonPitchingApiResponse | null) => {
+        if (cancelled || !data) return
+        setPitcherSeasonPocPayload(data.hasData && data.payload ? data.payload : null)
+      })
+      .catch(() => {
+        if (!cancelled) setPitcherSeasonPocPayload(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showPitcherSeasonSuganoUi, playerIdNormalized])
+
+  /** Phase 7: 期間別（月・週）派生 JSON */
+  useEffect(() => {
+    if (!showPitcherSeasonSuganoUi) {
+      setPitcherSeasonPitchingPeriodPayload(null)
+      return
+    }
+    const id = playerIdNormalized.trim()
+    if (!id) {
+      setPitcherSeasonPitchingPeriodPayload(null)
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/season-pitching-period?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: PitcherSeasonPitchingPeriodApiResponse | null) => {
+        if (cancelled || !data) return
+        setPitcherSeasonPitchingPeriodPayload(
+          data.hasData && data.payload ? data.payload : null
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setPitcherSeasonPitchingPeriodPayload(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showPitcherSeasonSuganoUi, playerIdNormalized])
+
+  const pitcherPeriodMonthRows = useMemo(
+    () =>
+      pitcherSeasonPitchingPeriodPayload?.rows.filter((r) => r.split_type === "calendar_month") ??
+      [],
+    [pitcherSeasonPitchingPeriodPayload]
+  )
+  const pitcherPeriodWeekRows = useMemo(
+    () =>
+      pitcherSeasonPitchingPeriodPayload?.rows.filter((r) => r.split_type === "calendar_week") ??
+      [],
+    [pitcherSeasonPitchingPeriodPayload]
+  )
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year)
@@ -484,6 +769,80 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
 
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
   const rankingHref = `/ranking/${selectedYear}/PL`
+  /** 見出し左帯・ヘッダー縦帯と同じ所属色 */
+  const sectionStripeColor = useMemo(
+    () =>
+      isRosterPlayer && rosterStripeKey
+        ? rankingTeamStripeColor(rosterStripeKey)
+        : teamColors[playerData.team] || "#666",
+    [isRosterPlayer, rosterStripeKey]
+  )
+
+  const pitcherPocTeamTable = useMemo(
+    () =>
+      pitcherSeasonPocPayload != null
+        ? pitcherPocTeamVsRows(pitcherSeasonPocPayload)
+        : EMPTY_TEAM_VS_ROWS,
+    [pitcherSeasonPocPayload]
+  )
+
+  const pitcherPocCatcherTable = useMemo(
+    () =>
+      pitcherSeasonPocPayload != null
+        ? pitcherPocCatcherRows(pitcherSeasonPocPayload)
+        : [{ label: "—", cells: Array.from({ length: 7 }, () => "—") }],
+    [pitcherSeasonPocPayload]
+  )
+
+  const pitcherPocHomeAwayTable = useMemo(
+    () =>
+      pitcherSeasonPocPayload != null
+        ? pitcherPocHomeAwayRows(pitcherSeasonPocPayload)
+        : (["ホーム", "アウェー"] as const).map((label) => ({
+            label,
+            era: "—",
+            wl: "—",
+            ip: "—",
+            k_bb_pct: "—",
+            k_pct: "—",
+            whip: "—",
+            avg: "—",
+          })),
+    [pitcherSeasonPocPayload]
+  )
+
+  const pitcherPocDayNightTable = useMemo(
+    () =>
+      pitcherSeasonPocPayload != null
+        ? pitcherPocDayNightRows(pitcherSeasonPocPayload)
+        : (["デー", "ナイター"] as const).map((label) => ({
+            label,
+            era: "—",
+            wl: "—",
+            ip: "—",
+            k_bb_pct: "—",
+            k_pct: "—",
+            whip: "—",
+            qs_pct: "—",
+          })),
+    [pitcherSeasonPocPayload]
+  )
+
+  const pitcherPocMaxInning = useMemo(() => {
+    const fallback = 9
+    const maxFromData =
+      pitcherSeasonPocPayload?.splits?.byInning?.reduce((m, r) => Math.max(m, r.inning ?? 0), 0) ?? 0
+    // 延長は通常 10〜12 回。異常値で縦に伸びすぎないよう上限だけ安全策を置く。
+    return Math.min(18, Math.max(fallback, maxFromData))
+  }, [pitcherSeasonPocPayload])
+
+  const pitcherPocStadiumTable = useMemo(
+    () =>
+      pitcherSeasonPocPayload != null
+        ? pitcherPocStadiumRows(pitcherSeasonPocPayload)
+        : EMPTY_STADIUM_VS_ROWS,
+    [pitcherSeasonPocPayload]
+  )
 
   return (
     <div
@@ -567,26 +926,32 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
         }
         style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
       >
-        {/* Player Name & Stats Tabs */}
-        <div
-          className={
-            isMobile
-              ? "flex flex-row items-center justify-between gap-3 mb-8"
-              : "flex flex-row items-center justify-between gap-4 mb-8"
-          }
-        >
-          <div
-            className="flex items-center gap-2"
-            style={
-              showSuganoSeasonUI
-                ? { transform: "scale(0.9)", transformOrigin: "left center" }
-                : undefined
-            }
-          >
+        {!rosterMainReady ? (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center py-20">
+            <SectionLoadingSpinner className="py-8" />
+          </div>
+        ) : (
+          <>
+            {/* Player Name & Stats Tabs */}
+            <div
+              className={
+                isMobile
+                  ? "flex flex-row items-center justify-between gap-3 mb-8"
+                  : "flex flex-row items-center justify-between gap-4 mb-8"
+              }
+            >
+              <div
+                className="flex items-center gap-2"
+                style={
+                  showPitcherSeasonSuganoUi
+                    ? { transform: "scale(0.9)", transformOrigin: "left center" }
+                    : undefined
+                }
+              >
             {/* Team Color Bar */}
             <div
               className="w-1.5 h-12 flex-shrink-0"
-              style={{ backgroundColor: teamColors[playerData.team] || "#666" }}
+              style={{ backgroundColor: sectionStripeColor }}
             />
             {/* Player Info */}
             <div className="flex flex-col">
@@ -600,14 +965,14 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                 {displayName}
               </h1>
               {(() => {
-                const romanToShow = displayRomanName ?? (playerRomanNames[displayName]
-                  ? (() => {
-                      const parts = playerRomanNames[displayName].split(/\s+/)
-                      return parts.length >= 2
-                        ? `${parts[0][0].toUpperCase()}.${parts[1]}`
-                        : parts[0] ?? ""
-                    })()
-                  : null)
+                const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }
+                const romanFull =
+                  mergedRoman[displayName] ?? mergedRoman[compactPlayerName(displayName)] ?? ""
+                const fromRoster = romanFull.trim()
+                /** ランキング等の ?roman= は略式のため、名簿にフル英字があるときはそちらを優先 */
+                const romanToShow =
+                  fromRoster ||
+                  (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
                 return romanToShow ? (
                   <span className="latin text-sm text-gray-400 leading-tight mt-0.5">
                     {romanToShow}
@@ -616,54 +981,56 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
               })()}
             </div>
           </div>
-          {/* Stats Tab Buttons */}
-          <div
-            className="relative flex shrink-0 overflow-hidden"
-            style={{
-              border: "1px solid #555",
-              backgroundColor: "#1a1a1a",
-            }}
-          >
+          {/* Stats Tab Buttons（名簿・パイロット対象のみ） */}
+          {showSeasonCareerTabs && (
             <div
-              className="absolute inset-y-0 left-0 w-1/2 transition-transform duration-200 ease-out"
+              className="relative isolate box-border flex min-h-9 shrink-0 items-stretch overflow-hidden"
               style={{
-                backgroundColor: "#FFFF44",
-                transform: statsTab === "career" ? "translateX(100%)" : "translateX(0)",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setStatsTab("season")}
-              className="relative z-10 flex flex-1 min-w-[80px] items-center justify-center px-4 py-1.5 font-bold text-[11px] transition-colors duration-150 hover:bg-[#2a2a2a]/50 whitespace-nowrap"
-              style={{
-                color: statsTab === "season" ? "#000000" : "#9ca3af",
+                border: "1px solid #555",
+                backgroundColor: "#1a1a1a",
               }}
             >
-              今季の成績
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatsTab("career")}
-              className="relative z-10 flex flex-1 min-w-[80px] items-center justify-center px-4 py-1.5 font-bold text-[11px] transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-              style={{
-                color: statsTab === "career" ? "#000000" : "#9ca3af",
-              }}
-            >
-              通算成績
-            </button>
-          </div>
+              <div
+                className="absolute inset-y-0 left-0 w-1/2 transition-transform duration-200 ease-out"
+                style={{
+                  backgroundColor: "#FFFF44",
+                  transform: statsTab === "career" ? "translateX(100%)" : "translateX(0)",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setStatsTab("season")}
+                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                style={{
+                  color: statsTab === "season" ? "#000000" : "#9ca3af",
+                }}
+              >
+                今季の成績
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatsTab("career")}
+                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                style={{
+                  color: statsTab === "career" ? "#000000" : "#9ca3af",
+                }}
+              >
+                通算成績
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Profile Table */}
         <div
-          className={showSuganoSeasonUI ? "mb-6" : isKikuchiPage ? "mb-6" : "mb-12"}
+          className={showPitcherSeasonSuganoUi ? "mb-6" : showFielderSeasonPilotUi ? "mb-6" : "mb-12"}
           style={
-            showSuganoSeasonUI || isKikuchiPage
+            showPitcherSeasonSuganoUi || showFielderSeasonPilotUi
               ? {
                   transform: "scale(0.7)",
                   transformOrigin: "top left",
                   width: "142.857%",
-                  marginBottom: showSuganoSeasonUI ? "-2.5rem" : undefined,
+                  marginBottom: showPitcherSeasonSuganoUi ? "-2.5rem" : undefined,
                 }
               : undefined
           }
@@ -785,1494 +1152,105 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
               </tr>
             </tbody>
           </table>
-        </div>
-
-        {/* 今季の成績（Phase 4: 菊池涼介のみパイロットデータ表示） */}
-        {statsTab === "season" && (
-          <div>
-            {!showSuganoSeasonUI && isKikuchiPage ? (
+          {/* 名簿野手: 今季サブタブ（プロフィール表・今季ブロックと同じ幅に収める） */}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            !showPitcherSeasonSuganoUi &&
+            showFielderSeasonPilotUi && (
               <div
+                className="relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-5"
                 style={{
-                  transform: "scale(0.7)",
-                  transformOrigin: "top left",
-                  width: "142.857%",
+                  border: "1px solid #555",
+                  backgroundColor: "#1a1a1a",
                 }}
               >
                 <div
-                  className="relative flex shrink-0 overflow-hidden mb-6"
+                  className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
                   style={{
-                    border: "1px solid #555",
-                    backgroundColor: "#1a1a1a",
+                    backgroundColor: "#FFFF44",
+                    transform:
+                      kikuchiSeasonDetailTab === "basic"
+                        ? "translateX(0)"
+                        : kikuchiSeasonDetailTab === "pitch"
+                          ? "translateX(100%)"
+                          : kikuchiSeasonDetailTab === "situation"
+                            ? "translateX(200%)"
+                            : "translateX(300%)",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setKikuchiSeasonDetailTab("basic")}
+                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                  style={{
+                    color: kikuchiSeasonDetailTab === "basic" ? "#000000" : "#9ca3af",
                   }}
                 >
-                  <div
-                    className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
-                    style={{
-                      backgroundColor: "#FFFF44",
-                      transform:
-                        kikuchiSeasonDetailTab === "basic"
-                          ? "translateX(0)"
-                          : kikuchiSeasonDetailTab === "pitch"
-                            ? "translateX(100%)"
-                            : kikuchiSeasonDetailTab === "situation"
-                              ? "translateX(200%)"
-                              : "translateX(300%)",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setKikuchiSeasonDetailTab("basic")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: kikuchiSeasonDetailTab === "basic" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    基本成績
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKikuchiSeasonDetailTab("pitch")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: kikuchiSeasonDetailTab === "pitch" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    球種情報
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKikuchiSeasonDetailTab("situation")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: kikuchiSeasonDetailTab === "situation" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    状況別
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setKikuchiSeasonDetailTab("period")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: kikuchiSeasonDetailTab === "period" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    期間別
-                  </button>
-                </div>
+                  基本成績
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKikuchiSeasonDetailTab("pitch")}
+                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                  style={{
+                    color: kikuchiSeasonDetailTab === "pitch" ? "#000000" : "#9ca3af",
+                  }}
+                >
+                  球種情報
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKikuchiSeasonDetailTab("situation")}
+                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                  style={{
+                    color: kikuchiSeasonDetailTab === "situation" ? "#000000" : "#9ca3af",
+                  }}
+                >
+                  状況別
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKikuchiSeasonDetailTab("period")}
+                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                  style={{
+                    color: kikuchiSeasonDetailTab === "period" ? "#000000" : "#9ca3af",
+                  }}
+                >
+                  期間別
+                </button>
+              </div>
+            )}
+          {/* 名簿野手・今季: 通算などは同一 scale コンテナ内に置く（別ラッパーだと transform のレイアウト高さで大きな空きが出る） */}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            !showPitcherSeasonSuganoUi &&
+            showFielderSeasonPilotUi && (
+              <>
                 <SeasonStatsPilot
                   playerId={seasonPilotPlayerId}
                   seasonDetailTab={kikuchiSeasonDetailTab}
                   layout={layout}
+                  looseSpacing
+                  rosterFielderShell={showFielderSeasonPilotUi}
+                  rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+                  headingStripeColor={sectionStripeColor}
                 />
                 {kikuchiSeasonDetailTab === "pitch" && (
                   <PitchDetailsPilot
                     playerId={seasonPilotPlayerId}
                     layout={layout}
-                  />
-                )}
-              </div>
-            ) : (
-              <>
-                {!showSuganoSeasonUI && (
-                  <SeasonStatsPilot
-                    playerId={seasonPilotPlayerId}
-                    seasonDetailTab={isKikuchiPage ? kikuchiSeasonDetailTab : undefined}
-                    layout={layout}
-                  />
-                )}
-                {!showSuganoSeasonUI && (!isKikuchiPage || kikuchiSeasonDetailTab === "pitch") && (
-                  <PitchDetailsPilot
-                    playerId={seasonPilotPlayerId}
-                    layout={layout}
+                    headingStripeColor={sectionStripeColor}
                   />
                 )}
               </>
             )}
+        </div>
 
-            {/* 青柳晃洋: 今季基本成績（同一UI・同一成績データ） */}
-            {showAoyagiPitchPilotSeasonUI && (
-              <>
-                {/* Detail Tab Buttons */}
-                <div
-                  className="relative flex shrink-0 overflow-hidden mb-6"
-                  style={{
-                    border: "1px solid #555",
-                    backgroundColor: "#1a1a1a",
-                  }}
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
-                    style={{
-                      backgroundColor: "#FFFF44",
-                      transform:
-                        detailTab === "basic"
-                          ? "translateX(0)"
-                          : detailTab === "pitch"
-                            ? "translateX(100%)"
-                            : detailTab === "situation"
-                              ? "translateX(200%)"
-                              : "translateX(300%)",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setDetailTab("basic")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: detailTab === "basic" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    基本成績
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDetailTab("pitch")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: detailTab === "pitch" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    球種情報
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDetailTab("situation")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: detailTab === "situation" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    状況別
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDetailTab("period")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: detailTab === "period" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    期間別
-                  </button>
-                </div>
-
-                {detailTab === "basic" && (
-                  <>
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  基本成績
-                </h2>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">防御率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">試合</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">先発</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">連投(試)</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">勝利</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">敗戦</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HLD</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">Ｓ</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">ＨＰ</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">2.25</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">ＳＰ</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">完投</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">完封</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">無四球</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">勝率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">回数</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打者</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">投球数</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">P/IP</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被安</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1.000</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">5.0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">21</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">76</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">15.2</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">4</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">被本</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">三振</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">四球</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">故意四</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">死球</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">暴投</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">失点</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">自責</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">WHIP</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">QS率</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">3</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">2</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1.20</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0.0%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 対チーム別の投球成績（3/15阪神戦ベース。該当成績なしは「ー」表示） */}
-                <div>
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  対チーム別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "95px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          チーム
-                        </th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">回数</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">K％</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        // パ・リーグ
-                        { team: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        // セ・リーグ
-                        { team: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { team: "阪神", era: "0.00", ip: "5.0", wl: "1-0", qs_pct: "100.0", k_pct: "14.3", k_bb_pct: "4.8", whip: "1.20", baa: ".211" },
-                        { team: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                      ].map((row) => (
-                        <tr key={row.team} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            <div className="flex items-center gap-1 min-h-[1.25rem]">
-                              <div
-                                className="w-1 h-4 flex-shrink-0"
-                                style={{
-                                  backgroundColor:
-                                    row.team === "巨人"
-                                      ? "#ff6600"
-                                      : row.team === "阪神"
-                                        ? "#ffde00"
-                                        : row.team === "ＤｅＮＡ"
-                                          ? "#0067c0"
-                                          : row.team === "ヤクルト"
-                                            ? "#2bbb3f"
-                                            : row.team === "中日"
-                                              ? "#004ea2"
-                                              : row.team === "広島"
-                                                ? "#d60718"
-                                                : row.team === "日本ハム"
-                                                  ? "#0077c8"
-                                                  : row.team === "楽天"
-                                                    ? "#7a0019"
-                                                    : row.team === "西武"
-                                                      ? "#004098"
-                                                      : row.team === "ロッテ"
-                                                        ? "#222222"
-                                                        : row.team === "オリックス"
-                                                          ? "#b79e51"
-                                                          : row.team === "ソフトバンク"
-                                                            ? "#ffdb00"
-                                                            : "#666666",
-                                }}
-                              />
-                              <span>{row.team}</span>
-                            </div>
-                          </td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                </div>
-
-                {/* 左右別の投球成績（暫定。菊池ページ「左右別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  左右別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "95px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          条件
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { label: "対右打者", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "対左打者", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                      ].map((row) => (
-                        <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.label}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ab}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.bb_pct === "ー" ? "ー" : parseFloat(row.bb_pct) === 100 ? "100％" : parseFloat(row.bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  投球指標
-                </h2>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HQS率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">SQS率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被BABIP</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被出塁率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被長打率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K-BB％</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K％</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB％</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">0.0%</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0.0%</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">.211</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">.250</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">.286</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1.50</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">5.40</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">3.60</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HR/9</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">GO/AO</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護率</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IPR</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB%</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">FIP</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">LOB%</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSAA</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSWIN</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">0.00</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1.80</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0.00</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">100.0%</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="overflow-hidden overflow-x-auto mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "collapse",
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <tbody>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">PR</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">KD</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">失点時回数</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護回</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護点</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時回数</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時失点</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB</th>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">無失点</th>
-                      </tr>
-                      <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0.0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0.0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">0</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">—</td>
-                        <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">1</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* コース別の投球成績（対右打者）（菊池ページ「コース別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  コース別の投球成績（対右打者）
-                </h2>
-                <div className="overflow-x-auto flex justify-center mb-4">
-                  <div
-                    className="inline-grid grid-cols-5 gap-0"
-                    style={{
-                      border: "0.5px solid #888888",
-                      background: "#000000",
-                      minWidth: "min(95vw, 380px)",
-                    }}
-                  >
-                    {[1, 2, 3, 4, 5].map((row) =>
-                      [1, 2, 3, 4, 5].map((col) => {
-                        const z = (row - 1) * 5 + col
-                        const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
-                        const stat = zoneStats?.vsRight?.find((s) => s.zoneId === z)
-                        const opsVal = stat?.ops ?? "ー"
-                        const avgVal = stat?.avg ?? "ー"
-                        const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
-                        return (
-                          <div
-                            key={z}
-                            className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
-                            style={{
-                              border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
-                              backgroundColor: "#000000",
-                              color: "#e5e5e5",
-                            }}
-                          >
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被OPS</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被打率</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被本</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 latin">
-                  5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
-                </p>
-
-                {/* コース別の投球成績（対左打者）（菊池ページ「コース別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  コース別の投球成績（対左打者）
-                </h2>
-                <div className="overflow-x-auto flex justify-center mb-4">
-                  <div
-                    className="inline-grid grid-cols-5 gap-0"
-                    style={{
-                      border: "0.5px solid #888888",
-                      background: "#000000",
-                      minWidth: "min(95vw, 380px)",
-                    }}
-                  >
-                    {[1, 2, 3, 4, 5].map((row) =>
-                      [1, 2, 3, 4, 5].map((col) => {
-                        const z = (row - 1) * 5 + col
-                        const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
-                        const stat = zoneStats?.vsLeft?.find((s) => s.zoneId === z)
-                        const opsVal = stat?.ops ?? "ー"
-                        const avgVal = stat?.avg ?? "ー"
-                        const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
-                        return (
-                          <div
-                            key={z}
-                            className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
-                            style={{
-                              border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
-                              backgroundColor: "#000000",
-                              color: "#e5e5e5",
-                            }}
-                          >
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被OPS</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被打率</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] latin">
-                              <span className="opacity-70">被本</span>
-                              <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 latin">
-                  5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
-                </p>
-                  </>
-                )}
-
-                {detailTab === "pitch" && (
-                  <>
-                {/* 球種一覧（菊池ページ「球種別の打撃成績」と同デザイン・球種別取得データを表示） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  球種一覧
-                </h2>
-                {gamePitchTypes == null ? (
-                  <p className="text-sm text-gray-400 mb-4">球種データを読み込み中...</p>
-                ) : (
-                  <>
-                    {/* 球種の投球割合（円グラフ） */}
-                    <PitchTypePieChart rows={gamePitchTypes.rows} />
-                    <div className="overflow-x-auto overflow-y-hidden mb-4 mt-8">
-                    <table
-                      className="text-xs"
-                      style={{
-                        fontVariantNumeric: "tabular-nums",
-                        borderCollapse: "separate",
-                        borderSpacing: 0,
-                        border: "1px solid #555",
-                        width: "100%",
-                        minWidth: "473px",
-                        tableLayout: "fixed",
-                      }}
-                    >
-                      <colgroup>
-                        <col style={{ width: "102px" }} />
-                        <col style={{ width: "95px" }} />
-                        <col style={{ width: "57px" }} />
-                        <col style={{ width: "57px" }} />
-                        <col style={{ width: "57px" }} />
-                        <col style={{ width: "48px" }} />
-                        <col style={{ width: "57px" }} />
-                      </colgroup>
-                      <thead>
-                        <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                          <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                            球種
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            平均球速
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            割合
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            Strike％
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            空振り％
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            被打率
-                          </th>
-                          <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                            被OPS
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gamePitchTypes.rows.map((row) => (
-                          <tr key={row.pitch_type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                            <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                              style={{ backgroundColor: "#1a1a1a" }}
-                            >
-                              {row.pitch_type}
-                            </td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg_speed_kmh != null ? row.avg_speed_kmh.toFixed(1) + " km/h" : "—"}</td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.pct.toFixed(1)}%</td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.strike_pct}</td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whiff_pct}</td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg}</td>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                              {(() => {
-                                const denom = row.ab + row.bb + row.hbp
-                                const obp = denom > 0 ? (row.h + row.bb + row.hbp) / denom : null
-                                const slg = row.ab > 0 ? (row.h + 3 * row.hr) / row.ab : null
-                                if (obp != null && slg != null) {
-                                  const ops = obp + slg
-                                  return ops < 1 ? "." + ops.toFixed(3).slice(2) : ops.toFixed(3)
-                                }
-                                return "—"
-                              })()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  </>
-                )}
-
-                  </>
-                )}
-
-                {detailTab === "situation" && (
-                  <>
-                {/* 球場別の投球成績（菊池ページ「球場別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  球場別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "95px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          球場
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        // パ・リーグ本拠・主要球場
-                        { venue: "エスコンＦ", teamLabel: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "楽天モバイル", teamLabel: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "ベルーナD", teamLabel: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "ZOZOマリン", teamLabel: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "京セラD大阪", teamLabel: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "みずほPayPay", teamLabel: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        // セ・リーグ主要球場
-                        { venue: "東京ドーム", teamLabel: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "神宮球場", teamLabel: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "横浜スタジアム", teamLabel: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "バンテリンD", teamLabel: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { venue: "甲子園球場", teamLabel: "阪神", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        // マツダ（3/15 阪神戦）
-                        { venue: "マツダ", teamLabel: "広島", era: "0.00", ip: "5.0", wl: "1-0", qs_pct: "100.0", k_pct: "14.3", k_bb_pct: "4.8", whip: "1.20", baa: ".211" },
-                        // 地方球場（セ・パ問わず、地方開催はすべてここに集約）
-                        { venue: "地方球場", teamLabel: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                      ].map((row) => (
-                        <tr key={row.venue} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            <div className="flex items-center gap-1 min-h-[1.25rem]">
-                              <div
-                                className="w-1 h-4 flex-shrink-0"
-                                style={{
-                                  backgroundColor:
-                                    row.teamLabel === "日本ハム"
-                                      ? "#0077c8"
-                                      : row.teamLabel === "楽天"
-                                        ? "#7a0019"
-                                        : row.teamLabel === "西武"
-                                          ? "#004098"
-                                          : row.teamLabel === "ロッテ"
-                                            ? "#222222"
-                                            : row.teamLabel === "オリックス"
-                                              ? "#b79e51"
-                                              : row.teamLabel === "ソフトバンク"
-                                                ? "#ffdb00"
-                                                : row.teamLabel === "巨人"
-                                                  ? "#ff6600"
-                                                  : row.teamLabel === "ヤクルト"
-                                                    ? "#2bbb3f"
-                                                    : row.teamLabel === "ＤｅＮＡ" || row.teamLabel === "横浜"
-                                                      ? "#0067c0"
-                                                      : row.teamLabel === "中日"
-                                                        ? "#004ea2"
-                                                        : row.teamLabel === "阪神"
-                                                          ? "#ffde00"
-                                                          : row.teamLabel === "広島"
-                                                            ? "#d60718"
-                                                            : "#666666",
-                                }}
-                              />
-                              <span>{row.venue}</span>
-                            </div>
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* ホーム&ビジター別の投球成績（菊池ページ「ホーム&ビジター別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  ホーム&ビジター別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "65px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          種別
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          type: "ホーム",
-                          era: "0.00",
-                          ip: "5.0",
-                          wl: "1-0",
-                          qs_pct: "100.0",
-                          k_pct: "14.3",
-                          k_bb_pct: "4.8",
-                          whip: "1.20",
-                          baa: ".211",
-                        },
-                        {
-                          type: "アウェー",
-                          era: "ー",
-                          ip: "ー",
-                          wl: "ー",
-                          qs_pct: "ー",
-                          k_pct: "ー",
-                          k_bb_pct: "ー",
-                          whip: "ー",
-                          baa: "ー",
-                        },
-                      ].map((row) => (
-                        <tr key={row.type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.type}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* イニング別の投球成績（暫定。菊池ページ「左右別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  イニング別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "58px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          イニング
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { label: "1回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "2回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "3回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "4回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "5回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "6回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "7回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "8回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                        { label: "9回", era: "ー", ab: "ー", bb_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー", hr: "ー" },
-                      ].map((row) => (
-                        <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-0.5 py-1 text-center latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.label}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ab}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.bb_pct === "ー" ? "ー" : parseFloat(row.bb_pct) === 100 ? "100％" : parseFloat(row.bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 捕手別の投球成績（3/15阪神戦ベース。菊池ページ「デー&ナイター別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  捕手別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "65px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          捕手
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          catcher: "石原 貴規",
-                          era: "0.00",
-                          ip: "5.0",
-                          wl: "1-0",
-                          qs_pct: "100.0",
-                          k_pct: "14.3",
-                          k_bb_pct: "4.8",
-                          whip: "1.20",
-                          baa: ".211",
-                        },
-                      ].map((row) => (
-                        <tr key={row.catcher} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.catcher}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* デー&ナイター別の投球成績（菊池ページ「ホーム&ビジター別の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  デー&ナイター別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "65px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          種別
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          type: "デー",
-                          era: "0.00",
-                          ip: "5.0",
-                          wl: "1-0",
-                          qs_pct: "100.0",
-                          k_pct: "14.3",
-                          k_bb_pct: "4.8",
-                          whip: "1.20",
-                          baa: ".211",
-                        },
-                        {
-                          type: "ナイター",
-                          era: "ー",
-                          ip: "ー",
-                          wl: "ー",
-                          qs_pct: "ー",
-                          k_pct: "ー",
-                          k_bb_pct: "ー",
-                          whip: "ー",
-                          baa: "ー",
-                        },
-                      ].map((row) => (
-                        <tr key={row.type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.type}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                  </>
-                )}
-
-                {detailTab === "period" && (
-                  <>
-                {/* 月間別の投球成績（菊池ページ「月間の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  月間別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "40px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          月
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { month: "～4月", era: "0.00", ip: "5.0", wl: "1-0", qs_pct: "100.0", k_pct: "14.3", k_bb_pct: "4.8", whip: "1.20", baa: ".211" },
-                        { month: "5月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "6月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "7月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "8月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "9月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "10月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                        { month: "11月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー", baa: "ー" },
-                      ].map((row) => (
-                        <tr key={row.month} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.month}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct === "ー" ? "ー" : parseFloat(row.qs_pct) === 100 ? "100％" : parseFloat(row.qs_pct).toFixed(1) + "％"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 週間別の投球成績（菊池ページ「週間の打撃成績」と同デザイン） */}
-                <h2
-                  className={`${tb} mb-4 pl-4 mt-8`}
-                  style={{
-                    borderLeft: "6px solid #FF4444",
-                    fontWeight: 900,
-                  }}
-                >
-                  週間別の投球成績
-                </h2>
-                <div className="overflow-x-auto overflow-y-hidden mb-4">
-                  <table
-                    className="text-xs"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      border: "1px solid #555",
-                      width: "100%",
-                      tableLayout: "fixed",
-                    }}
-                  >
-                    <colgroup>
-                      <col style={{ width: "95px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                          週間
-                        </th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          span: "3/10〜3/15",
-                          era: "0.00",
-                          ip: "5.0",
-                          wl: "1-0",
-                          bb_pct: "9.5",
-                          k_pct: "14.3",
-                          k_bb_pct: "4.8",
-                          whip: "1.20",
-                          baa: ".211",
-                        },
-                      ].map((row) => (
-                        <tr key={row.span} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                          <td
-                            className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                          >
-                            {row.span}
-                          </td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct === "ー" ? "ー" : parseFloat(row.k_bb_pct) === 100 ? "100％" : parseFloat(row.k_bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct === "ー" ? "ー" : parseFloat(row.k_pct) === 100 ? "100％" : parseFloat(row.k_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.bb_pct === "ー" ? "ー" : parseFloat(row.bb_pct) === 100 ? "100％" : parseFloat(row.bb_pct).toFixed(1) + "％"}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                          <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.baa}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                  </>
-                )}
-              </>
-            )}
-
-            {/* 菅野智之: 青柳ページと同じ「今季の成績」見出し・表構成（未連携は「—」「ー」） */}
-            {showSuganoSeasonUI && (
+        {/* 今季の成績（投手 PoC シェル） */}
+        {showSeasonCareerTabs && statsTab === "season" && (
+          <div>
+            {/* 投手: 青柳ページと同じ「今季の成績」見出し・表構成（未連携は「—」「ー」） */}
+            {showPitcherSeasonSuganoUi && (
               <div
                 style={{
                   transform: "scale(0.7)",
@@ -2280,9 +1258,13 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                   width: "142.857%",
                 }}
               >
-                {/* Detail Tab Buttons */}
+                {/* Detail Tab Buttons（main の横パディングまで #1a1a1a で埋める） */}
                 <div
-                  className="relative flex shrink-0 overflow-hidden mb-6"
+                  className={
+                    isMobile
+                      ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
+                      : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden"
+                  }
                   style={{
                     border: "1px solid #555",
                     backgroundColor: "#1a1a1a",
@@ -2293,63 +1275,63 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                     style={{
                       backgroundColor: "#FFFF44",
                       transform:
-                        suganoDetailTab === "basic"
+                        pitcherSeasonSubTab === "basic"
                           ? "translateX(0)"
-                          : suganoDetailTab === "pitch"
+                          : pitcherSeasonSubTab === "pitch"
                             ? "translateX(100%)"
-                            : suganoDetailTab === "situation"
+                            : pitcherSeasonSubTab === "situation"
                               ? "translateX(200%)"
                               : "translateX(300%)",
                     }}
                   />
                   <button
                     type="button"
-                    onClick={() => setSuganoDetailTab("basic")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    onClick={() => setPitcherSeasonSubTab("basic")}
+                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
                     style={{
-                      color: suganoDetailTab === "basic" ? "#000000" : "#9ca3af",
+                      color: pitcherSeasonSubTab === "basic" ? "#000000" : "#9ca3af",
                     }}
                   >
                     基本成績
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSuganoDetailTab("pitch")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    onClick={() => setPitcherSeasonSubTab("pitch")}
+                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
                     style={{
-                      color: suganoDetailTab === "pitch" ? "#000000" : "#9ca3af",
+                      color: pitcherSeasonSubTab === "pitch" ? "#000000" : "#9ca3af",
                     }}
                   >
                     球種情報
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSuganoDetailTab("situation")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    onClick={() => setPitcherSeasonSubTab("situation")}
+                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
                     style={{
-                      color: suganoDetailTab === "situation" ? "#000000" : "#9ca3af",
+                      color: pitcherSeasonSubTab === "situation" ? "#000000" : "#9ca3af",
                     }}
                   >
                     状況別
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSuganoDetailTab("period")}
-                    className="relative z-10 flex flex-1 items-center justify-center px-4 py-2 font-bold text-xs transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                    onClick={() => setPitcherSeasonSubTab("period")}
+                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
                     style={{
-                      color: suganoDetailTab === "period" ? "#000000" : "#9ca3af",
+                      color: pitcherSeasonSubTab === "period" ? "#000000" : "#9ca3af",
                     }}
                   >
                     期間別
                   </button>
                 </div>
 
-                {suganoDetailTab === "basic" && (
+                {pitcherSeasonSubTab === "basic" && (
                   <>
                     <h2
                       className={`${tb} mb-4 pl-4 mt-8`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
@@ -2373,20 +1355,23 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">試合</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">先発</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">連投(試)</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">勝利</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">敗戦</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HLD</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">Ｓ</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">ＨＰ</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">QS</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 10 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocBasicRow1(pitcherSeasonPocPayload)
+                              : Array.from({ length: 10 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2407,8 +1392,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       >
                         <tbody>
                           <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">ＳＰ</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">完投</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">完投</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">完封</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">無四球</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">勝率</th>
@@ -2417,14 +1401,18 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">投球数</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">P/IP</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被安</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K%</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 10 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocBasicRow2(pitcherSeasonPocPayload)
+                              : Array.from({ length: 10 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2457,12 +1445,15 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">QS率</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 10 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocBasicRow3(pitcherSeasonPocPayload)
+                              : Array.from({ length: 10 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2481,7 +1472,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -2524,20 +1515,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              { team: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "阪神", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { team: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                            ].map((row) => (
+                            {pitcherPocTeamTable.map((row) => (
                               <tr key={row.team} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                                 <td
                                   className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
@@ -2567,7 +1545,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                                                           : row.team === "西武"
                                                             ? "#004098"
                                                             : row.team === "ロッテ"
-                                                              ? "#222222"
+                                                              ? "#6b7280"
                                                               : row.team === "オリックス"
                                                                 ? "#b79e51"
                                                                 : row.team === "ソフトバンク"
@@ -2581,10 +1559,10 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                                 <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
                                 <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
                                 <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2605,7 +1583,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-0`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -2632,25 +1610,35 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "45px" }} />
                             <col style={{ width: "45px" }} />
-                            <col style={{ width: "45px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
-                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {["対右", "対左"].map((label) => (
+                            {(
+                              [
+                                { label: "対右", key: "vsR" as const },
+                                { label: "対左", key: "vsL" as const },
+                              ] as const
+                            ).map(({ label, key }) => {
+                              const agg =
+                                pitcherSeasonPocPayload?.splits?.vsHand?.[key] ?? null
+                              const cells =
+                                agg && pitcherSeasonPocPayload
+                                  ? pitcherPocHandCells(agg)
+                                  : Array.from({ length: 7 }, () => "—")
+                              return (
                               <tr key={label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                                 <td
                                   className="px-0 py-1 text-center align-middle latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
@@ -2658,13 +1646,14 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                                 >
                                   {label}
                                 </td>
-                                {Array.from({ length: 8 }, (_, i) => (
+                                {cells.map((cell, i) => (
                                   <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    —
+                                    {cell}
                                   </td>
                                 ))}
                               </tr>
-                            ))}
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -2675,7 +1664,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                     <h2
                       className={`${tb} mb-4 pl-4 mt-0`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
@@ -2694,23 +1683,24 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       >
                         <tbody>
                           <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HQS率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">QS率</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HQS率</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">SQS率</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打率</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被BABIP</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被出塁率</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被長打率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K-BB％</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K％</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB％</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 9 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocMetricRow1(pitcherSeasonPocPayload)
+                              : Array.from({ length: 7 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2730,23 +1720,24 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       >
                         <tbody>
                           <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">HR/9</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">GO/AO</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">GO/AO</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護率</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IPR</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB%</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">FIP</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">LOB%</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSAA</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSWIN</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HR/9</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K-BB％</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 9 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocMetricRow2(pitcherSeasonPocPayload)
+                              : Array.from({ length: 7 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2766,23 +1757,24 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       >
                         <tbody>
                           <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">PR</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">KD</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">失点時回数</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護回</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護点</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時回数</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">救援時失点</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">K％</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB％</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">LOB%</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">PR</th>
                             <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">無失点</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSAA</th>
+                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSWIN</th>
                           </tr>
                           <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {Array.from({ length: 9 }, (_, i) => (
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocMetricRow3(pitcherSeasonPocPayload)
+                              : Array.from({ length: 7 }, () => "—")
+                            ).map((cell, i) => (
                               <td
                                 key={i}
                                 className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
                               >
-                                —
+                                {cell}
                               </td>
                             ))}
                           </tr>
@@ -2793,7 +1785,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                     <h2
                       className={`${tb} mb-4 pl-4 mt-8`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
@@ -2851,7 +1843,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                     <h2
                       className={`${tb} mb-4 pl-4 mt-8`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
@@ -2909,100 +1901,238 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                   </>
                 )}
 
-                {suganoDetailTab === "pitch" && (
+                {pitcherSeasonSubTab === "pitch" && (
                   <>
                     <h2
                       className={`${tb} mb-4 pl-4 mt-8`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
                       球種一覧
                     </h2>
-                    <p className="text-sm text-gray-400 mb-4">（今季の球種データは未連携）</p>
-                    <div className="overflow-x-auto overflow-y-hidden mb-12">
-                      <table
-                        className="text-xs"
-                        style={{
-                          fontVariantNumeric: "tabular-nums",
-                          borderCollapse: "separate",
-                          borderSpacing: 0,
-                          border: "1px solid #555",
-                          width: "100%",
-                          minWidth: "473px",
-                          tableLayout: "fixed",
-                        }}
-                      >
-                        <colgroup>
-                          <col style={{ width: "102px" }} />
-                          <col style={{ width: "95px" }} />
-                          <col style={{ width: "57px" }} />
-                          <col style={{ width: "57px" }} />
-                          <col style={{ width: "57px" }} />
-                          <col style={{ width: "48px" }} />
-                          <col style={{ width: "57px" }} />
-                        </colgroup>
-                        <thead>
-                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                              球種
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              平均球速
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              割合
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              Strike％
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              空振り％
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              被打率
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                              被OPS
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                            <td
-                              className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                              style={{ backgroundColor: "#1a1a1a" }}
-                            >
-                              —
-                            </td>
-                            {Array.from({ length: 6 }, (_, i) => (
-                              <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                —
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    {gamePitchTypes?.rows?.length ? (
+                      <>
+                        <p className="text-sm text-gray-400 mb-4">
+                          試合 <span className="text-gray-200 font-mono tabular-nums">{gamePitchTypes.game_id}</span>
+                          の球種別（URL に{" "}
+                          <code className="text-gray-300">?yahooGameId=</code> で試合を切り替え可能）
+                        </p>
+                        <div className="mb-6">
+                          <PitchTypePieChart
+                            rows={gamePitchTypes.rows.map((r) => ({
+                              pitch_type: r.pitch_type,
+                              pitches: r.pitches,
+                              pct: r.pct,
+                            }))}
+                          />
+                        </div>
+                        <div className="overflow-x-auto overflow-y-hidden mb-12">
+                          <table
+                            className="text-xs"
+                            style={{
+                              fontVariantNumeric: "tabular-nums",
+                              borderCollapse: "separate",
+                              borderSpacing: 0,
+                              border: "1px solid #555",
+                              width: "100%",
+                              minWidth: "473px",
+                              tableLayout: "fixed",
+                            }}
+                          >
+                            <colgroup>
+                              <col style={{ width: "102px" }} />
+                              <col style={{ width: "95px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "48px" }} />
+                              <col style={{ width: "57px" }} />
+                            </colgroup>
+                            <thead>
+                              <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                  球種
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  平均球速
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  割合
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  Strike％
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  空振り％
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  被打率
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  被OPS
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gamePitchTypes.rows.map((row) => (
+                                <tr key={row.pitch_type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                  <td
+                                    className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                    style={{ backgroundColor: "#1a1a1a" }}
+                                  >
+                                    {row.pitch_type}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 whitespace-nowrap">
+                                    {row.avg_speed_kmh != null ? (
+                                      <>
+                                        <span className="latin">{row.avg_speed_kmh.toFixed(1)}</span>
+                                        <span className="latin text-[11px] opacity-90"> km/h</span>
+                                      </>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {row.pct.toFixed(1)}%
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {row.strike_pct}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {row.whiff_pct}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {row.avg}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {row.ops ?? "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                              {gamePitchTypes.total_row && (
+                                <tr
+                                  key="__total_row"
+                                  style={{ backgroundColor: "rgba(255, 255, 68, 0.12)" }}
+                                >
+                                  <td
+                                    className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                    style={{ backgroundColor: "#1a1a1a" }}
+                                  >
+                                    {gamePitchTypes.total_row.pitch_type}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    —
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {gamePitchTypes.total_row.pct.toFixed(1)}%
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {gamePitchTypes.total_row.strike_pct}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {gamePitchTypes.total_row.whiff_pct}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {gamePitchTypes.total_row.avg}
+                                  </td>
+                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                    {gamePitchTypes.total_row.ops ?? "—"}
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-400 mb-4">
+                          （球種データなし。広島・中日 PoC 試合に登板した投手は既定の{" "}
+                          <code className="text-gray-300">yahooGameId</code> で自動取得。他は{" "}
+                          <code className="text-gray-300">?yahooGameId=</code> を指定。青柳は別既定試合）
+                        </p>
+                        <div className="overflow-x-auto overflow-y-hidden mb-12">
+                          <table
+                            className="text-xs"
+                            style={{
+                              fontVariantNumeric: "tabular-nums",
+                              borderCollapse: "separate",
+                              borderSpacing: 0,
+                              border: "1px solid #555",
+                              width: "100%",
+                              minWidth: "473px",
+                              tableLayout: "fixed",
+                            }}
+                          >
+                            <colgroup>
+                              <col style={{ width: "102px" }} />
+                              <col style={{ width: "95px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "57px" }} />
+                              <col style={{ width: "48px" }} />
+                              <col style={{ width: "57px" }} />
+                            </colgroup>
+                            <thead>
+                              <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                  球種
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  平均球速
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  割合
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  Strike％
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  空振り％
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  被打率
+                                </th>
+                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                  被OPS
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                <td
+                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                  style={{ backgroundColor: "#1a1a1a" }}
+                                >
+                                  —
+                                </td>
+                                {Array.from({ length: 6 }, (_, i) => (
+                                  <td
+                                    key={i}
+                                    className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                  >
+                                    —
+                                  </td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
 
-                {suganoDetailTab === "situation" && (
+                {pitcherSeasonSubTab === "situation" && (
                   <>
                     {/* 状況別の投球成績（菊池ページ「状況別の打撃成績」と同じ条件列・ランナー別） */}
-                    <div
-                      style={{
-                        transform: "scale(1.1)",
-                        transformOrigin: "top left",
-                        width: "90.909%",
-                        marginBottom: "1.75rem",
-                      }}
-                    >
+                    <div className="w-full mb-7">
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3017,17 +2147,19 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             borderSpacing: 0,
                             border: "1px solid #555",
                             width: "100%",
-                            tableLayout: "fixed",
+                            tableLayout: "auto",
+                            minWidth: "520px",
                           }}
                         >
                           <colgroup>
                             <col style={{ width: "52px" }} />
                             <col style={{ width: "50px" }} />
+                            <col style={{ width: "60px" }} />
+                            {/* K-BB％ / K％ を BB％と同じ横幅に揃える */}
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
                             <col style={{ width: "45px" }} />
-                            <col style={{ width: "45px" }} />
-                            <col style={{ width: "51px" }} />
-                            <col style={{ width: "51px" }} />
-                            <col style={{ width: "51px" }} />
                             <col style={{ width: "45px" }} />
                           </colgroup>
                           <thead>
@@ -3035,42 +2167,49 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              "無し",
-                              "1塁",
-                              "2塁",
-                              "3塁",
-                              "1・2塁",
-                              "1・3塁",
-                              "2・3塁",
-                              "満塁",
-                              "非得点圏",
-                              "得点圏",
-                            ].map((label) => (
-                              <tr key={label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                            {(pitcherSeasonPocPayload
+                              ? pitcherPocSituationRows(pitcherSeasonPocPayload)
+                              : [
+                                  "無し",
+                                  "1塁",
+                                  "2塁",
+                                  "3塁",
+                                  "1・2塁",
+                                  "1・3塁",
+                                  "2・3塁",
+                                  "満塁",
+                                  "非得点圏",
+                                  "得点圏",
+                                ].map((label) => ({
+                                  label,
+                                  cells: Array.from({ length: 7 }, () => "ー"),
+                                }))
+                            ).map((row) => (
+                              <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                                 <td
                                   className="px-0.5 py-1 text-center align-middle latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
                                   style={{ backgroundColor: "#1a1a1a" }}
                                 >
-                                  {label}
+                                  {row.label}
                                 </td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                {row.cells.map((cell, i) => (
+                                  <td
+                                    key={i}
+                                    className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                  >
+                                    {cell}
+                                  </td>
+                                ))}
                               </tr>
                             ))}
                           </tbody>
@@ -3090,7 +2229,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-0`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3133,21 +2272,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              { venue: "エスコンＦ", teamLabel: "日本ハム", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "楽天モバイル", teamLabel: "楽天", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "ベルーナD", teamLabel: "西武", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "ZOZOマリン", teamLabel: "ロッテ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "京セラD大阪", teamLabel: "オリックス", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "みずほPayPay", teamLabel: "ソフトバンク", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "東京ドーム", teamLabel: "巨人", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "神宮球場", teamLabel: "ヤクルト", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "横浜スタジアム", teamLabel: "ＤｅＮＡ", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "バンテリンD", teamLabel: "中日", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "甲子園球場", teamLabel: "阪神", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "マツダ", teamLabel: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { venue: "地方球場", teamLabel: "広島", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                            ].map((row) => (
+                            {pitcherPocStadiumTable.map((row) => (
                               <tr key={row.venue} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                                 <td
                                   className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
@@ -3191,10 +2316,10 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -3203,80 +2328,86 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                     </div>
 
                     <div style={{ paddingTop: "3rem" }}>
-                    <h2
-                      className={`${tb} mb-4 pl-4 mt-0`}
+                    <div
                       style={{
-                        borderLeft: "6px solid #FF4444",
-                        fontWeight: 900,
+                        transform: "scale(1.1)",
+                        transformOrigin: "top left",
+                        width: "90.909%",
+                        marginBottom: "1.75rem",
                       }}
                     >
-                      ホーム&ビジター別の投球成績
-                    </h2>
-                    <div className="overflow-x-auto overflow-y-hidden mb-4">
-                      <table
-                        className="text-xs"
+                      <h2
+                        className={`${tb} mb-4 pl-4 mt-0`}
                         style={{
-                          fontVariantNumeric: "tabular-nums",
-                          borderCollapse: "separate",
-                          borderSpacing: 0,
-                          border: "1px solid #555",
-                          width: "100%",
-                          tableLayout: "fixed",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
+                          fontWeight: 900,
                         }}
                       >
-                        <colgroup>
-                          <col style={{ width: "65px" }} />
-                          <col style={{ width: "50px" }} />
-                          <col style={{ width: "45px" }} />
-                          <col style={{ width: "45px" }} />
-                          <col style={{ width: "51px" }} />
-                          <col style={{ width: "51px" }} />
-                          <col style={{ width: "51px" }} />
-                          <col style={{ width: "45px" }} />
-                          <col style={{ width: "45px" }} />
-                        </colgroup>
-                        <thead>
-                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                              種別
-                            </th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                            <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">QS％</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {["ホーム", "アウェー"].map((type) => (
-                            <tr key={type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                              <td
-                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                style={{ backgroundColor: "#1a1a1a" }}
-                              >
-                                {type}
-                              </td>
-                              {Array.from({ length: 8 }, (_, i) => (
-                                <td
-                                  key={i}
-                                  className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                                >
-                                  —
-                                </td>
-                              ))}
+                        ホーム&ビジター別の投球成績
+                      </h2>
+                      <div className="overflow-x-auto overflow-y-hidden mb-0">
+                        <table
+                          className="text-xs"
+                          style={{
+                            fontVariantNumeric: "tabular-nums",
+                            borderCollapse: "separate",
+                            borderSpacing: 0,
+                            border: "1px solid #555",
+                            width: "100%",
+                            tableLayout: "fixed",
+                          }}
+                        >
+                          <colgroup>
+                            <col style={{ width: "65px" }} />
+                            <col style={{ width: "50px" }} />
+                            <col style={{ width: "45px" }} />
+                            <col style={{ width: "45px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "45px" }} />
+                          </colgroup>
+                          <thead>
+                            <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                              <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                種別
+                              </th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">防御率</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">勝‐敗</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">回数</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">WHIP</th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {pitcherPocHomeAwayTable.map((row) => (
+                              <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                <td
+                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                  style={{ backgroundColor: "#1a1a1a" }}
+                                >
+                                  {row.label}
+                                </td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
 
                     <h2
                       className={`${tb} mb-4 pl-4 mt-8`}
                       style={{
-                        borderLeft: "6px solid #FF4444",
+                        borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
                       }}
                     >
@@ -3321,7 +2452,13 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                           </tr>
                         </thead>
                         <tbody>
-                          {Array.from({ length: 9 }, (_, i) => `${i + 1}回`).map((label) => (
+                          {Array.from({ length: pitcherPocMaxInning }, (_, i) => i + 1).map((inn) => {
+                            const label = `${inn}回`
+                            const cells =
+                              pitcherSeasonPocPayload != null
+                                ? pitcherPocInningRow(pitcherSeasonPocPayload, inn)
+                                : Array.from({ length: 8 }, () => "—")
+                            return (
                             <tr key={label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                               <td
                                 className="px-0.5 py-1 text-center latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
@@ -3329,16 +2466,17 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                               >
                                 {label}
                               </td>
-                              {Array.from({ length: 8 }, (_, j) => (
+                              {cells.map((cell, j) => (
                                 <td
                                   key={j}
                                   className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
                                 >
-                                  —
+                                  {cell}
                                 </td>
                               ))}
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -3354,7 +2492,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3397,22 +2535,27 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                              <td
-                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                style={{ backgroundColor: "#1a1a1a" }}
+                            {pitcherPocCatcherTable.map((row, ri) => (
+                              <tr
+                                key={`${row.label}-${ri}`}
+                                style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
                               >
-                                —
-                              </td>
-                              {Array.from({ length: 7 }, (_, i) => (
                                 <td
-                                  key={i}
-                                  className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                  style={{ backgroundColor: "#1a1a1a" }}
                                 >
-                                  —
+                                  {row.label}
                                 </td>
-                              ))}
-                            </tr>
+                                {row.cells.map((cell, i) => (
+                                  <td
+                                    key={i}
+                                    className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                  >
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -3420,7 +2563,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3463,22 +2606,21 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            {["デー", "ナイター"].map((type) => (
-                              <tr key={type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                            {pitcherPocDayNightTable.map((row) => (
+                              <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
                                 <td
                                   className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
                                   style={{ backgroundColor: "#1a1a1a" }}
                                 >
-                                  {type}
+                                  {row.label}
                                 </td>
-                                {Array.from({ length: 7 }, (_, i) => (
-                                  <td
-                                    key={i}
-                                    className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                                  >
-                                    —
-                                  </td>
-                                ))}
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -3490,7 +2632,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                   </>
                 )}
 
-                {suganoDetailTab === "period" && (
+                {pitcherSeasonSubTab === "period" && (
                   <>
                     <div
                       style={{
@@ -3503,7 +2645,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3544,32 +2686,67 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              { month: "～4月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "5月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "6月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "7月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "8月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "9月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "10月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                              { month: "11月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
-                            ].map((row) => (
-                              <tr key={row.month} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                <td
-                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                  style={{ backgroundColor: "#1a1a1a" }}
-                                >
-                                  {row.month}
-                                </td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
-                              </tr>
-                            ))}
+                            {pitcherPeriodMonthRows.length > 0
+                              ? pitcherPeriodMonthRows.map((row) => (
+                                  <tr
+                                    key={`m-${row.split_value}`}
+                                    style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                                  >
+                                    <td
+                                      className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                      style={{ backgroundColor: "#1a1a1a" }}
+                                    >
+                                      {row.split_label}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {formatEra(row.era)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      —
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {row.ip}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {kMinusBbPctOfBf(row.so, row.bb, row.bf)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {pctOfBf(row.so, row.bf)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {row.whip != null ? row.whip.toFixed(3) : "—"}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      —
+                                    </td>
+                                  </tr>
+                                ))
+                              : [
+                                  { month: "～4月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "5月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "6月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "7月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "8月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "9月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "10月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                  { month: "11月", era: "ー", ip: "ー", wl: "ー", qs_pct: "ー", k_pct: "ー", k_bb_pct: "ー", whip: "ー" },
+                                ].map((row) => (
+                                  <tr key={row.month} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                    <td
+                                      className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                      style={{ backgroundColor: "#1a1a1a" }}
+                                    >
+                                      {row.month}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">ー</td>
+                                  </tr>
+                                ))}
                           </tbody>
                         </table>
                       </div>
@@ -3577,7 +2754,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
-                          borderLeft: "6px solid #FF4444",
+                          borderLeft: `6px solid ${sectionStripeColor}`,
                           fontWeight: 900,
                         }}
                       >
@@ -3618,19 +2795,59 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                              <td
-                                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                style={{ backgroundColor: "#1a1a1a" }}
-                              >
-                                3/10〜3/15
-                              </td>
-                              {Array.from({ length: 7 }, (_, i) => (
-                                <td key={i} className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                  —
-                                </td>
-                              ))}
-                            </tr>
+                            {pitcherPeriodWeekRows.length > 0
+                              ? pitcherPeriodWeekRows.map((row) => (
+                                  <tr
+                                    key={`w-${row.split_value}`}
+                                    style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                                  >
+                                    <td
+                                      className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                      style={{ backgroundColor: "#1a1a1a" }}
+                                    >
+                                      {row.split_label}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {formatEra(row.era)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      —
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {row.ip}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {kMinusBbPctOfBf(row.so, row.bb, row.bf)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {pctOfBf(row.so, row.bf)}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {row.whip != null ? row.whip.toFixed(3) : "—"}
+                                    </td>
+                                    <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {row.avgAgainstApprox}
+                                    </td>
+                                  </tr>
+                                ))
+                              : (
+                                  <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                    <td
+                                      className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                      style={{ backgroundColor: "#1a1a1a" }}
+                                    >
+                                      3/10〜3/15
+                                    </td>
+                                    {Array.from({ length: 7 }, (_, i) => (
+                                      <td
+                                        key={i}
+                                        className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                      >
+                                        —
+                                      </td>
+                                    ))}
+                                  </tr>
+                                )}
                           </tbody>
                         </table>
                       </div>
@@ -3643,13 +2860,13 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
         )}
 
         {/* 通算成績 */}
-        {statsTab === "career" && (
+        {(!showSeasonCareerTabs || statsTab === "career") && (
           <>
         {/* Section Title */}
         <h2
           className={`${tb} mb-6 pl-4`}
           style={{
-            borderLeft: "6px solid #FF4444",
+            borderLeft: `6px solid ${sectionStripeColor}`,
             fontWeight: 900,
           }}
         >
@@ -3707,7 +2924,7 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
         <h2
           className={`${tb} mb-6 pl-4`}
           style={{
-            borderLeft: "6px solid #FF4444",
+            borderLeft: `6px solid ${sectionStripeColor}`,
             fontWeight: 900,
           }}
         >
@@ -3807,6 +3024,8 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
           </div>
           </>
         )}
+        </>
+        )}
       </main>
 
       {/* Footer */}
@@ -3820,32 +3039,12 @@ function PlayerPageClient({ layout, forceMobile }: { layout: ViewportLayout; for
 }
 
 export default function PlayerPage() {
-  const isDesktop = useIsDesktop()
-  const sp = useSearchParams()
-  const pathname = usePathname()
-
-  if (isDesktop === undefined) {
-    return <div className="min-h-screen bg-black" aria-busy="true" />
-  }
-
-  const forceMobile =
-    pathname.startsWith("/mobile/players") ||
-    sp.get("mobile") === "1" ||
-    sp.get("view") === "mobile" ||
-    sp.has("mobile=1") ||
-    sp.has("view=mobile") ||
-    (typeof window !== "undefined" &&
-      (() => {
-        const raw = window.location.search || ""
-        try {
-          const decoded = decodeURIComponent(raw)
-          return decoded.includes("mobile=1") || decoded.includes("view=mobile")
-        } catch {
-          return raw.includes("mobile%3D1") || raw.includes("view%3Dmobile")
-        }
-      })())
+  const { isDesktop, forceMobile } = useViewportLayout()
 
   return (
-    <PlayerPageClient layout={isDesktop ? "desktop" : "mobile"} forceMobile={forceMobile} />
+    <PlayerPageClient
+      layout={isDesktop ? "desktop" : "mobile"}
+      forceMobile={forceMobile}
+    />
   )
 }

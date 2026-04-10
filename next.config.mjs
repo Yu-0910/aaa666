@@ -5,6 +5,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // `process.cwd()` がズレても `_data` を確実に辿る（lib/projectRoot.ts）
+  env: {
+    TOPPAGE_PROJECT_ROOT: __dirname,
+  },
   // 複数 lockfile 警告を解消（プロジェクトルートを明示）
   outputFileTracingRoot: path.join(__dirname),
   typescript: {

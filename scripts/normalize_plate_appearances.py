@@ -8,17 +8,107 @@ normalize_plate_appearances.py
 - 状況の正規化 (base_state → outs, risp)
 - 球種・コースの抽出
 - メタデータ付与 (games_metaと結合)
+- lineup_slot: スタメン1〜9番（_data/yahoo_games_pilot/*_top.html の打順表 + canonical の startingLineup）
+  ※ plate_appearances の bat_order は Yahoo テキストの「その回の何番目の打者」用。集計の打順別は lineup_slot を優先する。
 """
 
 import csv
+import json
 import re
 import sys
 import io
 from pathlib import Path
 
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+_PLAYER_HREF_RE = re.compile(r"/npb/player/(\d+)/")
+
+
+def parse_lineup_from_top_html(html: str) -> dict[str, str]:
+    """Yahoo top ページのスタメン表（th が「打順」）から yahoo_player_id -> '1'..'9'。"""
+    if BeautifulSoup is None:
+        return {}
+    soup = BeautifulSoup(html, "html.parser")
+    out: dict[str, str] = {}
+    for table in soup.find_all("table"):
+        cls = table.get("class") or []
+        if not any("bb-splitsTable" in str(x) for x in cls):
+            continue
+        thead = table.find("thead")
+        if not thead:
+            continue
+        order_th = None
+        for th in thead.find_all("th"):
+            tcls = th.get("class") or []
+            if not any("bb-splitsTable__head--order" in str(x) for x in tcls):
+                continue
+            if (th.get_text() or "").strip() == "打順":
+                order_th = th
+                break
+        if not order_th:
+            continue
+        for tr in table.find_all("tr", class_="bb-splitsTable__row"):
+            tds = tr.find_all("td")
+            if len(tds) < 3:
+                continue
+            order_txt = (tds[0].get_text() or "").strip()
+            if not order_txt.isdigit():
+                continue
+            n = int(order_txt)
+            if not (1 <= n <= 9):
+                continue
+            a = tds[2].find("a", href=True)
+            if not a:
+                continue
+            m = _PLAYER_HREF_RE.search(a.get("href", "") or "")
+            if m:
+                out[m.group(1)] = order_txt
+    return out
+
+
+def load_lineup_maps(root: Path) -> dict[str, dict[str, str]]:
+    """game_id -> { yahoo_batter_id -> '1'..'9' }。canonical を読み、続けて *_top.html で上書き補完。"""
+    merged: dict[str, dict[str, str]] = {}
+    canon_dir = root / "_data" / "scraped_games" / "canonical"
+    if canon_dir.is_dir():
+        for path in sorted(canon_dir.glob("*.json")):
+            try:
+                doc = json.loads(path.read_text(encoding="utf-8"))
+                gid = str(doc.get("gameId") or path.stem).strip()
+                m: dict[str, str] = {}
+                for t in doc.get("game", {}).get("teams", []) or []:
+                    for p in t.get("startingLineup", []) or []:
+                        yid = (p.get("yahooPlayerId") or "").strip()
+                        bo = (p.get("battingOrder") or "").strip()
+                        if yid and bo.isdigit() and 1 <= int(bo) <= 9:
+                            m[yid] = bo
+                if m:
+                    merged[gid] = m
+            except Exception:
+                pass
+    pilot_dir = root / "_data" / "yahoo_games_pilot"
+    if pilot_dir.is_dir() and BeautifulSoup is not None:
+        for path in sorted(pilot_dir.glob("*_top.html")):
+            gid = path.stem.replace("_top", "")
+            try:
+                html = path.read_text(encoding="utf-8")
+                m = parse_lineup_from_top_html(html)
+                if not m:
+                    continue
+                prev = dict(merged.get(gid) or {})
+                prev.update(m)
+                merged[gid] = prev
+            except Exception:
+                pass
+    return merged
+
 
 # ---- 打席結果の正規化 ----
 def _matches(txt: str, *patterns: str) -> bool:
@@ -43,21 +133,16 @@ def normalize_result(result_raw: str) -> dict:
 
     # 走者情報のみ（打者結果なし）
     if _matches(txt, "一塁走者", "二塁走者", "三塁走者") and not _matches(
-        txt, "ヒット", "安打", "出塁", "ゴロ", "フライ", "三振", "フォアボール", "デッドボール", "四球", "死球"
+        txt, "ヒット", "安打", "出塁", "ゴロ", "フライ", "三振", "フォアボール", "デッドボール", "四球", "敬遠", "故意四球", "死球"
     ):
         return out
 
-    # 敬遠（故意四球）
-    if _matches(txt, "敬遠"):
-        out["bb"] = 1
-        out["ibb"] = 1
-        out["is_pa"] = 1
-        return out
-
-    # 四球・フォアボール
-    if _matches(txt, "フォアボール", "四球"):
+    # 四球・フォアボール・敬遠・故意四球（四球扱いで統一。敬遠は ibb も立てる）
+    if _matches(txt, "フォアボール", "四球", "敬遠", "故意四球"):
         out["bb"] = 1
         out["is_pa"] = 1
+        if _matches(txt, "敬遠", "故意四球"):
+            out["ibb"] = 1
         return out
 
     # 死球・デッドボール
@@ -296,9 +381,15 @@ def main():
 
             rows.append(row)
 
+    lineup_maps = load_lineup_maps(root)
+    for row in rows:
+        gid = row.get("game_id", "")
+        bid = (row.get("batter_id") or "").strip()
+        row["lineup_slot"] = lineup_maps.get(gid, {}).get(bid, "") if bid else ""
+
     # 出力
     out_fields = [
-        "game_id", "inning", "top_bottom", "bat_order", "batter_id", "pitcher_id", "base_state", "result_raw",
+        "game_id", "inning", "top_bottom", "bat_order", "lineup_slot", "batter_id", "pitcher_id", "base_state", "result_raw",
         "ab", "h", "h2", "h3", "hr", "bb", "hbp", "so", "sh", "sf", "gidp", "rbi", "r", "ibb", "sb", "cs", "is_pa",
         "outs", "base_state_code", "risp",
         "pitch_type", "course",

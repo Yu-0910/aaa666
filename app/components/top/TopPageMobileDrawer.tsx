@@ -12,6 +12,7 @@ export function TopPageMobileDrawer({ open, onClose, selectedYear }: Props) {
   if (!open) return null
 
   const rankingHref = `/ranking/${selectedYear}/PL`
+  const pitchingRankingHref = `/ranking/pitching/2026/PL`
 
   return (
     <>
@@ -39,7 +40,14 @@ export function TopPageMobileDrawer({ open, onClose, selectedYear }: Props) {
               トップページ
             </Link>
             <Link href={rankingHref} className="block py-2 px-3 hover:bg-[#2a2a2a] rounded transition-colors text-sm" onClick={onClose}>
-              成績一覧
+              打撃ランキング
+            </Link>
+            <Link
+              href={pitchingRankingHref}
+              className="block py-2 px-3 hover:bg-[#2a2a2a] rounded transition-colors text-sm"
+              onClick={onClose}
+            >
+              投手ランキング
             </Link>
             <Link href="#" className="block py-2 px-3 hover:bg-[#2a2a2a] rounded transition-colors text-sm" onClick={onClose}>
               ドラフト情報

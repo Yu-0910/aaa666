@@ -29,6 +29,7 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from scrape_yahoo_pitch_details import fetch_html, build_index, parse_pitch_details
+from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed
 
 BASE_URL = "https://baseball.yahoo.co.jp"
 PLAYER_ID_PATTERN = re.compile(r"/npb/player/(\d+)/top")
@@ -203,7 +204,7 @@ def is_strikeout(r: str) -> bool:
 
 
 def is_walk(r: str) -> bool:
-    return bool(re.search(r"四球|敬遠", (r or "").strip()))
+    return bool(re.search(r"四球|敬遠|故意四球", (r or "").strip()))
 
 
 def is_hbp(r: str) -> bool:
@@ -214,10 +215,19 @@ def is_sf(r: str) -> bool:
     return "犠飛" in (r or "").strip()
 
 
-def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> list[dict]:
-    """打席ごとの投球リストを球種別に集計（1 PA = 1 list of pitches）"""
+def format_ops(ab: int, h: int, tb: int, bb: int, hbp: int, sf: int) -> str:
+    obp_denom = ab + bb + hbp + sf
+    if obp_denom <= 0 and ab <= 0:
+        return "—"
+    obp = (h + bb + hbp) / obp_denom if obp_denom > 0 else 0.0
+    slg = (tb / ab) if ab > 0 else 0.0
+    return f"{(obp + slg):.3f}"
+
+
+def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dict]:
+    """打席ごとの投球リストを球種別に集計（1 PA = 1 list of pitches）。戻り値は (行, settlement_by_type)。"""
     if not all_pitch_rows:
-        return []
+        return [], {}
 
     by_type = {}
     for p in all_pitch_rows:
@@ -278,6 +288,7 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> list[dict]:
         whiff_pct = f"{(swing_miss / swing_total * 100):.1f}%" if swing_total else "—"
         ab = set_rec["ab"]
         avg = f"{(set_rec['h'] / ab):.3f}" if ab else "—"
+        ops = format_ops(ab, set_rec["h"], set_rec["tb"], set_rec["bb"], set_rec["hbp"], set_rec["sf"])
         speeds = [int(p["speed_kmh"]) for p in pitches if p.get("speed_kmh") and str(p["speed_kmh"]).isdigit()]
         avg_speed = round(sum(speeds) / len(speeds), 1) if speeds else None
 
@@ -293,6 +304,7 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> list[dict]:
             "strike_pct": strike_pct,
             "whiff_pct": whiff_pct,
             "avg": avg,
+            "ops": ops,
             "ab": ab,
             "h": set_rec["h"],
             "hr": set_rec["hr"],
@@ -302,7 +314,7 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> list[dict]:
         })
 
     result_rows.sort(key=lambda x: -x["pitches"])
-    return result_rows
+    return result_rows, settlement_by_type
 
 
 def main():
@@ -312,6 +324,8 @@ def main():
     parser.add_argument("--out-dir", default="_data/yahoo_games_pilot", help="JSON出力ディレクトリ")
     parser.add_argument("--sleep", type=float, default=1.2, help="リクエスト間隔(秒)")
     args = parser.parse_args()
+
+    ensure_yahoo_network_fetch_allowed()
 
     root = Path(__file__).resolve().parent.parent
     out_dir = root / args.out_dir.strip()
@@ -363,7 +377,7 @@ def main():
         sys.exit(1)
 
     # 3) 球種別に集計
-    aggregated = aggregate_by_pitch_type(all_pitches)
+    aggregated, settlement_by_type = aggregate_by_pitch_type(all_pitches)
     total_pitches = len(all_pitches)
     total_ab = sum(r["ab"] for r in aggregated)
     total_h = sum(r["h"] for r in aggregated)
@@ -371,7 +385,10 @@ def main():
     total_so = sum(r["so"] for r in aggregated)
     total_bb = sum(r["bb"] for r in aggregated)
     total_hbp = sum(r["hbp"] for r in aggregated)
+    total_tb = sum(rec["tb"] for rec in settlement_by_type.values())
+    total_sf = sum(rec["sf"] for rec in settlement_by_type.values())
     total_avg = f"{(total_h / total_ab):.3f}" if total_ab else "—"
+    total_ops = format_ops(total_ab, total_h, total_tb, total_bb, total_hbp, total_sf)
     total_strikes = sum(r["swing_miss"] + r["taken"] + r["foul"] + (r["ab"] - r["so"]) for r in aggregated)
     total_swing_miss = sum(r["swing_miss"] for r in aggregated)
     total_swing_denom = sum(r["swing_miss"] + r["foul"] + r["ab"] for r in aggregated)
@@ -394,6 +411,7 @@ def main():
             "strike_pct": f"{(total_strikes / total_pitches * 100):.1f}%" if total_pitches else "—",
             "whiff_pct": total_whiff,
             "avg": total_avg,
+            "ops": total_ops,
             "ab": total_ab,
             "h": total_h,
             "hr": total_hr,

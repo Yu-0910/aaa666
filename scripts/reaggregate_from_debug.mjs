@@ -41,7 +41,7 @@ function getTotalBases(r) {
 }
 
 function isWalk(r) {
-  return /四球|敬遠/.test((r || '').trim())
+  return /四球|敬遠|故意四球/.test((r || '').trim())
 }
 
 function isHbp(r) {

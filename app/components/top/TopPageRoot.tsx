@@ -7,10 +7,5 @@ type Props = Omit<TopPageClientProps, "layout">
 
 export function TopPageRoot(props: Props) {
   const isDesktop = useIsDesktop()
-
-  if (isDesktop === undefined) {
-    return <div className="min-h-screen bg-black" aria-busy="true" />
-  }
-
   return <TopPageClient {...props} layout={isDesktop ? "desktop" : "mobile"} />
 }

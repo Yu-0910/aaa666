@@ -27,9 +27,13 @@ export function sanitizeMetricForPath(metric: string): string {
  * @example
  * getRankingsUrl('data/rankings/2025/PL/OPS.json')
  * // => '/data/rankings/2025/PL/OPS.json'
- * 
+ *
+ * 投手: `data/rankings/pitching/2026/CL/防御率.json`（`public/data/rankings/pitching/...` と同一相対パス）
+ *
  * getRankingsUrl('/data/rankings/2025/PL/OPS.json')
  * // => '/data/rankings/2025/PL/OPS.json'
+ *
+ * `RANKINGS_EXTERNALIZE_SCOPE` は部分一致（`path.includes(scope)`）のため、`2026` や `pitching` を含むパスは通常そのまま通る。
  */
 export function getRankingsUrl(path: string): string {
   // パスを正規化: 必ず / で始まり、二重スラッシュを防ぐ

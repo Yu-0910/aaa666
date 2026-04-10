@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { usePathname } from "next/navigation"
 
 /**
  * デスクトップ判定
@@ -13,25 +13,65 @@ import { usePathname, useSearchParams } from "next/navigation"
  * 方針:
  * - 「幅が大きい」だけでは desktop にしない
  * - ある程度の高さも満たす場合に desktop 扱い
+ *
+ * Next.js の useSearchParams は App Router でサスペンドし、ルートの Suspense フォールバックが
+ * 真っ黒だと「何も表示されない」状態になりやすい。クエリは window + history を同期して読む。
  */
 const DESKTOP_MEDIA_PRIMARY = "(min-width: 1024px)"
 const DESKTOP_MEDIA_SECONDARY = "(min-width: 768px) and (min-height: 700px)"
 
-/** `/mobile/players/...` または URL に `?mobile=1` / `?view=mobile` があると PC 幅でもスマホ版 UI（確認用） */
-function useForceMobileFromSearch(): boolean {
-  const pathname = usePathname()
+const urlListeners = new Set<() => void>()
+let historyPatched = false
+
+function notifyUrlListeners() {
+  for (const cb of urlListeners) cb()
+}
+
+function ensureHistoryPatched() {
+  if (typeof window === "undefined" || historyPatched) return
+  historyPatched = true
+  const origPush = history.pushState.bind(history)
+  const origReplace = history.replaceState.bind(history)
+  history.pushState = (...args: Parameters<typeof origPush>) => {
+    origPush(...args)
+    queueMicrotask(notifyUrlListeners)
+  }
+  history.replaceState = (...args: Parameters<typeof origReplace>) => {
+    origReplace(...args)
+    queueMicrotask(notifyUrlListeners)
+  }
+  window.addEventListener("popstate", notifyUrlListeners)
+}
+
+function subscribeSearch(callback: () => void) {
+  if (typeof window === "undefined") return () => {}
+  ensureHistoryPatched()
+  urlListeners.add(callback)
+  return () => {
+    urlListeners.delete(callback)
+  }
+}
+
+function getSearchSnapshot(): string {
+  return typeof window !== "undefined" ? window.location.search : ""
+}
+
+function getServerSearchSnapshot(): string {
+  return ""
+}
+
+/** クライアントのクエリ文字列（useSearchParams の代替・サスペンドしない） */
+export function useClientSearchString(): string {
+  return useSyncExternalStore(subscribeSearch, getSearchSnapshot, getServerSearchSnapshot)
+}
+
+/** `/mobile/players/...` または URL に `?mobile=1` / `?view=mobile` など */
+export function computeForceMobile(pathname: string, search: string): boolean {
   if (pathname.startsWith("/mobile/players")) return true
-
-  const searchParams = useSearchParams()
-  // 正常系: ?mobile=1 / ?view=mobile
+  const qs = search.startsWith("?") ? search.slice(1) : search
+  const searchParams = new URLSearchParams(qs)
   if (searchParams.get("mobile") === "1" || searchParams.get("view") === "mobile") return true
-
-  // 誤ってクエリ全体をエンコードしてしまうケース: ?mobile%3D1 (= key が "mobile=1" になる)
-  // 例: http://localhost:3000/players/... ?mobile%3D1
   if (searchParams.has("mobile=1") || searchParams.has("view=mobile")) return true
-
-  // さらに、クエリ全体が1つの値として入ってしまい searchParams から拾えないケースにも対応
-  // 例: ?name%3D...%26roman%3D...%26mobile%3D1
   if (typeof window !== "undefined") {
     const raw = window.location.search || ""
     try {
@@ -41,38 +81,37 @@ function useForceMobileFromSearch(): boolean {
       if (raw.includes("mobile%3D1") || raw.includes("view%3Dmobile")) return true
     }
   }
-
-  // ?mobile (値なし) を強制スマホ扱いにしたい場合
   if (searchParams.has("mobile") && searchParams.get("mobile") !== "0") return true
-
   return false
 }
 
-export function useIsDesktop(): boolean | undefined {
-  const forceMobile = useForceMobileFromSearch()
-  const [isDesktop, setIsDesktop] = useState<boolean | undefined>(undefined)
+export function useViewportLayout(): { isDesktop: boolean; forceMobile: boolean } {
+  const pathname = usePathname()
+  const search = useClientSearchString()
+  const forceMobile = useMemo(() => computeForceMobile(pathname, search), [pathname, search])
+  const [isDesktopMedia, setIsDesktopMedia] = useState(false)
 
-  const media = useMemo(() => {
-    return {
+  const media = useMemo(
+    () => ({
       primary: DESKTOP_MEDIA_PRIMARY,
       secondary: DESKTOP_MEDIA_SECONDARY,
-    }
-  }, [])
+    }),
+    [],
+  )
 
   useEffect(() => {
     if (forceMobile) {
-      setIsDesktop(false)
+      setIsDesktopMedia(false)
       return
     }
 
     const mqPrimary = window.matchMedia(media.primary)
     const mqSecondary = window.matchMedia(media.secondary)
 
-    const update = () => setIsDesktop(mqPrimary.matches || mqSecondary.matches)
+    const update = () => setIsDesktopMedia(mqPrimary.matches || mqSecondary.matches)
     update()
 
     const addChangeListener = (mq: MediaQueryList, cb: () => void) => {
-      // Safari 等では addEventListener/removeEventListener が無いことがある
       const anyMq = mq as unknown as {
         addEventListener?: (type: "change", listener: () => void) => void
         removeEventListener?: (type: "change", listener: () => void) => void
@@ -105,5 +144,12 @@ export function useIsDesktop(): boolean | undefined {
     }
   }, [forceMobile, media.primary, media.secondary])
 
-  return isDesktop
+  return {
+    forceMobile,
+    isDesktop: forceMobile ? false : isDesktopMedia,
+  }
+}
+
+export function useIsDesktop(): boolean {
+  return useViewportLayout().isDesktop
 }

@@ -1,30 +1,15 @@
 /**
- * 試合・投手指定でコース別（対右/対左）投球成績を返す API
+ * 試合・Yahoo投手ID指定でコース別（対右/対左）投球成績を返す API
  * fetch_pitcher_zone_stats.py で生成した JSON を読み込む
  */
 
-import { NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
+import { NextResponse } from "next/server"
+import { type ZoneStat, type ZoneStatsResponse } from "@/lib/yahooGame/gamePitcherPilotFiles"
+import { loadZoneStatsJsonOrCanonical } from "@/lib/yahooGame/loadZoneStatsWithCanonicalFallback"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export type ZoneStat = {
-  zoneId: number
-  pitches: number
-  ab: number
-  h: number
-  hr: number
-  ops: string
-  avg: string
-}
-
-export type ZoneStatsResponse = {
-  game_id: string
-  pitcher_id: string
-  vsRight: ZoneStat[]
-  vsLeft: ZoneStat[]
-}
+export type { ZoneStat, ZoneStatsResponse }
 
 export async function GET(
   _request: Request,
@@ -36,30 +21,26 @@ export async function GET(
     const params = context.params instanceof Promise ? await context.params : context.params
     const { gameId, pitcherId } = params
     if (!gameId || !pitcherId) {
-      return NextResponse.json({ error: 'gameId and pitcherId required' }, { status: 400 })
+      return NextResponse.json({ error: "gameId and pitcherId required" }, { status: 400 })
     }
 
-    const dataDir = path.join(process.cwd(), '_data', 'yahoo_games_pilot')
-    const filePath = path.join(dataDir, `zone_stats_${gameId}_${pitcherId}.json`)
-
-    if (!fs.existsSync(filePath)) {
+    const data = loadZoneStatsJsonOrCanonical(getProjectRoot(), gameId, pitcherId)
+    if (!data) {
       return NextResponse.json(
         {
           error:
-            'Zone stats not found. Run: python scripts/fetch_pitcher_zone_stats.py --game-id ' +
+            "Zone stats unavailable (no JSON under _data/yahoo_games_pilot and no canonical pitchEvents). " +
+            "Run: python scripts/fetch_pitcher_zone_stats.py --game-id " +
             gameId +
-            ' --pitcher-id ' +
+            " --pitcher-id " +
             pitcherId,
         },
         { status: 404 }
       )
     }
-
-    const raw = fs.readFileSync(filePath, 'utf-8')
-    const data: ZoneStatsResponse = JSON.parse(raw)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('[game-zone-stats] Error:', error)
-    return NextResponse.json({ error: 'Failed to load zone stats' }, { status: 500 })
+    console.error("[game-zone-stats] Error:", error)
+    return NextResponse.json({ error: "Failed to load zone stats" }, { status: 500 })
   }
 }

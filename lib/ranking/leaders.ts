@@ -269,8 +269,8 @@ function getMetricValueForLeader(row: BattingCsvRow, metric: MetricDefinition): 
         slg = tb / ab
       }
       
-      if (obp !== null && slg !== null) {
-        return obp + slg
+      if (obp !== null) {
+        return obp + (slg ?? 0)
       }
       return null
     }
@@ -382,8 +382,8 @@ function getMetricValueForLeader(row: BattingCsvRow, metric: MetricDefinition): 
         slg = tb / ab
       }
       
-      if (obp !== null && slg !== null) {
-        return (obp + slg / 3) * 1000
+      if (obp !== null) {
+        return (obp + (slg ?? 0) / 3) * 1000
       }
       return null
     }
@@ -409,8 +409,8 @@ function getMetricValueForLeader(row: BattingCsvRow, metric: MetricDefinition): 
         slg = tb / ab
       }
       
-      if (obp !== null && slg !== null) {
-        return (1.8 * obp + slg) / 4
+      if (obp !== null) {
+        return (1.8 * obp + (slg ?? 0)) / 4
       }
       return null
     }

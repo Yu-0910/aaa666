@@ -13,37 +13,9 @@ import { Fragment } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { RankingViewModel, RankingRow } from '@/lib/ranking/types'
+import { formatRomanNameForRanking } from '@/lib/ranking/formatRomanNameForRanking'
+import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
-
-// チームカラーの定義
-const teamColors: { [key: string]: string } = {
-  // セ・リーグ
-  阪神: "#ffde00",
-  "阪神タイガース": "#ffde00",
-  巨人: "#ff6600",
-  "読売ジャイアンツ": "#ff6600",
-  DeNA: "#0067c0",
-  "横浜DeNAベイスターズ": "#0067c0",
-  広島: "#d60718",
-  "広島東洋カープ": "#d60718",
-  中日: "#004ea2",
-  "中日ドラゴンズ": "#004ea2",
-  ヤクルト: "#2bbb3f",
-  "東京ヤクルトスワローズ": "#2bbb3f",
-  // パ・リーグ
-  オリックス: "#b79e51",
-  "オリックス・バファローズ": "#b79e51",
-  ロッテ: "#222",
-  "千葉ロッテマリーンズ": "#222",
-  日本ハム: "#0077c8",
-  "北海道日本ハムファイターズ": "#0077c8",
-  楽天: "#7a0019",
-  "東北楽天ゴールデンイーグルス": "#7a0019",
-  西武: "#004098",
-  "埼玉西武ライオンズ": "#004098",
-  ソフトバンク: "#ffdb00",
-  "福岡ソフトバンクホークス": "#ffdb00",
-}
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -51,56 +23,14 @@ interface RankingUIProps {
   sortKey: string
   order: 'asc' | 'desc'
   onSortChange: (metricKey: string) => void
-}
-
-/**
- * ローマ字名をイニシャル.名前形式に変換
- * 日本人選手: "Kiyomiya Kotaro" → "K.Kiyomiya" (名前のイニシャル.苗字)
- * 外国人選手: "Sandro Fabian" → "S.Fabian" (苗字のイニシャル.名前)
- * 単一の名前: "Fabian" → "F.Fabian" (最初の文字.名前全体)
- * 
- * 注意: 既に「イニシャル.名前」形式（例: "M.Kozuru", "S.Fabian"）の場合は、そのまま返す
- */
-function formatRomanName(romanName: string): string {
-  const trimmed = romanName.trim()
-  if (!trimmed) return ''
-  
-  // 既に「イニシャル.名前」形式かどうかをチェック
-  // パターン: 1文字の大文字 + "." + 名前（例: "M.Kozuru", "S.Fabian"）
-  const alreadyFormattedPattern = /^[A-Z]\.([A-Z][a-z]+|[A-Z]+)$/
-  if (alreadyFormattedPattern.test(trimmed)) {
-    // 既にフォーマット済みの場合はそのまま返す
-    return trimmed
-  }
-  
-  // スペースで分割
-  const parts = trimmed.split(/\s+/)
-  
-  if (parts.length === 0) return ''
-  
-  if (parts.length === 1) {
-    // 名前のみの場合（外国人選手など）
-    // 例: "Fabian" → "F.Fabian"
-    const name = parts[0]
-    if (name.length > 0) {
-      return `${name[0].toUpperCase()}.${name}`
-    }
-    return ''
-  }
-  
-  // 2つ以上の部分がある場合
-  // 外国人選手の場合: "Sandro Fabian" → "S.Fabian" (苗字のイニシャル.名前)
-  // 日本人選手の場合: "Kiyomiya Kotaro" → "K.Kiyomiya" (名前のイニシャル.苗字)
-  // 
-  // 判定方法: 最後の部分が名前、それ以前が苗字（複数の場合もある）
-  const firstName = parts[parts.length - 1]  // 最後の部分が名前
-  const lastName = parts.slice(0, -1).join(' ')  // それ以前が苗字
-  
-  // 苗字の最初の文字をイニシャルとして取得
-  const initial = lastName.length > 0 ? lastName[0].toUpperCase() : ''
-  
-  // イニシャル.名前形式に変換（外国人選手形式）
-  return `${initial}.${firstName}`
+  /** ランキングベースパス（既定: `/ranking`）。投手は `/ranking/pitching` */
+  rankingPathBase?: string
+  /** 指標が未選択時の見出しフォールバック */
+  metricLabelFallback?: string
+  /** 年度セレクトの候補。未指定時は 2026〜1950 */
+  yearOptions?: number[]
+  /** メイン見出し直下の補足（例: 投手規定の説明） */
+  titleSubNote?: string
 }
 
 // 左ブロック（順＋フレーム＋選手）を1層にまとめ、隙間を防ぐ（問題29・二層構造の理想に合わせる）
@@ -109,22 +39,44 @@ const PLAYER_WIDTH = 90
 const FRAME_WIDTH = 2 // 順列と選手列の間のグレーフレーム
 const LEFT_BLOCK_WIDTH = RANK_WIDTH + FRAME_WIDTH + PLAYER_WIDTH // 122
 
-export default function RankingUI({ viewModel, sortedRows, sortKey, order, onSortChange }: RankingUIProps) {
-  const { title, season, league, metrics } = viewModel
+export default function RankingUI({
+  viewModel,
+  sortedRows,
+  sortKey,
+  order,
+  onSortChange,
+  rankingPathBase = '/ranking',
+  metricLabelFallback = '打撃成績',
+  yearOptions,
+  titleSubNote,
+}: RankingUIProps) {
+  const { season, league, metrics } = viewModel
   const router = useRouter()
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
   const activeMetric = metrics.find(m => m.key === sortKey)
-  const metricLabel = activeMetric?.label || '打撃成績'
-  
+  const metricLabel = activeMetric?.label || metricLabelFallback
+
   // タイトルを動的に生成（例：「パ・リーグ　OPSランキング (2025年)」）
-  const leagueName = league === 'CL' ? 'セ・リーグ' : 'パ・リーグ'
+  const leagueName =
+    league === 'CL'
+      ? 'セ・リーグ'
+      : league === 'PL'
+        ? 'パ・リーグ'
+        : league === 'PRE_spring'
+          ? '春季リーグ'
+          : league === 'PRE_fall'
+            ? '秋季リーグ'
+            : league
   const displayTitle = `${leagueName}　${metricLabel}ランキング (${season}年)`
+
+  const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
 
   // 年度変更ハンドラ
   const handleYearChange = (newYear: number) => {
-    // 同じリーグ、同じ指標で新しい年度のランキングページに遷移
-    router.push(`/ranking/${newYear}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`)
+    router.push(
+      `${rankingPathBase}/${newYear}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`
+    )
   }
 
   return (
@@ -152,7 +104,7 @@ export default function RankingUI({ viewModel, sortedRows, sortKey, order, onSor
             onChange={(e) => handleYearChange(Number(e.target.value))}
             className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
           >
-            {Array.from({ length: 77 }, (_, i) => 2026 - i).map((year) => (
+            {yearSelectOptions.map((year) => (
               <option key={year} value={year}>
                 {year}
               </option>
@@ -169,6 +121,9 @@ export default function RankingUI({ viewModel, sortedRows, sortKey, order, onSor
             {displayTitle}
           </h1>
         </div>
+        {titleSubNote ? (
+          <p className="text-[10px] text-gray-500 mb-2 leading-snug max-w-[920px]">{titleSubNote}</p>
+        ) : null}
 
         {/* ランキングテーブル */}
         <div className="bg-[#1a1a1a] overflow-hidden border border-[#333]">
@@ -342,10 +297,10 @@ export default function RankingUI({ viewModel, sortedRows, sortKey, order, onSor
                             style={{ width: PLAYER_WIDTH, minHeight: 32, backgroundColor: '#1f1f1f', padding: '2px 2px', boxSizing: 'border-box' }}
                           >
                             <div className="flex items-center gap-0.5 w-full min-w-0">
-                              <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: teamColors[row.team] || '#fff' }} />
+                              <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: rankingTeamStripeColor(row.team) }} />
                               <div className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05] h-8">
                                 <Link
-                                  href={`/players/${row.playerId}?name=${encodeURIComponent(row.name.replace(/\s+/g, ''))}${hasRomanName && row.romanName ? `&roman=${encodeURIComponent(formatRomanName(row.romanName))}` : ''}`}
+                                  href={`/players/${row.playerId}?name=${encodeURIComponent(row.name.replace(/\s+/g, ''))}${hasRomanName && row.romanName ? `&roman=${encodeURIComponent(formatRomanNameForRanking(row.romanName))}` : ''}`}
                                   className="block truncate"
                                 >
                                   <span className="text-white hover:text-[#ffff44] text-[13px] font-semibold truncate">
@@ -354,7 +309,7 @@ export default function RankingUI({ viewModel, sortedRows, sortKey, order, onSor
                                 </Link>
                                 {hasRomanName && row.romanName && (
                                   <span className="text-[10px] text-gray-400 latin truncate line-clamp-1">
-                                    {formatRomanName(row.romanName)}
+                                    {formatRomanNameForRanking(row.romanName)}
                                   </span>
                                 )}
                               </div>

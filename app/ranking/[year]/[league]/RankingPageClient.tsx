@@ -5,12 +5,15 @@
 
 "use client"
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo } from 'react'
+import { useClientSearchString } from '@/hooks/useIsDesktop'
 import RankingUI from '@/components/RankingUI'
 import type { RankingViewModel, RankingRow } from '@/lib/ranking/types'
 import { loadRankingJson } from '@/lib/ranking/jsonLoader'
 import { shouldRequireQualifyingPA, calculateMinPA, get1950MinGames } from '@/lib/ranking/qualifyingPA'
+import { lookupRomanInMap } from '@/lib/ranking/romanNameLookup'
+import { FullPageLoading } from '@/components/ui/spinner'
 
 interface RankingPageClientProps {
   initialViewModel: RankingViewModel
@@ -50,18 +53,31 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   } as RankingRow
 }
 
-/** CSV英字名マップ用のキー（server の normalizeKey と同一） */
-function romanMapKey(name: string, team: string): string {
-  const n = (name ?? '').toString().replace(/\u3000/g, ' ').trim()
-  const t = (team ?? '').toString().trim()
-  return `${n}|${t}`
+function ceilToInt(n: number): number {
+  if (!Number.isFinite(n)) return 0
+  return Math.ceil(n)
 }
 
-/** スペース除去キー（照合フォールバック用） */
-function romanMapKeyNoSpace(name: string, team: string): string {
-  const n = (name ?? '').toString().replace(/[\s\u3000]/g, '').trim()
-  const t = (team ?? '').toString().trim()
-  return `${n}|${t}`
+/**
+ * 現時点のチーム試合数（= 行の「試合」の最大値）から規定打席を計算する。
+ * ルール: チーム試合数 × 3.1（小数は切り上げ）
+ */
+function computeDynamicMinPAByTeam(rows: RankingRow[]): Map<string, number> {
+  const byTeamMaxGames = new Map<string, number>()
+  for (const row of rows) {
+    const team = String((row as any)['team'] ?? (row as any)['チーム'] ?? '').trim()
+    if (!team) continue
+    const gRaw = (row as any)['games'] ?? (row as any)['G'] ?? (row as any)['試合']
+    const g = typeof gRaw === 'number' ? gRaw : Number(gRaw)
+    if (!Number.isFinite(g)) continue
+    const prev = byTeamMaxGames.get(team) ?? 0
+    if (g > prev) byTeamMaxGames.set(team, g)
+  }
+  const out = new Map<string, number>()
+  for (const [team, games] of byTeamMaxGames.entries()) {
+    out.set(team, ceilToInt(games * 3.1))
+  }
+  return out
 }
 
 /**
@@ -81,23 +97,29 @@ async function mergeRomanNamesFromCsv(
   } catch {
     return rows
   }
-  return rows.map(row => {
+  return rows.map((row) => {
     if (row.romanName && row.romanName.trim()) return row
-    const key = romanMapKey(row.name, row.team)
-    const keyNoSpace = romanMapKeyNoSpace(row.name, row.team)
-    const en = map[key]?.trim() || map[keyNoSpace]?.trim()
+    const en = lookupRomanInMap(map, row.name, row.team)
     if (!en) return row
     return { ...row, romanName: en }
   })
 }
 
-function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
+export default function RankingPageClient({ initialViewModel }: RankingPageClientProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-
-  // URLクエリパラメータからソート情報を取得
-  const sortKey = searchParams.get('sort') || 'ops'
-  const order = (searchParams.get('order') as 'asc' | 'desc') || getDefaultSortOrder(sortKey)
+  const clientSearch = useClientSearchString()
+  const { sortKey, order, yahooPoc, yahooGameId } = useMemo(() => {
+    const q = clientSearch.replace(/^\?/, '')
+    const sp = new URLSearchParams(q)
+    const sk = sp.get('sort') || 'ops'
+    const ord = (sp.get('order') as 'asc' | 'desc') || getDefaultSortOrder(sk)
+    return {
+      sortKey: sk,
+      order: ord,
+      yahooPoc: sp.get('yahooPoc') === '1',
+      yahooGameId: sp.get('yahooGameId') || '2021038624',
+    }
+  }, [clientSearch])
 
   // 案A: 表示中の指標ごとにJSONを取得して保持
   const [rowsFromJson, setRowsFromJson] = useState<RankingRow[]>([])
@@ -143,7 +165,14 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [initialViewModel.season, initialViewModel.league, sortKey, metricDef?.label])
+  }, [
+    initialViewModel.season,
+    initialViewModel.league,
+    sortKey,
+    metricDef?.label,
+    yahooPoc,
+    yahooGameId,
+  ])
 
   // デバッグ用（開発時のみ）
   if (typeof window !== 'undefined') {
@@ -151,7 +180,7 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
       sortKey, 
       order,
       availableMetrics: initialViewModel.metrics.map(m => ({ key: m.key, label: m.label })),
-      urlParams: { sort: searchParams.get('sort'), order: searchParams.get('order') }
+      urlParams: { sort: sortKey, order }
     })
   }
 
@@ -207,7 +236,8 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
 
     // 規定打席フィルタを適用（Phase 4: 規定用CSV由来JSONでは全行が規定以上のため実質 no-op。従来JSONではフィルタが効き後方互換を確保）
     let filteredRows = rows
-    if (requiresQualifyingPA && minPA > 0) {
+    if (requiresQualifyingPA && minPA > 0 && !yahooPoc) {
+      const dynamicMinPAByTeam = computeDynamicMinPAByTeam(rows)
       filteredRows = rows.filter(row => {
         // 1966年・1967年パ・リーグの場合はチーム別規定打席（PA）を使用
         if (is1966PL || is1967PL) {
@@ -279,9 +309,12 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
           return passes
         } else {
           // 通常の場合は打席（PA）でフィルタリング
+          const team = String(row['team'] || row['チーム'] || '').trim()
+          const dynamicMinPA = team ? dynamicMinPAByTeam.get(team) : undefined
+          const effectiveMinPA = dynamicMinPA ?? minPA
           const pa = row['PA'] || row['pa'] || row['打席']
           const paValue = typeof pa === 'number' ? pa : Number(pa)
-          const passes = !isNaN(paValue) && paValue >= minPA
+          const passes = !isNaN(paValue) && paValue >= effectiveMinPA
           
           // デバッグログ（開発時のみ）- 若松勉のデータを確認
           if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -291,7 +324,7 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
                 playerName,
                 pa,
                 paValue,
-                minPA,
+                minPA: effectiveMinPA,
                 passes,
                 rowKeys: Object.keys(row),
               })
@@ -337,12 +370,20 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
       ...row,
       rank: index + 1,
     }))
-  }, [rowsFromJson, initialViewModel.metrics, initialViewModel.season, initialViewModel.league, sortKey, order])
+  }, [
+    rowsFromJson,
+    initialViewModel.metrics,
+    initialViewModel.season,
+    initialViewModel.league,
+    sortKey,
+    order,
+    yahooPoc,
+  ])
 
   // ソート切替ハンドラ
   const handleSortChange = (metricKey: string) => {
-    const currentSort = searchParams.get('sort') || sortKey
-    const currentOrder = (searchParams.get('order') as 'asc' | 'desc') || order
+    const currentSort = sortKey
+    const currentOrder = order
 
     let newOrder: 'asc' | 'desc'
     if (currentSort === metricKey) {
@@ -353,7 +394,13 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
       newOrder = getDefaultSortOrder(metricKey)
     }
 
-    router.replace(`/ranking/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}`)
+    const extra =
+      yahooPoc
+        ? `&yahooPoc=1&yahooGameId=${encodeURIComponent(yahooGameId)}`
+        : ""
+    router.replace(
+      `/ranking/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}${extra}`
+    )
   }
 
   if (loadError) {
@@ -367,6 +414,10 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
     )
   }
 
+  if (loading) {
+    return <FullPageLoading />
+  }
+
   return (
     <RankingUI
       viewModel={{ ...initialViewModel, rows: rowsFromJson }}
@@ -375,19 +426,5 @@ function RankingPageClientInner({ initialViewModel }: RankingPageClientProps) {
       order={order}
       onSortChange={handleSortChange}
     />
-  )
-}
-
-export default function RankingPageClient({ initialViewModel }: RankingPageClientProps) {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">読み込み中...</div>
-        </div>
-      </div>
-    }>
-      <RankingPageClientInner initialViewModel={initialViewModel} />
-    </Suspense>
   )
 }

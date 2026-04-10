@@ -1,0 +1,21 @@
+---
+description: 打者の利き手・コース番号の誤読防止（対右／対左・zoneId）
+globs: lib/yahooGame/batterHandFromCanonical.ts,lib/yahooGame/loadZoneStatsWithCanonicalFallback.ts,lib/pitchDetailsPilot.ts,app/players/**/*.tsx,app/api/games/**/zone-stats/**
+---
+
+# 打者の利き手（対右／対左）
+
+## やってはいけないこと
+
+- **打撃成績表・打順表の先頭セル `(左)` / `(右)` を、打者の利き手だと決めつけない。** 日本語のスコアでは多くの場合 **守備位置**（左翼・右翼）を指す。細川のように **左翼手かつ右打者** の組み合わせは普通にある。
+- チャットや過去サマリの「zone3」などを鵜呑みにせず、**決着ゾーンは canonical の該当打席 `pitchEvents` の最終球 `zoneId` で必ず確認**する。
+
+## 正しい情報源
+
+- アプリ内の左右振り分けは **`resolveBatHandJaForBatter`**（`lib/yahooGame/batterHandFromCanonical.ts`）に合わせる: **スタメン `startingLineup[].bats`** → **名簿 `bat_hand`**（`yahooPlayersMentioned` 経由の名前照合）。打撃表の `cells` は利き手判定に使っていない。
+- 「この打者は右打者か左打者か」を説明・推論するときは、上記が空のときは **名簿 CSV や公式** を疑う前に、**コードが参照しているフィールド**を優先する。
+
+## コース（zone）
+
+- UI のマス番号は `z = (row - 1) * 5 + col`（`app/players/[playerId]/page.tsx`）。**会話上の「3列目」が zoneId 3 と一致するとは限らない**（列と zone の対応を数える）。
+

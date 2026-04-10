@@ -84,23 +84,73 @@ def parse_pitch_details(html: str, game_id: str, inning: int, top_bottom: str, b
     soup = BeautifulSoup(html, "lxml")
     rows: list[dict] = []
 
-    # 投手・打者ID・打者名・打者利き腕を取得（投手|打者のリンクから）
+    # 投手・打者ID・打者名・打者利き腕を取得（#gm_rslt の選手リンクから）
+    # 注意: #gm_rslt は回/表示状態により見出し順が「投手 | 打者」または「打者 | 投手」になり得る。
+    # リンクの出現順に依存すると投手/打者が入れ替わるため、可能なら見出し順を読んで割り当てる。
     pitcher_id = ""
     batter_id = ""
     batter_name = ""  # 名簿照合用
     batter_hand = ""  # 左打/右打/両打 → 対左/対右の分類用
     pitcher_batter_table = soup.find("table", id="gm_rslt")
     if pitcher_batter_table:
-        for a in pitcher_batter_table.find_all("a", href=PLAYER_ID_PATTERN):
-            mid = PLAYER_ID_PATTERN.search(a.get("href", ""))
-            if mid:
-                pid = mid.group(1)
-                if not pitcher_id:
-                    pitcher_id = pid
-                elif not batter_id:
-                    batter_id = pid
-                    batter_name = (a.get_text() or "").strip()
-                    break
+        def _extract_two_players_in_row(tr) -> list[tuple[str, str]]:
+            links: list[tuple[str, str]] = []
+            for a in tr.find_all("a", href=PLAYER_ID_PATTERN):
+                mid = PLAYER_ID_PATTERN.search(a.get("href", ""))
+                if mid:
+                    links.append((mid.group(1), (a.get_text() or "").strip()))
+            return links
+
+        # 見出し行（th）から列順を推定
+        header_labels: list[str] = []
+        for tr in pitcher_batter_table.find_all("tr"):
+            ths = tr.find_all("th")
+            if not ths:
+                continue
+            texts = [th.get_text(strip=True) for th in ths]
+            if any(t in ("投手", "打者") for t in texts):
+                header_labels = [t for t in texts if t in ("投手", "打者")]
+                break
+
+        # 選手リンク行（2人）を探す（余計なリンクが混ざりやすいので tr 単位で見る）
+        pair: list[tuple[str, str]] = []
+        for tr in pitcher_batter_table.find_all("tr"):
+            cand = _extract_two_players_in_row(tr)
+            if len(cand) >= 2:
+                pair = cand[:2]
+                break
+
+        if len(pair) == 2:
+            first_id, first_name = pair[0]
+            second_id, second_name = pair[1]
+            if header_labels == ["投手", "打者"]:
+                pitcher_id = first_id
+                batter_id, batter_name = second_id, second_name
+            elif header_labels == ["打者", "投手"]:
+                batter_id, batter_name = first_id, first_name
+                pitcher_id = second_id
+            else:
+                # 見出しが取れない場合は、ページにより順序が揺れるため safest fallback として
+                # 「投手と思しき方」に投手IDが入るよう、セル内の投/打表記を使う（取れなければ従来順）
+                table_text = pitcher_batter_table.get_text()
+                if "投手" in table_text and "打者" in table_text and table_text.find("投手") < table_text.find("打者"):
+                    pitcher_id = first_id
+                    batter_id, batter_name = second_id, second_name
+                else:
+                    batter_id, batter_name = first_id, first_name
+                    pitcher_id = second_id
+        else:
+            # 最低限のフォールバック（1人しか取れない場合）
+            player_links: list[tuple[str, str]] = []
+            for a in pitcher_batter_table.find_all("a", href=PLAYER_ID_PATTERN):
+                mid = PLAYER_ID_PATTERN.search(a.get("href", ""))
+                if mid:
+                    player_links.append((mid.group(1), (a.get_text() or "").strip()))
+            if len(player_links) >= 2:
+                batter_id, batter_name = player_links[0][0], player_links[0][1]
+                pitcher_id = player_links[1][0]
+            elif len(player_links) == 1:
+                batter_id, batter_name = player_links[0][0], player_links[0][1]
         # 打者利き腕: 左打/右打/両打 をテーブル内から検索（左投/右投と区別するため「打」を含む形で検索）
         table_text = pitcher_batter_table.get_text()
         if "左打" in table_text:

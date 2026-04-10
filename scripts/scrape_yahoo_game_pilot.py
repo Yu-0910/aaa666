@@ -29,6 +29,10 @@ except ImportError:
     print("❌ エラー: pip install requests beautifulsoup4 lxml")
     sys.exit(1)
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed
+
 BASE_URL = "https://baseball.yahoo.co.jp"
 SCHEDULE_URL = f"{BASE_URL}/npb/schedule/"
 GAME_ID_PATTERN = re.compile(r'/npb/game/(\d{10})/')
@@ -78,6 +82,8 @@ def main():
     parser.add_argument("--out", default="_data/yahoo_games_pilot", help="出力ディレクトリ")
     parser.add_argument("--sleep", type=float, default=1.0, help="リクエスト間の秒数")
     args = parser.parse_args()
+
+    ensure_yahoo_network_fetch_allowed()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
