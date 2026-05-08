@@ -29,14 +29,23 @@ import {
 } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
-import { isWalkLikeResultText } from "../lib/baseballWalkResult"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
 import {
   applyPlayResult,
   classifySituationAtPaStart,
   emptyGameState,
 } from "../lib/yahooGame/paSituationSim"
+import {
+  emptyBattingSeasonAggYahoo,
+  plateAppearanceLastResultText,
+  updateBattingAggFromPa,
+  type BattingSeasonAggYahoo,
+} from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import {
+  loadVsHandRowsFromCanonicalWithDebug,
+  mergePhase10RestoredIntoDocIfPresent,
+} from "../lib/seasonStatsPilot"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -59,124 +68,11 @@ function fmtSlash3(n: number | null): string {
   return s.startsWith("0") ? s.slice(1) : s
 }
 
-function lastPitchResult(pa: PlateAppearance): string {
-  const pe = pa.pitchEvents ?? []
-  const last = pe.length > 0 ? pe[pe.length - 1] : null
-  return (
-    (pa.resultSummaryJa ?? "").trim() ||
-    ((last?.resultJa ?? "") as string).trim() ||
-    ""
-  )
-}
-
-function isStrikeout(result: string): boolean {
-  return /三振|空三振|見三振/.test(result) || /^(空振り|見逃し)/.test(result)
-}
-function isHbp(result: string): boolean {
-  return /死球/.test(result)
-}
-function isSacBunt(result: string): boolean {
-  return /犠打|送りバント/.test(result)
-}
-function isSacFly(result: string): boolean {
-  return /犠飛/.test(result)
-}
-function isGidp(result: string): boolean {
-  return /併殺/.test(result)
-}
-
-function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
-  if (/本塁打|ホームラン|HR/.test(result)) return 4
-  if (/三塁打/.test(result)) return 3
-  if (/二塁打/.test(result)) return 2
-  if (/安打|ヒット|左安|中安|右安/.test(result)) return 1
-  return 0
-}
-
-function isAtBat(result: string): boolean {
-  if (!result) return false
-  if (isWalkLikeResultText(result) || isHbp(result) || isSacBunt(result) || isSacFly(result)) return false
-  if (/妨害/.test(result)) return false
-  return true
-}
-
-type Agg = {
-  gameIds: Set<string>
-  pa: number
-  ab: number
-  r: number
-  h: number
-  h2: number
-  h3: number
-  hr: number
-  tb: number
-  rbi: number
-  so: number
-  bb: number
-  ibb: number
-  hbp: number
-  sh: number
-  sf: number
-  sb: number
-  cs: number
-  gidp: number
-  risp_ab: number
-  risp_h: number
-}
-
-function emptyAgg(): Agg {
-  return {
-    gameIds: new Set(),
-    pa: 0,
-    ab: 0,
-    r: 0,
-    h: 0,
-    h2: 0,
-    h3: 0,
-    hr: 0,
-    tb: 0,
-    rbi: 0,
-    so: 0,
-    bb: 0,
-    ibb: 0,
-    hbp: 0,
-    sh: 0,
-    sf: 0,
-    sb: 0,
-    cs: 0,
-    gidp: 0,
-    risp_ab: 0,
-    risp_h: 0,
-  }
-}
-
-function updateFromPa(agg: Agg, gameId: string, pa: PlateAppearance): void {
-  agg.gameIds.add(gameId)
-  agg.pa += 1
-  const result = lastPitchResult(pa)
-  if (isWalkLikeResultText(result)) agg.bb += 1
-  if (isHbp(result)) agg.hbp += 1
-  if (isSacBunt(result)) agg.sh += 1
-  if (isSacFly(result)) agg.sf += 1
-  if (isStrikeout(result)) agg.so += 1
-  if (isGidp(result)) agg.gidp += 1
-
-  if (isAtBat(result)) {
-    agg.ab += 1
-    const bases = hitBases(result)
-    if (bases > 0) agg.h += 1
-    if (bases === 2) agg.h2 += 1
-    if (bases === 3) agg.h3 += 1
-    if (bases === 4) agg.hr += 1
-    agg.tb += bases
-  }
-}
-
 function aggToSeasonStatsRow(
-  splitType: "pa_round" | "base_sit" | "bat_order",
+  splitType: "pa_round" | "base_sit" | "bat_order" | "vs_hand",
   splitValue: string,
   splitLabel: string,
-  agg: Agg
+  agg: BattingSeasonAggYahoo
 ): SeasonStatsRow {
   const h1 = Math.max(0, agg.h - agg.h2 - agg.h3 - agg.hr)
   const avg = agg.ab > 0 ? agg.h / agg.ab : null
@@ -211,6 +107,7 @@ function aggToSeasonStatsRow(
     sf: agg.sf,
     sb: agg.sb,
     cs: agg.cs,
+    e: agg.e,
     gidp: agg.gidp,
     avg: fmtSlash3(avg),
     obp: fmtSlash3(obp),
@@ -345,9 +242,9 @@ function main(): void {
   }
 
   /** batterId -> roundKey "1"|"2"|"3"|"4"|"5" -> Agg */
-  const byBatterRound = new Map<string, Map<string, Agg>>()
+  const byBatterRound = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
-  function ensureRoundMap(bid: string): Map<string, Agg> {
+  function ensureRoundMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterRound.get(bid)
     if (!m) {
       m = new Map()
@@ -356,9 +253,9 @@ function main(): void {
     return m
   }
 
-  const byBatterBatOrder = new Map<string, Map<string, Agg>>()
+  const byBatterBatOrder = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
-  function ensureBatOrderMap(bid: string): Map<string, Agg> {
+  function ensureBatOrderMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterBatOrder.get(bid)
     if (!m) {
       m = new Map()
@@ -370,14 +267,14 @@ function main(): void {
   function addBatOrderAgg(bid: string, slot: string, gameId: string, pa: PlateAppearance): void {
     const bm = ensureBatOrderMap(bid)
     const key = `bat_order_${slot}`
-    const agg = bm.get(key) ?? emptyAgg()
-    updateFromPa(agg, gameId, pa)
+    const agg = bm.get(key) ?? emptyBattingSeasonAggYahoo()
+    updateBattingAggFromPa(agg, gameId, pa)
     bm.set(key, agg)
   }
 
-  const byBatterSit = new Map<string, Map<string, Agg>>()
+  const byBatterSit = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
-  function ensureSitMap(bid: string): Map<string, Agg> {
+  function ensureSitMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterSit.get(bid)
     if (!m) {
       m = new Map()
@@ -388,10 +285,18 @@ function main(): void {
 
   function addSitAgg(bid: string, sitKey: string, gameId: string, pa: PlateAppearance): void {
     const sm = ensureSitMap(bid)
-    const agg = sm.get(sitKey) ?? emptyAgg()
-    updateFromPa(agg, gameId, pa)
+    const agg = sm.get(sitKey) ?? emptyBattingSeasonAggYahoo()
+    updateBattingAggFromPa(agg, gameId, pa)
     sm.set(sitKey, agg)
   }
+
+  const mergedDocsByGameId = new Map<string, CanonicalGameDocument>()
+  for (const d of docs) {
+    const gid = String(d.gameId ?? "").trim()
+    if (gid) mergedDocsByGameId.set(gid, mergePhase10RestoredIntoDocIfPresent(d))
+  }
+
+  const allBattersWithPas = new Set<string>()
 
   for (const doc of docs) {
     const gameId = doc.gameId
@@ -401,12 +306,13 @@ function main(): void {
     for (const pa of pas) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
+      allBattersWithPas.add(bid)
       const n = (appearanceCount.get(bid) ?? 0) + 1
       appearanceCount.set(bid, n)
       const roundKey = n <= 4 ? String(n) : "5"
       const roundMap = ensureRoundMap(bid)
-      const agg = roundMap.get(roundKey) ?? emptyAgg()
-      updateFromPa(agg, gameId, pa)
+      const agg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
+      updateBattingAggFromPa(agg, gameId, pa)
       roundMap.set(roundKey, agg)
     }
 
@@ -439,7 +345,7 @@ function main(): void {
         if (risp) addSitAgg(bid, "risp", gameId, pa)
         // 非得点圏: 2・3塁走者なし（ランナーなし・1塁のみ）
         if (!risp) addSitAgg(bid, "no_risp", gameId, pa)
-        state = applyPlayResult(state, lastPitchResult(pa))
+        state = applyPlayResult(state, plateAppearanceLastResultText(pa))
       }
     }
   }
@@ -460,10 +366,21 @@ function main(): void {
   const roundOrder = ["1", "2", "3", "4", "5"]
   const sitOrder = ["none", "r1", "r2", "r3", "r12", "r13", "r23", "loaded", "risp", "no_risp"]
   const batOrderSlots = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+  // Phase 27: phase11 (battingLines) には登場するが plateAppearances に出ない打者
+  // （投手のエラー出塁のみ・代走のみ等）も vs_hand 行を出力するため、battingLines の打者も含める。
+  const allBattersWithBattingLines = new Set<string>()
+  for (const doc of docs) {
+    for (const line of doc.domain?.battingLines ?? []) {
+      const bid = String(line.yahooPlayerId ?? "").trim()
+      if (bid) allBattersWithBattingLines.add(bid)
+    }
+  }
   const allBatterIds = new Set<string>([
+    ...allBattersWithPas,
     ...byBatterRound.keys(),
     ...byBatterSit.keys(),
     ...byBatterBatOrder.keys(),
+    ...allBattersWithBattingLines,
   ])
   const batterIds = [...allBatterIds].sort()
   for (const bid of batterIds) {
@@ -471,6 +388,13 @@ function main(): void {
     const sitMap = byBatterSit.get(bid)
     const batOrderMap = byBatterBatOrder.get(bid)
     const rows: SeasonStatsRow[] = []
+    const vsHand = loadVsHandRowsFromCanonicalWithDebug(bid, {
+      preloadedCanonicalDocs: docs,
+      mergedDocsByGameId,
+    })
+    for (const r of vsHand.rows) {
+      if (r.split_type === "vs_hand") rows.push(r)
+    }
     if (roundMap) {
       for (const rk of roundOrder) {
         const agg = roundMap.get(rk)
@@ -494,7 +418,7 @@ function main(): void {
       }
     }
     const payload = {
-      schemaVersion: "phase15-player-season-batting-splits-v0",
+      schemaVersion: "phase15-player-season-batting-splits-v1",
       seasonYear: year,
       yahooBatterId: bid,
       generatedAt: new Date().toISOString(),
@@ -506,6 +430,26 @@ function main(): void {
           "打席結果テキストから走者を簡易シミュレーション（paSituationSim）。公式記録の代替ではない。",
         batOrderNote:
           "スタメン登録の打順（1〜9）。代打・途中出場のみでスタメン名簿に無い打席は集計対象外。",
+        vsHandNote:
+          "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。",
+      },
+      reconciliation: {
+        // 通算（Phase 11）と R+L+unknown 合計の不一致を、試合単位で
+        //   - 正の Δ（取りこぼし） → 不明バケツへ加算（Phase 25 = P0 / Phase 27 = H/HR）
+        //   - 負の Δ（二重計上）   → 当該試合のバケツから減算（Phase 26 = P0 / Phase 27 = H/HR）
+        // で寄せた集計。`negativeUnabsorbedDelta` は P0 の負 Δ が不明バケツ等で吸収しきれなかった残量。
+        backfilledGames: vsHand.reconciliation.backfilledGames,
+        negativeDeltaGames: vsHand.reconciliation.negativeDeltaGames,
+        appliedDelta: vsHand.reconciliation.appliedDelta,
+        negativeDelta: vsHand.reconciliation.negativeDelta,
+        negativeAppliedDelta: vsHand.reconciliation.negativeAppliedDelta,
+        negativeUnabsorbedDelta: vsHand.reconciliation.negativeUnabsorbedDelta,
+        negativeDeltaSamples: vsHand.reconciliation.negativeDeltaSamples,
+        // Phase 27: H/HR の Δ 吸収量（負 = 過剰計上の減算 / 正 = 取りこぼしの不明バケツ加算）
+        negativeHrApplied: vsHand.reconciliation.negativeHrApplied,
+        negativeHApplied: vsHand.reconciliation.negativeHApplied,
+        positiveHrApplied: vsHand.reconciliation.positiveHrApplied,
+        positiveHApplied: vsHand.reconciliation.positiveHApplied,
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),
