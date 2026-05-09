@@ -1619,6 +1619,53 @@ export function loadVsHandRowsFromCanonicalWithDebug(
               }
             }
           }
+          if (!batterTeam) {
+            // 4) 最後の砦: cells に打席結果があるイニングについて、試合全体の plateAppearances
+            //    から「その inning の攻撃側半回」を引き、 visitor/home へ写像する。
+            //    宮本丈のように本人の PA は空でも、他 batter の PA から半回が確定できれば
+            //    batter team を特定できる（移籍打者・roster.team 不一致のケースも救済）。
+            const board = mergedDoc.game?.scoreboard ?? []
+            if (board.length >= 2) {
+              const visitor = String(board[0]?.teamName ?? '').trim()
+              const home = String(board[1]?.teamName ?? '').trim()
+              const targetInnings = new Set<number>()
+              for (let i = 0; i < cells.length; i++) {
+                const t = String(cells[i] ?? '').trim()
+                if (t) targetInnings.add(i + 1)
+              }
+              const allPas = mergedDoc.domain?.plateAppearances ?? []
+              const halvesByInning = new Map<number, Set<number>>()
+              for (const pa of allPas) {
+                const parsed = parsePaId(String(pa.paId ?? ''))
+                if (!parsed) continue
+                if (!targetInnings.has(parsed.inning)) continue
+                const set = halvesByInning.get(parsed.inning) ?? new Set<number>()
+                set.add(parsed.half)
+                halvesByInning.set(parsed.inning, set)
+              }
+              let candidate = ''
+              let consistent = true
+              for (const inn of targetInnings) {
+                const halves = halvesByInning.get(inn)
+                if (!halves || halves.size === 0) continue
+                // 同一 inning で top/bottom 両方が混在することは通常ありえないが、
+                // 念のため複数なら曖昧扱いで skip。
+                if (halves.size > 1) {
+                  consistent = false
+                  break
+                }
+                const half = [...halves][0]
+                const team = half === 0 && visitor ? visitor : half === 1 && home ? home : ''
+                if (!team) continue
+                if (!candidate) candidate = team
+                else if (candidate !== team) {
+                  consistent = false
+                  break
+                }
+              }
+              if (consistent && candidate) batterTeam = candidate
+            }
+          }
           const pitcherNameById = new Map<string, string>()
           for (const pl of mergedDoc.domain?.pitchingLines ?? []) {
             const pid = String(pl?.yahooPlayerId ?? '').trim()

@@ -1,12 +1,12 @@
 {
   "schemaVersion": "vs-hand-audit-v1",
-  "generatedAt": "2026-05-09T03:54:56.651Z",
+  "generatedAt": "2026-05-09T04:48:46.636Z",
   "year": "2026",
   "summary": {
     "battersCheckedCount": 322,
     "battersWithGapCount": 2,
     "battersWithNegativeGapCount": 2,
-    "battersWithUnknownCount": 27,
+    "battersWithUnknownCount": 14,
     "totalGap": {
       "pa": 0,
       "ab": 0,
@@ -17,7 +17,7 @@
       "sh": 0,
       "sf": 0
     },
-    "totalUnknownPa": 29,
+    "totalUnknownPa": 15,
     "totalMissingPitcherIdPas": 0,
     "totalInferredPitcherIdPas": 492,
     "totalInferredFromTextPas": 2295
@@ -142,14 +142,6 @@
   ],
   "topUnknownPlayers": [
     {
-      "yahooBatterId": "1700089",
-      "playerName": "宮本 丈",
-      "unknownPa": 2,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
       "yahooBatterId": "1900045",
       "playerName": "井上 広大",
       "unknownPa": 2,
@@ -160,14 +152,6 @@
     {
       "yahooBatterId": "1000150",
       "playerName": "秋山 翔吾",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
-      "yahooBatterId": "1100096",
-      "playerName": "石川 慎吾",
       "unknownPa": 1,
       "missingPitcherIdPas": 0,
       "pitcherThrowHandUnknownPaSum": 0,
@@ -206,14 +190,6 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "1500112",
-      "playerName": "平沼 翔太",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
       "yahooBatterId": "1600021",
       "playerName": "Ｄ．ビシエド",
       "unknownPa": 1,
@@ -222,16 +198,8 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "1700044",
-      "playerName": "大城 卓三",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
-      "yahooBatterId": "1700068",
-      "playerName": "中村 奨成",
+      "yahooBatterId": "1700089",
+      "playerName": "宮本 丈",
       "unknownPa": 1,
       "missingPitcherIdPas": 0,
       "pitcherThrowHandUnknownPaSum": 0,
@@ -262,30 +230,6 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "1800122",
-      "playerName": "渡邊 佳明",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
-      "yahooBatterId": "1860140",
-      "playerName": "Ｆ．レイエス",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
-      "yahooBatterId": "1900068",
-      "playerName": "岸 潤一郎",
-      "unknownPa": 1,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
       "yahooBatterId": "1961927",
       "playerName": "Ｅ．モンテロ",
       "unknownPa": 1,
@@ -294,8 +238,16 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "2000066",
-      "playerName": "二俣 翔一",
+      "yahooBatterId": "2100014",
+      "playerName": "宮下 朝陽",
+      "unknownPa": 1,
+      "missingPitcherIdPas": 0,
+      "pitcherThrowHandUnknownPaSum": 0,
+      "topUnresolvedPitchers": []
+    },
+    {
+      "yahooBatterId": "2103845",
+      "playerName": "鵜飼 航丞",
       "unknownPa": 1,
       "missingPitcherIdPas": 0,
       "pitcherThrowHandUnknownPaSum": 0,
@@ -1088,8 +1040,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 11,
-        "ab": 8,
+        "pa": 12,
+        "ab": 9,
         "h": 1,
         "hr": 0,
         "bb": 3,
@@ -1108,8 +1060,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -3818,8 +3770,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 0,
-        "ab": 0,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -3838,8 +3790,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -6408,8 +6360,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 35,
-        "ab": 28,
+        "pa": 36,
+        "ab": 29,
         "h": 9,
         "hr": 3,
         "bb": 7,
@@ -6428,8 +6380,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -6698,8 +6650,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 22,
-        "ab": 17,
+        "pa": 23,
+        "ab": 18,
         "h": 4,
         "hr": 0,
         "bb": 2,
@@ -6708,8 +6660,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -6898,8 +6850,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 14,
-        "ab": 13,
+        "pa": 15,
+        "ab": 14,
         "h": 5,
         "hr": 1,
         "bb": 0,
@@ -6918,8 +6870,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -9838,8 +9790,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 21,
-        "ab": 19,
+        "pa": 22,
+        "ab": 20,
         "h": 4,
         "hr": 0,
         "bb": 0,
@@ -9858,8 +9810,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -10538,9 +10490,9 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 97,
-        "ab": 91,
-        "h": 26,
+        "pa": 98,
+        "ab": 92,
+        "h": 27,
         "hr": 2,
         "bb": 5,
         "hbp": 0,
@@ -10558,9 +10510,9 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
-        "h": 1,
+        "pa": 0,
+        "ab": 0,
+        "h": 0,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -11728,9 +11680,9 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 36,
-        "ab": 31,
-        "h": 6,
+        "pa": 37,
+        "ab": 32,
+        "h": 7,
         "hr": 0,
         "bb": 3,
         "hbp": 0,
@@ -11748,9 +11700,9 @@
         "sf": 2
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
-        "h": 1,
+        "pa": 0,
+        "ab": 0,
+        "h": 0,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -14538,8 +14490,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 12,
-        "ab": 12,
+        "pa": 13,
+        "ab": 13,
         "h": 2,
         "hr": 0,
         "bb": 0,
@@ -14548,8 +14500,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -15578,10 +15530,10 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 27,
-        "ab": 21,
-        "h": 5,
-        "hr": 0,
+        "pa": 28,
+        "ab": 22,
+        "h": 6,
+        "hr": 1,
         "bb": 6,
         "hbp": 0,
         "sh": 0,
@@ -15598,10 +15550,10 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
-        "h": 1,
-        "hr": 1,
+        "pa": 0,
+        "ab": 0,
+        "h": 0,
+        "hr": 0,
         "bb": 0,
         "hbp": 0,
         "sh": 0,
@@ -15648,8 +15600,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 64,
-        "ab": 63,
+        "pa": 65,
+        "ab": 64,
         "h": 17,
         "hr": 2,
         "bb": 1,
@@ -15668,8 +15620,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -18448,10 +18400,10 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 56,
-        "ab": 56,
-        "h": 16,
-        "hr": 2,
+        "pa": 57,
+        "ab": 57,
+        "h": 17,
+        "hr": 3,
         "bb": 0,
         "hbp": 0,
         "sh": 0,
@@ -18468,10 +18420,10 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
-        "h": 1,
-        "hr": 1,
+        "pa": 0,
+        "ab": 0,
+        "h": 0,
+        "hr": 0,
         "bb": 0,
         "hbp": 0,
         "sh": 0,
@@ -20898,8 +20850,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 30,
-        "ab": 29,
+        "pa": 31,
+        "ab": 30,
         "h": 7,
         "hr": 0,
         "bb": 1,
@@ -20918,8 +20870,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -22578,8 +22530,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 7,
-        "ab": 6,
+        "pa": 8,
+        "ab": 7,
         "h": 1,
         "hr": 0,
         "bb": 1,
@@ -22598,8 +22550,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,

@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "1700089",
-  "generatedAt": "2026-05-09T03:46:42.747Z",
+  "generatedAt": "2026-05-09T04:39:30.217Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -11,11 +11,11 @@
     "vsHandNote": "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。"
   },
   "reconciliation": {
-    "backfilledGames": 2,
+    "backfilledGames": 1,
     "negativeDeltaGames": 0,
     "appliedDelta": {
-      "pa": 2,
-      "ab": 2,
+      "pa": 1,
+      "ab": 1,
       "bb": 0,
       "hbp": 0,
       "sh": 0,
@@ -51,8 +51,8 @@
     "positiveHrApplied": 0,
     "positiveHApplied": 0,
     "cellResolvedR": {
-      "pa": 3,
-      "ab": 2,
+      "pa": 4,
+      "ab": 3,
       "bb": 0,
       "hbp": 1,
       "sh": 0,
@@ -75,18 +75,8 @@
     "cellAmbiguousPas": 1,
     "cellPitcherHandUnknownPas": 0,
     "cellMissingTextPas": 0,
-    "cellTeamUnresolvedPas": 1,
-    "cellTeamUnresolvedSamples": [
-      {
-        "gameId": "2021038765",
-        "inning": 9,
-        "cellText": "中飛",
-        "rosterTeam": "東京ヤクルトスワローズ",
-        "scoreboardVisitor": "東京ヤクルトスワローズ",
-        "scoreboardHome": "中日ドラゴンズ",
-        "paCountForBatter": 0
-      }
-    ]
+    "cellTeamUnresolvedPas": 0,
+    "cellTeamUnresolvedSamples": []
   },
   "source": {
     "canonicalGames": [
@@ -321,9 +311,9 @@
       "split_type": "vs_hand",
       "split_value": "R",
       "split_label": "対右投手",
-      "g": 13,
-      "pa": 14,
-      "ab": 13,
+      "g": 14,
+      "pa": 15,
+      "ab": 14,
       "r": 0,
       "h": 5,
       "h1": 4,
@@ -342,10 +332,10 @@
       "cs": 0,
       "e": 0,
       "gidp": 0,
-      "avg": ".385",
-      "obp": ".429",
-      "slg": ".615",
-      "ops": "1.044",
+      "avg": ".357",
+      "obp": ".400",
+      "slg": ".571",
+      "ops": ".971",
       "risp_avg": ".000",
       "risp_ab": 0,
       "risp_h": 0,
@@ -367,9 +357,9 @@
       "split_type": "vs_hand",
       "split_value": "unknown",
       "split_label": "対不明",
-      "g": 2,
-      "pa": 2,
-      "ab": 2,
+      "g": 1,
+      "pa": 1,
+      "ab": 1,
       "r": 0,
       "h": 0,
       "h1": 0,

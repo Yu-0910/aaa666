@@ -47,7 +47,15 @@ export function parseIpToThirds(ip: string | undefined | null): number {
  *   2. `inferPitcherTeamForNf3Line` (plateAppearances の半回)
  *   3. roster.team が scoreboard の visitor/home のどちらかと厳密一致するなら採用
  *      （途中登板の中継ぎ投手は startingLineup に無いことが多いので必須）
+ *
+ * Sportsnavi の出場成績テーブルは「サマリ行（IP 空）」と「詳細行（IP あり）」の 2 段構造で
+ * 取得できることがあり、最終回担当の投手の IP が詳細行に出ない試合がある（試合 2021038765
+ * の松山晋也 [中日 9 回担当] など）。詳細行で thirds 区間を埋めた後、サマリ行に登場した
+ * 投手で詳細に居ない ID を **末尾に未確定区間として追加**することで、9 回以降の打席にも
+ * 利き腕解決ができるようにする。
  */
+const FALLBACK_PITCHER_TAIL_THIRDS = 999
+
 export function buildPitcherIntervalsByTeam(doc: CanonicalGameDocument): Map<string, PitcherInterval[]> {
   const out = new Map<string, PitcherInterval[]>()
   const lines: PitchingLine[] = doc.domain?.pitchingLines ?? []
@@ -61,21 +69,102 @@ export function buildPitcherIntervalsByTeam(doc: CanonicalGameDocument): Map<str
     if (t === visitor || t === home) return t
     return ""
   }
+  const resolveTeam = (yid: string): string =>
+    teamForYahooPlayerId(doc, yid) ||
+    inferPitcherTeamForNf3Line(doc, yid) ||
+    teamFromRoster(yid) ||
+    ""
+  // サマリ行（IP 空）に登場する yid をチーム別に収集（出現順を保つため Map<team, string[]>）
+  const summaryIdsByTeam = new Map<string, string[]>()
+  // 詳細行で push 済みの yid をチーム別に追跡
+  const placedIdsByTeam = new Map<string, Set<string>>()
   for (const line of lines) {
     const yid = (line.yahooPlayerId ?? "").trim()
     if (!yid) continue
-    const team =
-      teamForYahooPlayerId(doc, yid) ||
-      inferPitcherTeamForNf3Line(doc, yid) ||
-      teamFromRoster(yid) ||
-      ""
+    const team = resolveTeam(yid)
     if (!team) continue
     const thirds = parseIpToThirds(line.ip)
-    if (thirds <= 0) continue
+    if (thirds <= 0) {
+      const arr = summaryIdsByTeam.get(team) ?? []
+      if (!arr.includes(yid)) arr.push(yid)
+      summaryIdsByTeam.set(team, arr)
+      continue
+    }
     const list = out.get(team) ?? []
     const startThirds = list.length === 0 ? 0 : (list[list.length - 1]?.endThirds ?? 0)
     list.push({ yahooPitcherId: yid, startThirds, endThirds: startThirds + thirds })
     out.set(team, list)
+    const placed = placedIdsByTeam.get(team) ?? new Set<string>()
+    placed.add(yid)
+    placedIdsByTeam.set(team, placed)
+  }
+  // 詳細行で取れていないがサマリ行には居る投手を、各チームの末尾に「未確定区間」として補完。
+  // IP 不明なので endThirds は十分大きな値（FALLBACK_PITCHER_TAIL_THIRDS）を割り当て、
+  // 残イニングを必ず覆うようにする。
+  for (const [team, ids] of summaryIdsByTeam) {
+    const list = out.get(team) ?? []
+    const placed = placedIdsByTeam.get(team) ?? new Set<string>()
+    let cursor = list.length === 0 ? 0 : (list[list.length - 1]?.endThirds ?? 0)
+    for (const yid of ids) {
+      if (placed.has(yid)) continue
+      list.push({
+        yahooPitcherId: yid,
+        startThirds: cursor,
+        endThirds: cursor + FALLBACK_PITCHER_TAIL_THIRDS,
+      })
+      cursor += FALLBACK_PITCHER_TAIL_THIRDS
+      placed.add(yid)
+    }
+    placedIdsByTeam.set(team, placed)
+    if (list.length > 0) out.set(team, list)
+  }
+  // 補完 (b): pitchingLines（詳細・サマリ両方）に出てこないが、`plateAppearances` には
+  // pitcher_id として登場する投手を、相手チームの末尾に「未確定区間」として補完する。
+  // 試合 2021038802 の西武 9 回裏のように、サヨナラなどで Sportsnavi の出場成績側に
+  // 救援投手が記録されない試合に対応するため。
+  const paLines = doc.domain?.plateAppearances ?? []
+  const paPitchersByDefense = new Map<string, Set<string>>()
+  for (const pa of paLines) {
+    const pid = String((pa as { yahooPitcherId?: string }).yahooPitcherId ?? "").trim()
+    if (!pid) continue
+    const team = resolveTeam(pid)
+    if (!team) continue
+    const set = paPitchersByDefense.get(team) ?? new Set<string>()
+    set.add(pid)
+    paPitchersByDefense.set(team, set)
+  }
+  for (const [team, ids] of paPitchersByDefense) {
+    const list = out.get(team) ?? []
+    const placed = placedIdsByTeam.get(team) ?? new Set<string>()
+    let cursor = list.length === 0 ? 0 : (list[list.length - 1]?.endThirds ?? 0)
+    for (const yid of ids) {
+      if (placed.has(yid)) continue
+      list.push({
+        yahooPitcherId: yid,
+        startThirds: cursor,
+        endThirds: cursor + FALLBACK_PITCHER_TAIL_THIRDS,
+      })
+      cursor += FALLBACK_PITCHER_TAIL_THIRDS
+      placed.add(yid)
+    }
+    if (list.length > 0) out.set(team, list)
+  }
+  // 補完 (c): 各チームの最後の投手の `endThirds` を末尾まで延長する。
+  // これは「Sportsnavi 側のデータ欠落で 9 回（または延長）に登板した救援投手が
+  // 1 行も記録されないが、cells / plateAppearances には打席結果がある」場合に効く。
+  // 「**何かしらの投手** が最終回も投げた」という事実だけは確実なので、その投手は
+  // 直前の登板者の続きと仮定する（推測ではあるが、最後の投手以外の選択肢が無い）。
+  for (const [team, list] of out) {
+    if (list.length === 0) continue
+    const last = list[list.length - 1]
+    if (!last) continue
+    if (last.endThirds < last.startThirds + FALLBACK_PITCHER_TAIL_THIRDS) {
+      list[list.length - 1] = {
+        ...last,
+        endThirds: last.startThirds + FALLBACK_PITCHER_TAIL_THIRDS,
+      }
+      out.set(team, list)
+    }
   }
   return out
 }

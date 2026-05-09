@@ -297,12 +297,38 @@
   - `totalUnknownPa`: 118 → **29**（Phase 25 当初比 133 → 29 で **78% 削減**）
   - 内訳: `cellResolved R=66 / L=38`、`cellTeamUnresolved=17`、`cellAmbiguous=12`、
     `cellPitcherHandUnknown=0`（完全解消）。
-- 残（深追いせず固定化）:
-  - 17 PA = `cellTeamUnresolved`: シーズン中の移籍打者など `roster.team` が試合の
-    visitor/home と一致しないレアケース。canonical の `teams[].startingLineup` を
-    ビルダー側で埋める（Sportsnavi 原典 HTML から）と完全解消する見込み。
-  - 12 PA = `cellAmbiguous`: 半回内に右投手と左投手が同時登板する救援ローテで、
+
+#### Phase 29 追加修正（攻撃側 fallback + サマリ行補完 + 末尾延長）
+
+宮本丈の最後の 1 PA を起点に追加調査した結果、`cellTeamUnresolved` と
+`resolvePitchersForBatterInning=null` の双方を進められる 3 種の補完が見つかった:
+
+1. **`lib/seasonStatsPilot.ts` 攻撃側 fallback (4 段目)**:
+   `roster.team` が `visitor`/`home` と不一致でも、cells に打席結果がある全
+   target inning について試合全体の `plateAppearances` から半回が一意に決まれば、
+   その attack side を batter team として採用。
+2. **`lib/yahooGame/pitcherIntervalsFromPitchingLines.ts` サマリ行補完**:
+   出場成績テーブルが「サマリ行（IP 空）」と「詳細行（IP あり）」の 2 段構造で
+   生成される試合があり、最終回担当の救援投手が詳細行に出ない試合が存在する
+   （試合 2021038765 の松山晋也 [中日 9 回担当] など）。サマリ行に居て詳細に
+   居ない投手を、末尾に「未確定区間 (FALLBACK_PITCHER_TAIL_THIRDS=999)」として
+   補完。
+3. **`lib/yahooGame/pitcherIntervalsFromPitchingLines.ts` 末尾延長**:
+   サヨナラ等で Sportsnavi の出場成績側に 9 回裏の救援投手が 1 行も載らない
+   試合（試合 2021038802 西武 9 回裏など）がある。「最後の投手の `endThirds` を
+   末尾まで延長する」ことで、最終回もその投手の続きと仮定して利き腕を解決。
+
+- 結果（2026 シーズン audit; Phase 29 追加修正後）:
+  - `battersWithUnknown`: 27 → **14**
+  - `totalUnknownPa`: 29 → **15**（Phase 25 当初比 133 → 15 で **89% 削減**）
+  - 内訳: `cellResolved R=78 / L=40`、`cellTeamUnresolved=3`、`cellAmbiguous=12`、
+    `cellPitcherHandUnknown=0`、`cellMissingText=0`。
+- 残（運用上の許容範囲、これ以上はコスパが悪いので固定化）:
+  - **12 PA = `cellAmbiguous`**: 半回内に右投手と左投手が同時登板する救援ローテで、
     thirds 単位では片方に確定できないケース（推測禁止の方針で `unknown` のまま）。
+  - **3 PA = `cellTeamUnresolved`**: rosterTeam が visitor/home と不一致 or roster
+    未登録の batter (1900045 / 1800008 など)。canonical の `statsPlayerLinkedRows`
+    のチーム別 2 表構造をビルダー側で復元すれば解消する余地がある。
 
 ### 残課題（メモ）
 
