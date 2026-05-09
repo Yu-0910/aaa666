@@ -211,9 +211,9 @@
 
 ---
 
-## 付録: 実装の現状（Phase 25 / Phase 26 / Phase 27 / Phase 28 / Phase 29）
+## 付録: 実装の現状（Phase 25 / Phase 26 / Phase 27 / Phase 28 / Phase 29 / Phase 30）
 
-> 上記「フェーズ 1〜5」は本計画書の段階。下記の **Phase 25 / 26 / 27 / 28 / 29** は実装側の「対左右正常化」サブ Phase 番号で、**npm script の `phase25:` / `phase26:`（捕手系）とは別物**。
+> 上記「フェーズ 1〜5」は本計画書の段階。下記の **Phase 25 / 26 / 27 / 28 / 29 / 30** は実装側の「対左右正常化」サブ Phase 番号で、**npm script の `phase25:` / `phase26:`（捕手系）とは別物**。
 
 ### Phase 25 — P0 取りこぼしを `unknown` へ加算
 
@@ -318,21 +318,68 @@
    試合（試合 2021038802 西武 9 回裏など）がある。「最後の投手の `endThirds` を
    末尾まで延長する」ことで、最終回もその投手の続きと仮定して利き腕を解決。
 
-- 結果（2026 シーズン audit; Phase 29 追加修正後）:
+- 結果（2026 シーズン audit; Phase 29 追加修正後、Phase 30 前）:
   - `battersWithUnknown`: 27 → **14**
   - `totalUnknownPa`: 29 → **15**（Phase 25 当初比 133 → 15 で **89% 削減**）
   - 内訳: `cellResolved R=78 / L=40`、`cellTeamUnresolved=3`、`cellAmbiguous=12`、
     `cellPitcherHandUnknown=0`、`cellMissingText=0`。
-- 残（運用上の許容範囲、これ以上はコスパが悪いので固定化）:
-  - **12 PA = `cellAmbiguous`**: 半回内に右投手と左投手が同時登板する救援ローテで、
-    thirds 単位では片方に確定できないケース（推測禁止の方針で `unknown` のまま）。
-  - **3 PA = `cellTeamUnresolved`**: rosterTeam が visitor/home と不一致 or roster
-    未登録の batter (1900045 / 1800008 など)。canonical の `statsPlayerLinkedRows`
-    のチーム別 2 表構造をビルダー側で復元すれば解消する余地がある。
+
+### Phase 30 — `totalUnknownPa = 0`（ヒューリスティック許容 + 行出力バグ修正）
+
+Phase 29 追加修正後も残っていた **15 PA（cellAmbiguous 12 + cellTeamUnresolved 3）** を、
+以下で **2026 シーズン `audit:vs-hand-full` で `totalUnknownPa = 0` を達成**した。
+
+**打者チーム解決 (`cellTeamUnresolved → 0`):**
+
+0. **`battingLines` の連続継承**: Sportsnavi の `battingLines` は visitor → home の
+   並びが通常。**roster.team が visitor/home と一致しない交流戦打者**（井上広大のように
+   roster は阪神だが実際はロッテで出場）でも、`visitor/home` のどちらにもマッチする行が
+   出現するまで **直前 batter の team を継承**する。
+1. **visitor/home 両試行（5 段目）**: cells の target inning について visitor と home の
+   どちらを batterTeam と仮定したときだけ `resolvePitchersForBatterInning` が全 inning で
+   成功するかを見て採用。
+
+**半回内 R/L 混在 (`cellAmbiguous → 0`):**
+
+Phase 28 は「候補投手の利き腕が混在したら unknown」の保守路線だったが、代打のように
+**その半回の終盤に立つ打席**では対峙投手は統計的に「半回に登板した **最後の投手**」に
+集中する。そこで Phase 30 では次の **順番で** fallback を許容した:
+
+1. 同じ半回の `plateAppearances` の **最後の PA の yahooPitcherId** が ambiguous 候補集合に
+   含まれるなら、その投手の利き腕を採用。
+2. それでもダメなら **`reso.candidates` の末尾**（= pitchingLines 由来の登板順の最後）
+   の投手を採用。
+
+（Phase 28 のカウンタ名はそのまま `cellAmbiguousPas` だが、値は **解決に失敗した件数**
+であり Phase 30 後は 0 になる。）
+
+**出力バグ修正（Ｄ．ビシエド validate mismatch）:**
+
+Phase 25 で不明バケツに **`BB のみ` を補完したケース**で、`unknown` 行の出力条件
+`hasAnyAgg` が `PA/H/HR` のみだったため **BB が JSON に載らず** `validate:vs-hand-vs-phase11`
+が NG になった。**`bb/hbp/sh/sf > 0` でも行を出す**よう緩和。
+
+**診断スクリプト（オプション）:**
+
+- `scripts/diag_phase29_two_step_for_miyamoto.ts`
+- `scripts/diag_phase29_pitch_intervals_for_game.ts`
+- `scripts/diag_phase29_collect_unresolved_samples.ts`
+
+- 結果（2026 シーズン audit + validate; Phase 30 後）:
+  - `battersWithUnknown`: **0**
+  - `totalUnknownPa`: **0**（Phase 25 当初 133 → **100% 完全解消**）
+  - `cellAmbiguousPas`: **0**、`cellTeamUnresolvedPas`: **0**
+  - `phase28 cellResolved R=87 / L=46`
+  - `validate:vs-hand-vs-phase11`: **327 players P0 一致**
+
+**トレードオフ**: Phase 30 の ambiguous 解決は **厳密ではない**（代打が半回序盤に立った
+稀ケースでは誤分類の余地あり）。監査用カウンタが 0 でも、運用上は個別試合ログでの
+スポットチェックを推奨。
 
 ### 残課題（メモ）
 
 - `audit:vs-hand-full` で `battersWithGap` が 数件残る（柳田・桑原など、`u.h` が ±1 で trade-off）。`totalGap` は全列ゼロのため運用上は許容。気になるなら個別調査。
 - 「投手のみ試合」打者など、`phase15` の splits は出るが `vs_hand` 行が全部空になるケースがある（`hasAnyAgg` で行が出ないだけで合計には影響しない）。
-- npm `phase25:` / `phase26:` は **捕手系の派生**で、ここで言う Phase 25/26/27/28/29（対左右の正常化）とは別ライン。混同に注意。
+- Phase 30 後も **`対不明` 行が `PA=0` だが `BB=1` のように出る**ことがある（Phase 25 の P0 補完）。UI では「不明 PA = 0」と「対不明行の存在」を混同しないこと。
+- npm `phase25:` / `phase26:` は **捕手系の派生**で、ここで言う Phase 25/26/27/28/29/30（対左右の正常化）とは別ライン。混同に注意。
 

@@ -459,6 +459,7 @@ function main(): void {
         cellMissingTextPas: vsHand.reconciliation.cellMissingTextPas,
         cellTeamUnresolvedPas: vsHand.reconciliation.cellTeamUnresolvedPas,
         cellTeamUnresolvedSamples: vsHand.reconciliation.cellTeamUnresolvedSamples,
+        cellAmbiguousSamples: vsHand.reconciliation.cellAmbiguousSamples,
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),

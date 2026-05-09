@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "2112330",
-  "generatedAt": "2026-05-09T04:44:04.470Z",
+  "generatedAt": "2026-05-09T05:50:59.264Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -76,7 +76,8 @@
     "cellPitcherHandUnknownPas": 0,
     "cellMissingTextPas": 0,
     "cellTeamUnresolvedPas": 0,
-    "cellTeamUnresolvedSamples": []
+    "cellTeamUnresolvedSamples": [],
+    "cellAmbiguousSamples": []
   },
   "source": {
     "canonicalGames": [

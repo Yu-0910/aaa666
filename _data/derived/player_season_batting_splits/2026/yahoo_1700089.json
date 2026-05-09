@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "1700089",
-  "generatedAt": "2026-05-09T04:39:30.217Z",
+  "generatedAt": "2026-05-09T05:45:21.210Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -11,11 +11,11 @@
     "vsHandNote": "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。"
   },
   "reconciliation": {
-    "backfilledGames": 1,
+    "backfilledGames": 0,
     "negativeDeltaGames": 0,
     "appliedDelta": {
-      "pa": 1,
-      "ab": 1,
+      "pa": 0,
+      "ab": 0,
       "bb": 0,
       "hbp": 0,
       "sh": 0,
@@ -62,8 +62,8 @@
       "tb": 5
     },
     "cellResolvedL": {
-      "pa": 0,
-      "ab": 0,
+      "pa": 1,
+      "ab": 1,
       "bb": 0,
       "hbp": 0,
       "sh": 0,
@@ -72,11 +72,12 @@
       "hr": 0,
       "tb": 0
     },
-    "cellAmbiguousPas": 1,
+    "cellAmbiguousPas": 0,
     "cellPitcherHandUnknownPas": 0,
     "cellMissingTextPas": 0,
     "cellTeamUnresolvedPas": 0,
-    "cellTeamUnresolvedSamples": []
+    "cellTeamUnresolvedSamples": [],
+    "cellAmbiguousSamples": []
   },
   "source": {
     "canonicalGames": [
@@ -355,8 +356,8 @@
     },
     {
       "split_type": "vs_hand",
-      "split_value": "unknown",
-      "split_label": "対不明",
+      "split_value": "L",
+      "split_label": "対左投手",
       "g": 1,
       "pa": 1,
       "ab": 1,

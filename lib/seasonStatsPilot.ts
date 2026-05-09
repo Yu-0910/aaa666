@@ -429,6 +429,14 @@ export type VsHandReconciliationDebug = {
     scoreboardHome: string
     paCountForBatter: number
   }>
+  /** Phase 30 (追加): cellAmbiguous の発生サンプル（最大 10 件、原因切り分け用） */
+  cellAmbiguousSamples: Array<{
+    gameId: string
+    inning: number
+    cellText: string
+    batterTeam: string
+    candidatePitchers: Array<{ id: string; hand: 'R' | 'L' | '' }>
+  }>
 }
 
 type P0Counts = { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number }
@@ -734,6 +742,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     cellMissingTextPas: 0,
     cellTeamUnresolvedPas: 0,
     cellTeamUnresolvedSamples: [],
+    cellAmbiguousSamples: [],
   })
   const bid = (yahooBatterId || '').trim()
   if (!/^\d+$/.test(bid))
@@ -1582,10 +1591,37 @@ export function loadVsHandRowsFromCanonicalWithDebug(
             }
           }
           // 打者のチーム判定: スタメン外（代打のみ等）でも判定できるよう、複数経路で推定する。
+          // 0) battingLines の登場順序から「visitor block / home block」の連続性で判定
+          //    （Sportsnavi の battingLines は visitor → home の順で並ぶ慣例があり、
+          //     直前の team を継承することで井上広大のような roster.team 不一致 batter も救える）
           // 1) startingLineup（teams[]）から
           // 2) この試合の plateAppearances の半回 × scoreboard.teamName から
-          // 3) roster CSV（npb_roster_2026.csv）の team フィールドから（最後の手段）
-          let batterTeam = teamForYahooPlayerId(mergedDoc, bid)
+          // 3) roster CSV（npb_roster_2026.csv）の team フィールドから
+          // 4) 試合の plateAppearances の attack-side fallback
+          // 5) visitor/home 両方を試して片方のみ resolve できる場合に採用
+          const battingLineTeamByYid = (() => {
+            const map = new Map<string, string>()
+            const board = mergedDoc.game?.scoreboard ?? []
+            const visitor = String(board[0]?.teamName ?? '').trim()
+            const home = String(board[1]?.teamName ?? '').trim()
+            if (!visitor || !home) return map
+            let lastTeam = ''
+            for (const bl of mergedDoc.domain?.battingLines ?? []) {
+              const yid = String(bl.yahooPlayerId ?? '').trim()
+              if (!yid) continue
+              const r = findRosterPlayerByPublicId(yid)
+              const rt = String(r?.team ?? '').trim()
+              let team = ''
+              if (rt && (rt === visitor || rt === home)) team = rt
+              else if (lastTeam) team = lastTeam
+              if (team) {
+                map.set(yid, team)
+                lastTeam = team
+              }
+            }
+            return map
+          })()
+          let batterTeam = battingLineTeamByYid.get(bid) || teamForYahooPlayerId(mergedDoc, bid)
           if (!batterTeam) {
             const board = mergedDoc.game?.scoreboard ?? []
             if (board.length >= 2) {
@@ -1666,6 +1702,34 @@ export function loadVsHandRowsFromCanonicalWithDebug(
               if (consistent && candidate) batterTeam = candidate
             }
           }
+          if (!batterTeam) {
+            // Phase 30: 5) 5 段目 fallback。 visitor/home の両方を仮定して `resolvePitchersForBatterInning`
+            //    を試し、 cells を持つすべての target inning で **片方のみ resolve できる**なら、
+            //    その方を batter team として採用。両方とも resolve できる場合は判定不能で skip。
+            //    1900045 (rosterTeam=阪神 だが試合は西武vsロッテ) のような交流戦/不整合に対応。
+            const board = mergedDoc.game?.scoreboard ?? []
+            if (board.length >= 2) {
+              const visitor = String(board[0]?.teamName ?? '').trim()
+              const home = String(board[1]?.teamName ?? '').trim()
+              const targetInnings = new Set<number>()
+              for (let i = 0; i < cells.length; i++) {
+                const t = String(cells[i] ?? '').trim()
+                if (t) targetInnings.add(i + 1)
+              }
+              if (targetInnings.size > 0 && visitor && home) {
+                let visOk = true
+                let homeOk = true
+                for (const inn of targetInnings) {
+                  const reVis = resolvePitchersForBatterInning(mergedDoc, visitor, inn)
+                  const reHome = resolvePitchersForBatterInning(mergedDoc, home, inn)
+                  if (!reVis) visOk = false
+                  if (!reHome) homeOk = false
+                }
+                if (visOk && !homeOk) batterTeam = visitor
+                else if (!visOk && homeOk) batterTeam = home
+              }
+            }
+          }
           const pitcherNameById = new Map<string, string>()
           for (const pl of mergedDoc.domain?.pitchingLines ?? []) {
             const pid = String(pl?.yahooPlayerId ?? '').trim()
@@ -1737,10 +1801,62 @@ export function loadVsHandRowsFromCanonicalWithDebug(
                 const only = [...hands][0]
                 if (only === 'R' || only === 'L') hand = only
               }
+              // Phase 30 (a): 候補の利き腕が混在で確定できない場合、同じ半回の plateAppearances
+              // から **最後の PA の yahooPitcherId** を取り出して採用する（代打は通常その回の
+              // 終盤に立つため、半回の最後の投手に対峙した可能性が極めて高い）。
+              // 厳密ではないがヒューリスティクスとして妥当。
+              if (hand !== 'R' && hand !== 'L') {
+                const board = mergedDoc.game?.scoreboard ?? []
+                const visitorName = String(board[0]?.teamName ?? '').trim()
+                const targetHalf = batterTeam === visitorName ? 0 : 1
+                const halfPas = (mergedDoc.domain?.plateAppearances ?? []).filter((pa) => {
+                  const parsed = parsePaId(String(pa.paId ?? ''))
+                  return parsed?.inning === inning && parsed?.half === targetHalf
+                })
+                for (let i = halfPas.length - 1; i >= 0; i--) {
+                  const lastPid = String(
+                    (halfPas[i] as { yahooPitcherId?: string }).yahooPitcherId ?? '',
+                  ).trim()
+                  if (!lastPid) continue
+                  // 候補集合の中の投手のときだけ採用（候補外を勝手に推測しない）
+                  if (!reso.candidates.includes(lastPid)) continue
+                  const h = handFromPitcherId(lastPid)
+                  if (h === 'R' || h === 'L') {
+                    hand = h
+                    break
+                  }
+                }
+              }
+              // Phase 30 (b): plateAppearances 由来の解決でも取れない場合、 候補リストは
+              // 登板順 (= 半回内での登板順) に並んでいるので、 **最後の候補** = 半回の
+              // 最後に登板した投手を採用する。代打は通常半回の終盤に立つため、 厳密ではない
+              // がベストエフォートとして妥当な近似。
+              if (hand !== 'R' && hand !== 'L' && reso.candidates.length > 0) {
+                const lastPid = reso.candidates[reso.candidates.length - 1]
+                if (lastPid) {
+                  const h = handFromPitcherId(lastPid)
+                  if (h === 'R' || h === 'L') hand = h
+                }
+              }
             }
             if (hand !== 'R' && hand !== 'L') {
-              if (reso.kind === 'ambiguous') reconciliation.cellAmbiguousPas += 1
-              else reconciliation.cellPitcherHandUnknownPas += 1
+              if (reso.kind === 'ambiguous') {
+                reconciliation.cellAmbiguousPas += 1
+                if (reconciliation.cellAmbiguousSamples.length < 10) {
+                  reconciliation.cellAmbiguousSamples.push({
+                    gameId,
+                    inning,
+                    cellText: text,
+                    batterTeam,
+                    candidatePitchers: reso.candidates.map((pid) => ({
+                      id: pid,
+                      hand: handFromPitcherId(pid),
+                    })),
+                  })
+                }
+              } else {
+                reconciliation.cellPitcherHandUnknownPas += 1
+              }
               continue
             }
             const contribution = parseCellResultToContribution(text)
@@ -1852,7 +1968,11 @@ export function loadVsHandRowsFromCanonicalWithDebug(
   const rows: SeasonStatsRow[] = []
   // Phase 27: PA=0 でも H/HR が補完されるケース（target.pa は揃っているが HR/H だけ phase11 が上回る）
   // を行として出力するため、`pa > 0` だけでなく H/HR が積まれている場合も rows に含める。
-  const hasAnyAgg = (a: BattingSeasonAggYahoo): boolean => a.pa > 0 || a.h > 0 || a.hr > 0
+  // Phase 30: 行出力条件を緩和。Phase 25 の P0 取りこぼし吸収 (`appliedDelta.bb` 等) で
+  // 不明バケツに BB / HBP / SH / SF だけ加算されるケースがあり、 PA や H/HR がゼロでも
+  // 行を出さないと validate:vs-hand-vs-phase11 で BB ミスマッチを起こす。
+  const hasAnyAgg = (a: BattingSeasonAggYahoo): boolean =>
+    a.pa > 0 || a.h > 0 || a.hr > 0 || a.bb > 0 || a.hbp > 0 || a.sh > 0 || a.sf > 0
   if (hasAnyAgg(aggR)) rows.push(aggToVsHandRow('R', aggR))
   if (hasAnyAgg(aggL)) rows.push(aggToVsHandRow('L', aggL))
   if (hasAnyAgg(aggU)) rows.push(aggToVsHandRow('unknown', aggU))
