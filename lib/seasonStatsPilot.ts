@@ -419,6 +419,16 @@ export type VsHandReconciliationDebug = {
   cellMissingTextPas: number
   /** Phase 28: 打者のチーム自体が判定できず投手区間を引けなかった PA 数 */
   cellTeamUnresolvedPas: number
+  /** Phase 28 (追加): teamUnresolved の発生サンプル（最大 10 件、原因切り分け用） */
+  cellTeamUnresolvedSamples: Array<{
+    gameId: string
+    inning: number
+    cellText: string
+    rosterTeam: string
+    scoreboardVisitor: string
+    scoreboardHome: string
+    paCountForBatter: number
+  }>
 }
 
 type P0Counts = { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number }
@@ -723,6 +733,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     cellPitcherHandUnknownPas: 0,
     cellMissingTextPas: 0,
     cellTeamUnresolvedPas: 0,
+    cellTeamUnresolvedSamples: [],
   })
   const bid = (yahooBatterId || '').trim()
   if (!/^\d+$/.test(bid))
@@ -1624,24 +1635,55 @@ export function loadVsHandRowsFromCanonicalWithDebug(
             // batterTeam が空（スタメン名簿外でかつ PA も無いレア試合）→ チーム不明
             if (!batterTeam) {
               reconciliation.cellTeamUnresolvedPas += 1
+              if (reconciliation.cellTeamUnresolvedSamples.length < 10) {
+                const board = mergedDoc.game?.scoreboard ?? []
+                const rosterRow = findRosterPlayerByPublicId(bid)
+                reconciliation.cellTeamUnresolvedSamples.push({
+                  gameId,
+                  inning,
+                  cellText: text,
+                  rosterTeam: String(rosterRow?.team ?? ''),
+                  scoreboardVisitor: String(board[0]?.teamName ?? ''),
+                  scoreboardHome: String(board[1]?.teamName ?? ''),
+                  paCountForBatter: pas.length,
+                })
+              }
               continue
             }
             const reso = resolvePitchersForBatterInning(mergedDoc, batterTeam, inning)
             if (!reso) {
               reconciliation.cellTeamUnresolvedPas += 1
+              if (reconciliation.cellTeamUnresolvedSamples.length < 10) {
+                const board = mergedDoc.game?.scoreboard ?? []
+                const rosterRow = findRosterPlayerByPublicId(bid)
+                reconciliation.cellTeamUnresolvedSamples.push({
+                  gameId,
+                  inning,
+                  cellText: text,
+                  rosterTeam: String(rosterRow?.team ?? ''),
+                  scoreboardVisitor: String(board[0]?.teamName ?? ''),
+                  scoreboardHome: String(board[1]?.teamName ?? ''),
+                  paCountForBatter: pas.length,
+                })
+              }
               continue
+            }
+            // 投手 ID → 利き腕の解決は Yahoo ID 経由の roster lookup を優先（外国籍投手の
+            // 表記揺れで playerName マッチが外れるのを避ける）。失敗したら playerName ベース。
+            const handFromPitcherId = (pid: string): 'R' | 'L' | '' => {
+              const r = findRosterPlayerByPublicId(pid)
+              const th = String(r?.throw_hand ?? '').trim()
+              if (th === 'R' || th === 'L') return th
+              const pname = pitcherNameById.get(pid) ?? ''
+              return pname ? throwHandFromPitcherName(pname) : ''
             }
             // 1 投手のみの半回 → 確定。複数投手の半回でも候補全員の利き腕が一致するなら確定（推測ではない）。
             let hand: 'R' | 'L' | '' = ''
             if (reso.kind === 'unique') {
-              const pname = pitcherNameById.get(reso.pitcherId) ?? ''
-              hand = pname ? throwHandFromPitcherName(pname) : ''
+              hand = handFromPitcherId(reso.pitcherId)
             } else {
               const hands = new Set<'R' | 'L' | ''>()
-              for (const pid of reso.candidates) {
-                const pname = pitcherNameById.get(pid) ?? ''
-                hands.add(pname ? throwHandFromPitcherName(pname) : '')
-              }
+              for (const pid of reso.candidates) hands.add(handFromPitcherId(pid))
               // 候補の中に利き腕不明が混じっていたら、その混じりが空文字 '' で 1 件入る。
               // 厳密に「全員 R」または「全員 L」のとき以外は採用しない。
               if (hands.size === 1) {

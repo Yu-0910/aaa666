@@ -274,25 +274,35 @@
 
 ### Phase 29 — canonical の `scoreboard`/`teams` 充足 + roster 整備（並行進行）
 
-- 動機: Phase 28 の **`cellTeamUnresolvedPas=114`** は、現行 canonical ビルダーが
-  `scoreboard`/`teams` を空配列のままで生成し、Phase 28 の試合前情報パーサー
-  （"先攻:X / 後攻:Y" 正規表現）にも一部の試合（27 試合）はマッチしないため発生する。
-  roster ベースの代替フォールバックも `yahoo_to_npb_full.json` 未登録 ID で空振り。
-- スコープ:
-  1. **27 試合の特定**: `scripts/diag_phase28_team_unresolved.ts` で `preParseFailed`
-     と判定された canonical をリスト化（サンプル: `2021038646` / `2021038689` / `2021038694`）。
-  2. **canonical ビルダーの修正**: `buildCanonical.ts` に試合前情報テキストの構造変化を
-     吸収するパーサーを追加（または `scoreboard`/`teams` を Yahoo の HTML 由来でちゃんと
-     埋めるよう原典を辿る）。Phase 28 のヘルパー `inferTeamsFromTextPbpIfMissing` を
-     ビルダーから呼んでも良い。
-  3. **roster / 橋渡しの整備**:
-     - `cellPitcherHandUnknownPas=4` 分の投手を特定し、`npb_roster_2026.csv` の
-       `throw_hand` 列が空のレコードを埋める。
-     - 27 試合に登場するが `yahoo_to_npb_full.json` に未登録の player ID をリスト化し、
-       roster 行と紐付ける。
-- 完了条件: `audit:vs-hand-full` の `totalUnknownPa = 0` を達成。
-  Phase 28 のロジックは canonical/roster 整備と独立して動作するため、(b)+(c) が進めば
-  そのまま振り分け量が増える構造。
+- 動機: Phase 28 の `cellTeamUnresolvedPas=114` のうち、ほとんどは
+  「scoreboard は埋まっているが **中継ぎ投手の所属チームが startingLineup から
+  引けない**ため `buildPitcherIntervalsByTeam` が intervals を返せない」ケースで
+  あることが、`scripts/diag_phase29_one_batter.ts` の宮本丈サンプルで判明した。
+  27 試合の `preParseFailed` の正体は **試合中止 (`canceled`)** で domain 全体が
+  空のため Phase 28 の対象外。
+- 実装:
+  - `lib/yahooGame/pitcherIntervalsFromPitchingLines.ts`: 投手の所属チーム解決に
+    **roster fallback** を追加。`teamForYahooPlayerId` → `inferPitcherTeamForNf3Line`
+    → `roster.team が scoreboard.visitor/home と一致するなら採用` の 3 段。
+  - `lib/seasonStatsPilot.ts`: 投手の利き腕解決を **Yahoo ID → roster.throw_hand**
+    に切替（外国籍投手の表記揺れで `playerName` 一致が失敗するケースを吸収）。
+  - `lib/seasonStatsPilot.ts`: `cellTeamUnresolvedSamples`（最大 10 件）を出力に
+    加え、原因切り分けを容易にした。
+  - `scripts/diag_phase29_canonical_and_roster_gaps.ts`: scoreboard 空のままの試合・
+    未登録 Yahoo ID・throw_hand 未登録投手をまとめて棚卸し。
+  - `scripts/diag_phase29_one_batter.ts`: 1 batter 単位で reconciliation サンプルを
+    確認するスポットチェッカー。
+- 結果（2026 シーズン audit; Phase 29 後）:
+  - `battersWithUnknown`: 78 → 27（Phase 28 直後比）
+  - `totalUnknownPa`: 118 → **29**（Phase 25 当初比 133 → 29 で **78% 削減**）
+  - 内訳: `cellResolved R=66 / L=38`、`cellTeamUnresolved=17`、`cellAmbiguous=12`、
+    `cellPitcherHandUnknown=0`（完全解消）。
+- 残（深追いせず固定化）:
+  - 17 PA = `cellTeamUnresolved`: シーズン中の移籍打者など `roster.team` が試合の
+    visitor/home と一致しないレアケース。canonical の `teams[].startingLineup` を
+    ビルダー側で埋める（Sportsnavi 原典 HTML から）と完全解消する見込み。
+  - 12 PA = `cellAmbiguous`: 半回内に右投手と左投手が同時登板する救援ローテで、
+    thirds 単位では片方に確定できないケース（推測禁止の方針で `unknown` のまま）。
 
 ### 残課題（メモ）
 

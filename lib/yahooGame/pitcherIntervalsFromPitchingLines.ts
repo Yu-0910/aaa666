@@ -13,6 +13,7 @@
  */
 import type { CanonicalGameDocument, PitchingLine } from "./types"
 import { teamForYahooPlayerId, inferPitcherTeamForNf3Line } from "./pitcherPocHelpers"
+import { findRosterPlayerByPublicId } from "../npbRoster"
 
 export interface PitcherInterval {
   yahooPitcherId: string
@@ -40,14 +41,34 @@ export function parseIpToThirds(ip: string | undefined | null): number {
 /**
  * `pitchingLines` を防御チーム別にグループ化し、登板順に thirds の累積区間を割り当てる。
  * 同チームの並び順は `pitchingLines` の出現順（出場成績テーブルの上から下）と仮定。
+ *
+ * 投手の所属チーム判定は次の優先順:
+ *   1. `teamForYahooPlayerId` (startingLineup)
+ *   2. `inferPitcherTeamForNf3Line` (plateAppearances の半回)
+ *   3. roster.team が scoreboard の visitor/home のどちらかと厳密一致するなら採用
+ *      （途中登板の中継ぎ投手は startingLineup に無いことが多いので必須）
  */
 export function buildPitcherIntervalsByTeam(doc: CanonicalGameDocument): Map<string, PitcherInterval[]> {
   const out = new Map<string, PitcherInterval[]>()
   const lines: PitchingLine[] = doc.domain?.pitchingLines ?? []
+  const board = doc.game?.scoreboard ?? []
+  const visitor = board.length >= 2 ? String(board[0]?.teamName ?? "").trim() : ""
+  const home = board.length >= 2 ? String(board[1]?.teamName ?? "").trim() : ""
+  const teamFromRoster = (yid: string): string => {
+    const r = findRosterPlayerByPublicId(yid)
+    const t = String(r?.team ?? "").trim()
+    if (!t) return ""
+    if (t === visitor || t === home) return t
+    return ""
+  }
   for (const line of lines) {
     const yid = (line.yahooPlayerId ?? "").trim()
     if (!yid) continue
-    const team = teamForYahooPlayerId(doc, yid) || inferPitcherTeamForNf3Line(doc, yid) || ""
+    const team =
+      teamForYahooPlayerId(doc, yid) ||
+      inferPitcherTeamForNf3Line(doc, yid) ||
+      teamFromRoster(yid) ||
+      ""
     if (!team) continue
     const thirds = parseIpToThirds(line.ip)
     if (thirds <= 0) continue

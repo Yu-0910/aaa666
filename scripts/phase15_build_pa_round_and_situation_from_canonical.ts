@@ -458,6 +458,7 @@ function main(): void {
         cellPitcherHandUnknownPas: vsHand.reconciliation.cellPitcherHandUnknownPas,
         cellMissingTextPas: vsHand.reconciliation.cellMissingTextPas,
         cellTeamUnresolvedPas: vsHand.reconciliation.cellTeamUnresolvedPas,
+        cellTeamUnresolvedSamples: vsHand.reconciliation.cellTeamUnresolvedSamples,
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),

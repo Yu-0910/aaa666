@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "2106178",
-  "generatedAt": "2026-05-08T18:21:21.073Z",
+  "generatedAt": "2026-05-09T03:49:30.376Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -75,7 +75,18 @@
     "cellAmbiguousPas": 0,
     "cellPitcherHandUnknownPas": 0,
     "cellMissingTextPas": 0,
-    "cellTeamUnresolvedPas": 1
+    "cellTeamUnresolvedPas": 1,
+    "cellTeamUnresolvedSamples": [
+      {
+        "gameId": "2021038799",
+        "inning": 9,
+        "cellText": "右本",
+        "rosterTeam": "読売ジャイアンツ",
+        "scoreboardVisitor": "読売ジャイアンツ",
+        "scoreboardHome": "阪神タイガース",
+        "paCountForBatter": 0
+      }
+    ]
   },
   "source": {
     "canonicalGames": [

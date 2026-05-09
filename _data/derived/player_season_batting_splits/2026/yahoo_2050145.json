@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "2050145",
-  "generatedAt": "2026-05-08T18:20:34.601Z",
+  "generatedAt": "2026-05-09T03:48:47.763Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -11,11 +11,11 @@
     "vsHandNote": "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。"
   },
   "reconciliation": {
-    "backfilledGames": 2,
+    "backfilledGames": 1,
     "negativeDeltaGames": 0,
     "appliedDelta": {
-      "pa": 2,
-      "ab": 2,
+      "pa": 1,
+      "ab": 1,
       "bb": 0,
       "hbp": 0,
       "sh": 0,
@@ -51,8 +51,8 @@
     "positiveHrApplied": 0,
     "positiveHApplied": 0,
     "cellResolvedR": {
-      "pa": 0,
-      "ab": 0,
+      "pa": 1,
+      "ab": 1,
       "bb": 0,
       "hbp": 0,
       "sh": 0,
@@ -75,7 +75,18 @@
     "cellAmbiguousPas": 0,
     "cellPitcherHandUnknownPas": 0,
     "cellMissingTextPas": 0,
-    "cellTeamUnresolvedPas": 2
+    "cellTeamUnresolvedPas": 1,
+    "cellTeamUnresolvedSamples": [
+      {
+        "gameId": "2021038759",
+        "inning": 9,
+        "cellText": "遊直",
+        "rosterTeam": "埼玉西武ライオンズ",
+        "scoreboardVisitor": "福岡ソフトバンクホークス",
+        "scoreboardHome": "埼玉西武ライオンズ",
+        "paCountForBatter": 0
+      }
+    ]
   },
   "source": {
     "canonicalGames": [
@@ -310,9 +321,9 @@
       "split_type": "vs_hand",
       "split_value": "R",
       "split_label": "対右投手",
-      "g": 20,
-      "pa": 63,
-      "ab": 62,
+      "g": 21,
+      "pa": 64,
+      "ab": 63,
       "r": 0,
       "h": 17,
       "h1": 13,
@@ -331,10 +342,10 @@
       "cs": 0,
       "e": 0,
       "gidp": 1,
-      "avg": ".274",
-      "obp": ".286",
-      "slg": ".403",
-      "ops": ".689",
+      "avg": ".270",
+      "obp": ".281",
+      "slg": ".397",
+      "ops": ".678",
       "risp_avg": ".000",
       "risp_ab": 0,
       "risp_h": 0,
@@ -402,9 +413,9 @@
       "split_type": "vs_hand",
       "split_value": "unknown",
       "split_label": "対不明",
-      "g": 2,
-      "pa": 2,
-      "ab": 2,
+      "g": 1,
+      "pa": 1,
+      "ab": 1,
       "r": 0,
       "h": 0,
       "h1": 0,
