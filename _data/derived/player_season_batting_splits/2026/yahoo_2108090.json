@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "2108090",
-  "generatedAt": "2026-05-08T15:05:43.610Z",
+  "generatedAt": "2026-05-08T18:21:38.717Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -61,7 +61,33 @@
     "negativeHrApplied": 0,
     "negativeHApplied": 0,
     "positiveHrApplied": 0,
-    "positiveHApplied": 0
+    "positiveHApplied": 0,
+    "cellResolvedR": {
+      "pa": 0,
+      "ab": 0,
+      "bb": 0,
+      "hbp": 0,
+      "sh": 0,
+      "sf": 0,
+      "h": 0,
+      "hr": 0,
+      "tb": 0
+    },
+    "cellResolvedL": {
+      "pa": 0,
+      "ab": 0,
+      "bb": 0,
+      "hbp": 0,
+      "sh": 0,
+      "sf": 0,
+      "h": 0,
+      "hr": 0,
+      "tb": 0
+    },
+    "cellAmbiguousPas": 0,
+    "cellPitcherHandUnknownPas": 0,
+    "cellMissingTextPas": 0,
+    "cellTeamUnresolvedPas": 0
   },
   "source": {
     "canonicalGames": [
@@ -296,7 +322,7 @@
       "split_type": "vs_hand",
       "split_value": "R",
       "split_label": "対右投手",
-      "g": 11,
+      "g": 10,
       "pa": 33,
       "ab": 27,
       "r": 0,
@@ -342,7 +368,7 @@
       "split_type": "vs_hand",
       "split_value": "L",
       "split_label": "対左投手",
-      "g": 11,
+      "g": 10,
       "pa": 23,
       "ab": 19,
       "r": 0,

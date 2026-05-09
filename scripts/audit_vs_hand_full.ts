@@ -220,6 +220,13 @@ function main(): void {
   let totalInferredFromTextPas = 0
   // STEP 4 集計（全選手にまたがる投手別合計）
   const unknownPitcherTotalPa = new Map<string, number>()
+  // Phase 28: cells×投手区間 で R/L へ振り分けた件数 / フォールバック件数
+  let totalCellResolvedRPa = 0
+  let totalCellResolvedLPa = 0
+  let totalCellAmbiguousPas = 0
+  let totalCellPitcherHandUnknownPas = 0
+  let totalCellMissingTextPas = 0
+  let totalCellTeamUnresolvedPas = 0
 
   const t0 = Date.now()
   for (let i = 0; i < yahooIds.length; i++) {
@@ -272,6 +279,12 @@ function main(): void {
     totalMissingPitcherIdPas += missing
     totalInferredPitcherIdPas += inferredCarry
     totalInferredFromTextPas += inferredText
+    totalCellResolvedRPa += Number(d.reconciliation?.cellResolvedR?.pa ?? 0)
+    totalCellResolvedLPa += Number(d.reconciliation?.cellResolvedL?.pa ?? 0)
+    totalCellAmbiguousPas += Number(d.reconciliation?.cellAmbiguousPas ?? 0)
+    totalCellPitcherHandUnknownPas += Number(d.reconciliation?.cellPitcherHandUnknownPas ?? 0)
+    totalCellMissingTextPas += Number(d.reconciliation?.cellMissingTextPas ?? 0)
+    totalCellTeamUnresolvedPas += Number(d.reconciliation?.cellTeamUnresolvedPas ?? 0)
 
     // STEP 4: pitcher hand resolution failed but pitcherId was known
     const unknownPitchers: Record<string, number> = (d.unknownPitchers ?? {}) as Record<string, number>
@@ -446,6 +459,12 @@ function main(): void {
   console.log(`  step3 recoveredText    = ${totalInferredFromTextPas}`)
   console.log(`  step4 unresolvedPa     = ${[...unknownPitcherTotalPa.values()].reduce((s, n) => s + n, 0)}`)
   console.log(`  step4 unresolvedPids   = ${unknownPitcherTotalPa.size}`)
+  console.log(`  phase28 cellResolved R = ${totalCellResolvedRPa}`)
+  console.log(`  phase28 cellResolved L = ${totalCellResolvedLPa}`)
+  console.log(`  phase28 cellAmbiguous  = ${totalCellAmbiguousPas} (半回内に複数投手で利き腕一致せず)`)
+  console.log(`  phase28 handUnknown    = ${totalCellPitcherHandUnknownPas} (投手 ID は取れたが利き腕未登録)`)
+  console.log(`  phase28 missingText    = ${totalCellMissingTextPas} (cells テキストが空/解釈不能)`)
+  console.log(`  phase28 teamUnresolved = ${totalCellTeamUnresolvedPas} (打者のチームを判定できず投手区間を引けない)`)
 
   if (topGapPlayers.length > 0) {
     console.log(`[audit:vs-hand-full] top ${Math.min(top, topGapPlayers.length)} batters by |paGap|:`)

@@ -2,7 +2,7 @@
   "schemaVersion": "phase15-player-season-batting-splits-v1",
   "seasonYear": "2026",
   "yahooBatterId": "1400172",
-  "generatedAt": "2026-05-08T15:01:13.163Z",
+  "generatedAt": "2026-05-08T18:15:52.631Z",
   "meta": {
     "paRoundDefinition": "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
     "situationSplits": "base_sit",
@@ -11,12 +11,12 @@
     "vsHandNote": "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。"
   },
   "reconciliation": {
-    "backfilledGames": 1,
+    "backfilledGames": 0,
     "negativeDeltaGames": 0,
     "appliedDelta": {
-      "pa": 1,
+      "pa": 0,
       "ab": 0,
-      "bb": 1,
+      "bb": 0,
       "hbp": 0,
       "sh": 0,
       "sf": 0
@@ -49,7 +49,33 @@
     "negativeHrApplied": 0,
     "negativeHApplied": 0,
     "positiveHrApplied": 0,
-    "positiveHApplied": 0
+    "positiveHApplied": 0,
+    "cellResolvedR": {
+      "pa": 1,
+      "ab": 0,
+      "bb": 1,
+      "hbp": 0,
+      "sh": 0,
+      "sf": 0,
+      "h": 0,
+      "hr": 0,
+      "tb": 0
+    },
+    "cellResolvedL": {
+      "pa": 0,
+      "ab": 0,
+      "bb": 0,
+      "hbp": 0,
+      "sh": 0,
+      "sf": 0,
+      "h": 0,
+      "hr": 0,
+      "tb": 0
+    },
+    "cellAmbiguousPas": 0,
+    "cellPitcherHandUnknownPas": 0,
+    "cellMissingTextPas": 0,
+    "cellTeamUnresolvedPas": 0
   },
   "source": {
     "canonicalGames": [
@@ -282,8 +308,8 @@
   "rows": [
     {
       "split_type": "vs_hand",
-      "split_value": "L",
-      "split_label": "対左投手",
+      "split_value": "R",
+      "split_label": "対右投手",
       "g": 1,
       "pa": 1,
       "ab": 0,
@@ -328,8 +354,8 @@
     },
     {
       "split_type": "vs_hand",
-      "split_value": "unknown",
-      "split_label": "対不明",
+      "split_value": "L",
+      "split_label": "対左投手",
       "g": 1,
       "pa": 1,
       "ab": 0,

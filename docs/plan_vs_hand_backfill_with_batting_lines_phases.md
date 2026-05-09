@@ -211,9 +211,9 @@
 
 ---
 
-## 付録: 実装の現状（Phase 25 / Phase 26 / Phase 27）
+## 付録: 実装の現状（Phase 25 / Phase 26 / Phase 27 / Phase 28 / Phase 29）
 
-> 上記「フェーズ 1〜5」は本計画書の段階。下記の **Phase 25 / 26 / 27** は実装側の「対左右正常化」サブ Phase 番号で、**npm script の `phase25:` / `phase26:`（捕手系）とは別物**。
+> 上記「フェーズ 1〜5」は本計画書の段階。下記の **Phase 25 / 26 / 27 / 28 / 29** は実装側の「対左右正常化」サブ Phase 番号で、**npm script の `phase25:` / `phase26:`（捕手系）とは別物**。
 
 ### Phase 25 — P0 取りこぼしを `unknown` へ加算
 
@@ -239,9 +239,64 @@
 - **`scripts/validate_vs_hand_totals_vs_phase11.ts`**: `negativeReconPlayers > 0` は **info 表示**に変更。`exit 1` の判定材料は `mismatches` と `missingSplits` のみ（`--fail-on-negative-recon` を付けたときだけ厳密化）。
 - **`scripts/run_daily_npb_pipeline.mjs`**: DEPRECATED な `phase15b:build:vs-hand-backfill` の呼び出しを廃止し、validate も `validate:vs-hand-vs-phase11` をデフォルトで使うように修正。
 
+### Phase 28 — 不明 PA を出場成績テーブルから R/L へ振り分け
+
+- 動機: Phase 25 で `unknown` バケツへ寄せた PA は、`battingLines` には記録があるが
+  `plateAppearances` に対応エントリが無い「薄い PA」。これらを **そのまま不明にせず、
+  通算成績側の素材（出場成績テーブル）からチームと相手投手を逆引きして R/L へ振り分ける**。
+- 仕組み:
+  1. `cells[14..]`（回ごとの打席結果テキスト列）から「不明 PA の発生回 N」を特定
+     （既存 PA がその回に存在しない／cells に非空テキストがある イニングが該当）。
+  2. `pitchingLines` の `ip` を **三分の一イニング単位 (thirds)** で累積し、
+     回 N に登板していた**防御側投手**を逆引き（`pitcherIntervalsFromPitchingLines`）。
+     - 半回内に複数投手が登板（thirds 区間が重なる）した場合は、**全員の利き腕が
+       一致するときだけ採用**。混在は不明にフォールバック（R/L 按分禁止の精神を維持）。
+  3. cells のテキストを `parseCellResultToContribution` で `PA/AB/BB/HBP/SH/SF/H/HR/TB`
+     に変換し、解決した `aggR` または `aggL` に直接加算。
+- 実装ファイル:
+  - 新規: `lib/yahooGame/cellResultToContribution.ts`,
+    `lib/yahooGame/pitcherIntervalsFromPitchingLines.ts`,
+    `lib/yahooGame/inferTeamsFromTextPbp.ts`（canonical の `scoreboard`/`teams` が空の試合で
+    試合前情報テキスト → roster 集計の順にチーム情報を補強）。
+  - 変更: `lib/seasonStatsPilot.ts`（Phase 28 ブロックを `applyPositiveP0DeltaToAggUnknown`
+    の手前に挿入）、`scripts/phase15_build_pa_round_and_situation_from_canonical.ts`、
+    `scripts/audit_vs_hand_full.ts`（reconciliation 内訳を出力／集計）。
+- 出力フィールド（`reconciliation` に追加）:
+  - `cellResolvedR`, `cellResolvedL` — R/L へ振り分けた `PA/AB/BB/HBP/SH/SF/H/HR/TB`。
+  - `cellAmbiguousPas` — 半回内に複数投手登板で利き腕が混在し採用できなかった PA 数。
+  - `cellPitcherHandUnknownPas` — 投手 ID は取れたが roster.throw_hand 未登録の PA 数。
+  - `cellMissingTextPas` — cells のテキストが空／解釈不能の PA 数。
+  - `cellTeamUnresolvedPas` — 打者のチームを判定できず投手区間を引けなかった PA 数。
+- 結果（2026 シーズン audit; `audit:vs-hand-full`）:
+  - `battersWithUnknown`: 86 → 78
+  - `totalUnknownPa`: 133 → 118（−15、−11.3%）
+  - 内訳: `cellResolved R=9 / L=6`、`cellTeamUnresolved=114`、`cellPitcherHandUnknown=4`。
+
+### Phase 29 — canonical の `scoreboard`/`teams` 充足 + roster 整備（並行進行）
+
+- 動機: Phase 28 の **`cellTeamUnresolvedPas=114`** は、現行 canonical ビルダーが
+  `scoreboard`/`teams` を空配列のままで生成し、Phase 28 の試合前情報パーサー
+  （"先攻:X / 後攻:Y" 正規表現）にも一部の試合（27 試合）はマッチしないため発生する。
+  roster ベースの代替フォールバックも `yahoo_to_npb_full.json` 未登録 ID で空振り。
+- スコープ:
+  1. **27 試合の特定**: `scripts/diag_phase28_team_unresolved.ts` で `preParseFailed`
+     と判定された canonical をリスト化（サンプル: `2021038646` / `2021038689` / `2021038694`）。
+  2. **canonical ビルダーの修正**: `buildCanonical.ts` に試合前情報テキストの構造変化を
+     吸収するパーサーを追加（または `scoreboard`/`teams` を Yahoo の HTML 由来でちゃんと
+     埋めるよう原典を辿る）。Phase 28 のヘルパー `inferTeamsFromTextPbpIfMissing` を
+     ビルダーから呼んでも良い。
+  3. **roster / 橋渡しの整備**:
+     - `cellPitcherHandUnknownPas=4` 分の投手を特定し、`npb_roster_2026.csv` の
+       `throw_hand` 列が空のレコードを埋める。
+     - 27 試合に登場するが `yahoo_to_npb_full.json` に未登録の player ID をリスト化し、
+       roster 行と紐付ける。
+- 完了条件: `audit:vs-hand-full` の `totalUnknownPa = 0` を達成。
+  Phase 28 のロジックは canonical/roster 整備と独立して動作するため、(b)+(c) が進めば
+  そのまま振り分け量が増える構造。
+
 ### 残課題（メモ）
 
 - `audit:vs-hand-full` で `battersWithGap` が 数件残る（柳田・桑原など、`u.h` が ±1 で trade-off）。`totalGap` は全列ゼロのため運用上は許容。気になるなら個別調査。
 - 「投手のみ試合」打者など、`phase15` の splits は出るが `vs_hand` 行が全部空になるケースがある（`hasAnyAgg` で行が出ないだけで合計には影響しない）。
-- npm `phase25:` / `phase26:` は **捕手系の派生**で、ここで言う Phase 25/26/27（対左右の正常化）とは別ライン。混同に注意。
+- npm `phase25:` / `phase26:` は **捕手系の派生**で、ここで言う Phase 25/26/27/28/29（対左右の正常化）とは別ライン。混同に注意。
 

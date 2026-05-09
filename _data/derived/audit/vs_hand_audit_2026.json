@@ -1,12 +1,12 @@
 {
   "schemaVersion": "vs-hand-audit-v1",
-  "generatedAt": "2026-05-08T15:11:34.071Z",
+  "generatedAt": "2026-05-08T18:27:13.432Z",
   "year": "2026",
   "summary": {
     "battersCheckedCount": 322,
     "battersWithGapCount": 2,
     "battersWithNegativeGapCount": 2,
-    "battersWithUnknownCount": 86,
+    "battersWithUnknownCount": 78,
     "totalGap": {
       "pa": 0,
       "ab": 0,
@@ -17,10 +17,10 @@
       "sh": 0,
       "sf": 0
     },
-    "totalUnknownPa": 133,
+    "totalUnknownPa": 118,
     "totalMissingPitcherIdPas": 0,
-    "totalInferredPitcherIdPas": 25,
-    "totalInferredFromTextPas": 2762
+    "totalInferredPitcherIdPas": 492,
+    "totalInferredFromTextPas": 2295
   },
   "byStep": {
     "step2_plateAppearances_dropoffs": {
@@ -36,11 +36,11 @@
     },
     "step3_pitcher_id_recovered_carryforward_or_bf": {
       "description": "投手 ID を ③ 引継ぎ / ④ BF で救済した PA（成功事例）",
-      "totalPas": 25
+      "totalPas": 492
     },
     "step3_pitcher_id_recovered_text": {
       "description": "投手 ID を ⑤⑥⑦ 実況系で救済した PA（成功事例）",
-      "totalPas": 2762
+      "totalPas": 2295
     },
     "step4_pitcher_throw_hand_unresolved": {
       "description": "投手 ID は取れたが利き腕（R/L）を引けなかった PA",
@@ -70,14 +70,14 @@
       },
       "vsHand": {
         "r": {
-          "pa": 65,
-          "ab": 62,
-          "h": 17
+          "pa": 67,
+          "ab": 65,
+          "h": 18
         },
         "l": {
-          "pa": 45,
-          "ab": 43,
-          "h": 12
+          "pa": 43,
+          "ab": 40,
+          "h": 11
         },
         "u": {
           "pa": 0,
@@ -158,14 +158,6 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "1800122",
-      "playerName": "渡邊 佳明",
-      "unknownPa": 4,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
       "yahooBatterId": "1961927",
       "playerName": "Ｅ．モンテロ",
       "unknownPa": 4,
@@ -190,8 +182,8 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "2000056",
-      "playerName": "中野 拓夢",
+      "yahooBatterId": "1800122",
+      "playerName": "渡邊 佳明",
       "unknownPa": 3,
       "missingPitcherIdPas": 0,
       "pitcherThrowHandUnknownPaSum": 0,
@@ -278,14 +270,6 @@
       "topUnresolvedPitchers": []
     },
     {
-      "yahooBatterId": "1800067",
-      "playerName": "木浪 聖也",
-      "unknownPa": 2,
-      "missingPitcherIdPas": 0,
-      "pitcherThrowHandUnknownPaSum": 0,
-      "topUnresolvedPitchers": []
-    },
-    {
       "yahooBatterId": "1800091",
       "playerName": "野村 佑希",
       "unknownPa": 2,
@@ -296,6 +280,22 @@
     {
       "yahooBatterId": "1900045",
       "playerName": "井上 広大",
+      "unknownPa": 2,
+      "missingPitcherIdPas": 0,
+      "pitcherThrowHandUnknownPaSum": 0,
+      "topUnresolvedPitchers": []
+    },
+    {
+      "yahooBatterId": "1900068",
+      "playerName": "岸 潤一郎",
+      "unknownPa": 2,
+      "missingPitcherIdPas": 0,
+      "pitcherThrowHandUnknownPaSum": 0,
+      "topUnresolvedPitchers": []
+    },
+    {
+      "yahooBatterId": "1950996",
+      "playerName": "前川 右京",
       "unknownPa": 2,
       "missingPitcherIdPas": 0,
       "pitcherThrowHandUnknownPaSum": 0,
@@ -388,8 +388,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 41,
-        "ab": 39,
+        "pa": 40,
+        "ab": 38,
         "h": 10,
         "hr": 0,
         "bb": 1,
@@ -398,8 +398,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 31,
-        "ab": 29,
+        "pa": 32,
+        "ab": 30,
         "h": 7,
         "hr": 1,
         "bb": 2,
@@ -439,8 +439,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 17,
+      "step3InferredCarry": 13,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -528,22 +528,22 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 65,
-        "ab": 62,
-        "h": 17,
+        "pa": 67,
+        "ab": 65,
+        "h": 18,
         "hr": 2,
         "bb": 2,
-        "hbp": 1,
+        "hbp": 0,
         "sh": 0,
         "sf": 0
       },
       "vsHandL": {
-        "pa": 45,
-        "ab": 43,
-        "h": 12,
+        "pa": 43,
+        "ab": 40,
+        "h": 11,
         "hr": 0,
         "bb": 1,
-        "hbp": 1,
+        "hbp": 2,
         "sh": 0,
         "sf": 0
       },
@@ -579,8 +579,8 @@
       },
       "hasNegativeGap": true,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 12,
+      "step3InferredCarry": 8,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -738,9 +738,9 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 80,
-        "ab": 72,
-        "h": 18,
+        "pa": 79,
+        "ab": 71,
+        "h": 16,
         "hr": 0,
         "bb": 6,
         "hbp": 0,
@@ -748,9 +748,9 @@
         "sf": 1
       },
       "vsHandL": {
-        "pa": 40,
-        "ab": 37,
-        "h": 13,
+        "pa": 41,
+        "ab": 38,
+        "h": 15,
         "hr": 0,
         "bb": 1,
         "hbp": 1,
@@ -789,8 +789,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 19,
+      "step3InferredCarry": 15,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -1158,9 +1158,9 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 87,
-        "ab": 65,
-        "h": 17,
+        "pa": 88,
+        "ab": 66,
+        "h": 16,
         "hr": 6,
         "bb": 17,
         "hbp": 3,
@@ -1168,9 +1168,9 @@
         "sf": 2
       },
       "vsHandL": {
-        "pa": 50,
-        "ab": 42,
-        "h": 14,
+        "pa": 49,
+        "ab": 41,
+        "h": 15,
         "hr": 1,
         "bb": 7,
         "hbp": 1,
@@ -1209,8 +1209,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 22,
+      "step3InferredCarry": 18,
+      "step3InferredText": 5,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -1489,8 +1489,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 1,
+      "step3InferredCarry": 1,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2189,8 +2189,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 16,
+      "step3InferredCarry": 7,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2259,8 +2259,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 20,
+      "step3InferredCarry": 16,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2329,8 +2329,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 13,
+      "step3InferredCarry": 5,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2488,21 +2488,21 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 86,
+        "pa": 87,
         "ab": 77,
         "h": 22,
         "hr": 5,
-        "bb": 8,
+        "bb": 9,
         "hbp": 0,
         "sh": 1,
         "sf": 0
       },
       "vsHandL": {
-        "pa": 53,
+        "pa": 52,
         "ab": 44,
         "h": 13,
         "hr": 3,
-        "bb": 8,
+        "bb": 7,
         "hbp": 0,
         "sh": 0,
         "sf": 1
@@ -2539,8 +2539,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 21,
+      "step3InferredCarry": 16,
+      "step3InferredText": 5,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2628,11 +2628,11 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 0,
+        "pa": 1,
         "ab": 0,
         "h": 0,
         "hr": 0,
-        "bb": 0,
+        "bb": 1,
         "hbp": 0,
         "sh": 0,
         "sf": 0
@@ -2648,11 +2648,11 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
+        "pa": 0,
         "ab": 0,
         "h": 0,
         "hr": 0,
-        "bb": 1,
+        "bb": 0,
         "hbp": 0,
         "sh": 0,
         "sf": 0
@@ -2889,8 +2889,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 21,
+      "step3InferredCarry": 8,
+      "step3InferredText": 13,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2959,8 +2959,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 10,
+      "step3InferredCarry": 3,
+      "step3InferredText": 7,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -2978,8 +2978,8 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 69,
-        "ab": 62,
+        "pa": 70,
+        "ab": 63,
         "h": 18,
         "hr": 2,
         "bb": 5,
@@ -2988,8 +2988,8 @@
         "sf": 2
       },
       "vsHandL": {
-        "pa": 16,
-        "ab": 16,
+        "pa": 15,
+        "ab": 15,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -3029,8 +3029,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 8,
+      "step3InferredCarry": 4,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -3659,8 +3659,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 25,
+      "step3InferredCarry": 8,
+      "step3InferredText": 17,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -3799,8 +3799,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 8,
+      "step3InferredCarry": 8,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -3939,8 +3939,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 31,
+      "step3InferredCarry": 5,
+      "step3InferredText": 26,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -4098,8 +4098,8 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 30,
-        "ab": 28,
+        "pa": 31,
+        "ab": 29,
         "h": 5,
         "hr": 0,
         "bb": 1,
@@ -4108,8 +4108,8 @@
         "sf": 1
       },
       "vsHandL": {
-        "pa": 5,
-        "ab": 5,
+        "pa": 4,
+        "ab": 4,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -4149,8 +4149,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 5,
+      "step3InferredCarry": 5,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -4499,8 +4499,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 27,
+      "step3InferredCarry": 4,
+      "step3InferredText": 23,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -5479,8 +5479,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 21,
+      "step3InferredCarry": 1,
+      "step3InferredText": 20,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -5549,8 +5549,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 17,
+      "step3InferredCarry": 5,
+      "step3InferredText": 12,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -5988,8 +5988,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 4,
-        "ab": 4,
+        "pa": 3,
+        "ab": 3,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -5998,8 +5998,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 3,
-        "ab": 3,
+        "pa": 4,
+        "ab": 4,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -6039,8 +6039,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 4,
+      "step3InferredCarry": 1,
+      "step3InferredText": 3,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -6179,8 +6179,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 12,
+      "step3InferredCarry": 4,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -6249,8 +6249,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 15,
+      "step3InferredCarry": 8,
+      "step3InferredText": 7,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -6319,8 +6319,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 33,
+      "step3InferredCarry": 12,
+      "step3InferredText": 21,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -7159,8 +7159,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 29,
+      "step3InferredCarry": 1,
+      "step3InferredText": 28,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -7248,9 +7248,9 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 84,
-        "ab": 74,
-        "h": 24,
+        "pa": 85,
+        "ab": 75,
+        "h": 25,
         "hr": 1,
         "bb": 7,
         "hbp": 1,
@@ -7258,9 +7258,9 @@
         "sf": 1
       },
       "vsHandL": {
-        "pa": 44,
-        "ab": 39,
-        "h": 7,
+        "pa": 43,
+        "ab": 38,
+        "h": 6,
         "hr": 0,
         "bb": 2,
         "hbp": 0,
@@ -7299,8 +7299,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 22,
+      "step3InferredCarry": 17,
+      "step3InferredText": 5,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -7579,8 +7579,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 13,
+      "step3InferredCarry": 4,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -7999,8 +7999,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 7,
+      "step3InferredCarry": 4,
+      "step3InferredText": 3,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -8069,8 +8069,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 7,
+      "step3InferredCarry": 3,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -8419,8 +8419,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 18,
+      "step3InferredCarry": 4,
+      "step3InferredText": 14,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -8578,9 +8578,9 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 84,
-        "ab": 68,
-        "h": 16,
+        "pa": 85,
+        "ab": 69,
+        "h": 17,
         "hr": 2,
         "bb": 13,
         "hbp": 3,
@@ -8588,9 +8588,9 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 56,
-        "ab": 49,
-        "h": 19,
+        "pa": 55,
+        "ab": 48,
+        "h": 18,
         "hr": 0,
         "bb": 2,
         "hbp": 4,
@@ -8629,8 +8629,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 18,
+      "step3InferredCarry": 11,
+      "step3InferredText": 8,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -8858,8 +8858,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 48,
-        "ab": 42,
+        "pa": 49,
+        "ab": 43,
         "h": 7,
         "hr": 0,
         "bb": 6,
@@ -8878,8 +8878,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -9138,8 +9138,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 60,
-        "ab": 56,
+        "pa": 59,
+        "ab": 55,
         "h": 14,
         "hr": 3,
         "bb": 3,
@@ -9148,8 +9148,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 24,
-        "ab": 23,
+        "pa": 25,
+        "ab": 24,
         "h": 8,
         "hr": 1,
         "bb": 1,
@@ -9189,8 +9189,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 22,
+      "step3InferredCarry": 12,
+      "step3InferredText": 10,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9259,8 +9259,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 27,
+      "step3InferredCarry": 11,
+      "step3InferredText": 16,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9278,21 +9278,21 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 80,
+        "pa": 79,
         "ab": 75,
         "h": 17,
         "hr": 2,
-        "bb": 4,
+        "bb": 3,
         "hbp": 0,
         "sh": 1,
         "sf": 0
       },
       "vsHandL": {
-        "pa": 16,
+        "pa": 17,
         "ab": 14,
         "h": 5,
         "hr": 0,
-        "bb": 1,
+        "bb": 2,
         "hbp": 0,
         "sh": 1,
         "sf": 0
@@ -9329,8 +9329,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 20,
+      "step3InferredCarry": 8,
+      "step3InferredText": 12,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9399,8 +9399,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 19,
+      "step3InferredCarry": 3,
+      "step3InferredText": 16,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9539,8 +9539,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 12,
+      "step3InferredCarry": 3,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9679,8 +9679,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 4,
+      "step3InferredCarry": 4,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9749,8 +9749,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 27,
+      "step3InferredCarry": 4,
+      "step3InferredText": 23,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9819,8 +9819,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 14,
+      "step3InferredCarry": 4,
+      "step3InferredText": 10,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -9838,8 +9838,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 18,
-        "ab": 16,
+        "pa": 19,
+        "ab": 17,
         "h": 3,
         "hr": 0,
         "bb": 0,
@@ -9858,8 +9858,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 4,
-        "ab": 4,
+        "pa": 3,
+        "ab": 3,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -9959,8 +9959,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 12,
+      "step3InferredCarry": 1,
+      "step3InferredText": 11,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -10379,8 +10379,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 19,
+      "step3InferredCarry": 7,
+      "step3InferredText": 12,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -10470,7 +10470,7 @@
       "vsHandR": {
         "pa": 89,
         "ab": 83,
-        "h": 23,
+        "h": 24,
         "hr": 0,
         "bb": 4,
         "hbp": 0,
@@ -10480,7 +10480,7 @@
       "vsHandL": {
         "pa": 25,
         "ab": 20,
-        "h": 6,
+        "h": 5,
         "hr": 0,
         "bb": 1,
         "hbp": 1,
@@ -10519,8 +10519,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 21,
+      "step3InferredCarry": 12,
+      "step3InferredText": 9,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -10538,8 +10538,8 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 98,
-        "ab": 92,
+        "pa": 97,
+        "ab": 91,
         "h": 26,
         "hr": 2,
         "bb": 5,
@@ -10548,8 +10548,8 @@
         "sf": 1
       },
       "vsHandL": {
-        "pa": 32,
-        "ab": 27,
+        "pa": 33,
+        "ab": 28,
         "h": 10,
         "hr": 1,
         "bb": 4,
@@ -10589,8 +10589,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 30,
+      "step3InferredCarry": 13,
+      "step3InferredText": 17,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -10888,8 +10888,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 86,
-        "ab": 77,
+        "pa": 87,
+        "ab": 78,
         "h": 16,
         "hr": 2,
         "bb": 9,
@@ -10908,8 +10908,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -11098,9 +11098,9 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 103,
-        "ab": 91,
-        "h": 24,
+        "pa": 102,
+        "ab": 90,
+        "h": 23,
         "hr": 1,
         "bb": 10,
         "hbp": 2,
@@ -11108,9 +11108,9 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 36,
-        "ab": 28,
-        "h": 6,
+        "pa": 37,
+        "ab": 29,
+        "h": 7,
         "hr": 1,
         "bb": 7,
         "hbp": 0,
@@ -11149,8 +11149,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 33,
+      "step3InferredCarry": 13,
+      "step3InferredText": 20,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -11849,8 +11849,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 9,
+      "step3InferredCarry": 3,
+      "step3InferredText": 6,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -11989,8 +11989,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 19,
+      "step3InferredCarry": 3,
+      "step3InferredText": 16,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12078,23 +12078,23 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 58,
-        "ab": 46,
+        "pa": 56,
+        "ab": 45,
         "h": 10,
         "hr": 0,
         "bb": 5,
         "hbp": 1,
-        "sh": 5,
+        "sh": 4,
         "sf": 1
       },
       "vsHandL": {
-        "pa": 25,
-        "ab": 24,
+        "pa": 27,
+        "ab": 25,
         "h": 4,
         "hr": 1,
         "bb": 0,
         "hbp": 0,
-        "sh": 1,
+        "sh": 2,
         "sf": 0
       },
       "vsHandU": {
@@ -12129,8 +12129,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 13,
+      "step3InferredCarry": 9,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12148,9 +12148,9 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 70,
-        "ab": 60,
-        "h": 15,
+        "pa": 69,
+        "ab": 59,
+        "h": 14,
         "hr": 0,
         "bb": 8,
         "hbp": 0,
@@ -12158,9 +12158,9 @@
         "sf": 2
       },
       "vsHandL": {
-        "pa": 39,
-        "ab": 33,
-        "h": 5,
+        "pa": 40,
+        "ab": 34,
+        "h": 6,
         "hr": 0,
         "bb": 5,
         "hbp": 0,
@@ -12199,8 +12199,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 11,
+      "step3InferredCarry": 11,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12269,8 +12269,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 13,
+      "step3InferredCarry": 4,
+      "step3InferredText": 10,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12339,8 +12339,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 21,
+      "step3InferredCarry": 1,
+      "step3InferredText": 20,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12409,8 +12409,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 9,
+      "step3InferredCarry": 4,
+      "step3InferredText": 5,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12549,8 +12549,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 17,
+      "step3InferredCarry": 1,
+      "step3InferredText": 16,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12568,8 +12568,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 88,
-        "ab": 81,
+        "pa": 90,
+        "ab": 83,
         "h": 24,
         "hr": 0,
         "bb": 5,
@@ -12578,8 +12578,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 51,
-        "ab": 45,
+        "pa": 49,
+        "ab": 43,
         "h": 12,
         "hr": 1,
         "bb": 4,
@@ -12619,8 +12619,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 17,
+      "step3InferredCarry": 9,
+      "step3InferredText": 8,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12638,8 +12638,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 104,
-        "ab": 97,
+        "pa": 105,
+        "ab": 98,
         "h": 26,
         "hr": 1,
         "bb": 6,
@@ -12648,8 +12648,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 36,
-        "ab": 35,
+        "pa": 35,
+        "ab": 34,
         "h": 11,
         "hr": 3,
         "bb": 1,
@@ -12689,8 +12689,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 29,
+      "step3InferredCarry": 6,
+      "step3InferredText": 24,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12759,8 +12759,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 5,
+      "step3InferredCarry": 3,
+      "step3InferredText": 2,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -12788,8 +12788,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 2,
+        "ab": 2,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -12798,8 +12798,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -14248,9 +14248,9 @@
         "sf": 2
       },
       "vsHandR": {
-        "pa": 90,
-        "ab": 81,
-        "h": 22,
+        "pa": 91,
+        "ab": 82,
+        "h": 23,
         "hr": 0,
         "bb": 4,
         "hbp": 0,
@@ -14268,9 +14268,9 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 3,
-        "ab": 2,
-        "h": 2,
+        "pa": 2,
+        "ab": 1,
+        "h": 1,
         "hr": 0,
         "bb": 1,
         "hbp": 0,
@@ -14668,8 +14668,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 6,
-        "ab": 6,
+        "pa": 7,
+        "ab": 7,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -14678,8 +14678,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 10,
-        "ab": 10,
+        "pa": 11,
+        "ab": 11,
         "h": 4,
         "hr": 0,
         "bb": 0,
@@ -14688,8 +14688,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -14808,8 +14808,8 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 59,
-        "ab": 53,
+        "pa": 60,
+        "ab": 54,
         "h": 13,
         "hr": 1,
         "bb": 2,
@@ -14818,8 +14818,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 26,
-        "ab": 23,
+        "pa": 25,
+        "ab": 22,
         "h": 5,
         "hr": 1,
         "bb": 2,
@@ -14859,8 +14859,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 17,
+      "step3InferredCarry": 5,
+      "step3InferredText": 12,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -15018,8 +15018,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 49,
-        "ab": 43,
+        "pa": 50,
+        "ab": 44,
         "h": 13,
         "hr": 0,
         "bb": 3,
@@ -15028,8 +15028,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 33,
-        "ab": 30,
+        "pa": 32,
+        "ab": 29,
         "h": 11,
         "hr": 0,
         "bb": 1,
@@ -15069,8 +15069,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 14,
+      "step3InferredCarry": 8,
+      "step3InferredText": 6,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -15088,8 +15088,8 @@
         "sf": 1
       },
       "vsHandR": {
-        "pa": 32,
-        "ab": 27,
+        "pa": 33,
+        "ab": 28,
         "h": 6,
         "hr": 1,
         "bb": 4,
@@ -15108,8 +15108,8 @@
         "sf": 1
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -15139,8 +15139,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 6,
+      "step3InferredCarry": 2,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -15209,8 +15209,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 16,
+      "step3InferredCarry": 4,
+      "step3InferredText": 12,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -15349,8 +15349,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 7,
+      "step3InferredCarry": 7,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -15578,8 +15578,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 26,
-        "ab": 20,
+        "pa": 27,
+        "ab": 21,
         "h": 5,
         "hr": 0,
         "bb": 6,
@@ -15588,8 +15588,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -15629,8 +15629,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 14,
+      "step3InferredCarry": 4,
+      "step3InferredText": 10,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -16218,8 +16218,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 11,
-        "ab": 10,
+        "pa": 12,
+        "ab": 11,
         "h": 2,
         "hr": 0,
         "bb": 1,
@@ -16228,8 +16228,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -16348,9 +16348,9 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 31,
-        "ab": 28,
-        "h": 5,
+        "pa": 32,
+        "ab": 29,
+        "h": 6,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -16358,9 +16358,9 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 16,
-        "ab": 16,
-        "h": 3,
+        "pa": 15,
+        "ab": 15,
+        "h": 2,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -16399,8 +16399,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 4,
+      "step3InferredCarry": 4,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -16838,21 +16838,21 @@
         "sf": 3
       },
       "vsHandR": {
-        "pa": 80,
-        "ab": 69,
+        "pa": 82,
+        "ab": 70,
         "h": 12,
         "hr": 2,
-        "bb": 8,
+        "bb": 9,
         "hbp": 0,
         "sh": 1,
         "sf": 2
       },
       "vsHandL": {
-        "pa": 49,
-        "ab": 46,
+        "pa": 47,
+        "ab": 45,
         "h": 10,
         "hr": 1,
-        "bb": 2,
+        "bb": 1,
         "hbp": 0,
         "sh": 0,
         "sf": 1
@@ -16889,8 +16889,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 15,
+      "step3InferredCarry": 8,
+      "step3InferredText": 8,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -16959,8 +16959,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 28,
+      "step3InferredCarry": 4,
+      "step3InferredText": 24,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -17120,7 +17120,7 @@
       "vsHandR": {
         "pa": 10,
         "ab": 10,
-        "h": 2,
+        "h": 3,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -17130,7 +17130,7 @@
       "vsHandL": {
         "pa": 9,
         "ab": 9,
-        "h": 3,
+        "h": 2,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -17169,8 +17169,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 4,
+      "step3InferredCarry": 3,
+      "step3InferredText": 1,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -17379,8 +17379,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 25,
+      "step3InferredCarry": 8,
+      "step3InferredText": 17,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -17678,9 +17678,9 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 25,
-        "ab": 24,
-        "h": 7,
+        "pa": 26,
+        "ab": 25,
+        "h": 8,
         "hr": 0,
         "bb": 1,
         "hbp": 0,
@@ -17698,9 +17698,9 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
-        "h": 1,
+        "pa": 0,
+        "ab": 0,
+        "h": 0,
         "hr": 0,
         "bb": 0,
         "hbp": 0,
@@ -18178,8 +18178,8 @@
         "sf": 1
       },
       "vsHandL": {
-        "pa": 0,
-        "ab": 0,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -18188,8 +18188,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -18318,8 +18318,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 9,
-        "ab": 9,
+        "pa": 10,
+        "ab": 10,
         "h": 1,
         "hr": 0,
         "bb": 0,
@@ -18328,8 +18328,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -18639,8 +18639,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 11,
+      "step3InferredCarry": 1,
+      "step3InferredText": 10,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -18659,20 +18659,20 @@
       },
       "vsHandR": {
         "pa": 47,
-        "ab": 44,
+        "ab": 43,
         "h": 16,
         "hr": 0,
-        "bb": 1,
+        "bb": 2,
         "hbp": 0,
         "sh": 2,
         "sf": 0
       },
       "vsHandL": {
         "pa": 28,
-        "ab": 23,
+        "ab": 24,
         "h": 8,
         "hr": 0,
-        "bb": 4,
+        "bb": 3,
         "hbp": 0,
         "sh": 1,
         "sf": 0
@@ -18709,8 +18709,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 15,
+      "step3InferredCarry": 8,
+      "step3InferredText": 7,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -19199,8 +19199,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 3,
+      "step3InferredCarry": 3,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -19409,8 +19409,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 2,
-      "step3InferredText": 17,
+      "step3InferredCarry": 15,
+      "step3InferredText": 4,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -20249,8 +20249,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 4,
+      "step3InferredCarry": 4,
+      "step3InferredText": 0,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -20338,8 +20338,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 4,
-        "ab": 4,
+        "pa": 5,
+        "ab": 5,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -20358,8 +20358,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 2,
-        "ab": 2,
+        "pa": 1,
+        "ab": 1,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -21318,8 +21318,8 @@
         "sf": 0
       },
       "vsHandR": {
-        "pa": 81,
-        "ab": 75,
+        "pa": 82,
+        "ab": 76,
         "h": 21,
         "hr": 1,
         "bb": 6,
@@ -21328,8 +21328,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 36,
-        "ab": 32,
+        "pa": 35,
+        "ab": 31,
         "h": 5,
         "hr": 0,
         "bb": 4,
@@ -21369,8 +21369,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 32,
+      "step3InferredCarry": 5,
+      "step3InferredText": 27,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -21439,8 +21439,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 24,
+      "step3InferredCarry": 8,
+      "step3InferredText": 16,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -22139,8 +22139,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 1,
-      "step3InferredText": 6,
+      "step3InferredCarry": 4,
+      "step3InferredText": 3,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },
@@ -22238,8 +22238,8 @@
         "sf": 0
       },
       "vsHandL": {
-        "pa": 29,
-        "ab": 27,
+        "pa": 30,
+        "ab": 28,
         "h": 6,
         "hr": 1,
         "bb": 2,
@@ -22248,8 +22248,8 @@
         "sf": 0
       },
       "vsHandU": {
-        "pa": 1,
-        "ab": 1,
+        "pa": 0,
+        "ab": 0,
         "h": 0,
         "hr": 0,
         "bb": 0,
@@ -22699,8 +22699,8 @@
       },
       "hasNegativeGap": false,
       "step3MissingPitcherIdPas": 0,
-      "step3InferredCarry": 0,
-      "step3InferredText": 27,
+      "step3InferredCarry": 4,
+      "step3InferredText": 23,
       "step4UnresolvedPitcherCount": 0,
       "step4UnresolvedPaSum": 0
     },

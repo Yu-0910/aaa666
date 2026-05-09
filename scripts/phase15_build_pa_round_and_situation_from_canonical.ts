@@ -450,6 +450,14 @@ function main(): void {
         negativeHApplied: vsHand.reconciliation.negativeHApplied,
         positiveHrApplied: vsHand.reconciliation.positiveHrApplied,
         positiveHApplied: vsHand.reconciliation.positiveHApplied,
+        // Phase 28: 出場成績テーブルの cells[14..] と pitchingLines (ip 累積) で
+        // 不明 PA を R/L へ振り分けた量と、振り分け失敗の内訳。
+        cellResolvedR: vsHand.reconciliation.cellResolvedR,
+        cellResolvedL: vsHand.reconciliation.cellResolvedL,
+        cellAmbiguousPas: vsHand.reconciliation.cellAmbiguousPas,
+        cellPitcherHandUnknownPas: vsHand.reconciliation.cellPitcherHandUnknownPas,
+        cellMissingTextPas: vsHand.reconciliation.cellMissingTextPas,
+        cellTeamUnresolvedPas: vsHand.reconciliation.cellTeamUnresolvedPas,
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),

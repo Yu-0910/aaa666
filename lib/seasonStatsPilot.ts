@@ -31,6 +31,10 @@ import { isWalkLikeResultText } from '@/lib/baseballWalkResult'
 import { isStrikeoutResultJa } from '@/lib/yahooGame/paOutcomeResultJa'
 import { hitBases, isAtBat } from '@/lib/yahooGame/resultJaHitBases'
 import { pitcherThrowHandRLFromYahooPitcherIdWithMentioned } from '@/lib/yahooGame/batterHandFromCanonical'
+import { parseCellResultToContribution } from '@/lib/yahooGame/cellResultToContribution'
+import { resolvePitchersForBatterInning } from '@/lib/yahooGame/pitcherIntervalsFromPitchingLines'
+import { parsePaId, teamForYahooPlayerId } from '@/lib/yahooGame/pitcherPocHelpers'
+import { injectTeamsFromTextPbpIfMissing } from '@/lib/yahooGame/inferTeamsFromTextPbp'
 import { yahooPitcherIdForVsHandFromPa } from '@/lib/yahooGame/yahooPitcherIdForVsHandFromPa'
 import { mergePhase10IntoCanonical, type Phase10PitchRow } from '@/lib/yahooGame/mergePhase10FromPitchRows'
 import { getProjectRoot } from '@/lib/projectRoot'
@@ -400,6 +404,21 @@ export type VsHandReconciliationDebug = {
    */
   positiveHrApplied: number
   positiveHApplied: number
+  /**
+   * Phase 28: 出場成績テーブルの cells[14..]（回ごとの打席結果列）と
+   * pitchingLines（ip 累積）を使って、不明バケツに行く前に R/L へ振り分けた量。
+   * - `cellResolvedR/L`: 振り分けに成功した PA・AB・H・HR・BB・HBP・SH・SF の合計。
+   * - `cellAmbiguousPas`: 該当回に複数投手登板で曖昧と判定し不明にフォールバックした PA 数。
+   * - `cellPitcherHandUnknownPas`: 投手 ID は特定したが利き腕が取れなかった PA 数。
+   * - `cellMissingTextPas`: cells 自体が空で text を取れなかった不明 PA 数（戻り場所が無い）。
+   */
+  cellResolvedR: { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number; h: number; hr: number; tb: number }
+  cellResolvedL: { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number; h: number; hr: number; tb: number }
+  cellAmbiguousPas: number
+  cellPitcherHandUnknownPas: number
+  cellMissingTextPas: number
+  /** Phase 28: 打者のチーム自体が判定できず投手区間を引けなかった PA 数 */
+  cellTeamUnresolvedPas: number
 }
 
 type P0Counts = { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number }
@@ -685,6 +704,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
 } {
   // 橋渡し JSON をこのプロセスで更新した直後でも反映されるようにする（dev での調査・手直し用）
   invalidateYahooNpbBatterMapsCache()
+  const emptyCellResolved = () => ({ pa: 0, ab: 0, bb: 0, hbp: 0, sh: 0, sf: 0, h: 0, hr: 0, tb: 0 })
   const emptyReconciliation = (): VsHandReconciliationDebug => ({
     backfilledGames: 0,
     negativeDeltaGames: 0,
@@ -697,6 +717,12 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     negativeHApplied: 0,
     positiveHrApplied: 0,
     positiveHApplied: 0,
+    cellResolvedR: emptyCellResolved(),
+    cellResolvedL: emptyCellResolved(),
+    cellAmbiguousPas: 0,
+    cellPitcherHandUnknownPas: 0,
+    cellMissingTextPas: 0,
+    cellTeamUnresolvedPas: 0,
   })
   const bid = (yahooBatterId || '').trim()
   if (!/^\d+$/.test(bid))
@@ -735,19 +761,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
   const aggR = emptyBattingSeasonAggYahoo()
   const aggL = emptyBattingSeasonAggYahoo()
   const aggU = emptyBattingSeasonAggYahoo()
-  const reconciliation: VsHandReconciliationDebug = {
-    backfilledGames: 0,
-    negativeDeltaGames: 0,
-    appliedDelta: emptyP0(),
-    negativeDelta: emptyP0(),
-    negativeAppliedDelta: emptyP0(),
-    negativeUnabsorbedDelta: emptyP0(),
-    negativeDeltaSamples: [],
-    negativeHrApplied: 0,
-    negativeHApplied: 0,
-    positiveHrApplied: 0,
-    positiveHApplied: 0,
-  }
+  const reconciliation: VsHandReconciliationDebug = emptyReconciliation()
   const vsUnknownAbSamples: VsUnknownAbSample[] | undefined = options?.collectVsUnknownAbSamples
     ? []
     : undefined
@@ -1140,8 +1154,12 @@ export function loadVsHandRowsFromCanonicalWithDebug(
 
   for (const doc of docs) {
     const gid = String(doc.gameId ?? '').trim()
-    const mergedDoc =
+    // Phase 28: canonical の scoreboard / teams は現行ビルダーが空のまま生成するため、
+    // 試合前情報テキスト（"先攻:X..." / "後攻:Y..."）から軽量パースして補強する。
+    // 既に埋まっている場合は idempotent（元の doc が返る）。
+    const baseMerged =
       options?.mergedDocsByGameId?.get(gid) ?? mergePhase10RestoredIntoDocIfPresent(doc)
+    const mergedDoc = injectTeamsFromTextPbpIfMissing(baseMerged)
     const gameId = mergedDoc.gameId
     const mentioned = mergedDoc.game?.yahooPlayersMentioned ?? {}
     // Phase 25: 試合単位の R/L/U を記録するため、PA ループ前後で aggR/aggL/aggU をスナップショットする。
@@ -1524,14 +1542,159 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     //   battingLines が知らない 1 PA が vs_hand に積まれるパターンに効く（佐藤 都志也の試合 2021038786 等）。
     const target = computeBattingTargetForGameAndBatter(mergedDoc, bid)
     if (target) {
-      const snapAfterR = p0FromAgg(aggR)
-      const snapAfterL = p0FromAgg(aggL)
-      const snapAfterU = p0FromAgg(aggU)
-      const gameR = p0Delta(snapAfterR, snapBeforeR)
-      const gameL = p0Delta(snapAfterL, snapBeforeL)
-      const gameU = p0Delta(snapAfterU, snapBeforeU)
-      const current = p0Add(p0Add(gameR, gameL), gameU)
-      const delta = p0Delta(p0FromTarget(target), current)
+      let snapAfterR = p0FromAgg(aggR)
+      let snapAfterL = p0FromAgg(aggL)
+      let snapAfterU = p0FromAgg(aggU)
+      let gameR = p0Delta(snapAfterR, snapBeforeR)
+      let gameL = p0Delta(snapAfterL, snapBeforeL)
+      let gameU = p0Delta(snapAfterU, snapBeforeU)
+      let current = p0Add(p0Add(gameR, gameL), gameU)
+      let delta = p0Delta(p0FromTarget(target), current)
+
+      // Phase 28: 正の Δ を不明バケツへ流し込む手前で、出場成績テーブルの cells[14..]
+      // （回ごとの打席結果列）から「不明 PA の発生回」を特定し、その回に登板していた
+      // 投手を pitchingLines + ip 累積 で逆引きして R/L へ振り分ける。
+      // - 同じ回に複数投手登板（半回中の交代）は曖昧なので不明にフォールバック。
+      // - 投手 ID は取れたが利き腕未登録のケースも不明にフォールバック。
+      // - cells[14+i] が空のときは復元できないので不明にフォールバック。
+      if (p0HasPositive(delta)) {
+        const cellRow = (mergedDoc.game?.statsPlayerLinkedRows ?? []).find(
+          (r) => String(r?.yahooPlayerId ?? '').trim() === bid,
+        )
+        const cells = Array.isArray(cellRow?.cells) ? (cellRow!.cells as string[]).slice(14) : []
+        if (cells.length > 0) {
+          const existingByInning = new Map<number, number>()
+          for (const pa of pas) {
+            const parsed = parsePaId(String(pa.paId ?? ''))
+            if (parsed) {
+              existingByInning.set(parsed.inning, (existingByInning.get(parsed.inning) ?? 0) + 1)
+            }
+          }
+          // 打者のチーム判定: スタメン外（代打のみ等）でも判定できるよう、複数経路で推定する。
+          // 1) startingLineup（teams[]）から
+          // 2) この試合の plateAppearances の半回 × scoreboard.teamName から
+          // 3) roster CSV（npb_roster_2026.csv）の team フィールドから（最後の手段）
+          let batterTeam = teamForYahooPlayerId(mergedDoc, bid)
+          if (!batterTeam) {
+            const board = mergedDoc.game?.scoreboard ?? []
+            if (board.length >= 2) {
+              const visitor = String(board[0]?.teamName ?? '').trim()
+              const home = String(board[1]?.teamName ?? '').trim()
+              for (const pa of pas) {
+                const parsed = parsePaId(String(pa.paId ?? ''))
+                if (!parsed) continue
+                if (parsed.half === 0 && visitor) {
+                  batterTeam = visitor
+                  break
+                }
+                if (parsed.half === 1 && home) {
+                  batterTeam = home
+                  break
+                }
+              }
+            }
+          }
+          if (!batterTeam) {
+            const rosterRow = findRosterPlayerByPublicId(bid)
+            const rosterTeam = String(rosterRow?.team ?? '').trim()
+            // scoreboard が visitor/home の 2 つを返している場合、roster.team は visitor/home の
+            // どちらかと厳密一致する想定（移籍シーズンを除く）。
+            const board = mergedDoc.game?.scoreboard ?? []
+            if (rosterTeam && board.length >= 2) {
+              const visitor = String(board[0]?.teamName ?? '').trim()
+              const home = String(board[1]?.teamName ?? '').trim()
+              if (rosterTeam === visitor || rosterTeam === home) {
+                batterTeam = rosterTeam
+              }
+            }
+          }
+          const pitcherNameById = new Map<string, string>()
+          for (const pl of mergedDoc.domain?.pitchingLines ?? []) {
+            const pid = String(pl?.yahooPlayerId ?? '').trim()
+            const name = String(pl?.playerName ?? '').trim()
+            if (pid && name) pitcherNameById.set(pid, name)
+          }
+          for (let i = 0; i < cells.length; i++) {
+            const text = String(cells[i] ?? '').trim()
+            const inning = i + 1
+            const existingCount = existingByInning.get(inning) ?? 0
+            // 1 セル = 1 PA 前提。既存 PA があるイニングはスキップ（二重計上回避）。
+            if (existingCount >= 1) continue
+            if (!text) continue
+            // batterTeam が空（スタメン名簿外でかつ PA も無いレア試合）→ チーム不明
+            if (!batterTeam) {
+              reconciliation.cellTeamUnresolvedPas += 1
+              continue
+            }
+            const reso = resolvePitchersForBatterInning(mergedDoc, batterTeam, inning)
+            if (!reso) {
+              reconciliation.cellTeamUnresolvedPas += 1
+              continue
+            }
+            // 1 投手のみの半回 → 確定。複数投手の半回でも候補全員の利き腕が一致するなら確定（推測ではない）。
+            let hand: 'R' | 'L' | '' = ''
+            if (reso.kind === 'unique') {
+              const pname = pitcherNameById.get(reso.pitcherId) ?? ''
+              hand = pname ? throwHandFromPitcherName(pname) : ''
+            } else {
+              const hands = new Set<'R' | 'L' | ''>()
+              for (const pid of reso.candidates) {
+                const pname = pitcherNameById.get(pid) ?? ''
+                hands.add(pname ? throwHandFromPitcherName(pname) : '')
+              }
+              // 候補の中に利き腕不明が混じっていたら、その混じりが空文字 '' で 1 件入る。
+              // 厳密に「全員 R」または「全員 L」のとき以外は採用しない。
+              if (hands.size === 1) {
+                const only = [...hands][0]
+                if (only === 'R' || only === 'L') hand = only
+              }
+            }
+            if (hand !== 'R' && hand !== 'L') {
+              if (reso.kind === 'ambiguous') reconciliation.cellAmbiguousPas += 1
+              else reconciliation.cellPitcherHandUnknownPas += 1
+              continue
+            }
+            const contribution = parseCellResultToContribution(text)
+            if (!contribution) {
+              reconciliation.cellMissingTextPas += 1
+              continue
+            }
+            const targetAgg = hand === 'R' ? aggR : aggL
+            targetAgg.pa += contribution.pa
+            targetAgg.ab += contribution.ab
+            targetAgg.bb += contribution.bb
+            targetAgg.hbp += contribution.hbp
+            targetAgg.sh += contribution.sh
+            targetAgg.sf += contribution.sf
+            targetAgg.h += contribution.h
+            targetAgg.hr += contribution.hr
+            targetAgg.tb += contribution.tb
+            if (contribution.hitBases === 2) targetAgg.h2 += 1
+            if (contribution.hitBases === 3) targetAgg.h3 += 1
+            // gameIds は各回ごとに加算しないので set のまま（試合数 g に影響しないよう注意）
+            targetAgg.gameIds.add(gameId)
+            const bucket = hand === 'R' ? reconciliation.cellResolvedR : reconciliation.cellResolvedL
+            bucket.pa += contribution.pa
+            bucket.ab += contribution.ab
+            bucket.bb += contribution.bb
+            bucket.hbp += contribution.hbp
+            bucket.sh += contribution.sh
+            bucket.sf += contribution.sf
+            bucket.h += contribution.h
+            bucket.hr += contribution.hr
+            bucket.tb += contribution.tb
+          }
+          // cells で R/L に振り分けた分だけスナップショットと Δ を取り直す
+          snapAfterR = p0FromAgg(aggR)
+          snapAfterL = p0FromAgg(aggL)
+          snapAfterU = p0FromAgg(aggU)
+          gameR = p0Delta(snapAfterR, snapBeforeR)
+          gameL = p0Delta(snapAfterL, snapBeforeL)
+          gameU = p0Delta(snapAfterU, snapBeforeU)
+          current = p0Add(p0Add(gameR, gameL), gameU)
+          delta = p0Delta(p0FromTarget(target), current)
+        }
+      }
       if (p0HasPositive(delta)) {
         const applied = applyPositiveP0DeltaToAggUnknown(aggU, delta, gameId)
         reconciliation.backfilledGames += 1
