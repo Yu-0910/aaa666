@@ -3,7 +3,7 @@
  * NEXT_PUBLIC_RANKINGS_BASE_URL があるとき /data/* は R2 直も試す（本番プロキシ未整備時）
  */
 
-import { displaySitePathToPublicUrl } from '@/lib/ranking/fetchDisplayJsonServer'
+import { displaySitePathToPublicUrl } from '@/lib/displayData/sitePath'
 
 const cache = new Map<string, Promise<unknown>>()
 

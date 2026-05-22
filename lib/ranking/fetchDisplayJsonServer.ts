@@ -4,22 +4,10 @@
  * ローカル: R2 失敗時は同一オリジン /data/* プロキシ
  */
 
+import { displaySitePathToObjectKey } from '@/lib/displayData/sitePath'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 
-/** `/data/rankings/...` → `data/rankings/...` */
-export function displaySitePathToObjectKey(sitePath: string): string {
-  const normalized = sitePath.startsWith('/') ? sitePath.slice(1) : sitePath
-  if (!normalized.startsWith('data/')) {
-    throw new Error(`Invalid display path (expected /data/...): ${sitePath}`)
-  }
-  return normalized
-}
-
-export function displaySitePathToPublicUrl(sitePath: string): string | null {
-  const base = process.env.NEXT_PUBLIC_RANKINGS_BASE_URL?.trim()
-  if (!base) return null
-  return `${base.replace(/\/+$/, '')}/${displaySitePathToObjectKey(sitePath)}`
-}
+export { displaySitePathToObjectKey, displaySitePathToPublicUrl } from '@/lib/displayData/sitePath'
 
 async function fetchFromR2Direct<T>(sitePath: string): Promise<T | null> {
   const base = process.env.RANKINGS_BASE_URL?.trim()
@@ -62,12 +50,19 @@ async function fetchFromSameOriginProxy<T>(sitePath: string): Promise<T | null> 
   }
 }
 
+/** Vercel 本番は public/data が無い。R2 失敗後の同一オリジン fetch はタイムアウトの原因になる */
+function shouldTrySameOriginProxy(): boolean {
+  if (!process.env.VERCEL) return true
+  return process.env.NODE_ENV !== 'production'
+}
+
 export async function fetchDisplayJsonServer<T = unknown>(
   sitePath: string
 ): Promise<T | null> {
   const path = sitePath.startsWith('/') ? sitePath : `/${sitePath}`
   const fromR2 = await fetchFromR2Direct<T>(path)
   if (fromR2 != null) return fromR2
+  if (!shouldTrySameOriginProxy()) return null
   return fetchFromSameOriginProxy<T>(path)
 }
 

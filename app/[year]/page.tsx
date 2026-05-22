@@ -15,10 +15,14 @@ export default async function YearTopPage({ params }: PageProps) {
   let seasonInitial = null
   let weeklyInitial = null
   if (y === 2026) {
-    ;[seasonInitial, weeklyInitial] = await Promise.all([
-      loadSeasonTabPayloadServer(2026),
-      loadWeeklyTabPayloadServer(2026),
-    ])
+    try {
+      ;[seasonInitial, weeklyInitial] = await Promise.all([
+        loadSeasonTabPayloadServer(2026),
+        loadWeeklyTabPayloadServer(2026),
+      ])
+    } catch (err) {
+      console.error('[YearTopPage] failed to load 2026 tab payloads', err)
+    }
   }
 
   return (
