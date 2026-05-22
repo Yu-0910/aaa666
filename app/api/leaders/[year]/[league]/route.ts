@@ -21,9 +21,7 @@ export async function GET(
       console.log(`[API] GET /api/leaders/${year}/${upperLeague}`)
     }
     
-    // 2026年は2025年データを流用
-    const dataYear = year === '2026' ? '2025' : year
-    const data = getBattingLeaders(dataYear, upperLeague)
+    const data = getBattingLeaders(year, upperLeague)
     return NextResponse.json(data)
   } catch (error) {
     const resolvedParams = params instanceof Promise ? await params : params

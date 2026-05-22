@@ -5,13 +5,14 @@ import type React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect, useLayoutEffect, useMemo } from "react"
-import { useRouter, usePathname, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
 import PitchDetailsPilot from "@/app/components/PitchDetailsPilot"
 import type { ViewportLayout } from "@/lib/viewportLayout"
-import { useClientSearchString, useViewportLayout } from "@/hooks/useIsDesktop"
+import { useClientPathname, useClientSearchString, useViewportLayout } from "@/hooks/useIsDesktop"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
+import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import {
   isFabianPlayerPage,
   isKikuchiPlayerPage,
@@ -32,6 +33,13 @@ import type {
   PitcherSeasonPitchingPeriodApiResponse,
   PitcherSeasonPitchingPeriodPayload,
 } from "@/lib/pitcherSeasonPocTypes"
+import type { CatcherAppearancesApiResponse } from "@/app/api/players/[playerId]/catcher-appearances/route"
+import type {
+  CatcherPitchersApiResponse,
+} from "@/app/api/players/[playerId]/catcher-pitchers/route"
+import type { CatcherDefenseBasicApiResponse } from "@/app/api/players/[playerId]/catcher-defense-basic/route"
+import type { CatcherStartingSummaryApiResponse } from "@/app/api/players/[playerId]/catcher-starting-summary/route"
+import type { CatcherPaRoundPitchTypesApiResponse } from "@/app/api/players/[playerId]/catcher-pa-round-pitch-types/route"
 import {
   EMPTY_TEAM_VS_ROWS,
   pitcherPocBasicRow1,
@@ -53,7 +61,11 @@ import {
 import { formatEra } from "@/lib/formatStat"
 import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327 } from "@/lib/yahooGame/pitcherPocDefaults"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
+import { unwrapPitcherZoneStatsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
+import DerivedPipelineEmptyNotice, {
+  DerivedPipelineFielderHint,
+} from "@/app/components/DerivedPipelineEmptyNotice"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
@@ -142,6 +154,31 @@ const careerHighs = [
 
 function stripQueryHash(s: string): string {
   return (s || "").split("?")[0]?.split("#")[0] || ""
+}
+
+/**
+ * `useParams` / `usePathname` のサスペンド回避（Next.js 16 + layout Suspense で真っ黒になり得る）。
+ * `/players/[id]`・`/mobile/players/[id]` からセグメントを取る。
+ */
+function playerIdSegmentFromPathname(pathname: string): string {
+  const raw = stripQueryHash((pathname || "").trim())
+  if (!raw) return ""
+  const parts = raw.split("/").filter(Boolean)
+  const idx = parts.lastIndexOf("players")
+  if (idx >= 0 && parts[idx + 1]) {
+    let seg = parts[idx + 1]!
+    try {
+      seg = decodeURIComponent(seg).normalize("NFC")
+    } catch {
+      try {
+        seg = seg.normalize("NFC")
+      } catch {
+        // そのまま
+      }
+    }
+    return seg
+  }
+  return ""
 }
 
 /** NPB 公式 player_id（master CSV / ランキングリンクでパスが数値のみになることがある） */
@@ -347,11 +384,41 @@ function PlayerPageClient({
   const [pitcherSeasonSubTab, setPitcherSeasonSubTab] = useState<
     "basic" | "pitch" | "situation" | "period"
   >("basic")
-  // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。初期 pitch だと showPilotTab("situation") が偽になり
-  // 「状況別」の表が DOM に存在しない（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] = useState<
-    "basic" | "pitch" | "situation" | "period"
+    "basic" | "pitch" | "situation" | "period" | "catcher"
   >("basic")
+  const [catcherAppearances, setCatcherAppearances] = useState<{
+    gamesAsCatcher: number
+    gameIds: string[]
+  } | null>(null)
+  const [catcherPitchers, setCatcherPitchers] = useState<
+    NonNullable<CatcherPitchersApiResponse["payload"]>["rows"]
+  >([])
+  const [catcherDefenseBasic, setCatcherDefenseBasic] = useState<{
+    sbAttempts: number
+    sb: number
+    cs: number
+    csPct: number | null
+  } | null>(null)
+  const [catcherStartingSummary, setCatcherStartingSummary] = useState<{
+    starts: number
+    teamWins: number
+    teamLosses: number
+    teamWinPct: number | null
+    qsCount: number
+    hqsCount: number
+    sqsCount: number
+    qsPct: number | null
+    hqsPct: number | null
+    sqsPct: number | null
+  } | null>(null)
+  /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  const [catcherPaRoundPitchTypes, setCatcherPaRoundPitchTypes] = useState<
+    { key: "1" | "2" | "3" | "4" | "5"; pitches_total: number; rows: { pitch_type: string; pitches: number; pct: number }[] }[]
+  >([])
   const [displayName, setDisplayName] = useState(playerData.name)
   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
@@ -390,11 +457,21 @@ function PlayerPageClient({
     pitcher_id: string
     pitches_total: number
     rows: GamePitchTypeRow[]
-    total_row: GamePitchTypeRow
+    total_row?: GamePitchTypeRow
   }
   const [gamePitchTypes, setGamePitchTypes] = useState<GamePitchTypesData | null>(null)
-  type ZoneStat = { zoneId: number; pitches: number; ab: number; h: number; hr: number; ops: string; avg: string }
+  type ZoneStat = {
+    zoneId: number
+    pitches: number
+    ab: number
+    h: number
+    hr: number
+    isop: string
+    avg: string
+  }
   const [zoneStats, setZoneStats] = useState<{ vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null>(null)
+  /** zone-stats API が 404 等のとき。黙って「ー」だけだと空欄に見えるため明示する */
+  const [zoneStatsUnavailableReason, setZoneStatsUnavailableReason] = useState<string | null>(null)
   /** Phase 2: `_data/derived/player_season_pitching_poc` を API 経由で取得 */
   const [pitcherSeasonPocPayload, setPitcherSeasonPocPayload] =
     useState<PitcherSeasonPocPayload | null>(null)
@@ -402,17 +479,12 @@ function PlayerPageClient({
   const [pitcherSeasonPitchingPeriodPayload, setPitcherSeasonPitchingPeriodPayload] =
     useState<PitcherSeasonPitchingPeriodPayload | null>(null)
   const router = useRouter()
-  const pathname = usePathname()
+  const pathname = useClientPathname()
   const clientSearch = useClientSearchString()
-  const yahooGameIdParam = useMemo(() => {
-    const q = clientSearch.replace(/^\?/, "")
-    return (new URLSearchParams(q).get("yahooGameId") ?? "").trim()
-  }, [clientSearch])
-  const params = useParams()
-  const playerIdFromPath = (params?.playerId as string) || ""
+  const playerIdFromPath = playerIdSegmentFromPathname(pathname)
   const lastSegmentFromPathname = pathname.split("/").filter(Boolean).pop() || ""
   /**
-   * useParams().playerId が本番のみ空・未同期になるケースへのフォールバック。
+   * pathname から取れない場合のフォールバック（末尾セグメント）。
    * 青柳はパスが 2103788（Yahoo 投手ID）でも一致するため、同条件で本番でも表示されやすい。
    */
   const playerSegment =
@@ -478,7 +550,27 @@ function PlayerPageClient({
               ? players.find((p) => compactPlayerName(p.name_ja) === pathNameKey)
               : undefined
           const c = compactPlayerName(displayName)
-          const byName = players.find((p) => compactPlayerName(p.name_ja) === c)
+          /** 初回 fetch が state 初期値（近本プレースホルダ）のまま走るのを防ぐ。ランキング等の ?name= 付き URL 向け */
+          let nameKeyFromUrl = ""
+          if (typeof window !== "undefined") {
+            try {
+              const qn = new URLSearchParams(window.location.search).get("name")?.trim() ?? ""
+              if (qn) {
+                try {
+                  nameKeyFromUrl = compactPlayerName(decodeURIComponent(qn).normalize("NFC"))
+                } catch {
+                  nameKeyFromUrl = compactPlayerName(qn)
+                }
+              }
+            } catch {
+              nameKeyFromUrl = ""
+            }
+          }
+          const byName = players.find(
+            (p) =>
+              compactPlayerName(p.name_ja) === c ||
+              (nameKeyFromUrl.length > 0 && compactPlayerName(p.name_ja) === nameKeyFromUrl),
+          )
           /** URL が Yahoo 打者 ID のとき、クライアントでも NPB に落として名簿行を探す（byId は raw===npb のみのため 1600124 等で失敗し得る） */
           const npbFromYahooManual =
             id && /^\d+$/.test(id) ? MANUAL_YAHOO_TO_NPB[id] : undefined
@@ -591,6 +683,16 @@ function PlayerPageClient({
         isPitcherRegistrationPosition(rosterMatchedPosition, {
           rosterNpbPlayerId: rosterMatchedNpbId,
         })))
+  /** クエリに明示された Yahoo 試合 ID（無ければ空文字） */
+  const pitcherPocYahooGameIdExplicit = useMemo(() => {
+    const q = clientSearch.replace(/^\?/, "")
+    return (new URLSearchParams(q).get("yahooGameId") ?? "").trim()
+  }, [clientSearch])
+  /** 球種別・コース別 API 用の実効試合 ID（未指定時は PoC 既定） */
+  const pitcherPocYahooGameId = useMemo(() => {
+    if (pitcherPocYahooGameIdExplicit) return pitcherPocYahooGameIdExplicit
+    return isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
+  }, [pitcherPocYahooGameIdExplicit, isAoyagiPage])
   /**
    * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
    * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
@@ -611,12 +713,13 @@ function PlayerPageClient({
     displayName,
     displayRomanName,
   })
-  /** 名簿にいる選手・パイロット対象のみ「今季／通算」タブと今季ブロックを出す */
+  /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
   const showSeasonCareerTabs =
     isRosterPlayer ||
     isAoyagiPage ||
     isKikuchiPage ||
-    isFabianPage
+    isFabianPage ||
+    /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
 
   /**
    * 今季ブロックは statsTab === "season" のときだけ描画。名簿照合が遅いと一時的に showSeasonCareerTabs が偽になるが、
@@ -637,64 +740,339 @@ function PlayerPageClient({
     playerIdNormalized,
   ])
 
-  /** Phase 3: ?yahooGameId= で試合切替。未指定時は広島中日 PoC 既定（青柳のみ別試合 2021040084） */
+  /** 捕手出場（途中出場含む）: 捕手を守ったことがある選手だけ「捕手成績」タブを出す */
+  useEffect(() => {
+    if (!showSeasonCareerTabs || statsTab !== "season" || !showFielderSeasonPilotUi) {
+      setCatcherAppearances(null)
+      return
+    }
+    const id = (seasonPilotPlayerId || "").trim()
+    if (!id) {
+      setCatcherAppearances(null)
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(`/api/players/${encodeURIComponent(id)}/catcher-appearances?year=${encodeURIComponent(y)}`, {
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CatcherAppearancesApiResponse | null) => {
+        if (cancelled) return
+        if (!data?.hasData || !data.payload) {
+          setCatcherAppearances(null)
+          if (kikuchiSeasonDetailTab === "catcher") setKikuchiSeasonDetailTab("period")
+          return
+        }
+        setCatcherAppearances(data.payload)
+      })
+      .catch(() => {
+        if (!cancelled) setCatcherAppearances(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId, kikuchiSeasonDetailTab])
+
+  useEffect(() => {
+    if (!showSeasonCareerTabs || statsTab !== "season" || !showFielderSeasonPilotUi) {
+      setCatcherPitchers([])
+      return
+    }
+    const id = (seasonPilotPlayerId || "").trim()
+    if (!id) {
+      setCatcherPitchers([])
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(`/api/players/${encodeURIComponent(id)}/catcher-pitchers?year=${encodeURIComponent(y)}`, {
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CatcherPitchersApiResponse | null) => {
+        if (cancelled) return
+        setCatcherPitchers(data?.hasData && data.payload?.rows ? data.payload.rows : [])
+      })
+      .catch(() => {
+        if (!cancelled) setCatcherPitchers([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId])
+
+  useEffect(() => {
+    if (!showSeasonCareerTabs || statsTab !== "season" || !showFielderSeasonPilotUi) {
+      setCatcherPaRoundPitchTypes([])
+      return
+    }
+    const id = (seasonPilotPlayerId || "").trim()
+    if (!id) {
+      setCatcherPaRoundPitchTypes([])
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/catcher-pa-round-pitch-types?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CatcherPaRoundPitchTypesApiResponse | null) => {
+        if (cancelled) return
+        setCatcherPaRoundPitchTypes(
+          data?.hasData && data.payload?.byPaRoundPitchTypes ? data.payload.byPaRoundPitchTypes : []
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setCatcherPaRoundPitchTypes([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId])
+
+  useEffect(() => {
+    if (!showSeasonCareerTabs || statsTab !== "season" || !showFielderSeasonPilotUi) {
+      setCatcherStartingSummary(null)
+      return
+    }
+    const id = (seasonPilotPlayerId || "").trim()
+    if (!id) {
+      setCatcherStartingSummary(null)
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/catcher-starting-summary?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CatcherStartingSummaryApiResponse | null) => {
+        if (cancelled) return
+        setCatcherStartingSummary(data?.hasData && data.payload ? data.payload : null)
+      })
+      .catch(() => {
+        if (!cancelled) setCatcherStartingSummary(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId])
+
+  useEffect(() => {
+    if (!showSeasonCareerTabs || statsTab !== "season" || !showFielderSeasonPilotUi) {
+      setCatcherDefenseBasic(null)
+      return
+    }
+    const id = (seasonPilotPlayerId || "").trim()
+    if (!id) {
+      setCatcherDefenseBasic(null)
+      return
+    }
+    let cancelled = false
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/catcher-defense-basic?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" }
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: CatcherDefenseBasicApiResponse | null) => {
+        if (cancelled) return
+        setCatcherDefenseBasic(data?.hasData && data.payload ? data.payload : null)
+      })
+      .catch(() => {
+        if (!cancelled) setCatcherDefenseBasic(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId])
+
+  /**
+   * 解決策(1): 既定の試合 ID を URL に書き込む。?yahooGameId= が無いとき実効 ID と表示がずれないよう、
+   * 共有・手動変更しやすいクエリに同期する（値は pitcherPocYahooGameId と一致）。
+   */
+  useEffect(() => {
+    if (!showPitcherSeasonSuganoUi) return
+    if (typeof window === "undefined") return
+    const qs = clientSearch.startsWith("?") ? clientSearch.slice(1) : clientSearch
+    const params = new URLSearchParams(qs)
+    if (params.has("yahooGameId")) return
+    const gid = isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
+    params.set("yahooGameId", gid)
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [showPitcherSeasonSuganoUi, clientSearch, pathname, router, isAoyagiPage])
+
+  /**
+   * Phase 3: コース別は `pitcher-zone-stats`（canonical 横断・phase20）を主系。200 かつ hasData:false や形式不正時は
+   * 従来の `/api/games/.../zone-stats` にフォールバック。球種別は引き続き試合 API のみ。
+   */
   useEffect(() => {
     if (!showPitcherSeasonSuganoUi) {
       setGamePitchTypes(null)
       setZoneStats(null)
+      setZoneStatsUnavailableReason(null)
       return
     }
-    const gid =
-      yahooGameIdParam ||
-      (isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327)
+    const gid = pitcherPocYahooGameId
     const npb = rosterMatchedNpbId.trim() || (isAoyagiPage ? AOYAGI_NPB_ID : "")
-    if (!gid || !npb) {
-      setGamePitchTypes(null)
-      setZoneStats(null)
-      return
-    }
+    const zoneQueryId = seasonPilotPlayerId.trim() || playerIdNormalized.trim()
     let cancelled = false
-    const base = `/api/games/${encodeURIComponent(gid)}/pitchers/npb/${encodeURIComponent(npb)}`
+    const base =
+      gid && npb
+        ? `/api/games/${encodeURIComponent(gid)}/pitchers/npb/${encodeURIComponent(npb)}`
+        : ""
+
     setGamePitchTypes(null)
     setZoneStats(null)
-    Promise.all([
-      fetch(`${base}/pitch-types`).then((r) => (r.ok ? r.json() : null)),
-      fetch(`${base}/zone-stats`).then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([pt, zs]) => {
-        if (cancelled) return
-        setGamePitchTypes(pt as GamePitchTypesData | null)
-        setZoneStats(zs as { vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setGamePitchTypes(null)
-          setZoneStats(null)
+    setZoneStatsUnavailableReason(null)
+
+    const fetchGameZoneStats = async (): Promise<
+      | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+      | { ok: false; error: string }
+    > => {
+      if (!base) {
+        return { ok: false, error: "試合・名簿が確定しておらず、試合単位のゾーン成績も取得できません。" }
+      }
+      const r = await fetch(`${base}/zone-stats`, { cache: "no-store" })
+      if (r.ok) {
+        try {
+          return { ok: true, body: await r.json() }
+        } catch {
+          return { ok: false, error: "ゾーン成績の JSON が読み取れませんでした。" }
         }
-      })
+      }
+      let detail = `HTTP ${r.status}`
+      try {
+        const j = (await r.json()) as { error?: string }
+        if (typeof j.error === "string" && j.error.trim()) detail = j.error.trim()
+      } catch {
+        /* ignore */
+      }
+      return { ok: false, error: detail }
+    }
+
+    const fetchSeasonZoneStats = async (): Promise<
+      | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+      | { ok: false; error: string }
+    > => {
+      if (!zoneQueryId) {
+        return {
+          ok: false,
+          error: "名簿照合前のためシーズン横断のゾーン成績を取得できません。",
+        }
+      }
+      const r = await fetch(
+        `/api/players/${encodeURIComponent(zoneQueryId)}/pitcher-zone-stats?year=${encodeURIComponent(DERIVED_SEASON_YEAR_DEFAULT)}`,
+        { cache: "no-store" }
+      )
+      let raw: unknown = null
+      try {
+        raw = await r.json()
+      } catch {
+        return {
+          ok: false,
+          error: "シーズンゾーン成績の JSON が読み取れませんでした。",
+        }
+      }
+      const unwrapped = unwrapPitcherZoneStatsApiJson(raw, r.ok)
+      if (unwrapped.ok) {
+        return { ok: true, body: unwrapped.body }
+      }
+      let detail = unwrapped.error
+      if (unwrapped.code === "NO_DERIVED_DATA") {
+        detail += "（`npm run phase20:build:pitcher-zones` で派生を生成できます）"
+      }
+      return { ok: false, error: detail }
+    }
+
+    const run = async () => {
+      const ptPromise = base
+        ? fetch(`${base}/pitch-types`, { cache: "no-store" }).then((r) =>
+            r.ok ? r.json() : null
+          )
+        : Promise.resolve(null)
+
+      const season = await fetchSeasonZoneStats()
+      let zoneRes:
+        | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+        | { ok: false; error: string }
+      if (season.ok) {
+        zoneRes = season
+      } else {
+        const game = await fetchGameZoneStats()
+        if (game.ok) {
+          zoneRes = game
+        } else {
+          zoneRes = {
+            ok: false,
+            error:
+              season.error && game.error
+                ? `${season.error} 試合単位: ${game.error}`
+                : season.error || game.error,
+          }
+        }
+      }
+
+      const pt = await ptPromise
+      if (cancelled) return
+      setGamePitchTypes(pt as GamePitchTypesData | null)
+      if (zoneRes.ok) {
+        const zs = zoneRes.body as { vsRight: ZoneStat[]; vsLeft: ZoneStat[] }
+        setZoneStats(
+          Array.isArray(zs.vsRight) && Array.isArray(zs.vsLeft) ? zs : null
+        )
+        setZoneStatsUnavailableReason(
+          Array.isArray(zs.vsRight) && Array.isArray(zs.vsLeft)
+            ? null
+            : "ゾーン成績の形式が不正です。"
+        )
+      } else {
+        setZoneStats(null)
+        setZoneStatsUnavailableReason(zoneRes.error)
+      }
+    }
+
+    run().catch(() => {
+      if (!cancelled) {
+        setGamePitchTypes(null)
+        setZoneStats(null)
+        setZoneStatsUnavailableReason(
+          "試合データの取得に失敗しました。しばらくしてから再度お試しください。"
+        )
+      }
+    })
     return () => {
       cancelled = true
     }
   }, [
     showPitcherSeasonSuganoUi,
-    yahooGameIdParam,
+    pitcherPocYahooGameId,
     isAoyagiPage,
     rosterMatchedNpbId,
-    pitcherSeasonPocPayload,
+    seasonPilotPlayerId,
+    playerIdNormalized,
   ])
 
   /** Phase 2/6: `_data/derived/player_season_pitching_poc` を API 経由で取得（捕手別含む） */
   useEffect(() => {
     if (!showPitcherSeasonSuganoUi) {
       setPitcherSeasonPocPayload(null)
+      setPitcherSeasonPocApiSettled(false)
       return
     }
     const id = playerIdNormalized.trim()
     if (!id) {
       setPitcherSeasonPocPayload(null)
+      setPitcherSeasonPocApiSettled(false)
       return
     }
     let cancelled = false
+    setPitcherSeasonPocApiSettled(false)
     const y = DERIVED_SEASON_YEAR_DEFAULT
     fetch(
       `/api/players/${encodeURIComponent(id)}/season-pitching?year=${encodeURIComponent(y)}`,
@@ -707,6 +1085,9 @@ function PlayerPageClient({
       })
       .catch(() => {
         if (!cancelled) setPitcherSeasonPocPayload(null)
+      })
+      .finally(() => {
+        if (!cancelled) setPitcherSeasonPocApiSettled(true)
       })
     return () => {
       cancelled = true
@@ -846,7 +1227,7 @@ function PlayerPageClient({
 
   return (
     <div
-      className="min-h-screen text-white latin font-light"
+      className="player-page-fonts min-h-screen text-white"
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}
@@ -868,7 +1249,7 @@ function PlayerPageClient({
                 <span className="block w-full h-0.5 bg-[#ffff44]" />
               </div>
             </button>
-            <Link href="/" className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
+            <Link href={SITE_TOP_HREF} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={28} height={28} className="object-contain" />
             </Link>
             <select
@@ -887,7 +1268,7 @@ function PlayerPageClient({
       ) : (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
+            <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />
               <span className="text-[#ffff44] text-base font-bold tracking-tight">Short-Stop</span>
             </Link>
@@ -956,7 +1337,7 @@ function PlayerPageClient({
             {/* Player Info */}
             <div className="flex flex-col">
               <h1
-                className={`${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight latin font-light`}
+                className={`${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
                 style={{
                   textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
                   fontWeight: 900,
@@ -1165,59 +1546,56 @@ function PlayerPageClient({
                 }}
               >
                 <div
-                  className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
+                  className="absolute inset-y-0 left-0 transition-transform duration-200 ease-out"
                   style={{
                     backgroundColor: "#FFFF44",
-                    transform:
-                      kikuchiSeasonDetailTab === "basic"
-                        ? "translateX(0)"
-                        : kikuchiSeasonDetailTab === "pitch"
-                          ? "translateX(100%)"
-                          : kikuchiSeasonDetailTab === "situation"
-                            ? "translateX(200%)"
-                            : "translateX(300%)",
+                    width:
+                      catcherAppearances && catcherAppearances.gamesAsCatcher > 0 ? "20%" : "25%",
+                    transform: (() => {
+                      const tabs =
+                        catcherAppearances && catcherAppearances.gamesAsCatcher > 0
+                          ? (["basic", "pitch", "situation", "period", "catcher"] as const)
+                          : (["basic", "pitch", "situation", "period"] as const)
+                      const idx = Math.max(0, tabs.indexOf(kikuchiSeasonDetailTab as any))
+                      return `translateX(${idx * 100}%)`
+                    })(),
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("basic")}
-                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "basic" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  基本成績
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("pitch")}
-                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "pitch" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  球種情報
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("situation")}
-                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "situation" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  状況別
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKikuchiSeasonDetailTab("period")}
-                  className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                  style={{
-                    color: kikuchiSeasonDetailTab === "period" ? "#000000" : "#9ca3af",
-                  }}
-                >
-                  期間別
-                </button>
+                {(() => {
+                  const tabs =
+                    catcherAppearances && catcherAppearances.gamesAsCatcher > 0
+                      ? ([
+                          { key: "basic", label: "基本成績" },
+                          { key: "pitch", label: "球種情報" },
+                          { key: "situation", label: "状況別" },
+                          { key: "period", label: "期間別" },
+                          { key: "catcher", label: "捕手成績" },
+                        ] as const)
+                      : ([
+                          { key: "basic", label: "基本成績" },
+                          { key: "pitch", label: "球種情報" },
+                          { key: "situation", label: "状況別" },
+                          { key: "period", label: "期間別" },
+                        ] as const)
+                  return tabs.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setKikuchiSeasonDetailTab(t.key as any)}
+                      title={
+                        t.key === "catcher"
+                          ? "捕手として出場した試合が派生データに含まれる場合のみタブが表示されます（計画書 Phase 3）"
+                          : undefined
+                      }
+                      className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                      style={{
+                        color: kikuchiSeasonDetailTab === t.key ? "#000000" : "#9ca3af",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))
+                })()}
               </div>
             )}
           {/* 名簿野手・今季: 通算などは同一 scale コンテナ内に置く（別ラッパーだと transform のレイアウト高さで大きな空きが出る） */}
@@ -1226,21 +1604,667 @@ function PlayerPageClient({
             !showPitcherSeasonSuganoUi &&
             showFielderSeasonPilotUi && (
               <>
-                <SeasonStatsPilot
-                  playerId={seasonPilotPlayerId}
-                  seasonDetailTab={kikuchiSeasonDetailTab}
-                  layout={layout}
-                  looseSpacing
-                  rosterFielderShell={showFielderSeasonPilotUi}
-                  rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
-                  headingStripeColor={sectionStripeColor}
-                />
-                {kikuchiSeasonDetailTab === "pitch" && (
-                  <PitchDetailsPilot
-                    playerId={seasonPilotPlayerId}
-                    layout={layout}
-                    headingStripeColor={sectionStripeColor}
-                  />
+                {kikuchiSeasonDetailTab === "catcher" ? (
+                  <div className="w-full mb-7">
+                    <h2
+                      className={`${tb} mb-4 pl-4 mt-8`}
+                      style={{
+                        borderLeft: `6px solid ${sectionStripeColor}`,
+                        fontWeight: 900,
+                      }}
+                    >
+                      基本成績
+                    </h2>
+
+                    {(() => {
+                      const na = "—"
+                      const games = catcherAppearances?.gamesAsCatcher ?? 0
+
+                      const ipToOuts = (ip: string | null | undefined): number => {
+                        const t = String(ip ?? "").trim()
+                        if (!t) return 0
+                        if (t.includes(".")) {
+                          const [w, frac] = t.split(".")
+                          const whole = parseInt(w, 10) || 0
+                          const f = parseInt(frac ?? "0", 10) || 0
+                          return whole * 3 + Math.min(2, f)
+                        }
+                        const n = parseInt(t, 10)
+                        return Number.isFinite(n) ? n * 3 : 0
+                      }
+                      const outsToIp = (outs: number): string => {
+                        if (outs <= 0) return "0"
+                        const w = Math.floor(outs / 3)
+                        const f = outs % 3
+                        return f === 0 ? String(w) : `${w}.${f}`
+                      }
+                      const pct = (num: number, den: number, digits = 1): string =>
+                        den > 0 ? `${((num / den) * 100).toFixed(digits)}%` : na
+                      const avg = (h: number, ab: number): string => (ab > 0 ? (h / ab).toFixed(3) : na)
+
+                      const rows = catcherPitchers ?? []
+                      const sum = rows.reduce(
+                        (a, r) => {
+                          a.bf += r.bf ?? 0
+                          a.ab += r.ab ?? 0
+                          a.h += r.h ?? 0
+                          a.hr += r.hr ?? 0
+                          a.so += r.so ?? 0
+                          a.bb += r.bb ?? 0
+                          a.hbp += r.hbp ?? 0
+                          a.outs += r.ipOuts ?? ipToOuts(r.ip)
+                          a.wins += r.wins ?? 0
+                          a.losses += r.losses ?? 0
+                          a.qsCount += r.qsCount ?? 0
+                          return a
+                        },
+                        {
+                          bf: 0,
+                          ab: 0,
+                          h: 0,
+                          hr: 0,
+                          so: 0,
+                          bb: 0,
+                          hbp: 0,
+                          outs: 0,
+                          wins: 0,
+                          losses: 0,
+                          qsCount: 0,
+                        }
+                      )
+
+                      // Phase6 は catcher split の ER を直接持たないため、ERA と outs から推定して合算する（近似）
+                      const estErSum = rows.reduce((acc, r) => {
+                        const outs = (r.ipOuts ?? ipToOuts(r.ip)) || 0
+                        const era = r.era
+                        if (era == null || outs <= 0) return acc
+                        return acc + (era * outs) / 27
+                      }, 0)
+                      const eraAgg = sum.outs > 0 ? (estErSum * 27) / sum.outs : null
+                      const whipAgg = sum.outs > 0 ? (sum.h + sum.bb) / (sum.outs / 3) : null
+                      const csPctVal =
+                        catcherDefenseBasic?.csPct != null ? `${catcherDefenseBasic.csPct.toFixed(1)}%` : na
+
+                      const starterStarts = catcherStartingSummary?.starts ?? 0
+                      const starterWins = catcherStartingSummary?.teamWins ?? 0
+                      const starterLosses = catcherStartingSummary?.teamLosses ?? 0
+                      const starterWinPct =
+                        catcherStartingSummary?.teamWinPct != null
+                          ? catcherStartingSummary.teamWinPct.toFixed(3)
+                          : na
+                      const qsCount = catcherStartingSummary?.qsCount ?? 0
+                      const qsPct =
+                        catcherStartingSummary?.qsPct != null
+                          ? `${catcherStartingSummary.qsPct.toFixed(1)}%`
+                          : na
+                      const hqsPct =
+                        catcherStartingSummary?.hqsPct != null
+                          ? `${catcherStartingSummary.hqsPct.toFixed(1)}%`
+                          : na
+                      const sqsPct =
+                        catcherStartingSummary?.sqsPct != null
+                          ? `${catcherStartingSummary.sqsPct.toFixed(1)}%`
+                          : na
+
+                      // 1段あたり7指標（指定ラベルは維持）
+                      const row1 = [
+                        eraAgg == null ? na : formatEra(eraAgg),
+                        String(games),
+                        starterStarts > 0 ? String(starterStarts) : na, // 先発＝スタメン捕手回数
+                        starterWins > 0 ? String(starterWins) : na, // 勝利＝スタメン試合のチーム勝利
+                        starterLosses > 0 ? String(starterLosses) : na, // 敗戦＝スタメン試合のチーム敗戦
+                        avg(sum.h, sum.ab),
+                        qsCount > 0 ? String(qsCount) : na, // QS（回数）
+                      ]
+                      const row2 = [
+                        starterWinPct, // 勝率＝スタメン試合のチーム勝率
+                        outsToIp(sum.outs),
+                        sum.bf ? String(sum.bf) : na,
+                        na, // 投球数（捕手側は未連携）
+                        sum.h ? String(sum.h) : na,
+                        pct(sum.so, sum.bf),
+                        whipAgg != null ? whipAgg.toFixed(2) : na,
+                      ]
+                      const row3 = [
+                        sum.hr ? String(sum.hr) : na,
+                        sum.so ? String(sum.so) : na,
+                        sum.bb ? String(sum.bb) : na,
+                        na, // 故意四（未連携）
+                        sum.hbp ? String(sum.hbp) : na,
+                        na, // 失点（未連携）
+                        starterStarts > 0 ? qsPct : na, // QS率（母数＝スタメン捕手回数）
+                      ]
+                      const catcherBasicExtra = [
+                        hqsPct, // HQS率（母数＝スタメン捕手回数）
+                        sqsPct, // SQS率（母数＝スタメン捕手回数）
+                        na, // 被BABIP（未連携）
+                        na, // 被出塁率（未連携）
+                        na, // 被長打率（未連携）
+                        na, // GO/AO（未連携）
+                        csPctVal, // 盗塁阻止率
+                      ]
+                      return (
+                        <>
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    防御率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    試合
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    先発
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    勝利
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    敗戦
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被打率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    QS
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row1.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    勝率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    回数
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被打者
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    投球数
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被安
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    K%
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    WHIP
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row2.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    被本
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    三振
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    四球
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    故意四
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    死球
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    失点
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    QS率
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row3.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    HQS率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    SQS率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被BABIP
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被出塁率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被長打率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    GO/AO
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    盗塁阻止率
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {catcherBasicExtra.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* 巡目別の球種一覧（投手ページの積み上げ横棒グラフをトレース） */}
+                          <h2
+                            className={`${tb} mb-4 pl-4 mt-8`}
+                            style={{
+                              borderLeft: `6px solid ${sectionStripeColor}`,
+                              fontWeight: 900,
+                            }}
+                          >
+                            巡目別の球種一覧（スタメン時）
+                          </h2>
+
+                          <div className="mb-12">
+                            {(() => {
+                              const rounds = [
+                                { key: "1", label: "1巡目" },
+                                { key: "2", label: "2巡目" },
+                                { key: "3", label: "3巡目" },
+                                { key: "4", label: "4巡目" },
+                                { key: "5", label: "5巡目以上" },
+                              ] as const
+
+                              const palette = [
+                                "#3b82f6",
+                                "#22c55e",
+                                "#f59e0b",
+                                "#a855f7",
+                                "#ef4444",
+                                "#06b6d4",
+                                "#eab308",
+                              ] as const
+
+                              // 捕手タブ（スタメン時）: Phase26 の派生を優先（無ければ暫定で全体割合）
+                              const roundRows =
+                                catcherPaRoundPitchTypes && catcherPaRoundPitchTypes.length > 0
+                                  ? catcherPaRoundPitchTypes
+                                  : null
+                              const byRound = new Map(
+                                (roundRows ?? []).map((r) => [String(r.key), r] as const)
+                              )
+
+                              const allTypes = new Map<string, number>()
+                              if (roundRows && roundRows.length > 0) {
+                                for (const rr of roundRows) {
+                                  for (const row of rr.rows) {
+                                    allTypes.set(
+                                      row.pitch_type,
+                                      (allTypes.get(row.pitch_type) ?? 0) + row.pitches
+                                    )
+                                  }
+                                }
+                              } else if (gamePitchTypes?.rows?.length) {
+                                for (const r of gamePitchTypes.rows) {
+                                  allTypes.set(r.pitch_type, Math.round(r.pct * 10))
+                                }
+                              }
+
+                              const typeOrder = [...allTypes.entries()]
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([t]) => t)
+                              const colorByType = new Map(
+                                typeOrder.map((t, i) => [t, palette[i % palette.length]!] as const)
+                              )
+
+                              const partsForRound = (roundKey: string) => {
+                                const rr = byRound.get(roundKey) ?? null
+                                if (rr && rr.pitches_total > 0) {
+                                  return rr.rows
+                                    .slice()
+                                    .sort((a, b) => b.pct - a.pct)
+                                    .map((r) => ({
+                                      key: `${roundKey}-${r.pitch_type}`,
+                                      label: r.pitch_type,
+                                      pct: Math.max(0, Math.min(100, r.pct)),
+                                      color: colorByType.get(r.pitch_type) ?? palette[0],
+                                    }))
+                                }
+                                return gamePitchTypes?.rows?.length
+                                  ? gamePitchTypes.rows
+                                      .slice()
+                                      .sort((a, b) => b.pct - a.pct)
+                                      .map((r, i) => ({
+                                        key: `${roundKey}-fallback-${r.pitch_type}-${i}`,
+                                        label: r.pitch_type,
+                                        pct: Math.max(0, Math.min(100, r.pct)),
+                                        color: colorByType.get(r.pitch_type) ?? palette[i % palette.length]!,
+                                      }))
+                                  : []
+                              }
+
+                              const na = "—"
+                              return (
+                                <>
+                                  {rounds.map((rd) => (
+                                    <div key={rd.key} className="mb-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-[64px] text-[12px] text-gray-200 font-black tabular-nums whitespace-nowrap">
+                                          {rd.label}
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="h-7 border border-[#555] overflow-hidden bg-[#111] border-l border-r border-l-white border-r-white">
+                                            <div className="flex h-full w-full">
+                                              {(() => {
+                                                const parts = partsForRound(rd.key)
+                                                return parts.length > 0 ? (
+                                                  parts.map((p) => (
+                                                    <div
+                                                      key={p.key}
+                                                      title={`${p.label}: ${p.pct.toFixed(1)}%`}
+                                                      className="h-full flex items-center justify-center"
+                                                      style={{
+                                                        width: `${p.pct.toFixed(1)}%`,
+                                                        backgroundColor: p.color,
+                                                        color: "#000000",
+                                                        fontWeight: 900,
+                                                        fontSize: "15px",
+                                                        lineHeight: "1",
+                                                        letterSpacing: "0.02em",
+                                                      }}
+                                                    >
+                                                      {p.pct.toFixed(0)}%
+                                                    </div>
+                                                  ))
+                                                ) : (
+                                                  <div className="h-full w-full bg-[#1a1a1a]" />
+                                                )
+                                              })()}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                                    {typeOrder.length > 0 ? (
+                                      typeOrder.map((label) => (
+                                        <div key={label} className="flex items-center gap-1 whitespace-nowrap">
+                                          <span
+                                            className="inline-block w-2 h-2"
+                                            style={{
+                                              backgroundColor: colorByType.get(label) ?? palette[0],
+                                            }}
+                                          />
+                                          <span className="text-gray-300">{label}</span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span>{na}</span>
+                                    )}
+                                  </div>
+                                </>
+                              )
+                            })()}
+                          </div>
+
+                          <div className="text-[11px] text-gray-400">
+                            {catcherAppearances?.gameIds?.length
+                              ? `試合ID: ${catcherAppearances.gameIds.join(", ")}`
+                              : "試合ID: —"}
+                          </div>
+
+                          {/* 投手別成績（最大15人。投手ページの「捕手別の投球成績」をトレース） */}
+                          <h2
+                            className={`${tb} mb-4 pl-4 mt-8`}
+                            style={{
+                              borderLeft: `6px solid ${sectionStripeColor}`,
+                              fontWeight: 900,
+                            }}
+                          >
+                            投手別成績
+                          </h2>
+                          <div className="overflow-x-auto overflow-y-hidden mb-0">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "separate",
+                                borderSpacing: 0,
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <colgroup>
+                                <col style={{ width: "65px" }} />
+                                <col style={{ width: "50px" }} />
+                                <col style={{ width: "45px" }} />
+                                <col style={{ width: "45px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "45px" }} />
+                              </colgroup>
+                              <thead>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                    投手
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    防御率
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    勝‐敗
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    回数
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    K-BB％
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    K％
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    WHIP
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    QS％
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(catcherPitchers?.length ? catcherPitchers.slice(0, 15) : []).length ? (
+                                  catcherPitchers.slice(0, 15).map((row, ri) => (
+                                    <tr
+                                      key={`${row.pitcherNpbId}-${ri}`}
+                                      style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                                    >
+                                      <td
+                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                        style={{ backgroundColor: "#1a1a1a" }}
+                                      >
+                                        {row.pitcherName}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.era == null ? "—" : formatEra(row.era)}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.wl || "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.ip || "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.kBbPct != null ? `${row.kBbPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.kPct != null ? `${row.kPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.whip != null ? row.whip.toFixed(2) : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.qsPct != null ? `${row.qsPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  Array.from({ length: 15 }, (_, i) => (
+                                    <tr key={`na-${i}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                      <td
+                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                        style={{ backgroundColor: "#1a1a1a" }}
+                                      >
+                                        —
+                                      </td>
+                                      {Array.from({ length: 7 }, () => "—").map((v, j) => (
+                                        <td
+                                          key={j}
+                                          className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                        >
+                                          {v}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <>
+                    {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
+                    <SeasonStatsPilot
+                      playerId={seasonPilotPlayerId}
+                      seasonDetailTab={kikuchiSeasonDetailTab as any}
+                      layout={layout}
+                      looseSpacing
+                      rosterFielderShell={showFielderSeasonPilotUi}
+                      rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+                      headingStripeColor={sectionStripeColor}
+                    />
+                    {kikuchiSeasonDetailTab === "pitch" && (
+                      <PitchDetailsPilot
+                        playerId={seasonPilotPlayerId}
+                        layout={layout}
+                        headingStripeColor={sectionStripeColor}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -1258,6 +2282,12 @@ function PlayerPageClient({
                   width: "142.857%",
                 }}
               >
+                <DerivedPipelineEmptyNotice
+                  variant="pitcher"
+                  show={Boolean(
+                    pitcherSeasonPocApiSettled && !pitcherSeasonPocPayload && rosterMainReady
+                  )}
+                />
                 {/* Detail Tab Buttons（main の横パディングまで #1a1a1a で埋める） */}
                 <div
                   className={
@@ -1791,6 +2821,43 @@ function PlayerPageClient({
                     >
                       コース別の投球成績（対右打者）
                     </h2>
+                    {zoneStatsUnavailableReason ? (
+                      <div
+                        className="mb-4 rounded border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100/95 leading-relaxed"
+                        role="status"
+                      >
+                        <p className="font-bold text-amber-200 mb-1">コース別データを表示できません</p>
+                        <p className="text-[11px] text-gray-300 mb-2 whitespace-pre-wrap break-words">
+                          {zoneStatsUnavailableReason}
+                        </p>
+                        <ul className="list-disc pl-4 text-[11px] text-gray-400 space-y-1">
+                          <li>
+                            表示対象の投手が<strong className="text-gray-300">この試合に登板しているか</strong>
+                            確認してください。既定試合（PoC）に出ていない投手は、名簿照合で Yahoo
+                            投手IDが取れず 404 になります。
+                          </li>
+                          <li>
+                            URL に{" "}
+                            <code className="text-gray-200 font-mono tabular-nums">
+                              ?yahooGameId=（Yahooの試合ID）
+                            </code>{" "}
+                            を付け、<strong className="text-gray-300">その試合に出た投手</strong>
+                            と組み合わせてください。
+                          </li>
+                          <li>
+                            事前に{" "}
+                            <code className="text-gray-200 font-mono text-[10px]">
+                              python scripts/fetch_pitcher_zone_stats.py --game-id … --pitcher-id …
+                            </code>{" "}
+                            で{" "}
+                            <code className="text-gray-200 font-mono text-[10px]">
+                              _data/yahoo_games_pilot/zone_stats_*.json
+                            </code>{" "}
+                            を置くと、canonical に pitchEvents が無くても表示できます。
+                          </li>
+                        </ul>
+                      </div>
+                    ) : null}
                     <div className="overflow-x-auto flex justify-center mb-4">
                       <div
                         className="inline-grid grid-cols-5 gap-0"
@@ -1805,7 +2872,7 @@ function PlayerPageClient({
                             const z = (row - 1) * 5 + col
                             const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
                             const stat = zoneStats?.vsRight?.find((s) => s.zoneId === z)
-                            const opsVal = stat?.ops ?? "ー"
+                            const isopVal = stat?.isop ?? "ー"
                             const avgVal = stat?.avg ?? "ー"
                             const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
                             return (
@@ -1819,8 +2886,8 @@ function PlayerPageClient({
                                 }}
                               >
                                 <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被OPS</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
+                                  <span className="opacity-70">被ISOP</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{isopVal}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] latin">
                                   <span className="opacity-70">被打率</span>
@@ -1837,7 +2904,7 @@ function PlayerPageClient({
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-2 latin">
-                      5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
+                      5×5グリッド（投手目線）。主に canonical 横断のシーズン集計（派生未生成時は URL の試合 ID に基づく単試合）。被ISOP・被打率・被本は決着球のゾーン別。
                     </p>
 
                     <h2
@@ -1863,7 +2930,7 @@ function PlayerPageClient({
                             const z = (row - 1) * 5 + col
                             const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
                             const stat = zoneStats?.vsLeft?.find((s) => s.zoneId === z)
-                            const opsVal = stat?.ops ?? "ー"
+                            const isopVal = stat?.isop ?? "ー"
                             const avgVal = stat?.avg ?? "ー"
                             const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
                             return (
@@ -1877,8 +2944,8 @@ function PlayerPageClient({
                                 }}
                               >
                                 <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被OPS</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{opsVal}</span>
+                                  <span className="opacity-70">被ISOP</span>
+                                  <span className="latin font-black tabular-nums text-[12px]">{isopVal}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] latin">
                                   <span className="opacity-70">被打率</span>
@@ -1895,7 +2962,7 @@ function PlayerPageClient({
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-2 latin">
-                      5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。被OPS・被打率・被本塁打は決着球のゾーン別。
+                      5×5グリッド（投手目線）。主に canonical 横断のシーズン集計（派生未生成時は URL の試合 ID に基づく単試合）。被ISOP・被打率・被本は決着球のゾーン別。
                     </p>
                     </div>
                   </>
@@ -2011,39 +3078,143 @@ function PlayerPageClient({
                                   </td>
                                 </tr>
                               ))}
-                              {gamePitchTypes.total_row && (
-                                <tr
-                                  key="__total_row"
-                                  style={{ backgroundColor: "rgba(255, 255, 68, 0.12)" }}
-                                >
-                                  <td
-                                    className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                    style={{ backgroundColor: "#1a1a1a" }}
-                                  >
-                                    {gamePitchTypes.total_row.pitch_type}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    —
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {gamePitchTypes.total_row.pct.toFixed(1)}%
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {gamePitchTypes.total_row.strike_pct}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {gamePitchTypes.total_row.whiff_pct}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {gamePitchTypes.total_row.avg}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {gamePitchTypes.total_row.ops ?? "—"}
-                                  </td>
-                                </tr>
-                              )}
                             </tbody>
                           </table>
+                        </div>
+
+                        {/* 巡目別の球種一覧（積み上げ横棒グラフ） */}
+                        <h2
+                          className={`${tb} mb-4 pl-4 mt-8`}
+                          style={{
+                            borderLeft: `6px solid ${sectionStripeColor}`,
+                            fontWeight: 900,
+                          }}
+                        >
+                          巡目別の球種一覧
+                        </h2>
+                        
+                        <div className="mb-12">
+                          {(() => {
+                            const rounds = [
+                              { key: "1", label: "1巡目" },
+                              { key: "2", label: "2巡目" },
+                              { key: "3", label: "3巡目" },
+                              { key: "4", label: "4巡目" },
+                              { key: "5", label: "5巡目以上" },
+                            ] as const
+
+                            const palette = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#06b6d4", "#eab308"] as const
+
+                            // 実データ優先: season-pitching payload の巡目別球種（無ければ暫定で全体割合）
+                            const roundRows = pitcherSeasonPocPayload?.splits?.byPaRoundPitchTypes ?? null
+                            const byRound = new Map((roundRows ?? []).map((r) => [String(r.key), r] as const))
+
+                            const allTypes = new Map<string, number>()
+                            if (roundRows && roundRows.length > 0) {
+                              for (const rr of roundRows) {
+                                for (const row of rr.rows) {
+                                  allTypes.set(row.pitch_type, (allTypes.get(row.pitch_type) ?? 0) + row.pitches)
+                                }
+                              }
+                            } else if (gamePitchTypes?.rows?.length) {
+                              for (const r of gamePitchTypes.rows) {
+                                allTypes.set(r.pitch_type, Math.round(r.pct * 10))
+                              }
+                            }
+
+                            const typeOrder = [...allTypes.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t)
+                            const colorByType = new Map(typeOrder.map((t, i) => [t, palette[i % palette.length]!] as const))
+
+                            const partsForRound = (roundKey: string) => {
+                              const rr = byRound.get(roundKey) ?? null
+                              if (rr && rr.pitches_total > 0) {
+                                return rr.rows
+                                  .slice()
+                                  .sort((a, b) => b.pct - a.pct)
+                                  .map((r) => ({
+                                    key: `${roundKey}-${r.pitch_type}`,
+                                    label: r.pitch_type,
+                                    pct: Math.max(0, Math.min(100, r.pct)),
+                                    color: colorByType.get(r.pitch_type) ?? palette[0],
+                                  }))
+                              }
+                              // fallback（暫定）: 全体の球種割合（pct）をそのまま使う
+                              return gamePitchTypes?.rows?.length
+                                ? gamePitchTypes.rows
+                                    .slice()
+                                    .sort((a, b) => b.pct - a.pct)
+                                    .map((r, i) => ({
+                                      key: `${roundKey}-fallback-${r.pitch_type}-${i}`,
+                                      label: r.pitch_type,
+                                      pct: Math.max(0, Math.min(100, r.pct)),
+                                      color: colorByType.get(r.pitch_type) ?? palette[i % palette.length]!,
+                                    }))
+                                : []
+                            }
+
+                            const na = "—"
+
+                            return (
+                              <>
+                                {rounds.map((rd) => (
+                                  <div key={rd.key} className="mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-[64px] text-[12px] text-gray-200 font-black tabular-nums whitespace-nowrap">
+                                        {rd.label}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="h-7 border border-[#555] overflow-hidden bg-[#111] border-l border-r border-l-white border-r-white">
+                                          <div className="flex h-full w-full">
+                                            {(() => {
+                                              const parts = partsForRound(rd.key)
+                                              return parts.length > 0 ? (
+                                                parts.map((p) => (
+                                                <div
+                                                  key={p.key}
+                                                  title={`${p.label}: ${p.pct.toFixed(1)}%`}
+                                                  className="h-full flex items-center justify-center"
+                                                  style={{
+                                                    width: `${p.pct.toFixed(1)}%`,
+                                                    backgroundColor: p.color,
+                                                    color: "#000000",
+                                                    fontWeight: 900,
+                                                    fontSize: "15px",
+                                                    lineHeight: "1",
+                                                    letterSpacing: "0.02em",
+                                                  }}
+                                                >
+                                                  {p.pct.toFixed(0)}%
+                                                </div>
+                                                ))
+                                              ) : (
+                                                <div className="h-full w-full bg-[#1a1a1a]" />
+                                              )
+                                            })()}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+
+                                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                                  {typeOrder.length > 0 ? (
+                                    typeOrder.map((label) => (
+                                      <div key={label} className="flex items-center gap-1 whitespace-nowrap">
+                                        <span
+                                          className="inline-block w-2 h-2"
+                                          style={{ backgroundColor: colorByType.get(label) ?? palette[0] }}
+                                        />
+                                        <span className="text-gray-300">{label}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span>{na}</span>
+                                  )}
+                                </div>
+                              </>
+                            )
+                          })()}
                         </div>
                       </>
                     ) : (
@@ -2212,6 +3383,134 @@ function PlayerPageClient({
                                 ))}
                               </tr>
                             ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* 巡目別の投球成績（野手「巡目別の打撃成績」と同デザイン） */}
+                    <div className="w-full mb-7">
+                      <h2
+                        className={`${tb} mb-4 pl-4 mt-8`}
+                        style={{
+                          borderLeft: `6px solid ${sectionStripeColor}`,
+                          fontWeight: 900,
+                        }}
+                      >
+                        巡目別の投球成績
+                      </h2>
+                      <div className="overflow-x-auto overflow-y-hidden mb-0">
+                        <table
+                          className="text-xs"
+                          style={{
+                            fontVariantNumeric: "tabular-nums",
+                            borderCollapse: "separate",
+                            borderSpacing: 0,
+                            border: "1px solid #555",
+                            width: "100%",
+                            tableLayout: "fixed",
+                            minWidth: "660px",
+                          }}
+                        >
+                          <colgroup>
+                            <col style={{ width: "56px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "45px" }} />
+                            <col style={{ width: "45px" }} />
+                          </colgroup>
+                          <thead>
+                            <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                巡目
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                防御率
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                被打率
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                K-BB％
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                K％
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                BB％
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                自責点
+                              </th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                被本塁打
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const LABELS = [
+                                { key: "1", label: "1巡目" },
+                                { key: "2", label: "2巡目" },
+                                { key: "3", label: "3巡目" },
+                                { key: "4", label: "4巡目" },
+                                { key: "5", label: "5巡目以上" },
+                              ] as const
+                              const na = "—"
+                              const rows = pitcherSeasonPocPayload?.splits?.byPaRound ?? []
+                              const byKey = new Map(rows.map((r) => [String(r.key ?? "").trim(), r]))
+                              const pct = (num: number, den: number) =>
+                                den > 0 ? `${((num / den) * 100).toFixed(1)}%` : na
+                              const eraCell = (era: number | null | undefined) => (era == null ? na : formatEra(era))
+                              const avgAgainst = (r: { avg?: string; h: number; ab: number } | null) => {
+                                if (!r) return na
+                                const s = (r.avg ?? "").trim()
+                                if (s) return s
+                                return r.ab > 0 ? (r.h / r.ab).toFixed(3) : na
+                              }
+
+                              return LABELS.map((item) => {
+                                const r = byKey.get(item.key) ?? null
+                                const bf = r?.bf ?? 0
+                                const so = r?.so ?? 0
+                                const bb = r?.bb ?? 0
+                                const er = r?.er
+                                return (
+                                  <tr key={item.key} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                    <td
+                                      className="px-0 py-1 text-center align-middle latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                      style={{ backgroundColor: "#1a1a1a" }}
+                                    >
+                                      {item.label}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r ? eraCell(r.era) : na}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {avgAgainst(r as any)}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r ? pct(so - bb, bf) : na}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r ? pct(so, bf) : na}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r ? pct(bb, bf) : na}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r && typeof er === "number" ? String(er) : na}
+                                    </td>
+                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                      {r ? String(r.hr ?? 0) : na}
+                                    </td>
+                                  </tr>
+                                )
+                              })
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -2903,7 +4202,7 @@ function PlayerPageClient({
                 <div
                   className={`${isMobile ? "text-[3.75rem]" : "text-[2.875rem]"} font-black leading-none mb-4`}
                   style={{
-                    fontFamily: '"Bebas Neue", sans-serif',
+                    fontFamily: 'var(--font-bebas-neue), "Bebas Neue", sans-serif',
                     letterSpacing: "1.2px",
                     fontVariantNumeric: "tabular-nums",
                   }}

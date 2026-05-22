@@ -4,30 +4,38 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import TopPageLeadersClient from "@/app/components/TopPageLeadersClient"
 import ArticlesListClient from "@/app/components/ArticlesListClient"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
-import { LeadersPanel, StandingsPanel, type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
-import {
-  mainTabs,
-  subTabs,
-  getDataForPanel,
-  dummyArticles,
-} from "@/app/components/top/topPageConstants"
+import { SITE_TOP_HREF } from "@/lib/siteNavigation"
+import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import { mainTabs, dummyArticles } from "@/app/components/top/topPageConstants"
+import { usesTopBattingModernLayout } from "@/lib/topPageBatting2025Grid"
+import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabContent"
+import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabContent"
+import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
   layout: TopPageLayoutMode
   initialYear: number
   articlesMode: "rss" | "dummy"
+  /** 2026 など: サーバーで読んだ TOP タブ用データ */
+  seasonInitial?: SeasonTabPayload | null
+  /** 2026: サーバーで読んだ今週タブ用データ */
+  weeklyInitial?: WeeklyTabPayload | null
 }
 
-export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClientProps) {
+export function TopPageClient({
+  layout,
+  initialYear,
+  articlesMode,
+  seasonInitial = null,
+  weeklyInitial = null,
+}: TopPageClientProps) {
   const isMobile = layout === "mobile"
-  const isTop2025 = initialYear === 2025
   const [activeMainTab, setActiveMainTab] = useState(0)
-  const [activeSubTab, setActiveSubTab] = useState(0)
   const [selectedYear, setSelectedYear] = useState(initialYear)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const isTopBattingModernPage = usesTopBattingModernLayout(selectedYear)
 
   const router = useRouter()
 
@@ -46,11 +54,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
 
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
   const rankingHref = `/ranking/${selectedYear}/PL`
-  const pitchingLeague =
-    activeMainTab === 0 && subTabs[activeSubTab]?.type === "combined"
-      ? subTabs[activeSubTab].league || "PL"
-      : "PL"
-  const pitchingRankingHref = `/ranking/pitching/2026/${pitchingLeague}`
+  const pitchingRankingHref = `/ranking/pitching/2026/PL`
 
   const mainTabButtons = (
     <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-black" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-black"}>
@@ -58,10 +62,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
         <button
           key={tab.id}
           type="button"
-          onClick={() => {
-            setActiveMainTab(tab.id)
-            if (tab.id === 0) setActiveSubTab(0)
-          }}
+          onClick={() => setActiveMainTab(tab.id)}
           className={`relative overflow-hidden group transition-all duration-200 flex items-center justify-center ${
             activeMainTab === tab.id ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
           } border border-[#555] ${isMobile ? "py-1.5 px-3 text-xs" : "py-2 px-3 text-sm"} font-semibold whitespace-nowrap`}
@@ -72,59 +73,29 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
     </div>
   )
 
-  const subTabBar = (
-    <div className={isMobile ? "grid grid-cols-4 gap-0" : "max-w-6xl mx-auto grid grid-cols-4 gap-1 px-4"}>
-      {subTabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => setActiveSubTab(tab.id)}
-          className={`${isMobile ? "py-3 text-xs" : "py-2.5 text-sm"} border border-[#555] transition-all duration-200 ease-in-out text-center flex items-center justify-center ${
-            activeSubTab === tab.id
-              ? "bg-[#ffff44] text-black font-semibold shadow-lg"
-              : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a] hover:text-[#ffff44] " + (isMobile ? "hover:scale-105" : "")
-          }`}
-        >
-          <span className="latin">{tab.label}</span>
-        </button>
-      ))}
-    </div>
-  )
+  const prefetchSeasonTab = selectedYear === 2026 && seasonInitial != null
+  const prefetchWeeklyTab = selectedYear === 2026 && weeklyInitial != null
 
   const tabContentInner = (
     <>
-      {activeMainTab === 0 && (
-        <div>
-          {subTabs[activeSubTab].type === "combined" && (
-            <div className="space-y-4">
-              <TopPageLeadersClient
-                year={selectedYear}
-                league={subTabs[activeSubTab].league || "CL"}
-                layout={layout}
-              />
-              <div>
-                <LeadersPanel
-                  title={`${subTabs[activeSubTab].league === "CL" ? "セ・リーグ" : "パ・リーグ"} 投球成績`}
-                  leagueName={subTabs[activeSubTab].league === "CL" ? "Central League" : "Pacific League"}
-                  leagueColor={subTabs[activeSubTab].league === "CL" ? "#039850" : "#10b8ce"}
-                  data={getDataForPanel(subTabs[activeSubTab].league || "CL", "pitching")}
-                  year={selectedYear}
-                  league={subTabs[activeSubTab].league || "CL"}
-                  layout={layout}
-                  statsCategory="pitching"
-                />
-              </div>
-            </div>
-          )}
-          {subTabs[activeSubTab].type === "standings" && (
-            <StandingsPanel
-              league={subTabs[activeSubTab].league || "CL"}
-              leagueColor={subTabs[activeSubTab].league === "CL" ? "#039850" : "#10b8ce"}
-            />
-          )}
+      {(activeMainTab === 0 || prefetchSeasonTab) && (
+        <div className={activeMainTab !== 0 ? "hidden" : undefined} aria-hidden={activeMainTab !== 0}>
+          <TopPageSeasonTabContent
+            year={selectedYear}
+            layout={layout}
+            initialPayload={prefetchSeasonTab ? seasonInitial : undefined}
+          />
         </div>
       )}
-      {activeMainTab === 1 && <div className="text-white text-center py-8">今週の成績（準備中）</div>}
+      {(activeMainTab === 1 || prefetchWeeklyTab) && (
+        <div className={activeMainTab !== 1 ? "hidden" : undefined} aria-hidden={activeMainTab !== 1}>
+          <TopPageWeeklyTabContent
+            year={selectedYear}
+            layout={layout}
+            initialPayload={prefetchWeeklyTab ? weeklyInitial : undefined}
+          />
+        </div>
+      )}
       {activeMainTab === 2 && <div className="text-white text-center py-8">予想投手（準備中）</div>}
       {activeMainTab === 3 &&
         (articlesMode === "rss" ? (
@@ -154,10 +125,8 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
     </>
   )
 
-  const contentPadding = activeMainTab === 0 && isMobile ? "pb-16" : ""
-
   return (
-    <div className={`min-h-screen bg-black text-white ${isTop2025 ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen bg-black text-white ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
@@ -173,7 +142,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
                 <span className="block w-full h-0.5 bg-[#ffff44]" />
               </div>
             </button>
-            <Link href="/" className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
+            <Link href={SITE_TOP_HREF} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={28} height={28} className="object-contain" />
             </Link>
             <select
@@ -192,7 +161,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
       ) : (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
+            <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />
               <span className="text-[#ffff44] text-base font-bold tracking-tight">Short-Stop</span>
             </Link>
@@ -227,19 +196,7 @@ export function TopPageClient({ layout, initialYear, articlesMode }: TopPageClie
 
       {mainTabButtons}
 
-      {!isMobile && activeMainTab === 0 && (
-        <div className="border-b border-[#555] bg-black/90">
-          {subTabBar}
-        </div>
-      )}
-
-      {isMobile && activeMainTab === 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-black border-t border-[#555] animate-in slide-in-from-bottom duration-300 backdrop-blur-sm bg-opacity-95">
-          {subTabBar}
-        </div>
-      )}
-
-      <div className={`${isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"} ${contentPadding}`}>
+      <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
       </div>
     </div>

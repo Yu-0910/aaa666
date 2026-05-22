@@ -11,7 +11,8 @@ const _inter = Inter({
 })
 
 const _notoSansJP = Noto_Sans_JP({
-  weight: ["400", "500", "700"],
+  /* globals / player-page の既定 600・表の font-black(900) を実フォントで出す（未指定だと 600 が 500/700 に丸められてブレる） */
+  weight: ["400", "500", "600", "700", "900"],
   subsets: ["latin"],
   display: "swap",
   variable: "--font-noto-sans-jp",

@@ -1,21 +1,32 @@
-"use client"
-
-import { Suspense } from "react"
-import { useParams } from "next/navigation"
 import { TopPageRoot } from "@/app/components/top/TopPageRoot"
-import { FullPageLoading } from "@/components/ui/spinner"
+import {
+  loadSeasonTabPayloadServer,
+  loadWeeklyTabPayloadServer,
+} from "@/lib/topPage/loadTopPageTabDataServer"
 
-function TopFallback() {
-  return <FullPageLoading />
+type PageProps = {
+  params: Promise<{ year: string }>
 }
 
-export default function YearTopPage() {
-  const params = useParams()
-  const y = Number(params?.year) || 2024
+export default async function YearTopPage({ params }: PageProps) {
+  const { year: yearStr } = await params
+  const y = Number(yearStr) || 2024
+
+  let seasonInitial = null
+  let weeklyInitial = null
+  if (y === 2026) {
+    ;[seasonInitial, weeklyInitial] = await Promise.all([
+      loadSeasonTabPayloadServer(2026),
+      loadWeeklyTabPayloadServer(2026),
+    ])
+  }
 
   return (
-    <Suspense fallback={<TopFallback />}>
-      <TopPageRoot initialYear={y} articlesMode="dummy" />
-    </Suspense>
+    <TopPageRoot
+      initialYear={y}
+      articlesMode="dummy"
+      seasonInitial={seasonInitial}
+      weeklyInitial={weeklyInitial}
+    />
   )
 }

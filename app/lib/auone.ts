@@ -88,7 +88,7 @@ function extractArticlesFromHtml(html: string): AuoneArticle[] {
         } else {
           // フォールバック: 日付の後のテキストから抽出
           if (dateMatch) {
-            const afterDate = itemHtml.substring(dateMatch.index + dateMatch[0].length)
+            const afterDate = itemHtml.substring((dateMatch.index ?? 0) + dateMatch[0].length)
             const cleanAfterDate = afterDate.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
             const fallbackSourceMatch = cleanAfterDate.match(/^([A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\-\.]+)/)
             if (fallbackSourceMatch) {

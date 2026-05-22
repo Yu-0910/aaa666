@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from "next/server"
+import { getProjectRoot } from "@/lib/projectRoot"
 import { type ZoneStat, type ZoneStatsResponse } from "@/lib/yahooGame/gamePitcherPilotFiles"
 import { loadZoneStatsJsonOrCanonical } from "@/lib/yahooGame/loadZoneStatsWithCanonicalFallback"
 
@@ -38,7 +39,11 @@ export async function GET(
         { status: 404 }
       )
     }
-    return NextResponse.json(data)
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      },
+    })
   } catch (error) {
     console.error("[game-zone-stats] Error:", error)
     return NextResponse.json({ error: "Failed to load zone stats" }, { status: 500 })

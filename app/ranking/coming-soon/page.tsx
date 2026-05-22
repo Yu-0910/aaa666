@@ -6,6 +6,7 @@
 "use client"
 
 import Link from "next/link"
+import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 
 export default function ComingSoonPage() {
   return (
@@ -23,7 +24,7 @@ export default function ComingSoonPage() {
           </button>
 
           {/* Center: Logo */}
-          <Link href="/" className="absolute left-1/2 transform -translate-x-1/2">
+          <Link href={SITE_TOP_HREF} className="absolute left-1/2 transform -translate-x-1/2">
             <img src="/logo.png" alt="Logo" className="w-7 h-7 cursor-pointer hover:opacity-80 transition-opacity" />
           </Link>
 

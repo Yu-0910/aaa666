@@ -12,7 +12,25 @@ import {
   type LeadersConfig,
 } from "@/app/components/top/topPageConstants"
 import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
-import { BATTING_TOP_2025_GRID_METRICS, battingTop2025GridReady } from "@/lib/topPageBatting2025Grid"
+import {
+  BATTING_TOP_2025_FOUR_GRID_CLASS,
+  BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
+  BATTING_TOP_2025_GRID_METRICS,
+  shouldShowTopBattingFourGrid,
+  usesTopBattingModernLayout,
+  usesTopPageModernLeaderRow,
+  usesTopPageModernMetricTitle,
+} from "@/lib/topPageBatting2025Grid"
+import {
+  PITCHING_TOP_2026_GRID_METRICS,
+  shouldShowTopPitchingFourGrid,
+  usesTopPitchingModernLayout,
+} from "@/lib/topPagePitching2026Grid"
+import {
+  getWeeklyPitchingRankingUrl,
+  getWeeklyPitchingStatsListUrl,
+} from "@/lib/topPage/weeklyRankingUrl"
+import { leaderListReactKey } from "@/lib/ranking/leadersTypes"
 
 export type TopPageLayoutMode = "mobile" | "desktop"
 
@@ -26,6 +44,8 @@ type LeadersPanelProps = {
   layout: TopPageLayoutMode
   /** 投球パネルは投手ランキング（下記年度固定）へ遷移 */
   statsCategory?: "batting" | "pitching"
+  /** 今週タブ: 火曜 weekKey */
+  weekKey?: string
 }
 
 /** 投手ランキング完成品は 2026 のみ（計画書 §3.1） */
@@ -35,35 +55,34 @@ const LeaderRow = ({
   leader,
   stat,
   index,
-  year,
+  modernLeaderRow,
 }: {
   leader: Record<string, unknown>
   index: number
   stat: unknown
-  year: number
+  modernLeaderRow: boolean
 }) => {
-  const formattedValue = formatStat(stat, leader.value)
+  const formattedValue = formatStat(String(stat ?? ""), leader.value)
   const l = leader as { romanName?: string; name?: string; team?: string }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
-  const isTop2025 = year === 2025
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
 
   return (
-    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
       <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">{index + 1}</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
         href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
-        {isTop2025 ? (
+        {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
               <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
@@ -82,7 +101,7 @@ const LeaderRow = ({
           </>
         )}
       </Link>
-      {!isTop2025 && (
+      {!modernLeaderRow && (
         <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
       )}
     </div>
@@ -92,34 +111,33 @@ const LeaderRow = ({
 const MiniLeaderRow = ({
   leader,
   stat,
-  year,
+  modernLeaderRow,
 }: {
   leader: Record<string, unknown>
   stat: unknown
-  year: number
+  modernLeaderRow: boolean
 }) => {
-  const formattedValue = formatStat(stat, leader.value)
+  const formattedValue = formatStat(String(stat ?? ""), leader.value)
   const l = leader as { romanName?: string; name?: string; team?: string }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
-  const isTop2025 = year === 2025
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
 
   return (
-    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
       <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">1</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-8" : "h-10 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-8" : "h-10 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
         href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
-        {isTop2025 ? (
+        {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
               <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
@@ -138,7 +156,7 @@ const MiniLeaderRow = ({
           </>
         )}
       </Link>
-      {!isTop2025 && (
+      {!modernLeaderRow && (
         <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
       )}
     </div>
@@ -154,6 +172,7 @@ export function LeadersPanel({
   league,
   layout,
   statsCategory = "batting",
+  weekKey,
 }: LeadersPanelProps) {
   const normalizeBattingMetricKey = (metric: string): string => {
     if (metric in metricMap) {
@@ -184,6 +203,9 @@ export function LeadersPanel({
   }
 
   const getRankingUrl = (metric: string): string => {
+    if (statsCategory === "pitching" && league && weekKey) {
+      return getWeeklyPitchingRankingUrl(PITCHING_RANKING_SEASON, weekKey, league, metric)
+    }
     if (statsCategory === "pitching" && league) {
       const metricKey = normalizePitchingMetricKey(metric)
       const order = getPitchingSortOrderForKey(metricKey)
@@ -198,6 +220,9 @@ export function LeadersPanel({
   }
 
   const getStatsListUrl = (): string => {
+    if (statsCategory === "pitching" && league && weekKey) {
+      return getWeeklyPitchingStatsListUrl(PITCHING_RANKING_SEASON, weekKey, league)
+    }
     if (statsCategory === "pitching" && league) {
       return `/ranking/pitching/${PITCHING_RANKING_SEASON}/${league}`
     }
@@ -209,6 +234,12 @@ export function LeadersPanel({
 
   const topGrid = layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"
   const miniGrid = layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"
+  const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory)
+  const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory)
+  const isTopBattingModern = usesTopBattingModernLayout(year) && statsCategory === "batting"
+  const isTopPitchingModern = usesTopPitchingModernLayout(year) && statsCategory === "pitching"
+  const effectiveMiniGrid =
+    isTopPitchingModern && layout === "desktop" ? "grid grid-cols-4 gap-1" : miniGrid
 
   return (
     <div className="space-y-1">
@@ -217,17 +248,61 @@ export function LeadersPanel({
           <div style={{ width: "4px", height: "32px", backgroundColor: leagueColor }} />
           <div>
             <div className="text-sm font-medium">{title}</div>
-            <div className="text-[10px] text-gray-400">{leagueName}</div>
+            <div
+              className={`text-[10px] text-gray-400 ${weekKey ? "latin tabular-nums" : ""}`}
+            >
+              {leagueName}
+            </div>
           </div>
         </div>
       </div>
 
-      {year === 2025 && statsCategory === "batting" && battingTop2025GridReady(data.leaders) ? (
-        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
-          <div className="grid grid-cols-2 gap-1">
+      {isTopPitchingModern && shouldShowTopPitchingFourGrid(data.leaders) ? (
+        <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
+          <div className={BATTING_TOP_2025_FOUR_GRID_CLASS}>
+            {PITCHING_TOP_2026_GRID_METRICS.map((metric) =>
+              data.leaders[metric] ? (
+                <div key={metric} className="bg-black border border-[#555] p-1 relative">
+                  <div className="relative mb-1 flex min-h-[22px] items-center">
+                    <Link
+                      href={getRankingUrl(metric)}
+                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
+                    >
+                      <span
+                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z％%]/.test(metric) ? "latin" : ""}`}
+                      >
+                        {metric}
+                      </span>
+                    </Link>
+                    <Link
+                      href={getStatsListUrl()}
+                      className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    >
+                      成績一覧
+                    </Link>
+                  </div>
+                  <div className="space-y-0">
+                    {data.leaders[metric]?.map((leader, leaderIndex) => (
+                      <LeaderRow
+                        key={leaderListReactKey(leader, leaderIndex)}
+                        leader={leader as Record<string, unknown>}
+                        stat={metric}
+                        index={leaderIndex}
+                        modernLeaderRow={panelModernLeaderRow}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
+          </div>
+        </div>
+      ) : isTopBattingModern && shouldShowTopBattingFourGrid(data.leaders) ? (
+        <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
+          <div className={BATTING_TOP_2025_FOUR_GRID_CLASS}>
             {BATTING_TOP_2025_GRID_METRICS.map((metric) =>
               data.leaders[metric] ? (
-                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                <div key={metric} className="bg-black border border-[#555] p-1 relative">
                   <div className="relative mb-1 flex min-h-[22px] items-center">
                     <Link
                       href={getRankingUrl(metric)}
@@ -249,11 +324,11 @@ export function LeadersPanel({
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
                       <LeaderRow
-                        key={leader.rank}
+                        key={leaderListReactKey(leader, leaderIndex)}
                         leader={leader as Record<string, unknown>}
                         stat={metric}
                         index={leaderIndex}
-                        year={year}
+                        modernLeaderRow={panelModernLeaderRow}
                       />
                     ))}
                   </div>
@@ -262,7 +337,7 @@ export function LeadersPanel({
             )}
           </div>
         </div>
-      ) : year === 2025 && statsCategory === "batting" && data.top3Metrics.length >= 3 ? (
+      ) : isTopBattingModern && data.top3Metrics.length >= 3 ? (
         <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
           <div className="grid grid-cols-2 gap-1">
             {data.top3Metrics.slice(0, 2).map((metric) =>
@@ -281,7 +356,7 @@ export function LeadersPanel({
                     </Link>
                     <Link
                       href={getStatsListUrl()}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${year === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${useModernMetricTitle ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
                     </Link>
@@ -289,11 +364,11 @@ export function LeadersPanel({
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
                       <LeaderRow
-                        key={leader.rank}
+                        key={leaderListReactKey(leader, leaderIndex)}
                         leader={leader as Record<string, unknown>}
                         stat={metric}
                         index={leaderIndex}
-                        year={year}
+                        modernLeaderRow={panelModernLeaderRow}
                       />
                     ))}
                   </div>
@@ -316,7 +391,7 @@ export function LeadersPanel({
                 </Link>
                 <Link
                   href={getStatsListUrl()}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${year === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${useModernMetricTitle ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
                 </Link>
@@ -324,11 +399,11 @@ export function LeadersPanel({
               <div className="space-y-0">
                 {data.leaders[data.top3Metrics[2]!]?.map((leader, leaderIndex) => (
                   <LeaderRow
-                    key={leader.rank}
+                    key={leaderListReactKey(leader, leaderIndex)}
                     leader={leader as Record<string, unknown>}
                     stat={data.top3Metrics[2]!}
                     index={leaderIndex}
-                    year={year}
+                    modernLeaderRow={panelModernLeaderRow}
                   />
                 ))}
               </div>
@@ -339,7 +414,7 @@ export function LeadersPanel({
         <div className={topGrid}>
           {data.top3Metrics.map((metric) => (
             <div key={metric} className="bg-black border border-[#555] p-1 relative">
-              {year === 2025 ? (
+              {useModernMetricTitle ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}
@@ -377,11 +452,11 @@ export function LeadersPanel({
               <div className="space-y-0">
                 {data.leaders[metric]?.map((leader, leaderIndex) => (
                   <LeaderRow
-                    key={leader.rank}
+                    key={leaderListReactKey(leader, leaderIndex)}
                     leader={leader as Record<string, unknown>}
                     stat={metric}
                     index={leaderIndex}
-                    year={year}
+                    modernLeaderRow={panelModernLeaderRow}
                   />
                 ))}
               </div>
@@ -390,13 +465,13 @@ export function LeadersPanel({
         </div>
       )}
 
-      <div className={miniGrid}>
+      <div className={effectiveMiniGrid}>
         {(statsCategory === "batting" && year === 2025 ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
             <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
-              {year === 2025 ? (
+              {useModernMetricTitle ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}
@@ -435,7 +510,11 @@ export function LeadersPanel({
                   </Link>
                 </div>
               )}
-              <MiniLeaderRow leader={leader as Record<string, unknown>} stat={metric} year={year} />
+              <MiniLeaderRow
+                leader={leader as Record<string, unknown>}
+                stat={metric}
+                modernLeaderRow={panelModernLeaderRow}
+              />
             </div>
           )
         })}

@@ -46,7 +46,7 @@ export function buildRanking(
 
   for (const player of filtered) {
     // CSV列名から値を取得（大文字小文字対応）
-    let value: number | null = null
+    let value: number | string | null = null
 
     // 直接マッチ
     const csvKey = metricDef.csvKey

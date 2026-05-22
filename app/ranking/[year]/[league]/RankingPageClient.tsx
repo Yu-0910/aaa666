@@ -12,6 +12,12 @@ import RankingUI from '@/components/RankingUI'
 import type { RankingViewModel, RankingRow } from '@/lib/ranking/types'
 import { loadRankingJson } from '@/lib/ranking/jsonLoader'
 import { shouldRequireQualifyingPA, calculateMinPA, get1950MinGames } from '@/lib/ranking/qualifyingPA'
+import { computeDynamicMinPAByTeam } from '@/lib/ranking/dynamicQualifyingPA'
+import {
+  fetchMinPAByTeamClient,
+  rowPassesQualifyingPAWithMinMap,
+} from '@/lib/ranking/qualifyingThresholdsShared'
+import { season2026BattingQualifyingNote } from '@/lib/ranking/qualifyingUiNotes'
 import { lookupRomanInMap } from '@/lib/ranking/romanNameLookup'
 import { FullPageLoading } from '@/components/ui/spinner'
 
@@ -51,33 +57,6 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
     romanName,
     team: String(raw['team'] ?? raw['Team'] ?? raw['チーム'] ?? raw['team_name'] ?? ''),
   } as RankingRow
-}
-
-function ceilToInt(n: number): number {
-  if (!Number.isFinite(n)) return 0
-  return Math.ceil(n)
-}
-
-/**
- * 現時点のチーム試合数（= 行の「試合」の最大値）から規定打席を計算する。
- * ルール: チーム試合数 × 3.1（小数は切り上げ）
- */
-function computeDynamicMinPAByTeam(rows: RankingRow[]): Map<string, number> {
-  const byTeamMaxGames = new Map<string, number>()
-  for (const row of rows) {
-    const team = String((row as any)['team'] ?? (row as any)['チーム'] ?? '').trim()
-    if (!team) continue
-    const gRaw = (row as any)['games'] ?? (row as any)['G'] ?? (row as any)['試合']
-    const g = typeof gRaw === 'number' ? gRaw : Number(gRaw)
-    if (!Number.isFinite(g)) continue
-    const prev = byTeamMaxGames.get(team) ?? 0
-    if (g > prev) byTeamMaxGames.set(team, g)
-  }
-  const out = new Map<string, number>()
-  for (const [team, games] of byTeamMaxGames.entries()) {
-    out.set(team, ceilToInt(games * 3.1))
-  }
-  return out
 }
 
 /**
@@ -125,6 +104,29 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
   const [rowsFromJson, setRowsFromJson] = useState<RankingRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [minPAByTeamCanonical, setMinPAByTeamCanonical] = useState<Map<string, number> | null>(null)
+
+  const season = initialViewModel.season
+  const leagueUpper = initialViewModel.league.toUpperCase()
+  const is2026 = season === '2026'
+
+  useEffect(() => {
+    if (!is2026) {
+      setMinPAByTeamCanonical(null)
+      return
+    }
+    let cancelled = false
+    fetchMinPAByTeamClient(season, leagueUpper)
+      .then((map) => {
+        if (!cancelled) setMinPAByTeamCanonical(map.size > 0 ? map : null)
+      })
+      .catch(() => {
+        if (!cancelled) setMinPAByTeamCanonical(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [is2026, season, leagueUpper])
 
   const metricDef = initialViewModel.metrics.find(m => m.key === sortKey)
 
@@ -237,7 +239,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     // 規定打席フィルタを適用（Phase 4: 規定用CSV由来JSONでは全行が規定以上のため実質 no-op。従来JSONではフィルタが効き後方互換を確保）
     let filteredRows = rows
     if (requiresQualifyingPA && minPA > 0 && !yahooPoc) {
-      const dynamicMinPAByTeam = computeDynamicMinPAByTeam(rows)
+      const dynamicMinPAByTeam = computeDynamicMinPAByTeam(rows, season)
       filteredRows = rows.filter(row => {
         // 1966年・1967年パ・リーグの場合はチーム別規定打席（PA）を使用
         if (is1966PL || is1967PL) {
@@ -307,6 +309,12 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
           }
           
           return passes
+        } else if (is2026 && minPAByTeamCanonical && minPAByTeamCanonical.size > 0) {
+          return rowPassesQualifyingPAWithMinMap(
+            row as Record<string, unknown>,
+            minPAByTeamCanonical,
+            minPA
+          )
         } else {
           // 通常の場合は打席（PA）でフィルタリング
           const team = String(row['team'] || row['チーム'] || '').trim()
@@ -378,6 +386,8 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     sortKey,
     order,
     yahooPoc,
+    is2026,
+    minPAByTeamCanonical,
   ])
 
   // ソート切替ハンドラ
@@ -418,13 +428,29 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     return <FullPageLoading />
   }
 
+  const titleSubNote = season2026BattingQualifyingNote(sortKey, season)
+  const emptyAfterFilter =
+    !loadError &&
+    rowsFromJson.length > 0 &&
+    sortedRows.length === 0 &&
+    shouldRequireQualifyingPA(sortKey) &&
+    !yahooPoc
+
   return (
-    <RankingUI
-      viewModel={{ ...initialViewModel, rows: rowsFromJson }}
-      sortedRows={sortedRows}
-      sortKey={sortKey}
-      order={order}
-      onSortChange={handleSortChange}
-    />
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {emptyAfterFilter && (
+        <div className="border-b border-[#444] bg-[#141414] px-3 py-2 text-center text-xs sm:text-sm text-gray-400">
+          規定打席を満たす選手がいません。別の指標を選ぶか、team-games.json の生成（npm run phase12:build:rankings）を確認してください。
+        </div>
+      )}
+      <RankingUI
+        viewModel={{ ...initialViewModel, rows: rowsFromJson }}
+        sortedRows={sortedRows}
+        sortKey={sortKey}
+        order={order}
+        onSortChange={handleSortChange}
+        titleSubNote={titleSubNote}
+      />
+    </div>
   )
 }

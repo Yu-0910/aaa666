@@ -42,7 +42,11 @@ export async function GET(
         { status: 404 }
       )
     }
-    return NextResponse.json(data)
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      },
+    })
   } catch (error) {
     console.error("[game-pitch-types] Error:", error)
     return NextResponse.json({ error: "Failed to load pitch types" }, { status: 500 })

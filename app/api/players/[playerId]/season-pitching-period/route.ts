@@ -1,5 +1,9 @@
-import { NextResponse } from "next/server"
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import {
+  decodePlayerPathSegment,
+  jsonDerivedResponse,
+  yearFromRequest,
+} from "@/lib/api/derivedPlayerApiShared"
 import { loadPitcherSeasonPitchingPeriodPayloadFromRepo } from "@/lib/pitcherSeasonPitchingPeriodLoad"
 import { resolvePilotPitcherNpbFromUrlSegment } from "@/lib/pitcherSeasonPocPilotFallback"
 import type { PitcherSeasonPitchingPeriodApiResponse } from "@/lib/pitcherSeasonPocTypes"
@@ -14,15 +18,8 @@ export async function GET(
   try {
     const { playerId } =
       context.params instanceof Promise ? await context.params : context.params
-    const raw = (playerId || "").trim()
-    let decoded = raw
-    try {
-      decoded = decodeURIComponent(raw).normalize("NFC")
-    } catch {
-      decoded = raw
-    }
-    const year =
-      new URL(request.url).searchParams.get("year")?.trim() || DERIVED_SEASON_YEAR_DEFAULT
+    const decoded = decodePlayerPathSegment((playerId || "").trim())
+    const year = yearFromRequest(request)
 
     const roster = findRosterPlayerByPublicId(decoded)
     let npb = roster?.npb_player_id?.trim() ?? ""
@@ -30,29 +27,21 @@ export async function GET(
       const pilot = resolvePilotPitcherNpbFromUrlSegment(decoded)
       if (pilot) npb = pilot
     }
-    if (!npb) {
-      const body: PitcherSeasonPitchingPeriodApiResponse = {
-        hasData: false,
-        year,
-        payload: null,
-      }
-      return NextResponse.json(body, {
-        headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-      })
+    // 名簿照合が外れるケースでも、URL セグメント自体が NPB player_id で派生ファイルが存在するなら直接読む。
+    let payload =
+      npb ? loadPitcherSeasonPitchingPeriodPayloadFromRepo(year, npb) : null
+    if (!payload && /^\d+$/.test(decoded)) {
+      payload = loadPitcherSeasonPitchingPeriodPayloadFromRepo(year, decoded)
+      if (payload) npb = decoded
     }
-
-    const payload = loadPitcherSeasonPitchingPeriodPayloadFromRepo(year, npb)
-    const body: PitcherSeasonPitchingPeriodApiResponse = {
+    return jsonDerivedResponse({
       hasData: payload != null,
       year,
       payload,
-    }
-    return NextResponse.json(body, {
-      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-    })
+    } satisfies PitcherSeasonPitchingPeriodApiResponse)
   } catch (e) {
     console.error("[season-pitching-period]", e)
-    return NextResponse.json(
+    return jsonDerivedResponse(
       {
         hasData: false,
         year: DERIVED_SEASON_YEAR_DEFAULT,

@@ -14,8 +14,10 @@ import {
   shouldRequireQualifyingPitching,
   computePitchingQualifyingMinIpByTeam,
   rowMeetsPitchingQualifyingIp,
-  getPitchingQualifyingUiNote,
+  type PitchingQualifyingThresholds,
 } from '@/lib/ranking/qualifyingPitching'
+import { fetchPitchingThresholdsClient } from '@/lib/ranking/qualifyingThresholdsShared'
+import { season2026PitchingQualifyingNote } from '@/lib/ranking/qualifyingUiNotes'
 import { getPitchingSortOrderForKey } from '@/lib/ranking/pitchingSortOrder'
 import { lookupRomanInMap } from '@/lib/ranking/romanNameLookup'
 import { FullPageLoading } from '@/components/ui/spinner'
@@ -91,6 +93,30 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
   const [rowsFromJson, setRowsFromJson] = useState<RankingRow[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [fetchSettled, setFetchSettled] = useState(false)
+  const [pitchingThresholdsCanonical, setPitchingThresholdsCanonical] =
+    useState<PitchingQualifyingThresholds | null>(null)
+
+  const season = initialViewModel.season
+  const leagueUpper = initialViewModel.league.toUpperCase()
+  const is2026 = season === '2026'
+
+  useEffect(() => {
+    if (!is2026) {
+      setPitchingThresholdsCanonical(null)
+      return
+    }
+    let cancelled = false
+    fetchPitchingThresholdsClient(season, leagueUpper)
+      .then((t) => {
+        if (!cancelled) setPitchingThresholdsCanonical(t)
+      })
+      .catch(() => {
+        if (!cancelled) setPitchingThresholdsCanonical(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [is2026, season, leagueUpper])
 
   const metricDef = initialViewModel.metrics.find((m) => m.key === sortKey)
 
@@ -138,10 +164,10 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
     }
   }, [initialViewModel.season, initialViewModel.league, sortKey, metricDef?.label])
 
-  const pitchingQualifyingThresholds = useMemo(
-    () => computePitchingQualifyingMinIpByTeam(rowsFromJson),
-    [rowsFromJson]
-  )
+  const pitchingQualifyingThresholds = useMemo(() => {
+    if (is2026 && pitchingThresholdsCanonical) return pitchingThresholdsCanonical
+    return computePitchingQualifyingMinIpByTeam(rowsFromJson)
+  }, [is2026, pitchingThresholdsCanonical, rowsFromJson])
 
   const sortedRows = useMemo(() => {
     const rows = rowsFromJson
@@ -223,6 +249,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
     shouldRequireQualifyingPitching(sortKey)
 
   const emptyNoData = fetchSettled && rowsFromJson.length === 0 && !!metricDef
+  const titleSubNote = season2026PitchingQualifyingNote(sortKey, season)
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -246,9 +273,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
         rankingPathBase="/ranking/pitching"
         metricLabelFallback="投球成績"
         yearOptions={[2026]}
-        titleSubNote={
-          shouldRequireQualifyingPitching(sortKey) ? getPitchingQualifyingUiNote() : undefined
-        }
+        titleSubNote={titleSubNote}
       />
     </div>
   )

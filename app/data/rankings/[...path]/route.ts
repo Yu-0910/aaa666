@@ -15,6 +15,46 @@ import { getExternalRankingsUrl } from '@/lib/ranking/url'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+async function tryReadLocalRankingJson(relativePath: string): Promise<unknown | null> {
+  const fs = await import('fs')
+  const path = await import('path')
+  const filePath = path.join(process.cwd(), 'public', 'data', 'rankings', relativePath)
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf-8')
+    return JSON.parse(fileContent) as unknown
+  } catch {
+    return null
+  }
+}
+
+function jsonResponseWithCache(data: unknown): NextResponse {
+  const headers = new Headers()
+  headers.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600')
+  headers.set('Content-Type', 'application/json')
+  return NextResponse.json(data, { headers })
+}
+
+/**
+ * `public/data/rankings/{relativePath}` を読む。
+ * 打撃のみ先頭セグメントが `2026` で見つからないとき `2025/...` を試す（`loadRankingJson` と同じ）。
+ * `pitching/2026/...` では年度フォールバックしない。
+ */
+async function readLocalRankingsWithFallback(
+  relativePath: string,
+  pathSegments: string[]
+): Promise<unknown | null> {
+  let data = await tryReadLocalRankingJson(relativePath)
+  if (
+    data == null &&
+    pathSegments[0] === '2026' &&
+    pathSegments[1] !== 'pitching'
+  ) {
+    const alt = ['2025', ...pathSegments.slice(1)].join('/')
+    data = await tryReadLocalRankingJson(alt)
+  }
+  return data
+}
+
 /**
  * GET リクエストを処理
  * /data/rankings/2025/PL/OPS.json のようなリクエストを外部ストレージへプロキシ
@@ -39,43 +79,32 @@ export async function GET(
     // 打撃のみ: 先頭セグメントが `2026` のとき未配置なら 2025 にフォールバック。投手 `pitching/...` ではフォールバックしない。
     const relativePath = pathSegments.join('/')
     let pathForFetch = relativePath
-    
+
+    // 重要:
+    // rankings:rebuild は `public/data/rankings/...` を更新する。
+    // しかし RANKINGS_BASE_URL が設定されていると、ビルド/本番でも外部へプロキシされ、
+    // 「ローカルで生成したのに画面が変わらない」混乱が起きやすい。
+    // 明示的にローカル優先したい場合はこのフラグで切り替える。
+    const preferLocal = String(process.env.RANKINGS_PREFER_LOCAL || '').trim() === '1'
+    if (preferLocal) {
+      const data = await readLocalRankingsWithFallback(relativePath, pathSegments)
+      if (data != null) return jsonResponseWithCache(data)
+    }
+
     // 環境変数チェック
     const baseUrl = process.env.RANKINGS_BASE_URL
     if (!baseUrl) {
-      // 開発環境ではローカルファイル参照にフォールバック
-      if (process.env.NODE_ENV === 'development') {
-        const fs = await import('fs')
-        const path = await import('path')
-        const tryRead = (rel: string) => {
-          const filePath = path.join(process.cwd(), 'public', 'data', 'rankings', rel)
-          try {
-            const fileContent = fs.readFileSync(filePath, 'utf-8')
-            return JSON.parse(fileContent) as unknown
-          } catch {
-            return null
-          }
-        }
-        let data = tryRead(relativePath)
-        if (data == null && pathSegments[0] === '2026') {
-          const alt = ['2025', ...pathSegments.slice(1)].join('/')
-          data = tryRead(alt)
-        }
-        if (data != null) {
-          const headers = new Headers()
-          headers.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600')
-          headers.set('Content-Type', 'application/json')
-          return NextResponse.json(data, { headers })
-        }
-        console.error(`[RankingsProxy] Local file not found: ${relativePath}`)
-        return NextResponse.json({ error: 'File not found (local fallback failed)' }, { status: 404 })
-      }
-      
-      // 本番環境ではエラー
-      console.error('[RankingsProxy] RANKINGS_BASE_URL is not configured')
+      // `public/data/rankings` をリポジトリに含めてデプロイする構成では、本番でもローカル参照が必要
+      // （未設定で 500 にするとランキング表の数値が一切出ない）
+      const data = await readLocalRankingsWithFallback(relativePath, pathSegments)
+      if (data != null) return jsonResponseWithCache(data)
+      console.error(`[RankingsProxy] Local file not found: ${relativePath}`)
       return NextResponse.json(
-        { error: 'RANKINGS_BASE_URL is not configured' },
-        { status: 500 }
+        {
+          error:
+            'Ranking JSON not found. Add files under public/data/rankings or set RANKINGS_BASE_URL.',
+        },
+        { status: 404 }
       )
     }
     
@@ -87,40 +116,13 @@ export async function GET(
       
       const isInScope = scopes.some(s => pathLower.includes(s))
       if (!isInScope) {
-        // scope外: ローカルファイル参照（開発環境）または404
-        if (process.env.NODE_ENV === 'development') {
-          const fs = await import('fs')
-          const path = await import('path')
-          const tryRead = (rel: string) => {
-            const filePath = path.join(process.cwd(), 'public', 'data', 'rankings', rel)
-            try {
-              const fileContent = fs.readFileSync(filePath, 'utf-8')
-              return JSON.parse(fileContent) as unknown
-            } catch {
-              return null
-            }
-          }
-          let data = tryRead(relativePath)
-          if (data == null && pathSegments[0] === '2026') {
-            const alt = ['2025', ...pathSegments.slice(1)].join('/')
-            data = tryRead(alt)
-          }
-          if (data != null) {
-            const headers = new Headers()
-            headers.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600')
-            headers.set('Content-Type', 'application/json')
-            return NextResponse.json(data, { headers })
-          }
-          console.error(`[RankingsProxy] Local file not found (scope): ${relativePath}`)
-          return NextResponse.json(
-            { error: 'File not found (not in scope and local fallback failed)' },
-            { status: 404 }
-          )
-        }
-        
-        // 本番環境では404
+        const data = await readLocalRankingsWithFallback(relativePath, pathSegments)
+        if (data != null) return jsonResponseWithCache(data)
+        console.error(`[RankingsProxy] Local file not found (scope): ${relativePath}`)
         return NextResponse.json(
-          { error: `Path ${relativePath} is not in externalization scope: ${scope}` },
+          {
+            error: `Path ${relativePath} is not in externalization scope (${scope}) and no local file was found`,
+          },
           { status: 404 }
         )
       }
@@ -163,6 +165,11 @@ export async function GET(
       console.error(
         `[RankingsProxy] Failed to fetch from external, status: ${fetchResponse.status}`
       )
+      const localFallback = await readLocalRankingsWithFallback(relativePath, pathSegments)
+      if (localFallback != null) {
+        console.warn(`[RankingsProxy] Using public/data/rankings fallback after external ${fetchResponse.status}`)
+        return jsonResponseWithCache(localFallback)
+      }
       return NextResponse.json(
         { error: `Failed to fetch ranking data: ${fetchResponse.statusText}` },
         { status: fetchResponse.status }

@@ -13,7 +13,26 @@ import { formatStat } from "@/lib/formatStat"
 import metricMap from "@/config/metric_map.json"
 import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
 import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
-import { BATTING_TOP_2025_GRID_METRICS, battingTop2025GridReady } from "@/lib/topPageBatting2025Grid"
+import {
+  BATTING_TOP_2025_FOUR_GRID_CLASS,
+  BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
+  BATTING_TOP_2025_GRID_METRICS,
+  shouldShowTopBattingFourGrid,
+  usesTopBattingModernLayout,
+  usesTopPageModernLeaderRow,
+} from "@/lib/topPageBatting2025Grid"
+import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
+import { fetchTopWeeklyLeadersForPage } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
+import {
+  getWeeklyBattingRankingUrl,
+  getWeeklyBattingStatsListUrl,
+} from "@/lib/topPage/weeklyRankingUrl"
+import {
+  topLeadersSectionSubtitle,
+  topSeasonLeadersSectionTitle,
+  topWeeklyLeadersSectionTitle,
+} from "@/lib/topPage/weeklyTabDisplayTitle"
+import { leaderListReactKey } from "@/lib/ranking/leadersTypes"
 
 type LeadersConfig = {
   top3Metrics: string[]
@@ -25,6 +44,11 @@ type TopPageLeadersClientProps = {
   year: number | string
   league: string
   layout?: TopPageLayoutMode
+  /** 指定時は今週タブ（週間スナップショット） */
+  weekKey?: string
+  weekLabel?: string
+  /** TOPタブ親で先読み済みのとき（自前のローディングUIを出さない） */
+  initialData?: LeadersConfig
 }
 
 const teamColors: Record<string, string> = {
@@ -65,22 +89,22 @@ const LeaderRow = ({
 }) => {
   const formattedValue = formatStat(stat, leader.value)
   const romanShort = abbreviatedRomanForUrl(leader)
-  const isTop2025 = year === 2025
+  const modernLeaderRow = usesTopPageModernLeaderRow(year, "batting")
 
   return (
-    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
       <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">{index + 1}</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
         style={{ backgroundColor: teamColors[leader.team] || "#666" }}
       />
       <Link
         href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
-        {isTop2025 ? (
+        {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
               <span className="text-white text-sm font-semibold leading-tight truncate">{leader.name}</span>
@@ -99,7 +123,7 @@ const LeaderRow = ({
           </>
         )}
       </Link>
-      {!isTop2025 && (
+      {!modernLeaderRow && (
         <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
       )}
     </div>
@@ -109,22 +133,22 @@ const LeaderRow = ({
 const MiniLeaderRow = ({ leader, stat, year }: { leader: any; stat: any; year: number }) => {
   const formattedValue = formatStat(stat, leader.value)
   const romanShort = abbreviatedRomanForUrl(leader)
-  const isTop2025 = year === 2025
+  const modernLeaderRow = usesTopPageModernLeaderRow(year, "batting")
 
   return (
-    <div className={`flex gap-0.5 py-0.5 ${isTop2025 ? "items-stretch" : "items-center"}`}>
+    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
       <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
         <span className="text-white text-[10px] latin tabular-nums">1</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${isTop2025 ? "self-center h-8" : "h-10 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-8" : "h-10 self-center"}`}
         style={{ backgroundColor: teamColors[leader.team] || "#666" }}
       />
       <Link
         href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${isTop2025 ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
+        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
-        {isTop2025 ? (
+        {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
               <span className="text-white text-sm font-semibold leading-tight truncate">{leader.name}</span>
@@ -143,16 +167,23 @@ const MiniLeaderRow = ({ leader, stat, year }: { leader: any; stat: any; year: n
           </>
         )}
       </Link>
-      {!isTop2025 && (
+      {!modernLeaderRow && (
         <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
       )}
     </div>
   )
 }
 
-export default function TopPageLeadersClient({ year, league, layout = "mobile" }: TopPageLeadersClientProps) {
-  const [data, setData] = useState<LeadersConfig | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function TopPageLeadersClient({
+  year,
+  league,
+  layout = "mobile",
+  weekKey,
+  weekLabel,
+  initialData,
+}: TopPageLeadersClientProps) {
+  const [data, setData] = useState<LeadersConfig | null>(initialData ?? null)
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   
@@ -162,35 +193,37 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
   const leagueColor = leagueColors[upperLeague] || "#666"
   
   useEffect(() => {
-    // APIルートからデータを取得
-    const apiUrl = `/api/leaders/${year}/${upperLeague}`
-    console.log(`[TopPageLeadersClient] Fetching: ${apiUrl}`)
-    
-    fetch(apiUrl)
-      .then(res => {
-        console.log(`[TopPageLeadersClient] Response status: ${res.status}`)
-        if (!res.ok) {
-          return res.json().then(errData => {
-            throw new Error(errData.error || `HTTP error! status: ${res.status}`)
-          })
-        }
-        return res.json()
-      })
-      .then(data => {
-        console.log(`[TopPageLeadersClient] Data received:`, data)
-        // エラーレスポンスをチェック
-        if (data.error) {
-          throw new Error(data.error)
-        }
-        setData(data)
+    if (initialData) {
+      setData(initialData)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    const load = weekKey
+      ? fetchTopWeeklyLeadersForPage(year, upperLeague, "batting", weekKey).then((r) => r.config)
+      : fetchTopLeadersForPage(year, upperLeague, "batting")
+
+    load
+      .then((leadersData) => {
+        if (cancelled) return
+        setData(leadersData)
         setLoading(false)
       })
-      .catch(err => {
-        console.error('[TopPageLeadersClient] Error fetching leaders:', err)
-        setError(err.message || 'データの取得に失敗しました')
+      .catch((err: Error) => {
+        if (cancelled) return
+        console.error("[TopPageLeadersClient] Error fetching leaders:", err)
+        setError(err.message || "データの取得に失敗しました")
         setLoading(false)
       })
-  }, [year, upperLeague])
+    return () => {
+      cancelled = true
+    }
+  }, [year, upperLeague, weekKey, initialData])
   
   const normalizeMetricKey = (metric: string): string => {
     if (metric in metricMap) {
@@ -206,20 +239,33 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
   }
 
   const getRankingUrl = (metric: string): string => {
-    const metricKey = normalizeMetricKey(metric)
-    const order = (metricKey === 'kpct' || metricKey === 'k%') ? 'asc' : 'desc'
     const yearStr = String(year)
+    if (weekKey) {
+      return getWeeklyBattingRankingUrl(yearStr, weekKey, upperLeague, metric)
+    }
+    const metricKey = normalizeMetricKey(metric)
+    const order = metricKey === "kpct" || metricKey === "k%" ? "asc" : "desc"
     return `/ranking/${yearStr}/${upperLeague}?sort=${encodeURIComponent(metricKey)}&order=${order}`
   }
 
   const getStatsListUrl = (): string => {
     const yearStr = String(year)
-    const url = `/ranking/${yearStr}/${upperLeague}`
-    if (process.env.NODE_ENV === 'development') {
+    const url = weekKey
+      ? getWeeklyBattingStatsListUrl(yearStr, weekKey, upperLeague)
+      : `/ranking/${yearStr}/${upperLeague}`
+    if (process.env.NODE_ENV === "development") {
       console.log(`[TopPageLeadersClient] getStatsListUrl: ${url}`)
     }
     return url
   }
+
+  const battingTitle = weekKey
+    ? topWeeklyLeadersSectionTitle(upperLeague, "batting")
+    : topSeasonLeadersSectionTitle(upperLeague, "batting")
+  const battingSubtitle = topLeadersSectionSubtitle(upperLeague, {
+    kind: "batting",
+    weekLabel: weekKey ? weekLabel : undefined,
+  })
 
   if (loading) {
     return (
@@ -228,8 +274,12 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
           <div className="flex items-center gap-2">
             <div style={{ width: "4px", height: "32px", backgroundColor: leagueColor }} />
             <div>
-              <div className="text-sm font-medium">{leagueInfo.ja} 打撃成績</div>
-              <div className="text-[10px] text-gray-400">{leagueInfo.en}</div>
+              <div className="text-sm font-medium">{battingTitle}</div>
+              <div
+                className={`text-[10px] text-gray-400 ${weekKey ? "latin tabular-nums" : ""}`}
+              >
+                {battingSubtitle}
+              </div>
             </div>
           </div>
         </div>
@@ -247,8 +297,12 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
           <div className="flex items-center gap-2">
             <div style={{ width: "4px", height: "32px", backgroundColor: leagueColor }} />
             <div>
-              <div className="text-sm font-medium">{leagueInfo.ja} 打撃成績</div>
-              <div className="text-[10px] text-gray-400">{leagueInfo.en}</div>
+              <div className="text-sm font-medium">{battingTitle}</div>
+              <div
+                className={`text-[10px] text-gray-400 ${weekKey ? "latin tabular-nums" : ""}`}
+              >
+                {battingSubtitle}
+              </div>
             </div>
           </div>
         </div>
@@ -257,24 +311,33 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
     )
   }
 
+  const isWeeklyBattingTab = Boolean(weekKey)
+  const showBattingFourGrid =
+    usesTopBattingModernLayout(Number(year)) &&
+    (isWeeklyBattingTab || shouldShowTopBattingFourGrid(data.leaders))
+
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div style={{ width: "4px", height: "32px", backgroundColor: leagueColor }} />
           <div>
-            <div className="text-sm font-medium">{leagueInfo.ja} 打撃成績</div>
-            <div className="text-[10px] text-gray-400">{leagueInfo.en}</div>
+            <div className="text-sm font-medium">{battingTitle}</div>
+            <div
+              className={`text-[10px] text-gray-400 ${weekKey ? "latin tabular-nums" : ""}`}
+            >
+              {battingSubtitle}
+            </div>
           </div>
         </div>
       </div>
 
-      {Number(year) === 2025 && battingTop2025GridReady(data.leaders) ? (
-        <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
-          <div className="grid grid-cols-2 gap-1">
+      {usesTopBattingModernLayout(Number(year)) && shouldShowTopBattingFourGrid(data.leaders) ? (
+        <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
+          <div className={BATTING_TOP_2025_FOUR_GRID_CLASS}>
             {BATTING_TOP_2025_GRID_METRICS.map((metric) =>
               data.leaders[metric] ? (
-                <div key={metric} className="bg-black border border-[#555] p-1 relative min-w-0">
+                <div key={metric} className="bg-black border border-[#555] p-1 relative">
                   <div className="relative mb-1 flex min-h-[22px] items-center">
                     <Link
                       href={getRankingUrl(metric)}
@@ -304,7 +367,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
                       <LeaderRow
-                        key={leader.rank}
+                        key={leaderListReactKey(leader, leaderIndex)}
                         leader={leader}
                         stat={metric}
                         index={leaderIndex}
@@ -317,7 +380,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
             )}
           </div>
         </div>
-      ) : Number(year) === 2025 && data.top3Metrics.length >= 3 ? (
+      ) : !isWeeklyBattingTab && usesTopBattingModernLayout(Number(year)) && data.top3Metrics.length >= 3 ? (
         <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
           <div className="grid grid-cols-2 gap-1">
             {data.top3Metrics.slice(0, 2).map((metric) =>
@@ -344,7 +407,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
                         }
                         router.push(url)
                       }}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${Number(year) === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${usesTopBattingModernLayout(Number(year)) ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                     >
                       成績一覧
                     </button>
@@ -352,7 +415,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
                       <LeaderRow
-                        key={leader.rank}
+                        key={leaderListReactKey(leader, leaderIndex)}
                         leader={leader}
                         stat={metric}
                         index={leaderIndex}
@@ -387,7 +450,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
                     }
                     router.push(url)
                   }}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${Number(year) === 2025 ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${usesTopBattingModernLayout(Number(year)) ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                 >
                   成績一覧
                 </button>
@@ -395,7 +458,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
               <div className="space-y-0">
                 {data.leaders[data.top3Metrics[2]!]?.map((leader, leaderIndex) => (
                   <LeaderRow
-                    key={leader.rank}
+                    key={leaderListReactKey(leader, leaderIndex)}
                     leader={leader}
                     stat={data.top3Metrics[2]!}
                     index={leaderIndex}
@@ -406,11 +469,11 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
             </div>
           )}
         </div>
-      ) : (
+      ) : !isWeeklyBattingTab ? (
         <div className={layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"}>
           {data.top3Metrics.map((metric) => (
             <div key={metric} className="bg-black border border-[#555] p-1 relative">
-              {Number(year) === 2025 ? (
+              {usesTopBattingModernLayout(Number(year)) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}
@@ -464,7 +527,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
               <div className="space-y-0">
                 {data.leaders[metric]?.map((leader, leaderIndex) => (
                   <LeaderRow
-                    key={leader.rank}
+                    key={leaderListReactKey(leader, leaderIndex)}
                     leader={leader}
                     stat={metric}
                     index={leaderIndex}
@@ -475,15 +538,16 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
+      {!isWeeklyBattingTab && (
       <div className={layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"}>
-        {(Number(year) === 2025 ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+        {(usesTopBattingModernLayout(Number(year)) ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
             <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
-              {Number(year) === 2025 ? (
+              {usesTopBattingModernLayout(Number(year)) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}
@@ -543,6 +607,7 @@ export default function TopPageLeadersClient({ year, league, layout = "mobile" }
           )
         })}
       </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 
 type Props = {
   open: boolean
@@ -33,7 +34,7 @@ export function TopPageMobileDrawer({ open, onClose, selectedYear }: Props) {
 
           <nav className="space-y-2">
             <Link
-              href="/"
+              href={SITE_TOP_HREF}
               className="block py-2 px-3 hover:bg-[#2a2a2a] rounded transition-colors text-sm"
               onClick={onClose}
             >

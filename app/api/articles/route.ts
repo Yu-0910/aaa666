@@ -1220,7 +1220,7 @@ async function fetchArticlesFromRSS(
         title: item.title || '',
         link: item.link || '',
         pubDate: (item as any).isoDate || item.pubDate || (item as any).published || '', // isoDateを優先
-        description: item.description || item.contentSnippet || undefined,
+        description: (item as { description?: string }).description || item.contentSnippet || undefined,
         sourceName: (item as any).source?.name || (item as any).source?._ || (typeof (item as any).source === 'string' ? (item as any).source : undefined),
         sourceUrl: (item as any).source?.url || (item as any).source?.['@_url'] || undefined,
         comments: (item as any).comments || undefined, // Yahoo Topics RSS用
@@ -1960,9 +1960,6 @@ export async function GET(request: Request) {
       const cacheDuration = rssConfig?.settings.cacheDuration || 3600000 // デフォルト1時間
 
       if (cacheAge < cacheDuration) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[API] Returning cached articles (age: ${Math.floor(cacheAge / 1000)}s)`)
-        }
         return NextResponse.json(cachedArticles)
       }
     }

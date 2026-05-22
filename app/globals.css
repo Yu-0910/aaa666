@@ -124,7 +124,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* text-foreground は :root でほぼ黒。ここでは #000 背景に白文字を固定したいため併用しない
+       （@apply と color:#fff の順が崩れると継承が黒になり、個人ページの表の数値が見えなくなる） */
+    @apply bg-background;
     background-color: #000;
     color: #fff;
     /* Set default font weight to semibold for all Japanese text */
@@ -158,5 +160,39 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
+  }
+}
+
+/* 選手個人ページのみ: next/font の実フォントを明示（本番個人ページの見え方に合わせる。色・レイアウトは触らない） */
+@layer components {
+  .player-page-fonts {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif;
+    font-weight: 600;
+  }
+
+  .player-page-fonts .latin {
+    font-family: var(--font-inter), "Inter", sans-serif;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .player-page-fonts .bebas {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 従来 max-w-md 幅を下限に、横は親幅まで伸縮 */
+  .batting-top-2025-four-metrics {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .batting-top-2025-four-grid {
+    display: grid;
+    width: 100%;
+    min-width: 28rem;
+    max-width: 100%;
+    grid-template-columns: repeat(2, minmax(13.875rem, 1fr));
+    gap: 0.25rem;
   }
 }

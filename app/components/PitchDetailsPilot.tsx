@@ -3,6 +3,8 @@
 import { useState, useEffect, useLayoutEffect } from "react"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
+import { unwrapPitchDetailsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
+import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
 type PitchDetailRow = {
   game_id: string
@@ -56,7 +58,7 @@ type ZoneStats = {
   hbp: number
   sf: number
   avg: string
-  ops: string
+  isop: string
 }
 
 type Props = {
@@ -98,22 +100,12 @@ export default function PitchDetailsPilot({
   useEffect(() => {
     if (!playerId) return
     let cancelled = false
-    fetch(`/api/players/${encodeURIComponent(playerId)}/pitch-details`)
+    fetch(
+      `/api/players/${encodeURIComponent(playerId)}/pitch-details?year=${encodeURIComponent(DERIVED_SEASON_YEAR_DEFAULT)}`
+    )
       .then(async (res) => {
-        if (!res.ok) {
-          return {
-            plateAppearances: [] as PlateAppearancePitches[],
-            pitchTypeStats: [] as PitchTypeStats[],
-            zoneStats: [] as ZoneStats[],
-            isPilot: false,
-          }
-        }
-        return res.json() as Promise<{
-          plateAppearances: PlateAppearancePitches[]
-          pitchTypeStats: PitchTypeStats[]
-          zoneStats: ZoneStats[]
-          isPilot: boolean
-        }>
+        const json = await res.json().catch(() => null)
+        return unwrapPitchDetailsApiJson(json)
       })
       .then((data) => {
         if (cancelled) return
@@ -147,7 +139,14 @@ export default function PitchDetailsPilot({
 
   // canonical 由来の zoneStats はゾーン欠損で全 0 の可能性もあるが、isPilot（Phase 14 等）なら表を出す
   if (!isPilot) {
-    return null
+    return (
+      <div
+        className="mb-6 rounded border border-slate-600/50 bg-slate-900/40 px-3 py-2 text-sm text-slate-300"
+        role="status"
+      >
+        一球速報が取り込まれていないため、コース別・球種別の表示はありません（シーズン通算は出場成績ベースで補完される場合があります）。
+      </div>
+    )
   }
 
   return (
@@ -179,7 +178,7 @@ export default function PitchDetailsPilot({
                 const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
                 const hasSettlement =
                   stat != null && stat.ab + stat.bb + stat.hbp + stat.sf > 0
-                const opsDisplay = hasSettlement ? stat!.ops : "—"
+                const isopDisplay = hasSettlement ? stat!.isop : "—"
                 const avgDisplay = hasSettlement ? stat!.avg : "—"
                 const hrDisplay = hasSettlement ? String(stat!.hr) : "—"
                 return (
@@ -193,8 +192,8 @@ export default function PitchDetailsPilot({
                     }}
                   >
                     <div className="flex items-center gap-1.5 text-xs latin">
-                      <span className="opacity-70">OPS</span>
-                      <span className="latin font-black tabular-nums text-[14px]">{opsDisplay}</span>
+                      <span className="opacity-70">ISOP</span>
+                      <span className="latin font-black tabular-nums text-[14px]">{isopDisplay}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs latin">
                       <span className="opacity-70">打率</span>
@@ -211,7 +210,7 @@ export default function PitchDetailsPilot({
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-2 latin">
-          5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。OPS・打率・HRは決着球のゾーン別（該当なしは「—」）。
+          5×5グリッド（投手目線＝投手がマウンドから見る視点。外角高→内角低）。中央9マス＝ストライクゾーン。ISOP・打率・HRは決着球のゾーン別（該当なしは「—」）。
         </p>
       </div>
     </div>

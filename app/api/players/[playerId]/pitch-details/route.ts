@@ -1,18 +1,37 @@
 /**
- * Phase 4: 投球詳細パイロット API
- * 菊池涼介のみ、打席別の球種・コース（25マス）情報を返す
+ * Phase 4: 投球詳細パイロット API（`{ hasData, year, payload }`）
  */
 
-import { NextResponse } from 'next/server'
-import { DERIVED_SEASON_YEAR_DEFAULT, getYahooIdForPilot } from '@/lib/seasonStatsPilot'
+import {
+  decodePlayerPathSegment,
+  jsonDerivedResponse,
+  yearFromRequest,
+} from "@/lib/api/derivedPlayerApiShared"
+import { getYahooIdForPilot } from "@/lib/seasonStatsPilot"
 import {
   loadPhase14PitchBundle,
   loadPitchDetails,
   loadPitchTypeStats,
   loadZoneStats,
-} from '@/lib/pitchDetailsPilot'
+} from "@/lib/pitchDetailsPilot"
+import type { PlateAppearancePitches, PitchTypeStats, ZoneStats } from "@/lib/pitchDetailsPilot"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
+
+export type PitchDetailsApiPayload = {
+  plateAppearances: PlateAppearancePitches[]
+  pitchTypeStats: PitchTypeStats[]
+  zoneStats: ZoneStats[]
+  isPilot: boolean
+}
+
+export type PitchDetailsApiResponse = {
+  hasData: boolean
+  year: string
+  payload: PitchDetailsApiPayload | null
+  code?: string
+  message?: string
+}
 
 export async function GET(
   request: Request,
@@ -21,16 +40,16 @@ export async function GET(
   try {
     const { playerId } =
       context.params instanceof Promise ? await context.params : context.params
-    const year =
-      new URL(request.url).searchParams.get('year')?.trim() || DERIVED_SEASON_YEAR_DEFAULT
-    const yahooId = getYahooIdForPilot(playerId)
+    const decoded = decodePlayerPathSegment((playerId || "").trim())
+    const year = yearFromRequest(request)
+    const yahooId = getYahooIdForPilot(decoded)
     if (!yahooId) {
-      return NextResponse.json({
-        plateAppearances: [],
-        pitchTypeStats: [],
-        zoneStats: [],
-        isPilot: false,
-      })
+      return jsonDerivedResponse({
+        hasData: false,
+        year,
+        payload: null,
+        code: "NO_YAHOO_ID",
+      } satisfies PitchDetailsApiResponse)
     }
     const plateAppearances = loadPitchDetails(yahooId)
     const pitchTypeStats = loadPitchTypeStats(yahooId, year)
@@ -41,16 +60,27 @@ export async function GET(
       fromCanonical != null ||
       pitchTypeStats.length > 0 ||
       zoneStats.length > 0
-    return NextResponse.json({
+    const payload: PitchDetailsApiPayload = {
       plateAppearances,
       pitchTypeStats,
       zoneStats,
       isPilot,
-    })
+    }
+    return jsonDerivedResponse({
+      hasData: isPilot,
+      year,
+      payload: isPilot ? payload : null,
+    } satisfies PitchDetailsApiResponse)
   } catch (error) {
-    console.error('[pitch-details] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to load pitch details' },
+    console.error("[pitch-details] Error:", error)
+    return jsonDerivedResponse(
+      {
+        hasData: false,
+        year: yearFromRequest(request),
+        payload: null,
+        code: "SERVER_ERROR",
+        message: "Failed to load pitch details",
+      } satisfies PitchDetailsApiResponse,
       { status: 500 }
     )
   }
