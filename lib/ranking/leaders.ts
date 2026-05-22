@@ -11,10 +11,12 @@ import { calculateRCNf3 } from '@/lib/rc'
 import { BATTING_TOP_2025_RBI_TOP_N } from '@/lib/topPageBatting2025Grid'
 import {
   buildBattingLeadersConfigFromRankings,
+  buildBattingLeadersConfigFromRankingsAsync,
   hasBattingRankingsJsonForLeague,
 } from '@/lib/ranking/leadersFromRankingsJson'
 import {
   readTopLeadersSnapshot,
+  readTopLeadersSnapshotAsync,
   TOP_LEADERS_SNAPSHOT_YEAR,
 } from '@/lib/topPage/leadersSnapshot2026'
 
@@ -676,6 +678,10 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
     }
   }
 
+  if (year === '2026') {
+    return { top3Metrics, miniMetrics, leaders: {} }
+  }
+
   const { rows, availableMetrics } = loadBattingCsv(year, league)
   
   if (process.env.NODE_ENV === 'development') {
@@ -736,6 +742,35 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
     miniMetrics,
     leaders,
   }
+}
+
+/**
+ * Phase 7: 本番 Vercel（public/data 無し）向け。プロキシ経由で JSON を取得。
+ */
+export async function getBattingLeadersAsync(
+  year: string,
+  league: string
+): Promise<LeadersConfig> {
+  const upperLeague = league.toUpperCase()
+  const top3Metrics = ['OPS', '打率', '本塁打']
+  const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
+
+  if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
+    const fromSnapshot = await readTopLeadersSnapshotAsync(year, upperLeague, 'batting')
+    if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
+      return fromSnapshot
+    }
+  }
+
+  const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
+  if (fromRankings) return fromRankings
+
+  if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
+    const sync = buildBattingLeadersConfigFromRankings(year, upperLeague)
+    if (sync) return sync
+  }
+
+  return getBattingLeaders(year, league)
 }
 
 /**

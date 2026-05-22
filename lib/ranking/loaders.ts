@@ -108,9 +108,13 @@ export function loadBattingCsv(
   league: string
 ): { rows: BattingCsvRow[]; availableMetrics: MetricDefinition[]; csvPath: string } {
   try {
-    // 2026年は2025年データを流用
-    const dataYear = year === '2026' ? '2025' : year
-    // CSVファイルのパスを探索
+    // 2026 表示は rankings / top-leaders JSON（R2）が正。CSV の 2025 流用は廃止。
+    if (year === '2026') {
+      throw new Error(
+        'loadBattingCsv: 2026 は CSV を使いません。RANKINGS_BASE_URL または rankings:rebuild を確認してください。'
+      )
+    }
+    const dataYear = year
     const csvPath = findBattingCsv(dataYear, league)
 
     if (process.env.NODE_ENV === 'development') {

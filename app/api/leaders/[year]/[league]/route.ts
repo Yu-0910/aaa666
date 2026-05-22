@@ -2,7 +2,7 @@
  * API Route: 指定年度・リーグの打撃成績リーダーを取得（動的ルート）
  */
 
-import { getBattingLeaders } from '@/lib/ranking/leaders'
+import { getBattingLeadersAsync } from '@/lib/ranking/leaders'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -21,7 +21,7 @@ export async function GET(
       console.log(`[API] GET /api/leaders/${year}/${upperLeague}`)
     }
     
-    const data = getBattingLeaders(year, upperLeague)
+    const data = await getBattingLeadersAsync(year, upperLeague)
     return NextResponse.json(data)
   } catch (error) {
     const resolvedParams = params instanceof Promise ? await params : params

@@ -2,7 +2,7 @@
  * API Route: 指定年度・リーグの投球成績リーダー（ランキング JSON から抽出）
  */
 
-import { getPitchingLeaders } from "@/lib/ranking/leadersFromPitchingRankingsJson"
+import { getPitchingLeadersAsync } from "@/lib/ranking/leadersFromPitchingRankingsJson"
 import { NextResponse } from "next/server"
 
 export async function GET(
@@ -18,7 +18,7 @@ export async function GET(
       console.log(`[API] GET /api/pitching-leaders/${year}/${upperLeague}`)
     }
 
-    const data = getPitchingLeaders(year, upperLeague)
+    const data = await getPitchingLeadersAsync(year, upperLeague)
     return NextResponse.json(data)
   } catch (error) {
     const resolvedParams = params instanceof Promise ? await params : params

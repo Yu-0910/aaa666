@@ -78,3 +78,16 @@ export async function fetchRankingMetricJsonServer(
   )
   return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : null
 }
+
+export async function fetchPitchingRankingMetricJsonServer(
+  year: string,
+  league: string,
+  metricLabel: string,
+  sanitize: (m: string) => string
+): Promise<Record<string, unknown>[] | null> {
+  const fileBase = sanitize(metricLabel)
+  const raw = await fetchDisplayJsonServer<unknown>(
+    `/data/rankings/pitching/${year}/${league.toUpperCase()}/${fileBase}.json`
+  )
+  return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : null
+}

@@ -18,8 +18,10 @@ import {
   PITCHING_TOP_2026_GRID_METRICS,
   PITCHING_TOP_2026_MINI_METRICS,
 } from "@/lib/topPagePitching2026Grid"
+import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import {
   readTopLeadersSnapshot,
+  readTopLeadersSnapshotAsync,
   TOP_LEADERS_SNAPSHOT_YEAR,
 } from "@/lib/topPage/leadersSnapshot2026"
 
@@ -168,18 +170,17 @@ function topNForPitchingMetric(metricLabel: string): number {
   return 1
 }
 
-export function buildPitchingLeadersConfigFromRankings(
+function buildPitchingLeadersFromMetricRows(
   year: string,
-  league: string
+  league: string,
+  metricRows: Map<string, RankingJsonRow[]>
 ): LeadersConfig | null {
   const upperLeague = league.toUpperCase()
-  if (!hasPitchingRankingsJsonForLeague(year, upperLeague)) return null
-
   const leaders: Record<string, LeaderRow[]> = {}
   const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
 
   for (const metricLabel of allMetrics) {
-    const rows = readPitchingRankingMetricJson(year, upperLeague, metricLabel)
+    const rows = metricRows.get(metricLabel)
     if (!rows?.length) continue
     const topN = topNForPitchingMetric(metricLabel)
     const top = extractTopPitchingLeadersFromRows(rows, metricLabel, topN, year, upperLeague)
@@ -195,6 +196,45 @@ export function buildPitchingLeadersConfigFromRankings(
   }
 }
 
+export function buildPitchingLeadersConfigFromRankings(
+  year: string,
+  league: string
+): LeadersConfig | null {
+  const upperLeague = league.toUpperCase()
+  if (!hasPitchingRankingsJsonForLeague(year, upperLeague)) return null
+
+  const metricRows = new Map<string, RankingJsonRow[]>()
+  const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
+  for (const metricLabel of allMetrics) {
+    const rows = readPitchingRankingMetricJson(year, upperLeague, metricLabel)
+    if (rows?.length) metricRows.set(metricLabel, rows)
+  }
+  return buildPitchingLeadersFromMetricRows(year, league, metricRows)
+}
+
+export async function buildPitchingLeadersConfigFromRankingsAsync(
+  year: string,
+  league: string
+): Promise<LeadersConfig | null> {
+  const upperLeague = league.toUpperCase()
+  const metricRows = new Map<string, RankingJsonRow[]>()
+  const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
+
+  for (const metricLabel of allMetrics) {
+    let rows = readPitchingRankingMetricJson(year, upperLeague, metricLabel)
+    if (!rows?.length) {
+      rows = await fetchPitchingRankingMetricJsonServer(
+        year,
+        upperLeague,
+        metricLabel,
+        sanitizeMetricForPath
+      )
+    }
+    if (rows?.length) metricRows.set(metricLabel, rows)
+  }
+  return buildPitchingLeadersFromMetricRows(year, league, metricRows)
+}
+
 export function getPitchingLeaders(year: string, league: string): LeadersConfig {
   const upperLeague = league.toUpperCase()
   const empty: LeadersConfig = {
@@ -206,27 +246,43 @@ export function getPitchingLeaders(year: string, league: string): LeadersConfig 
   if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
     const fromSnapshot = readTopLeadersSnapshot(year, upperLeague, "pitching")
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[getPitchingLeaders] ${year} ${upperLeague}: top-leaders snapshot`)
-      }
       return fromSnapshot
     }
   }
 
   if (hasPitchingRankingsJsonForLeague(year, upperLeague)) {
     const fromRankings = buildPitchingLeadersConfigFromRankings(year, upperLeague)
-    if (fromRankings) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[getPitchingLeaders] ${year} ${upperLeague}: extracted from pitching rankings JSON`)
-      }
-      return fromRankings
+    if (fromRankings) return fromRankings
+  }
+
+  return empty
+}
+
+export async function getPitchingLeadersAsync(
+  year: string,
+  league: string
+): Promise<LeadersConfig> {
+  const upperLeague = league.toUpperCase()
+  const empty: LeadersConfig = {
+    top3Metrics: [...PITCHING_TOP_2026_GRID_METRICS],
+    miniMetrics: [...PITCHING_TOP_2026_MINI_METRICS],
+    leaders: {},
+  }
+
+  if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
+    const fromSnapshot = await readTopLeadersSnapshotAsync(year, upperLeague, "pitching")
+    if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
+      return fromSnapshot
     }
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.warn(
-      `[getPitchingLeaders] ${year} ${upperLeague}: no pitching rankings JSON; run npm run phase19:build:pitching-rankings`
-    )
+  const fromRankings = await buildPitchingLeadersConfigFromRankingsAsync(year, upperLeague)
+  if (fromRankings) return fromRankings
+
+  if (hasPitchingRankingsJsonForLeague(year, upperLeague)) {
+    const sync = buildPitchingLeadersConfigFromRankings(year, upperLeague)
+    if (sync) return sync
   }
+
   return empty
 }
