@@ -11,6 +11,13 @@ const nextConfig = {
   },
   // 複数 lockfile 警告を解消（プロジェクトルートを明示）
   outputFileTracingRoot: path.join(__dirname),
+  // Vercel ビルド: 歴史 CSV 1 万ファイル超をサーバー関数のトレース対象から除外
+  outputFileTracingExcludes: {
+    '*': [
+      '_data/master_csv__import_1950_2024/**',
+      '_data/master_csv/**',
+    ],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -34,6 +41,36 @@ const nextConfig = {
   },
   // 出力先を明示的に設定（OneDriveの同期問題を回避）
   distDir: '.next',
+  async headers() {
+    return [
+      {
+        source: '/data/top-leaders/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, stale-while-revalidate=86400',
+          },
+        ],
+      },
+      {
+        source: '/data/rankings/weekly/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300, stale-while-revalidate=3600',
+          },
+        ],
+      },
+    ]
+  },
+  // Node 24 + OneDrive 等で WasmHash._updateWithBuffer が undefined で落ちる事例の回避
+  // （webpack の wasm-md4 経路を使わず xxhash64 に固定）
+  webpack: (config) => {
+    if (config.output && typeof config.output === 'object') {
+      config.output.hashFunction = 'xxhash64'
+    }
+    return config
+  },
 }
 
 export default nextConfig

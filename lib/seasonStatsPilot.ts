@@ -1,6 +1,6 @@
 /**
  * Phase 4: パイロット今季成績
- * Yahoo games pilot (2026/3/4 オープン戦5試合) の batting_stats.csv から選手別スプリット成績を取得
+ * 個人ページ向けシーズン成績のマージ（正は Phase11/13/15/16/17 派生 JSON）。旧 pilot CSV は廃止。
  */
 
 import fs from 'fs'
@@ -12,7 +12,7 @@ import {
   PILOT_KIKUCHI_YAHOO_BATTER_ID,
 } from '@/lib/pilotPlayerConstants'
 import { createFielderPlaceholderTotalRow } from '@/lib/fielderSeasonPlaceholderRow'
-import { findRosterPlayerByPublicId, getPlayerHandedness } from '@/lib/npbRoster'
+import { findRosterPlayerByPublicId } from '@/lib/npbRoster'
 import { invalidateYahooNpbBatterMapsCache, resolveYahooPilotIdForStats } from '@/lib/yahooNpbBatterIdMap'
 import { formatWeekRangeTueToSunFromTuesdayYmd } from '@/lib/yahooGame/jstPeriodKeys'
 import {
@@ -20,7 +20,7 @@ import {
   buildEnrichedBattingSeasonRow,
   computeBattingTargetForGameAndBatter,
   emptyBattingSeasonAggYahoo,
-  plateAppearanceLastResultText,
+  plateAppearanceResolvedResultText,
   updateBattingAggFromPa,
   type BattingSeasonAggYahoo,
   type BattingTargetForGameAndBatter,
@@ -30,13 +30,24 @@ import type { CanonicalGameDocument, PlateAppearance } from '@/lib/yahooGame/typ
 import { isWalkLikeResultText } from '@/lib/baseballWalkResult'
 import { isStrikeoutResultJa } from '@/lib/yahooGame/paOutcomeResultJa'
 import { hitBases, isAtBat } from '@/lib/yahooGame/resultJaHitBases'
-import { pitcherThrowHandRLFromYahooPitcherIdWithMentioned } from '@/lib/yahooGame/batterHandFromCanonical'
+import {
+  pitcherThrowHandFromJaNameHint,
+  pitcherThrowHandRLFromYahooPitcherIdWithMentioned,
+} from '@/lib/yahooGame/batterHandFromCanonical'
+import { defendingTeamFullNameFromPlateAppearance } from '@/lib/yahooGame/inferTeamsFromTextPbp'
 import { parseCellResultToContribution } from '@/lib/yahooGame/cellResultToContribution'
 import { resolvePitchersForBatterInning } from '@/lib/yahooGame/pitcherIntervalsFromPitchingLines'
 import { parsePaId, teamForYahooPlayerId } from '@/lib/yahooGame/pitcherPocHelpers'
 import { injectTeamsFromTextPbpIfMissing } from '@/lib/yahooGame/inferTeamsFromTextPbp'
 import { yahooPitcherIdForVsHandFromPa } from '@/lib/yahooGame/yahooPitcherIdForVsHandFromPa'
+import {
+  buildPitcherIdByPaIdFromTextTimeline,
+  enrichPlateAppearancesWithResolvedPitcherIds,
+  resolvePitcherIdForPlateAppearance,
+} from '@/lib/yahooGame/resolvePitcherIdByPaId'
 import { mergePhase10IntoCanonical, type Phase10PitchRow } from '@/lib/yahooGame/mergePhase10FromPitchRows'
+import { dedupePlateAppearancesByInningHalfOrder } from '@/lib/yahooGame/dedupePlateAppearances'
+export { dedupePlateAppearancesByInningHalfOrder }
 import { getProjectRoot } from '@/lib/projectRoot'
 import type { BattingVsHandTotalReconciliation, PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
 import {
@@ -44,6 +55,7 @@ import {
   DERIVED_SEASON_YEAR_DEFAULT,
   enrichSeasonStatsRowSabermetrics,
 } from '@/lib/seasonStatsPilotShared'
+import { battingSlashRatesFromCounts } from '@/lib/battingRateFormat'
 
 /** クライアントは `@/lib/seasonStatsPilotShared` を参照（fs を引き込まない） */
 export type { BattingVsHandTotalReconciliation, PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
@@ -111,6 +123,7 @@ function formatSplitLabel(splitType: string, splitValue: string): string {
     const n = splitValue.replace('bat_order_', '')
     return /^[1-9]$/.test(n) ? `${n}番` : `打順${n}`
   }
+  if (splitType === 'starter_field') return splitValue
   if (splitType === 'stadium') return splitValue
   if (splitType === 'vs_hand') {
     if (splitValue === 'R') return '対右投手'
@@ -172,19 +185,20 @@ function normalizeDerivedRowLabels(row: SeasonStatsRow): SeasonStatsRow {
   }
 }
 
-/** 対左右: canonical と同一の `updateBattingAggFromPa`。結果が空の打席は数えない（plateAppearanceLastResultText 強化で空を減らす）。 */
-function updateVsHandFromPa(agg: BattingSeasonAggYahoo, gameId: string, pa: PlateAppearance): void {
-  if (!plateAppearanceLastResultText(pa)) return
-  updateBattingAggFromPa(agg, gameId, pa)
+/** 対左右: canonical と同一の `updateBattingAggFromPa`。結果が空の打席は数えない（Phase 2: 出場成績 zip 優先）。 */
+function updateVsHandFromPa(
+  agg: BattingSeasonAggYahoo,
+  gameId: string,
+  pa: PlateAppearance,
+  doc: CanonicalGameDocument,
+): void {
+  if (!plateAppearanceResolvedResultText(doc, pa).trim()) return
+  updateBattingAggFromPa(agg, gameId, pa, doc)
 }
 
 function aggToVsHandRow(splitValue: 'R' | 'L' | 'unknown', agg: BattingSeasonAggYahoo): SeasonStatsRow {
   const h1 = Math.max(0, agg.h - agg.h2 - agg.h3 - agg.hr)
-  const avg = agg.ab > 0 ? agg.h / agg.ab : null
-  const obpDen = agg.ab + agg.bb + agg.hbp + agg.sf
-  const obp = obpDen > 0 ? (agg.h + agg.bb + agg.hbp) / obpDen : null
-  const slg = agg.ab > 0 ? agg.tb / agg.ab : null
-  const ops = obp != null ? obp + (agg.ab > 0 ? agg.tb / agg.ab : 0) : null
+  const slash = battingSlashRatesFromCounts(agg)
   return {
     split_type: 'vs_hand',
     split_value: splitValue,
@@ -210,10 +224,10 @@ function aggToVsHandRow(splitValue: 'R' | 'L' | 'unknown', agg: BattingSeasonAgg
     cs: agg.cs,
     e: agg.e,
     gidp: agg.gidp,
-    avg: fmtSlash3(avg),
-    obp: fmtSlash3(obp),
-    slg: fmtSlash3(slg),
-    ops: fmtSlash3(ops),
+    avg: slash.avg,
+    obp: slash.obp,
+    slg: slash.slg,
+    ops: slash.ops,
     risp_avg: '.000',
     risp_ab: 0,
     risp_h: 0,
@@ -258,83 +272,6 @@ export function mergePhase10RestoredIntoDocIfPresent(doc: CanonicalGameDocument)
   } catch {
     return doc
   }
-}
-
-/**
- * paId を `${gameId}-${回}-${表|裏}-${番号}` とみなせる打席について、番号を数値正規化したキーで重複を1件にまとめる。
- * canonical の打席と実況フォールバックで別 paId が立つと対左右の PA だけ膨らむため（loadVsHand 内コメント参照）。
- */
-export function dedupePlateAppearancesByInningHalfOrder(
-  pas: PlateAppearance[],
-  gameId: string | undefined,
-): PlateAppearance[] {
-  const gid = String(gameId ?? '').trim()
-  if (!gid || pas.length < 2) return pas
-
-  const canonicalKey = (pa: PlateAppearance): string => {
-    const id = String(pa.paId ?? '').trim()
-    if (!id.startsWith(`${gid}-`)) return id
-    const tail = id.slice(gid.length + 1)
-    const parts = tail.split('-')
-    if (parts.length < 3) return id
-    const inn = parts[0]!
-    const half = parts[1]!
-    const orderStr = parts.slice(2).join('-')
-    const ord = parseInt(orderStr, 10)
-    if (!Number.isFinite(ord)) return id
-    return `${gid}-${inn}-${half}-${ord}`
-  }
-
-  const richness = (pa: PlateAppearance): number => {
-    const pe = Array.isArray(pa.pitchEvents) ? pa.pitchEvents.length : 0
-    const r = String(pa.resultSummaryJa ?? '').trim().length
-    return pe * 1000 + r
-  }
-
-  const best = new Map<string, PlateAppearance>()
-  for (const pa of pas) {
-    const k = canonicalKey(pa)
-    const cur = best.get(k)
-    if (!cur) {
-      best.set(k, pa)
-      continue
-    }
-    const ra = richness(pa)
-    const rb = richness(cur)
-    if (ra > rb) best.set(k, pa)
-    else if (ra === rb && String(pa.paId ?? '').length < String(cur.paId ?? '').length) best.set(k, pa)
-  }
-
-  const sortParts = (k: string): [string, number, number, number] | null => {
-    const p = k.split('-')
-    if (p.length < 4) return null
-    const ord = parseInt(p[p.length - 1]!, 10)
-    const half = p[p.length - 2]!
-    const inn = parseInt(p[p.length - 3]!, 10)
-    const g = p.slice(0, -3).join('-')
-    if (!Number.isFinite(ord) || !Number.isFinite(inn)) return null
-    const ho = half === '表' ? 0 : half === '裏' ? 1 : 2
-    return [g, inn, ho, ord]
-  }
-
-  const out = [...best.values()]
-  out.sort((a, b) => {
-    const ka = canonicalKey(a)
-    const kb = canonicalKey(b)
-    const pa = sortParts(ka)
-    const pb = sortParts(kb)
-    if (pa && pb) {
-      for (let i = 0; i < 4; i++) {
-        const c = pa[i]! < pb[i]! ? -1 : pa[i]! > pb[i]! ? 1 : 0
-        if (c !== 0) return c
-      }
-      return 0
-    }
-    const c = ka.localeCompare(kb, 'ja')
-    if (c !== 0) return c
-    return String(a.paId ?? '').localeCompare(String(b.paId ?? ''), 'ja')
-  })
-  return out
 }
 
 /** `collectVsUnknownAbSamples` 用: 対不明に入った打数（isAtBat）の打席サンプル */
@@ -814,146 +751,13 @@ export function loadVsHandRowsFromCanonicalWithDebug(
 
   const compact = (s: string): string => String(s ?? '').replace(/\s/g, '').replace(/　/g, '')
 
-  const pregameText = (doc: CanonicalGameDocument): string => {
-    const secs = doc.game?.textPlayByPlay ?? []
-    const pre = secs.find((x) => String(x?.sectionTitle ?? '').trim() === '試合前情報')
-    const lines: string[] = Array.isArray(pre?.lines) ? pre!.lines : []
-    return lines.join(' ')
-  }
-
-  const resolveTeamsFromPregame = (preText: string): { visitorTeam: string; homeTeam: string } => {
-    const mVis = preText.match(/先攻[:：]\s*([^\sの]+?)のスターティングラインアップ/)
-    const mHome = preText.match(/後攻[:：]\s*([^\sの]+?)のスターティングラインアップ/)
-    return {
-      visitorTeam: mVis?.[1] ? String(mVis[1]).trim() : '',
-      homeTeam: mHome?.[1] ? String(mHome[1]).trim() : '',
-    }
-  }
-
-  const resolveStartersFromPregame = (
-    preText: string,
-    teams: { visitorTeam: string; homeTeam: string },
-  ): { visitorStarter: string; homeStarter: string } => {
-    const mStart = preText.match(/先発ピッチャーは(.+?)(?:先攻[:：]|$)/)
-    const startText = mStart?.[1] ? String(mStart[1]) : ''
-    const pickNameForTeam = (team: string): string => {
-      if (!team || !startText) return ''
-      // "オリックスが中8日で エスピノーザ" のようなパターンを想定
-      const r = new RegExp(`${team}が[^\\s]*\\s*([^、,\\s]+)`, 'u')
-      const mm = startText.match(r)
-      return mm?.[1] ? String(mm[1]).trim() : ''
-    }
-    return {
-      visitorStarter: pickNameForTeam(teams.visitorTeam),
-      homeStarter: pickNameForTeam(teams.homeTeam),
-    }
-  }
-
-  const splitPitchingLinesByTeamOrder = (
-    doc: CanonicalGameDocument,
-  ): { visitor: typeof doc.domain.pitchingLines; home: typeof doc.domain.pitchingLines } | null => {
-    const lines = Array.isArray(doc.domain?.pitchingLines) ? doc.domain.pitchingLines : []
-    if (lines.length === 0) return null
-
-    // 1) まずは「試合前情報（テキスト）」から先発投手名を引いてチーム順を決める（従来）。
-    const pre = pregameText(doc)
-    const teams = resolveTeamsFromPregame(pre)
-    const starters = resolveStartersFromPregame(pre, teams)
-    const keyVisitor = compact(starters.visitorStarter)
-    const keyHome = compact(starters.homeStarter)
-    if (keyVisitor && keyHome) {
-      const idxVisitor = lines.findIndex((l) => compact(String(l.playerName ?? '')) === keyVisitor)
-      const idxHome = lines.findIndex((l) => compact(String(l.playerName ?? '')) === keyHome)
-      if (idxVisitor >= 0 && idxHome >= 0) {
-        // スポナビは通常「先攻チームの投手成績→後攻チームの投手成績」順で並ぶ想定
-        if (idxVisitor < idxHome) {
-          return { visitor: lines.slice(0, idxHome), home: lines.slice(idxHome) }
-        }
-        if (idxHome < idxVisitor) {
-          return { visitor: lines.slice(idxVisitor), home: lines.slice(0, idxVisitor) }
-        }
-      }
-    }
-
-    // 2) フォールバック: `pitchingLines[].yahooPlayerId` とスタメン投手（投）のIDで分割する。
-    // 「試合前情報」テキストが欠損/文字化けしても、統計表（stats_row_v0）がある限りこちらは機能する。
-    try {
-      const teamsArr = Array.isArray(doc.game?.teams) ? doc.game.teams : []
-      const visitor = teamsArr[0]
-      const home = teamsArr[1]
-      const pickPitcherId = (t: any): string => {
-        const lineup = Array.isArray(t?.startingLineup) ? t.startingLineup : []
-        const p = lineup.find((x: any) => String(x?.fieldingPosition ?? '').trim() === '投')
-        return String(p?.yahooPlayerId ?? '').trim()
-      }
-      const visitorStarterId = pickPitcherId(visitor)
-      const homeStarterId = pickPitcherId(home)
-      if (visitorStarterId && homeStarterId) {
-        const idxVisitor = lines.findIndex((l: any) => String(l?.yahooPlayerId ?? '').trim() === visitorStarterId)
-        const idxHome = lines.findIndex((l: any) => String(l?.yahooPlayerId ?? '').trim() === homeStarterId)
-        if (idxVisitor >= 0 && idxHome >= 0) {
-          if (idxVisitor < idxHome) return { visitor: lines.slice(0, idxHome), home: lines.slice(idxHome) }
-          if (idxHome < idxVisitor) return { visitor: lines.slice(idxVisitor), home: lines.slice(0, idxVisitor) }
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    // 3) フォールバック: スタメン（teams）が欠損している試合向け。
-    // `plateAppearances` に含まれる投手IDから、表/裏それぞれの「最初に確認できた投手ID」を seed にして分割する。
-    try {
-      const pas = Array.isArray(doc.domain?.plateAppearances) ? doc.domain.plateAppearances : []
-      const pickSeed = (half: '表' | '裏'): string => {
-        for (const pa of pas) {
-          const paId = String((pa as any)?.paId ?? '')
-          if (!paId.includes(`-${half}-`)) continue
-          const pid = yahooPitcherIdForVsHandFromPa(pa as PlateAppearance)
-          if (pid) return pid
-        }
-        return ''
-      }
-      const homePitcherId = pickSeed('表') // 表=visitor打撃→home投手
-      const visitorPitcherId = pickSeed('裏') // 裏=home打撃→visitor投手
-      if (homePitcherId && visitorPitcherId) {
-        const idxHome = lines.findIndex((l: any) => String(l?.yahooPlayerId ?? '').trim() === homePitcherId)
-        const idxVisitor = lines.findIndex((l: any) => String(l?.yahooPlayerId ?? '').trim() === visitorPitcherId)
-        if (idxVisitor >= 0 && idxHome >= 0) {
-          if (idxVisitor < idxHome) return { visitor: lines.slice(0, idxHome), home: lines.slice(idxHome) }
-          if (idxHome < idxVisitor) return { visitor: lines.slice(idxVisitor), home: lines.slice(0, idxVisitor) }
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    return null
-  }
-
-  const assignPitcherNameByBf = (
-    pas: PlateAppearance[],
-    pitchers: Array<{ playerName: string; bf?: number | null }>,
-  ): Map<string, string> => {
-    const out = new Map<string, string>()
-    if (pas.length === 0 || pitchers.length === 0) return out
-    let i = 0
-    let remain = Math.max(0, Math.trunc(Number(pitchers[0]?.bf ?? 0)))
-    for (const pa of pas) {
-      while (i < pitchers.length && remain <= 0) {
-        i++
-        remain = Math.max(0, Math.trunc(Number(pitchers[i]?.bf ?? 0)))
-      }
-      const name = String(pitchers[i]?.playerName ?? '').trim()
-      if (name) out.set(String(pa.paId ?? ''), name)
-      remain -= 1
-    }
-    return out
-  }
-
-  const throwHandFromPitcherName = (name: string): 'R' | 'L' | '' => {
-    const th = getPlayerHandedness(String(name ?? '').trim()).throwHand
-    return th === 'R' || th === 'L' ? th : ''
-  }
+  const throwHandFromPitcherName = (
+    name: string,
+    defendingTeamFullName: string,
+  ): 'R' | 'L' | '' =>
+    pitcherThrowHandFromJaNameHint(String(name ?? '').trim(), {
+      defendingTeamFullName,
+    })
 
   const rawYahooTextPathForGame = (gameId: string): string => {
     return path.join(getProjectRoot(), '_data', 'scraped_games', 'raw_yahoo_text', `${gameId}.html`)
@@ -1025,153 +829,6 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     return 'アウト'
   }
 
-  const inferPitcherIdFromText = (doc: CanonicalGameDocument, paId?: string): string => {
-    const s = String(paId ?? '').trim()
-    const m = s.match(/^\d+-(\d+)-(表|裏)-(\d+)$/)
-    if (!m) return ''
-    const inning = m[1]
-    const half = m[2]
-    const order = m[3]
-
-    const mentioned = doc.game?.yahooPlayersMentioned ?? {}
-    const nameToId = new Map<string, string>()
-    for (const [id, name] of Object.entries(mentioned)) {
-      const k = compact(String(name ?? '').trim())
-      if (k && !nameToId.has(k)) nameToId.set(k, String(id).trim())
-    }
-
-    const secs = doc.game?.textPlayByPlay ?? []
-    const line = paTextLine(doc, paId)
-    // まず行中に pitcher 明示があればそれを優先
-    if (line) {
-      const lm = String(line).match(/ピッチャー\s*([^\s]+?)(?:\s|に代わって|→|$)/)
-      const pname = lm?.[1] ? String(lm[1]).trim() : ''
-      if (pname) {
-        const key = compact(pname)
-        const direct = nameToId.get(key)
-        if (direct) return direct
-        for (const [k, id] of nameToId.entries()) {
-          if (k && key && (k === key || k.includes(key))) return id
-        }
-      }
-    }
-
-    // pitcher 明示が無い場合は「先発ピッチャーは…」から当該表裏の先発を使う（投手交代は別途改善）
-    const pre = secs.find((x) => String(x?.sectionTitle ?? '').trim() === '試合前情報')
-    const preText = Array.isArray(pre?.lines) ? pre!.lines.join(' ') : ''
-    if (!preText) return ''
-    // 先攻/後攻チーム名（先攻=表の攻撃側）
-    const mVis = preText.match(/先攻[:：]\s*([^\sの]+?)のスターティングラインアップ/)
-    const mHome = preText.match(/後攻[:：]\s*([^\sの]+?)のスターティングラインアップ/)
-    const visitorTeam = mVis?.[1] ? String(mVis[1]).trim() : ''
-    const homeTeam = mHome?.[1] ? String(mHome[1]).trim() : ''
-    // 先発ピッチャーの文（例: "先発ピッチャーはオリックスが… エスピノーザ 、日本ハムが… 伊藤"）
-    const mStart = preText.match(/先発ピッチャーは(.+?)(?:先攻[:：]|$)/)
-    const startText = mStart?.[1] ? String(mStart[1]) : ''
-    if (!startText) return ''
-    const pickNameForTeam = (team: string): string => {
-      if (!team) return ''
-      const r = new RegExp(`${team}が[^\\s]*\\s*([^、,\\s]+)`, 'u')
-      const mm = startText.match(r)
-      return mm?.[1] ? String(mm[1]).trim() : ''
-    }
-    const homeStarterName = pickNameForTeam(homeTeam)
-    const visitorStarterName = pickNameForTeam(visitorTeam)
-    const wantPitcherName = half === '表' ? homeStarterName : visitorStarterName
-    const key = compact(wantPitcherName)
-    if (!key) return ''
-    const direct = nameToId.get(key)
-    if (direct) return direct
-    for (const [k, id] of nameToId.entries()) {
-      if (k && (k === key || k.includes(key))) return id
-    }
-    return ''
-  }
-
-  /**
-   * 実況（textPlayByPlay）を時系列に走査し、各打席（paId）に対応する投手IDを割り当てる。
-   * - 投手交代（例: "投手交代: 宮城 → 山田"）を反映
-   * - 初期値は「試合前情報」の先発投手（表=home投手、裏=visitor投手）
-   * - 投手名→ID は `yahooPlayersMentioned` を参照（部分一致も許容）
-   */
-  const buildPitcherIdByPaIdFromTextTimeline = (doc: CanonicalGameDocument): Map<string, string> => {
-    const out = new Map<string, string>()
-    const gameId = String(doc.gameId ?? '').trim()
-    if (!gameId) return out
-
-    const mentioned = doc.game?.yahooPlayersMentioned ?? {}
-    const nameToId = new Map<string, string>()
-    for (const [id, name] of Object.entries(mentioned)) {
-      const k = compact(String(name ?? '').trim())
-      if (k && !nameToId.has(k)) nameToId.set(k, String(id).trim())
-    }
-    const resolveNameToId = (pname: string): string => {
-      const key = compact(pname)
-      if (!key) return ''
-      const direct = nameToId.get(key)
-      if (direct) return direct
-      for (const [k, id] of nameToId.entries()) {
-        if (k && (k === key || k.includes(key) || key.includes(k))) return id
-      }
-      return ''
-    }
-
-    const pre = pregameText(doc)
-    const teams = resolveTeamsFromPregame(pre)
-    const starters = resolveStartersFromPregame(pre, teams)
-    const homeStarterId = starters.homeStarter ? resolveNameToId(starters.homeStarter) : ''
-    const visitorStarterId = starters.visitorStarter ? resolveNameToId(starters.visitorStarter) : ''
-
-    // 表（先攻=visitor打撃）→ home投手、裏（後攻=home打撃）→ visitor投手
-    let currentTop = homeStarterId
-    let currentBottom = visitorStarterId
-
-    const secs = doc.game?.textPlayByPlay ?? []
-    for (const sec of secs) {
-      const title = String(sec?.sectionTitle ?? '').trim()
-      const m = title.match(/^(\d+)回(表|裏)$/)
-      if (!m) continue
-      const inning = m[1]
-      const half = m[2] // 表/裏
-      const lines: string[] = Array.isArray(sec?.lines) ? sec!.lines : []
-      for (const line of lines) {
-        const s = String(line ?? '')
-
-        // 投手交代: A → B
-        const ch =
-          s.match(/投手交代\s*[:：]\s*[^→]+?→\s*([^\s、,]+)\b/u) ??
-          s.match(/投手交代\s*[:：]\s*[^→]+?→\s*([^\s、,]+)\s*/u)
-        if (ch?.[1]) {
-          const pid = resolveNameToId(String(ch[1]).trim())
-          if (pid) {
-            if (half === '表') currentTop = pid
-            else currentBottom = pid
-          }
-        }
-
-        // ピッチャー明示（稀に出る）
-        const pm = s.match(/ピッチャー\s*([^\s]+?)(?:\s|に代わって|→|$)/u)
-        if (pm?.[1]) {
-          const pid = resolveNameToId(String(pm[1]).trim())
-          if (pid) {
-            if (half === '表') currentTop = pid
-            else currentBottom = pid
-          }
-        }
-
-        // 打席行: "3： ..." の先頭番号を paId に対応付け
-        const om = s.match(/^\s*(\d+)\s*[：:]/u)
-        if (om?.[1]) {
-          const order = String(om[1])
-          const paId = `${gameId}-${inning}-${half}-${order}`
-          const pid = half === '表' ? currentTop : currentBottom
-          if (pid) out.set(paId, pid)
-        }
-      }
-    }
-    return out
-  }
-
   for (const doc of docs) {
     const gid = String(doc.gameId ?? '').trim()
     // Phase 28: canonical の scoreboard / teams は現行ビルダーが空のまま生成するため、
@@ -1179,7 +836,9 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     // 既に埋まっている場合は idempotent（元の doc が返る）。
     const baseMerged =
       options?.mergedDocsByGameId?.get(gid) ?? mergePhase10RestoredIntoDocIfPresent(doc)
-    const mergedDoc = injectTeamsFromTextPbpIfMissing(baseMerged)
+    const mergedDoc = enrichPlateAppearancesWithResolvedPitcherIds(
+      injectTeamsFromTextPbpIfMissing(baseMerged),
+    )
     const gameId = mergedDoc.gameId
     const mentioned = mergedDoc.game?.yahooPlayersMentioned ?? {}
     // Phase 25: 試合単位の R/L/U を記録するため、PA ループ前後で aggR/aggL/aggU をスナップショットする。
@@ -1270,49 +929,12 @@ export function loadVsHandRowsFromCanonicalWithDebug(
       String(a.paId ?? '').localeCompare(String(b.paId ?? ''))
     )
     pas = dedupePlateAppearancesByInningHalfOrder(pas, gameId)
-    // BF による投手割当（実況ベースの補助。pitcherId が無い打席向け）
-    const paTop = pas.filter((p) => String(p.inningHalf ?? '').includes('表'))
-    const paBottom = pas.filter((p) => String(p.inningHalf ?? '').includes('裏'))
-    const pitchSplit = splitPitchingLinesByTeamOrder(mergedDoc)
-    const pitcherNameByPaIdTop = pitchSplit ? assignPitcherNameByBf(paTop, pitchSplit.home ?? []) : new Map()
-    const pitcherNameByPaIdBottom = pitchSplit ? assignPitcherNameByBf(paBottom, pitchSplit.visitor ?? []) : new Map()
-    // 同一試合内の「表／裏」ごとに、直前の投手IDを carry-forward する（実況補完などで pitcherId が欠けるケース用）
-    const lastPitcherByHalf: Record<'top' | 'bottom', string> = { top: '', bottom: '' }
-    let lastPitcherAny = ''
-
-    // plateAppearances が投手ID欠損でも、先発投手はスタメン（投）から取れることがあるため seed する
-    try {
-      const teams = mergedDoc.game?.teams ?? []
-      const visitor = teams[0]
-      const home = teams[1]
-      const pickPitcher = (t: any): string => {
-        const lineup = Array.isArray(t?.startingLineup) ? t.startingLineup : []
-        const p = lineup.find((x: any) => String(x?.fieldingPosition ?? '').trim() === '投')
-        return String(p?.yahooPlayerId ?? '').trim()
-      }
-      const visitorPitcherId = pickPitcher(visitor)
-      const homePitcherId = pickPitcher(home)
-      // 表=先攻（visitor 打撃）→ home 投手、裏=home 打撃→ visitor 投手
-      if (homePitcherId) lastPitcherByHalf.top = homePitcherId
-      if (visitorPitcherId) lastPitcherByHalf.bottom = visitorPitcherId
-      lastPitcherAny = homePitcherId || visitorPitcherId || lastPitcherAny
-    } catch {
-      // ignore
-    }
-    const halfKeyFromPaId = (paId?: string): 'top' | 'bottom' | null => {
-      const s = String(paId ?? '').trim()
-      if (!s) return null
-      // canonical の paId は `${gameId}-${inning}-表|裏-${seq}` 形式
-      if (s.includes('-表-')) return 'top'
-      if (s.includes('-裏-')) return 'bottom'
-      return null
-    }
 
     for (const pa of pas) {
-      // 結果欠損の打席は実況行から補完する。BF 名簿で左右だけ決めて early-return する経路でも
+      // 結果欠損の打席は実況行から補完する。
       // 同じ pa を使わないと、通算(Phase11)と対左右の合計安打が食い違う（例: 黒川 1900113）。
       // 要約・一球のいずれでも結果が取れないときは実況行から補完（pitchEvents だけあるが最終球が空、等）
-      const needBackfill = !plateAppearanceLastResultText(pa).trim()
+      const needBackfill = !plateAppearanceResolvedResultText(mergedDoc, pa).trim()
       const rawLine = needBackfill ? paTextLine(mergedDoc, pa.paId) : ''
       const inferredResult = needBackfill ? resultFromPaTextLine(rawLine) : ''
       const paForAgg: PlateAppearance =
@@ -1323,7 +945,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         yahooPitcherIdForSample: string,
       ) => {
         if (!vsUnknownAbSamples || vsUnknownAbSamples.length >= 40) return
-        const rtAgg = plateAppearanceLastResultText(paForAgg)
+        const rtAgg = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
         if (!isAtBat(rtAgg)) return
         vsUnknownAbSamples.push({
           gameId,
@@ -1334,70 +956,14 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         })
       }
 
-      const hk = halfKeyFromPaId(pa.paId)
-      const pidFromAny = yahooPitcherIdForVsHandFromPa(pa)
-      if (pidFromAny && hk) lastPitcherByHalf[hk] = pidFromAny
-      if (pidFromAny) lastPitcherAny = pidFromAny
-
-      let pid = pidFromAny
-      if (!pid && hk && lastPitcherByHalf[hk]) {
-        pid = lastPitcherByHalf[hk]
-        inferredPitcherIdPas += 1
-      }
-      if (!pid && !hk && lastPitcherAny) {
-        pid = lastPitcherAny
-        inferredPitcherIdPas += 1
-      }
-      // 投手IDが欠損している打席は、まず BF（打者数）割当で投手名→名簿利き腕で左右を確定させる。
-      // 実況テキストから投手IDを推定すると、交代文の欠落等で誤った投手に吸い込まれやすく、
-      // vs_hand の R/L が 1打席単位でズレる原因になるため、ここでは「左右の確定」を優先する。
-      if (!pid) {
-        const paIdKey = String(pa.paId ?? '')
-        const pname =
-          pitcherNameByPaIdTop.get(paIdKey) ??
-          pitcherNameByPaIdBottom.get(paIdKey) ??
-          ''
-        const thName = pname ? throwHandFromPitcherName(pname) : ''
-        if (thName === 'R') {
-          updateVsHandFromPa(aggR, gameId, paForAgg)
-          if (needBackfill && backfilledResultSamples.length < 30) {
-            backfilledResultSamples.push({
-              gameId,
-              paId: String(pa.paId ?? ''),
-              vsHand: 'R',
-              rawLine,
-              inferredResult,
-            })
-          }
-          continue
-        }
-        if (thName === 'L') {
-          updateVsHandFromPa(aggL, gameId, paForAgg)
-          if (needBackfill && backfilledResultSamples.length < 30) {
-            backfilledResultSamples.push({
-              gameId,
-              paId: String(pa.paId ?? ''),
-              vsHand: 'L',
-              rawLine,
-              inferredResult,
-            })
-          }
-          continue
-        }
-      }
-      if (!pid) {
-        const fromTimeline = pitcherIdByPaIdFromText.get(String(pa.paId ?? '')) ?? ''
-        if (fromTimeline) {
-          pid = fromTimeline
-          inferredPitcherIdFromTextPas += 1
-        }
-      }
-      if (!pid) {
-        const fromText = inferPitcherIdFromText(mergedDoc, pa.paId)
-        if (fromText) {
-          pid = fromText
-          inferredPitcherIdFromTextPas += 1
-        }
+      const resolved = resolvePitcherIdForPlateAppearance(
+        mergedDoc,
+        paForAgg,
+        pitcherIdByPaIdFromText,
+      )
+      let pid = resolved.pitcherId
+      if (resolved.source === 'text_timeline' || resolved.source === 'pa_line') {
+        inferredPitcherIdFromTextPas += 1
       }
       if (!pid) {
         missingPitcherIdPas += 1
@@ -1409,7 +975,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
           })
         }
         recordVsUnknownAbIfAtBat('missing_pitcher_id', '')
-        updateVsHandFromPa(aggU, gameId, paForAgg)
+        updateVsHandFromPa(aggU, gameId, paForAgg, mergedDoc)
         if (needBackfill && backfilledResultSamples.length < 30) {
           backfilledResultSamples.push({
             gameId,
@@ -1421,27 +987,19 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         }
         continue
       }
-      let th = pitcherThrowHandRLFromYahooPitcherIdWithMentioned(pid, mentioned)
-      // 投手IDはあるが橋渡し/mentioned が無いケース（sportsnavi canonical の yahooPlayersMentioned 空など）では
-      // BF割当で投手名を引いて名簿から左右を解決する。
-      if (!th) {
-        const paIdKey = String(pa.paId ?? '')
-        const pname =
-          pitcherNameByPaIdTop.get(paIdKey) ??
-          pitcherNameByPaIdBottom.get(paIdKey) ??
-          ''
-        const thName = pname ? throwHandFromPitcherName(pname) : ''
-        if (thName === 'R' || thName === 'L') th = thName
-      }
-      // それでも不明なら、実況HTML（raw_yahoo_text）から投手名を拾って名簿で左右を解決する
+      const defendingTeam = defendingTeamFullNameFromPlateAppearance(mergedDoc, paForAgg)
+      let th = pitcherThrowHandRLFromYahooPitcherIdWithMentioned(pid, mentioned, {
+        defendingTeamFullName: defendingTeam,
+      })
+      // 橋渡し/mentioned が無いときは raw_yahoo_text の投手名で名簿照合
       if (!th && pitcherNameFromRawYahooText) {
         const pname = pitcherNameFromRawYahooText(pid)
-        const thName = pname ? throwHandFromPitcherName(pname) : ''
+        const thName = pname ? throwHandFromPitcherName(pname, defendingTeam) : ''
         if (thName === 'R' || thName === 'L') th = thName
       }
       const vsHand: 'R' | 'L' | 'unknown' = th === 'R' ? 'R' : th === 'L' ? 'L' : 'unknown'
       if (paDump && gameId === dumpGameId) {
-        const rtAgg = plateAppearanceLastResultText(paForAgg)
+        const rtAgg = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
         paDump.push({
           gameId,
           paId: String(pa.paId ?? ''),
@@ -1464,7 +1022,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         })
       }
       // ヒット種別の判定が追いつかないケースをサンプル収集（H が少なくなる原因）
-      const rt = plateAppearanceLastResultText(paForAgg)
+      const rt = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
       if (
         unparsedAtBatSamples.length < 30 &&
         rt &&
@@ -1481,12 +1039,12 @@ export function loadVsHandRowsFromCanonicalWithDebug(
           resultText: rt,
         })
       }
-      if (vsHand === 'R') updateVsHandFromPa(aggR, gameId, paForAgg)
-      else if (vsHand === 'L') updateVsHandFromPa(aggL, gameId, paForAgg)
+      if (vsHand === 'R') updateVsHandFromPa(aggR, gameId, paForAgg, mergedDoc)
+      else if (vsHand === 'L') updateVsHandFromPa(aggL, gameId, paForAgg, mergedDoc)
       else {
         unknownPitchers[pid] = (unknownPitchers[pid] ?? 0) + 1
         recordVsUnknownAbIfAtBat('pitcher_throw_hand_unknown', pid)
-        updateVsHandFromPa(aggU, gameId, paForAgg)
+        updateVsHandFromPa(aggU, gameId, paForAgg, mergedDoc)
       }
     }
 
@@ -1510,7 +1068,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
       const suspectPa: Array<{ paId: string; vsHand: 'R' | 'L' | 'unknown'; resultText: string }> = []
       for (const pa of pas) {
         // ここでは投手の左右ではなく、打席の結果分類が合っているかを見たい
-        const rt = plateAppearanceLastResultText(pa)
+        const rt = plateAppearanceResolvedResultText(mergedDoc, pa)
         if (!rt) continue
         if (isWalkLikeResultText(rt)) parsed.bb += 1
         if (isStrikeoutResultJa(rt)) parsed.so += 1
@@ -1524,7 +1082,11 @@ export function loadVsHandRowsFromCanonicalWithDebug(
           if (suspectPa.length < 20 && bases === 0 && !/四球|申告敬遠|敬遠|死球|犠打|犠飛|犠牲フライ|犠牲飛/.test(rt)) {
             const paId = String(pa.paId ?? '')
             const pid = yahooPitcherIdForVsHandFromPa(pa)
-            const th = pid ? pitcherThrowHandRLFromYahooPitcherIdWithMentioned(pid, mentioned) : ''
+            const th = pid
+              ? pitcherThrowHandRLFromYahooPitcherIdWithMentioned(pid, mentioned, {
+                  defendingTeamFullName: defendingTeamFullNameFromPlateAppearance(mergedDoc, pa),
+                })
+              : ''
             const vsHand: 'R' | 'L' | 'unknown' = th === 'R' ? 'R' : th === 'L' ? 'L' : 'unknown'
             suspectPa.push({ paId, vsHand, resultText: rt })
           }
@@ -2248,12 +1810,6 @@ export function mergePilotSeasonStatsWithDerived(
   return { rows: merged, battingTotalRowSource: totalSource, battingVsHandReconciliation }
 }
 
-function fmtSlash3(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '.000'
-  const s = n.toFixed(3)
-  return s.startsWith('0') ? s.slice(1) : s
-}
-
 function int(v: unknown): number {
   const n = parseInt(String(v ?? '0'), 10)
   return Number.isFinite(n) ? n : 0
@@ -2289,11 +1845,7 @@ function computeBattingFromPaRows(rows: Array<Record<string, string>>) {
   const pa = paRows.length
   const tb = h1 + h2 * 2 + h3 * 3 + hr * 4
 
-  const avg = ab > 0 ? h / ab : null
-  const obpDen = ab + bb + hbp + sf
-  const obp = obpDen > 0 ? (h + bb + hbp) / obpDen : null
-  const slg = ab > 0 ? tb / ab : null
-  const ops = obp != null ? obp + (ab > 0 ? tb / ab : 0) : null
+  const slash = battingSlashRatesFromCounts({ h, ab, tb, bb, hbp, sf })
 
   return {
     g: gameIds.size,
@@ -2315,10 +1867,10 @@ function computeBattingFromPaRows(rows: Array<Record<string, string>>) {
     sb,
     cs,
     gidp,
-    avg: fmtSlash3(avg),
-    obp: fmtSlash3(obp),
-    slg: fmtSlash3(slg),
-    ops: fmtSlash3(ops),
+    avg: slash.avg,
+    obp: slash.obp,
+    slg: slash.slg,
+    ops: slash.ops,
   }
 }
 

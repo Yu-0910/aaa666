@@ -7,7 +7,13 @@
 
 import { compactPlayerName } from "@/lib/playerNameNormalize"
 import type { NpbRosterPlayer } from "@/lib/npbRoster"
-import { getPlayerHandednessById } from "@/lib/npbRoster"
+import {
+  findRosterPlayerByPublicId,
+  findRosterPlayersMatchingJaHint,
+  getPlayerHandedness,
+  getPlayerHandednessById,
+  throwHandFromUniqueRosterPlayers,
+} from "@/lib/npbRoster"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 import type { CanonicalGameDocument } from "./types"
 
@@ -90,8 +96,65 @@ export function effectiveVsHandBucketForPitcherSplit(
 
 /** Yahoo 投手 ID → 名簿の投球腕（R/L）。橋渡しで NPB を解決してから参照。 */
 export function pitcherThrowHandRLFromYahooPitcherId(yahooPitcherId: string): "R" | "L" | "" {
-  const npb = resolveNpbPlayerIdFromPublicId(yahooPitcherId.trim())
-  if (!npb || !/^\d+$/.test(npb)) return ""
-  const { throwHand } = getPlayerHandednessById(npb)
-  return throwHand
+  const pid = yahooPitcherId.trim()
+  if (!pid) return ""
+
+  const npb = resolveNpbPlayerIdFromPublicId(pid)
+  if (npb && /^\d+$/.test(npb)) {
+    return getPlayerHandednessById(npb).throwHand
+  }
+
+  // 橋渡しが未整備な Yahoo ID でも、名簿 publicId 解決ができる場合がある
+  const roster = findRosterPlayerByPublicId(pid)
+  if (roster?.npb_player_id) {
+    return getPlayerHandednessById(roster.npb_player_id).throwHand
+  }
+
+  return ""
+}
+
+export type PitcherThrowHandResolveOptions = {
+  /** 守備球団（名簿 `team` 正式名）。省略時は略称キー照合を行わない */
+  defendingTeamFullName?: string
+}
+
+/**
+ * 日本語表示名ヒントから投球腕（略称は `defendingTeamFullName` 必須・候補1人のみ採用）。
+ */
+export function pitcherThrowHandFromJaNameHint(
+  jaNameHint: string,
+  options?: PitcherThrowHandResolveOptions,
+): "R" | "L" | "" {
+  const name = String(jaNameHint ?? "").trim()
+  if (!name) return ""
+
+  const exact = getPlayerHandedness(name).throwHand
+  if (exact === "R" || exact === "L") return exact
+
+  const team = String(options?.defendingTeamFullName ?? "").trim()
+  if (!team) return ""
+
+  const matches = findRosterPlayersMatchingJaHint(name, { teamFullName: team })
+  return throwHandFromUniqueRosterPlayers(matches)
+}
+
+/**
+ * 対左右など「投手の投球腕」分類用。
+ * 1) `pitcherThrowHandRLFromYahooPitcherId`（NPB 橋渡し・名簿 ID）
+ * 2) `yahooPlayersMentioned[id]` の日本語名（正式名は全国、略称は守備球団で絞り候補1人のみ）
+ *
+ * 略称のみの全国 `find` は行わない（例: ヤクルト「オスナ」とソフトバンク「オスナ」の混同防止）。
+ */
+export function pitcherThrowHandRLFromYahooPitcherIdWithMentioned(
+  yahooPitcherId: string,
+  yahooPlayersMentioned: Record<string, string | undefined> | undefined,
+  options?: PitcherThrowHandResolveOptions,
+): "R" | "L" | "" {
+  const pid = (yahooPitcherId ?? "").trim()
+  if (!pid) return ""
+  const th = pitcherThrowHandRLFromYahooPitcherId(pid)
+  if (th === "R" || th === "L") return th
+  const name = yahooPlayersMentioned?.[pid]
+  if (!name) return ""
+  return pitcherThrowHandFromJaNameHint(String(name), options)
 }

@@ -9,3 +9,7 @@ output/master/
 
 # ランキングデータ（外部ストレージから取得するため）
 public/data/rankings/
+
+# 1950〜の巨大CSV（本番ビルド・APIでは不要。英字名は master_csv_calculated の 2025 のみ＋名簿）
+_data/master_csv__import_1950_2024/
+_data/master_csv/
