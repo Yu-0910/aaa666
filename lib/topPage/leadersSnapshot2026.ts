@@ -8,6 +8,7 @@
 import fs from "fs"
 import path from "path"
 import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
+import { topLeadersSnapshotPublicUrl } from "@/lib/topPage/leadersSnapshotShared"
 import { buildBattingLeadersConfigFromRankings } from "@/lib/ranking/leadersFromRankingsJson"
 import { buildPitchingLeadersConfigFromRankings } from "@/lib/ranking/leadersFromPitchingRankingsJson"
 import {
@@ -64,6 +65,25 @@ export function readTopLeadersSnapshot(
     if (!isLeadersConfigShape(raw)) return null
     return raw
   } catch {
+    return null
+  }
+}
+
+/** Phase 7: 本番（fs 無し）では R2 直読み（fetchTopLeadersSnapshotRemote） */
+export async function readTopLeadersSnapshotAsync(
+  year: string,
+  league: string,
+  category: TopLeadersCategory
+): Promise<LeadersConfig | null> {
+  const { fetchTopLeadersSnapshotRemote } = await import(
+    "@/lib/topPage/fetchTopLeadersSnapshotRemote"
+  )
+  try {
+    const local = readTopLeadersSnapshot(year, league, category)
+    if (local) return local
+    return fetchTopLeadersSnapshotRemote(year, league, category)
+  } catch (err) {
+    console.error("[readTopLeadersSnapshotAsync]", year, league, category, err)
     return null
   }
 }

@@ -19,11 +19,8 @@ import {
   PITCHING_TOP_2026_MINI_METRICS,
 } from "@/lib/topPagePitching2026Grid"
 import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
-import {
-  readTopLeadersSnapshot,
-  readTopLeadersSnapshotAsync,
-  TOP_LEADERS_SNAPSHOT_YEAR,
-} from "@/lib/topPage/leadersSnapshot2026"
+import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshot2026"
+import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 
 const teamCodeToName: Record<string, string> = {
   H: "阪神",
@@ -270,7 +267,7 @@ export async function getPitchingLeadersAsync(
   }
 
   if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
-    const fromSnapshot = await readTopLeadersSnapshotAsync(year, upperLeague, "pitching")
+    const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, "pitching")
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
       return fromSnapshot
     }

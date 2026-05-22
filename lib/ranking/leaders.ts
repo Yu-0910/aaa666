@@ -14,11 +14,8 @@ import {
   buildBattingLeadersConfigFromRankingsAsync,
   hasBattingRankingsJsonForLeague,
 } from '@/lib/ranking/leadersFromRankingsJson'
-import {
-  readTopLeadersSnapshot,
-  readTopLeadersSnapshotAsync,
-  TOP_LEADERS_SNAPSHOT_YEAR,
-} from '@/lib/topPage/leadersSnapshot2026'
+import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from '@/lib/topPage/leadersSnapshot2026'
+import { fetchTopLeadersSnapshotRemote } from '@/lib/topPage/fetchTopLeadersSnapshotRemote'
 
 export type { LeaderRow, LeadersConfig } from './leadersTypes'
 import type { LeaderRow, LeadersConfig } from './leadersTypes'
@@ -756,7 +753,7 @@ export async function getBattingLeadersAsync(
   const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
 
   if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
-    const fromSnapshot = await readTopLeadersSnapshotAsync(year, upperLeague, 'batting')
+    const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
       return fromSnapshot
     }
@@ -768,6 +765,10 @@ export async function getBattingLeadersAsync(
   if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
     const sync = buildBattingLeadersConfigFromRankings(year, upperLeague)
     if (sync) return sync
+  }
+
+  if (process.env.RANKINGS_BASE_URL?.trim() || process.env.NODE_ENV === 'production') {
+    return { top3Metrics, miniMetrics, leaders: {} }
   }
 
   return getBattingLeaders(year, league)

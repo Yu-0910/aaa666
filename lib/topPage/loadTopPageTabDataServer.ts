@@ -7,7 +7,8 @@ import fs from "fs"
 import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { getProjectRoot } from "@/lib/projectRoot"
-import { readTopLeadersSnapshotAsync } from "@/lib/topPage/leadersSnapshot2026"
+import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
+import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
 import { TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshotShared"
 import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
@@ -81,61 +82,91 @@ async function readWeeklyCurrentWeekMetaAsync(
   )
 }
 
+/** Vercel 本番: R2 URL が無いときはサーバー先読みしない（落ちるのを防ぐ） */
+export function canPreload2026TabDataOnServer(): boolean {
+  if (process.env.RANKINGS_BASE_URL?.trim()) return true
+  if (!process.env.VERCEL) return true
+  return false
+}
+
 export async function loadSeasonTabPayloadServer(
   year: string | number
 ): Promise<SeasonTabPayload | null> {
-  const yearStr = String(year)
-  if (yearStr !== TOP_LEADERS_SNAPSHOT_YEAR) return null
+  try {
+    const yearStr = String(year)
+    if (yearStr !== TOP_LEADERS_SNAPSHOT_YEAR) return null
+    if (!canPreload2026TabDataOnServer()) return null
 
-  const [clBat, plBat, clPitch, plPitch] = await Promise.all([
-    readTopLeadersSnapshotAsync(yearStr, "CL", "batting"),
-    readTopLeadersSnapshotAsync(yearStr, "PL", "batting"),
-    readTopLeadersSnapshotAsync(yearStr, "CL", "pitching"),
-    readTopLeadersSnapshotAsync(yearStr, "PL", "pitching"),
-  ])
+    const loadSnapshot = async (
+      league: string,
+      category: TopLeadersCategory
+    ): Promise<LeadersConfig | null> => {
+      const local = readTopLeadersSnapshot(yearStr, league, category)
+      if (local && Object.keys(local.leaders).length > 0) return local
+      return fetchTopLeadersSnapshotRemote(yearStr, league, category)
+    }
 
-  if (!clBat || !plBat) return null
+    const [clBat, plBat, clPitch, plPitch] = await Promise.all([
+      loadSnapshot("CL", "batting"),
+      loadSnapshot("PL", "batting"),
+      loadSnapshot("CL", "pitching"),
+      loadSnapshot("PL", "pitching"),
+    ])
 
-  const payload: SeasonTabPayload = {
-    batting: { CL: clBat, PL: plBat },
+    if (!clBat || !plBat) return null
+
+    const payload: SeasonTabPayload = {
+      batting: { CL: clBat, PL: plBat },
+    }
+    if (clPitch && plPitch) {
+      payload.pitching = { CL: clPitch, PL: plPitch }
+    }
+    return payload
+  } catch (err) {
+    console.error("[loadSeasonTabPayloadServer]", err)
+    return null
   }
-  if (clPitch && plPitch) {
-    payload.pitching = { CL: clPitch, PL: plPitch }
-  }
-  return payload
 }
 
 export async function loadWeeklyTabPayloadServer(
   year: string | number
 ): Promise<WeeklyTabPayload | null> {
-  const yearStr = String(year)
-  if (yearStr !== TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR) return null
+  try {
+    const yearStr = String(year)
+    if (yearStr !== TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR) return null
+    if (!canPreload2026TabDataOnServer()) return null
 
-  const root = getProjectRoot()
-  const metaRaw = await readWeeklyCurrentWeekMetaAsync(root, yearStr)
-  if (!metaRaw?.weekKey) return null
+    const root = getProjectRoot()
+    const metaRaw = await readWeeklyCurrentWeekMetaAsync(root, yearStr)
+    if (!metaRaw?.weekKey) return null
 
-  const weekMeta = {
-    weekKey: metaRaw.weekKey,
-    weekLabel: metaRaw.weekLabel ?? weekLabelForKey(metaRaw.weekKey),
-    calendarWeekKey: metaRaw.calendarWeekKey ?? metaRaw.weekKey,
-    calendarWeekLabel: metaRaw.calendarWeekLabel ?? weekLabelForKey(metaRaw.calendarWeekKey ?? metaRaw.weekKey),
-    isFallbackWeek: metaRaw.isFallbackWeek ?? false,
-  }
+    const calendarWeekKey = metaRaw.calendarWeekKey ?? metaRaw.weekKey
+    const weekMeta = {
+      weekKey: metaRaw.weekKey,
+      weekLabel: metaRaw.weekLabel ?? weekLabelForKey(metaRaw.weekKey),
+      calendarWeekKey,
+      calendarWeekLabel:
+        metaRaw.calendarWeekLabel ?? weekLabelForKey(calendarWeekKey),
+      isFallbackWeek: metaRaw.isFallbackWeek ?? false,
+    }
 
-  const weekKey = weekMeta.weekKey
-  const [clBat, plBat, clPitch, plPitch] = await Promise.all([
-    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "batting"),
-    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "batting"),
-    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "pitching"),
-    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "pitching"),
-  ])
+    const weekKey = weekMeta.weekKey
+    const [clBat, plBat, clPitch, plPitch] = await Promise.all([
+      readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "batting"),
+      readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "batting"),
+      readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "pitching"),
+      readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "pitching"),
+    ])
 
-  if (!clBat || !plBat || !clPitch || !plPitch) return null
+    if (!clBat || !plBat || !clPitch || !plPitch) return null
 
-  return {
-    weekMeta,
-    batting: { CL: clBat, PL: plBat },
-    pitching: { CL: clPitch, PL: plPitch },
+    return {
+      weekMeta,
+      batting: { CL: clBat, PL: plBat },
+      pitching: { CL: clPitch, PL: plPitch },
+    }
+  } catch (err) {
+    console.error("[loadWeeklyTabPayloadServer]", err)
+    return null
   }
 }
