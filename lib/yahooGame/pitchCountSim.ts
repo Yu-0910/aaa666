@@ -1,6 +1,11 @@
 /**
  * 一球ごとの resultJa から、**最終球を投げる直前**の B-S カウントを求める（Phase 16）。
- * canonical に balls/strikes が無い場合の近似。ファウル・ボール・空振り等の表記に依存。
+ * canonical に balls/strikes が無い場合の近似。
+ *
+ * 分類ルール（「一球結果テキストの分類ギャップ」対策の SSOT）:
+ * - 優先順: ファウル → ボール系 → ストライク系 → neutral
+ * - 表記は Yahoo 一球速報の「詳しい投球内容」由来。
+ * - Python は scripts/pitch_result_ja_classify_cli.ts 経由で本モジュールを呼ぶ（二重実装しない）。
  */
 
 import type { PitchEvent } from "./types"
@@ -24,21 +29,85 @@ export function isValidPitchCountKey(k: string): boolean {
   return VALID_COUNT_KEYS.has(k)
 }
 
-function classifyForCount(r: string): "ball" | "strike" | "foul" | "neutral" {
+/** ファウル（文中に「ファウル」を含む） */
+export function isFoulPitchResultJa(r: string | null | undefined): boolean {
+  const t = (r ?? "").trim()
+  return !!t && /ファウル/.test(t)
+}
+
+/**
+ * ボールカウントが増える表記（四死球・ボール・死球など）。
+ * カウントシミュ・球種別の「balls」列で共通利用。
+ */
+export function isBallLikePitchResultJa(r: string | null | undefined): boolean {
+  const t = (r ?? "").trim()
+  if (!t) return false
+  if (/ボール/.test(t) || /デッドボール/.test(t)) return true
+  if (/死球|触身/.test(t)) return true
+  if (/^四球/.test(t) || /^敬遠/.test(t) || /故意四/.test(t)) return true
+  return false
+}
+
+/**
+ * 球種別空振り率などで「スイングの空振り相当」とみなす一球テキスト。
+ * `空振り` を含む表記に加え、決着表記の `空三振`（先頭一致）を含める。
+ */
+export function isWhiffLikePitchResultJa(r: string | null | undefined): boolean {
+  const t = (r ?? "").trim()
+  if (!t) return false
+  if (/^空三振/.test(t)) return true
+  if (/空振り/.test(t)) return true
+  return false
+}
+
+/** 空振り相当に加え、振り逃げ（スイングストライク扱いの拡張） */
+export function isSwingMissLikePitchResultJa(r: string | null | undefined): boolean {
+  const t = (r ?? "").trim()
+  if (!t) return false
+  if (isWhiffLikePitchResultJa(t)) return true
+  if (/振り逃げ/.test(t)) return true
+  return false
+}
+
+/** 見逃しストライク・見逃し三振の見逃し系、および見三振 */
+export function isTakenStrikeLikePitchResultJa(r: string | null | undefined): boolean {
+  const t = (r ?? "").trim()
+  if (!t) return false
+  if (/^見逃し/.test(t)) return true
+  if (/^見三振/.test(t)) return true
+  return false
+}
+
+export type PitchCountKind = "ball" | "strike" | "foul" | "neutral"
+
+/** B-S シミュ用: 1 球の resultJa を ball / strike / foul / neutral に分類 */
+export function classifyPitchResultForCountJa(r: string | null | undefined): PitchCountKind {
   const t = (r ?? "").trim()
   if (!t) return "neutral"
-  if (/ファウル/.test(t)) return "foul"
-  if (/ボール/.test(t) || /デッドボール/.test(t)) return "ball"
-  if (/死球|触身/.test(t)) return "ball"
-  if (/空振り/.test(t) || /^見逃し/.test(t) || /振り逃げ/.test(t)) return "strike"
+  if (isFoulPitchResultJa(t)) return "foul"
+  if (isBallLikePitchResultJa(t)) return "ball"
+  if (isSwingMissLikePitchResultJa(t) || isTakenStrikeLikePitchResultJa(t)) return "strike"
   return "neutral"
+}
+
+/** 球種別 Strike% / 空振り% 用の相互排他バケット（該当なしは none） */
+export function bucketPitchResultForTypeRow(
+  r: string | null | undefined
+): "balls" | "swing_miss" | "taken" | "foul" | "none" {
+  const t = (r ?? "").trim()
+  if (!t) return "none"
+  if (isFoulPitchResultJa(t)) return "foul"
+  if (isBallLikePitchResultJa(t)) return "balls"
+  if (isSwingMissLikePitchResultJa(t)) return "swing_miss"
+  if (isTakenStrikeLikePitchResultJa(t)) return "taken"
+  return "none"
 }
 
 /**
  * 1 球の後のカウント（MLB ルール：2ストライク後のファウルはカウント不変）
  */
 export function advanceBs(b: number, s: number, resultJa: string): { b: number; s: number } {
-  const kind = classifyForCount(resultJa)
+  const kind = classifyPitchResultForCountJa(resultJa)
   let nb = b
   let ns = s
   if (kind === "ball") {

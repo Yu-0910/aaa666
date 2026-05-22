@@ -15,6 +15,7 @@ import {
   nf3PrDisplay,
   nf3RsaaRswinDisplay,
 } from "./nf3LeaguePitchingFallback"
+import { STADIUM_VENUE_UI_ROWS_PITCHER } from "@/lib/stadiumVenueNormalize"
 
 function pctStr(num: number, den: number): string {
   if (den <= 0) return "ー"
@@ -263,21 +264,7 @@ export type StadiumVsRow = {
   whip: string
 }
 
-const STADIUM_VENUE_ROWS: { display: string; dataKeys: string[]; teamLabel: string }[] = [
-  { display: "エスコンＦ", dataKeys: ["エスコン", "北広島"], teamLabel: "日本ハム" },
-  { display: "楽天モバイル", dataKeys: ["楽天モバイル", "楽天生命"], teamLabel: "楽天" },
-  { display: "ベルーナD", dataKeys: ["ベルーナ", "メットライフ", "西武ドーム"], teamLabel: "西武" },
-  { display: "ZOZOマリン", dataKeys: ["ZOZO", "マリン"], teamLabel: "ロッテ" },
-  { display: "京セラD大阪", dataKeys: ["京セラ"], teamLabel: "オリックス" },
-  { display: "みずほPayPay", dataKeys: ["みずほPayPay", "PayPayドーム"], teamLabel: "ソフトバンク" },
-  { display: "東京ドーム", dataKeys: ["東京ドーム"], teamLabel: "巨人" },
-  { display: "神宮球場", dataKeys: ["神宮球場", "神宮"], teamLabel: "ヤクルト" },
-  { display: "横浜スタジアム", dataKeys: ["横浜スタジアム", "横浜S", "横浜"], teamLabel: "ＤｅＮＡ" },
-  { display: "バンテリンD", dataKeys: ["バンテリンD", "バンテリンドーム"], teamLabel: "中日" },
-  { display: "甲子園球場", dataKeys: ["甲子園球場", "甲子園"], teamLabel: "阪神" },
-  { display: "マツダ", dataKeys: ["マツダ", "マツダスタジアム"], teamLabel: "広島" },
-  { display: "地方球場", dataKeys: ["地方球場", "地方"], teamLabel: "広島" },
-]
+const STADIUM_VENUE_ROWS = STADIUM_VENUE_UI_ROWS_PITCHER
 
 function findStadiumRow(
   rows: PitcherSeasonPocStadiumRow[],

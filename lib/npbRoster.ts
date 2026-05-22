@@ -6,7 +6,7 @@
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "node:url"
-import { compactPlayerName } from "@/lib/playerNameNormalize"
+import { compactPlayerName, isJapaneseNpbListedNameJa } from "@/lib/playerNameNormalize"
 import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
 import { getProjectRoot } from "@/lib/projectRoot"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
@@ -162,7 +162,7 @@ export function getNewPlayers2026(): NpbRosterPlayer[] {
 }
 
 /** 名簿の日本語名から「Ｓ．ファビアン」「Ｈ．メヒア」等の別表記キーを列挙 */
-function rosterJaNameLookupKeys(nameJa: string): string[] {
+export function rosterJaNameLookupKeys(nameJa: string): string[] {
   const c = compactPlayerName(nameJa)
   const keys = new Set<string>([c])
   const noInitial = c
@@ -219,4 +219,42 @@ export function findRosterPlayerByPublicIdOrJaName(
   const hint = (jaHint || "").trim()
   if (!hint || /^\d+$/.test(hint)) return null
   return findRosterPlayerByPublicId(hint)
+}
+
+/**
+ * canonical の `yahooPlayersMentioned` 等の日本語ヒントで名簿行を列挙する。
+ * `teamFullName` 指定時はその球団のみ（対左右の投手腕解決で同姓別球団の混同を防ぐ）。
+ */
+export function findRosterPlayersMatchingJaHint(
+  jaHint: string,
+  opts?: { teamFullName?: string },
+): NpbRosterPlayer[] {
+  const hint = (jaHint || "").trim()
+  if (!hint || /^\d+$/.test(hint)) return []
+  const key = compactPlayerName(hint)
+  if (!key) return []
+
+  const teamFilter = String(opts?.teamFullName ?? "").trim()
+  let roster = getNpbRoster2026()
+  if (teamFilter) roster = roster.filter((r) => String(r.team ?? "").trim() === teamFilter)
+
+  const seen = new Set<string>()
+  const matches: NpbRosterPlayer[] = []
+  for (const r of roster) {
+    const id = String(r.npb_player_id ?? "").trim()
+    if (!id || seen.has(id)) continue
+    const direct = compactPlayerName(r.name_ja) === key
+    const alt = rosterJaNameLookupKeys(r.name_ja).includes(key)
+    if (!direct && !alt) continue
+    seen.add(id)
+    matches.push(r)
+  }
+  return matches
+}
+
+/** 候補がちょうど1人のときだけ投球腕を返す（2人以上は推測しない） */
+export function throwHandFromUniqueRosterPlayers(players: NpbRosterPlayer[]): "R" | "L" | "" {
+  if (players.length !== 1) return ""
+  const th = getPlayerHandednessById(players[0]!.npb_player_id).throwHand
+  return th === "R" || th === "L" ? th : ""
 }

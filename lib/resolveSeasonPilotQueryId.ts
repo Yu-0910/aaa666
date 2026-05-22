@@ -11,7 +11,7 @@
  * - `usePathname()` の末尾セグメントで菊池を同期判定（params より先に安定しやすい）
  *
  * 新しいパイロット選手を足すときは、このモジュールと `getYahooIdForPilot`、および
- * `_data/yahoo_games_pilot/batting_stats.csv`（該当 Yahoo 打者 ID の行）をセットで更新すること。
+ * Phase11 派生（`player_season_batting/{年}/yahoo_{id}.json`）が揃っていることを確認すること。
  */
 
 import {

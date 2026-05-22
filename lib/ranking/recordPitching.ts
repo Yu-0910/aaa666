@@ -8,6 +8,7 @@ import fs from 'fs'
 import path from 'path'
 import type { MetricDefinition } from './types'
 import { getPitchingJsonKey } from './metricMap'
+import { readFsTextWithLegacyEncodings } from './readFsTextWithLegacyEncodings'
 
 function findRecordPitchingCsv(): string | null {
   const searchPaths = [
@@ -33,25 +34,15 @@ export function loadMetricsFromRecordPitching(): MetricDefinition[] {
     return getDefaultPitchingMetrics()
   }
 
-  const encodings: BufferEncoding[] = ['utf-8-sig', 'utf-8', 'shift_jis', 'cp932']
-  let firstLine: string | null = null
+  const content = readFsTextWithLegacyEncodings(csvPath)
+  const rawFirstLine = content ? content.split(/\r?\n/)[0] ?? null : null
 
-  for (const encoding of encodings) {
-    try {
-      const content = fs.readFileSync(csvPath, encoding)
-      firstLine = content.split('\n')[0]
-      if (firstLine) break
-    } catch {
-      continue
-    }
-  }
-
-  if (!firstLine) {
+  if (!rawFirstLine) {
     console.warn('Record_pitching.csv の読み込みに失敗しました。デフォルト指標を使用します。')
     return getDefaultPitchingMetrics()
   }
 
-  firstLine = firstLine.replace(/\r?\n$/, '')
+  const firstLine = rawFirstLine.replace(/\r?\n$/, '')
 
   let metricsRaw = firstLine.split(',')
   if (metricsRaw.length === 1) {

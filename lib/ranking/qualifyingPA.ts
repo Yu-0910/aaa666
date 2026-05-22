@@ -76,6 +76,20 @@ function normalizeMetricKeyForPA(metricKey: string): string {
  * @param metricKey 指標の内部キー（metric_map.json の値や Record.csv のラベル由来）
  * @returns 規定打席が必要な場合はtrue、不要な場合はfalse
  */
+/**
+ * チーム試合数から規定打席を算出（動的規定・ランキング JSON 用）。
+ * 静的 `calculateMinPA(year, league)` と端数処理を揃える。
+ */
+export function minPAFromTeamGames(teamGames: number, year: string): number {
+  if (!Number.isFinite(teamGames) || teamGames <= 0) return 0
+  const calculatedPA = teamGames * 3.1
+  const yearNum = parseInt(year, 10)
+  if (Number.isFinite(yearNum) && yearNum >= 2009) {
+    return Math.round(calculatedPA)
+  }
+  return Math.floor(calculatedPA)
+}
+
 export function shouldRequireQualifyingPA(metricKey: string): boolean {
   const normalizedKey = normalizeMetricKeyForPA(metricKey);
   

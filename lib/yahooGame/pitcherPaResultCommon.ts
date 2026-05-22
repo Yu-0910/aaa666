@@ -1,8 +1,11 @@
 /**
  * 投手 PoC: 打席結果テキストから PA 集計（Phase 1 / Phase 6 共通）
+ * 打者集計と同一の略称解釈: `resultJaHitBases` / `docs/yahoo_plate_appearance_batting_rules.md`
  */
 
 import { isWalkLikeResultText } from "@/lib/baseballWalkResult"
+import { isStrikeoutResultJa } from "@/lib/yahooGame/paOutcomeResultJa"
+import { hitBases, isAtBat } from "@/lib/yahooGame/resultJaHitBases"
 
 export function lastPitchResult(pa: {
   paId?: string
@@ -18,9 +21,6 @@ export function lastPitchResult(pa: {
   )
 }
 
-function isStrikeout(result: string): boolean {
-  return /三振|空三振|見三振/.test(result) || /^(空振り|見逃し)/.test(result)
-}
 function isHbp(result: string): boolean {
   return /死球/.test(result)
 }
@@ -28,23 +28,7 @@ function isSacBunt(result: string): boolean {
   return /犠打|送りバント/.test(result)
 }
 function isSacFly(result: string): boolean {
-  return /犠飛/.test(result)
-}
-
-function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
-  if (/本塁打|ホームラン|HR/.test(result)) return 4
-  if (/三塁打/.test(result)) return 3
-  if (/二塁打/.test(result)) return 2
-  if (/安打|ヒット|左安|中安|右安/.test(result)) return 1
-  return 0
-}
-
-function isAtBat(result: string): boolean {
-  if (!result) return false
-  if (isWalkLikeResultText(result) || isHbp(result) || isSacBunt(result) || isSacFly(result))
-    return false
-  if (/妨害/.test(result)) return false
-  return true
+  return /犠飛|犠牲フライ|犠牲飛/.test(result)
 }
 
 /** 投手視点: 1 打席のカウント */
@@ -62,7 +46,7 @@ export function addPitcherPaCount(
     return
   }
   if (isSacBunt(result) || isSacFly(result)) return
-  if (isStrikeout(result)) {
+  if (isStrikeoutResultJa(result)) {
     agg.so += 1
     if (isAtBat(result)) agg.ab += 1
     return

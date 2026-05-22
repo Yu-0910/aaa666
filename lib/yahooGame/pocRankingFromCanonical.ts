@@ -37,10 +37,16 @@ function paEstimate(b: BattingLine): number {
   return ab + bb + hbp + sh
 }
 
-/** 単純化: 二塁打・三塁打が無い前提の TB（PoC）。本番は Phase 4 以降で精密化 */
+/** PoC 用 TB。battingLines に h2/h3 が付いていればそれを使い、無ければ非 HR を単打近似 */
 function totalBasesApprox(b: BattingLine): number {
   const h = b.h ?? 0
   const hr = b.hr ?? 0
+  if (b.h2 != null || b.h3 != null) {
+    const h2 = b.h2 ?? 0
+    const h3 = b.h3 ?? 0
+    const h1 = Math.max(0, h - h2 - h3 - hr)
+    return h1 + 2 * h2 + 3 * h3 + 4 * hr
+  }
   const singlesDoublesTriples = Math.max(0, h - hr)
   return singlesDoublesTriples + 4 * hr
 }
@@ -73,7 +79,7 @@ function valueForMetric(
   if (L === "打点") return b.rbi ?? 0
   if (L === "本塁打" || L === "HR") return b.hr ?? 0
   if (L === "得点") return b.r ?? 0
-  if (L === "四球" || L === "敬遠" || L === "故意四球") return b.bb ?? 0
+  if (L === "四球" || L === "敬遠" || L === "故意四" || L === "故意四球") return b.bb ?? 0
   if (L === "三振") return b.so ?? 0
   if (L === "打数") return b.ab ?? 0
   if (L === "打席") return paEstimate(b)

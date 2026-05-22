@@ -26,6 +26,7 @@ export function createFielderPlaceholderTotalRow() {
     sf: 0,
     sb: 0,
     cs: 0,
+    e: 0,
     gidp: 0,
     avg: "—",
     obp: "—",

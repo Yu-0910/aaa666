@@ -99,8 +99,3 @@ export function rowMeetsPitchingQualifyingIp(
   const minIp = team ? (thresholds.byTeam.get(team) ?? thresholds.fallbackMinIp) : thresholds.fallbackMinIp
   return ip >= minIp
 }
-
-/** 一覧直下に表示する注記（打撃の規定打席に相当する説明） */
-export function getPitchingQualifyingUiNote(): string {
-  return `※防御率・WHIP などの率系指標は、チームごとに「当該データでの最大試合数×${QUALIFYING_IP_INNINGS_PER_TEAM_GAME}」回以上の投球回がある選手のみ表示しています。`
-}

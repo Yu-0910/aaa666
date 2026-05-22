@@ -6,6 +6,19 @@ export {
   inferPitchingLineFromStatsRow,
 } from "./buildCanonical"
 export {
+  STATS_ROW_APPEARANCE_START_INDEX,
+  buildAppearanceZipResultOverrides,
+  extractAppearanceStatSlotsFromCells,
+  countNonEmptyAppearanceSlots,
+  diagnoseBattingAppearanceSlotsVsPlateAppearances,
+  type AppearancePaVsLogRow,
+} from "./appearanceStatsTrailingCells"
+export {
+  plateAppearanceResolvedResultText,
+} from "./canonicalBattingSeasonAgg"
+export { isAppearancePrimaryZipEnabled } from "./appearancePrimaryFeatureFlag"
+export { isPlateResultAppearanceOnly } from "./plateResultSourceFeatureFlag"
+export {
   ingestCanonicalGame,
   loadManifest,
   saveManifest,

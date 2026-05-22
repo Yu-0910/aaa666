@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "fs"
 import { join } from "path"
 import type { CanonicalGameDocument } from "./types"
 
+/** ディスク上の canonical のみ（一球復元は未マージ）。派生生成は `loadCanonicalGamesMergedForDerivedPipeline` を使うこと。 */
 export function loadCanonicalGames(projectRoot: string): CanonicalGameDocument[] {
   const dir = join(projectRoot, "_data", "scraped_games", "canonical")
   if (!existsSync(dir)) return []

@@ -14,7 +14,7 @@ export type MatchedGameBatting = {
 }
 
 /**
- * canonical の打撃行から、名簿の npb_player_id に一致する1行を返す（Phase 5 個人ページ用）
+ * canonical の打撃行から、名簿の npb_player_id に一致する1行を返す（plan_full_pipeline Phase 6 個人ページ用）
  */
 export function findBattingLineForNpbPlayer(
   canonical: CanonicalGameDocument,

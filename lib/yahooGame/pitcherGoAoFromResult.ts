@@ -5,12 +5,16 @@
 
 export type BattedBallOutKind = "ground" | "air" | "none"
 
+function stripBracketNotes(s: string): string {
+  return String(s ?? "").replace(/\[[^\]]*\]/g, "").trim()
+}
+
 /**
  * 三振・四死球・安打・エラー出塁などは "none"（GO/AO の対象外）。
  * 犠飛はフライ系として "air"、犠打はゴロ系として "ground" とする。
  */
 export function classifyBattedBallOutForGoAo(resultJa: string): BattedBallOutKind {
-  const s = (resultJa ?? "").trim()
+  const s = stripBracketNotes(resultJa)
   if (!s) return "none"
 
   if (/四球|申告|死球|ボーク/.test(s)) return "none"
@@ -20,7 +24,7 @@ export function classifyBattedBallOutForGoAo(resultJa: string): BattedBallOutKin
   if (/三振|見逃し三振|空三振|見三振/.test(s)) return "none"
   if (/^(空振り|見逃し)三振/.test(s)) return "none"
 
-  if (/犠飛/.test(s)) return "air"
+  if (/犠飛|犠牲フライ|犠牲飛/.test(s)) return "air"
   if (/犠打|送りバント/.test(s)) return "ground"
 
   if (/ゴロ|併殺/.test(s)) return "ground"

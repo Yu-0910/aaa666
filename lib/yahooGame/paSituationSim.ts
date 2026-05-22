@@ -1,4 +1,7 @@
 import { isWalkLikeResultText } from '@/lib/baseballWalkResult'
+import { isStrikeoutResultJa } from '@/lib/yahooGame/paOutcomeResultJa'
+import { hitBases } from '@/lib/yahooGame/resultJaHitBases'
+import { stripBracketNotes } from '@/lib/yahooGame/paSettlementStatsFromResultJa'
 
 /**
  * 打席結果テキストからイニング内の走者・アウトを簡易シミュレーションし、
@@ -94,25 +97,21 @@ function applyHomeRun(): Bases {
   return emptyBases()
 }
 
+/** 走者更新用。打撃集計の `hitBases` と略称ルールを共有する。 */
 function isHomeRun(r: string): boolean {
-  return /本塁打|ホームラン|^\s*HR\b/.test(r)
+  return hitBases(r) === 4
 }
 
 function isTriple(r: string): boolean {
-  return /三塁打/.test(r)
+  return hitBases(r) === 3
 }
 
 function isDouble(r: string): boolean {
-  return /二塁打|[左右中]２/.test(r)
+  return hitBases(r) === 2
 }
 
 function isSingle(r: string): boolean {
-  if (isHomeRun(r) || isTriple(r) || isDouble(r)) return false
-  return /安打|ヒット|左安|中安|右安|遊安/.test(r)
-}
-
-function isWalk(r: string): boolean {
-  return /四球|敬遠/.test(r)
+  return hitBases(r) === 1
 }
 
 function isHbp(r: string): boolean {
@@ -124,12 +123,7 @@ function isSacBunt(r: string): boolean {
 }
 
 function isSacFly(r: string): boolean {
-  return /犠飛/.test(r)
-}
-
-function isStrikeout(r: string): boolean {
-  const t = r.trim()
-  return /三振|空三振|見三振/.test(r) || /^見逃し/.test(t) || /^空振り$/.test(t)
+  return /犠飛|犠牲フライ|犠牲飛/.test(r)
 }
 
 function isGidp(r: string): boolean {
@@ -149,7 +143,7 @@ function isGenericBattingOut(r: string): boolean {
     isSacFly(r)
   )
     return false
-  if (isStrikeout(r) || isGidp(r)) return true
+  if (isStrikeoutResultJa(r) || isGidp(r)) return true
   if (/妨害|敬遠|四球|死球/.test(r)) return false
   return (
     /飛|ゴロ|直|併殺|振り逃げ|封殺|失策|エラー|野選|犠/.test(r) ||
@@ -207,7 +201,7 @@ export function applyPlayResult(state: GameState, rawResult: string): GameState 
   if (isGidp(r)) {
     return addOuts({ outs: s.outs, b: { r1: false, r2: false, r3: false } }, 2)
   }
-  if (isStrikeout(r)) {
+  if (isStrikeoutResultJa(r)) {
     return addOuts(s, 1)
   }
   if (isGenericBattingOut(r)) {

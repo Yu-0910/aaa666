@@ -1,14 +1,42 @@
 /**
  * Phase 4: 投球詳細パイロット
- * pitch_details_kikuchi.csv から菊池涼介の打席別球種・コース情報を取得
+ * Phase14 派生が無い場合のフォールバック: pitch_details.csv（batter_id 一致）
  */
 
 import fs from 'fs'
 import path from 'path'
 import type { PlateAppearance } from '@/lib/yahooGame/types'
+import { bucketPitchResultForTypeRow } from '@/lib/yahooGame/pitchCountSim'
+import {
+  getTotalBasesFromResultJa,
+  isHitResultJa,
+  isHomeRunFromResultJa,
+  isHbpResultJa,
+  isSfResultJa,
+} from '@/lib/yahooGame/paSettlementStatsFromResultJa'
+import {
+  isSettlementPitchResultJa,
+  isStrikeoutResultJa,
+} from '@/lib/yahooGame/paOutcomeResultJa'
 import { isWalkLikeResultText } from '@/lib/baseballWalkResult'
 import type { ZoneStat, ZoneStatsResponse } from '@/lib/yahooGame/gamePitcherPilotFiles'
+import {
+  effectiveVsHandBucketForPitcherSplit,
+  pitcherThrowHandRLFromYahooPitcherId,
+} from '@/lib/yahooGame/batterHandFromCanonical'
+import { getProjectRoot } from '@/lib/projectRoot'
 import { DERIVED_SEASON_YEAR_DEFAULT, getYahooIdForPilot } from './seasonStatsPilot'
+import {
+  STRAIGHT_SPEED_BAND_KEYS,
+  kmhToStraightBandKey,
+  resolveStraightSpeedBandKey,
+} from '@/lib/straightSpeedBands'
+
+export {
+  STRAIGHT_SPEED_BANDS,
+  STRAIGHT_SPEED_BAND_KEYS,
+  type StraightSpeedBandKey,
+} from '@/lib/straightSpeedBands'
 
 export type PitchDetailRow = {
   game_id: string
@@ -38,13 +66,14 @@ export type PlateAppearancePitches = {
 }
 
 export function loadPitchDetails(yahooId: string): PlateAppearancePitches[] {
-  if (yahooId !== '1100082') return []
+  const bid = yahooId.trim()
+  if (!bid) return []
 
   const csvPath = path.join(
     process.cwd(),
     '_data',
     'yahoo_games_pilot',
-    'pitch_details_kikuchi.csv'
+    'pitch_details.csv'
   )
   if (!fs.existsSync(csvPath)) return []
 
@@ -57,6 +86,7 @@ export function loadPitchDetails(yahooId: string): PlateAppearancePitches[] {
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',')
     if (cols.length < header.length) continue
+    if ((cols[5] ?? '').trim() !== bid) continue
     rows.push({
       game_id: cols[0] ?? '',
       inning: parseInt(cols[1] ?? '0', 10) || 0,
@@ -125,70 +155,6 @@ export type PitchTypeStats = {
   ops: string
 }
 
-/** 打席の決着球か（打数にカウント） */
-function isSettlementResult(r: string): boolean {
-  const s = (r || '').trim()
-  // 飛球系: Yahoo は括弧付き・番号付き（一飛／二飛／邪飛）など多様。行末 $ は使わない
-  if (
-    /^(左飛|中飛|右飛|一飛|二飛|三飛|遊飛|左邪飛|三邪飛|レフトフライ|センターフライ|ライトフライ|フライ)/.test(
-      s
-    )
-  )
-    return true
-  // 内野直球（遊直 等）
-  if (/遊直|一塁直|二塁直|三塁直/.test(s)) return true
-  if (/ゴロ|ライナー|併殺/.test(s)) return true
-  if (/^(空振り|見逃し)/.test(s)) return true
-  if (/三振|空三振|見三振/.test(s)) return true
-  // 左安・右安・中安・遊安、略号の 右２／左３（全角数字）は「安打」文字列が無い
-  if (/^(左安|右安|中安|遊安|二塁|三塁|本塁|ソロ|満塁)/.test(s)) return true
-  if (/^(右|左|中)[２2]/.test(s) || /^(右|左|中)[３3]/.test(s)) return true
-  if (/安打|ヒット|二塁打|三塁打|本塁打/.test(s)) return true
-  return false
-}
-
-/** 安打か */
-function isHit(r: string): boolean {
-  const s = (r || '').trim()
-  if (/^(左安|右安|中安|遊安|二塁|三塁|本塁|ソロ|満塁)/.test(s)) return true
-  // Yahoo: 右２・左３（二塁打・三塁打の略、全角数字）
-  if (/^(右|左|中)[２2]/.test(s) || /^(右|左|中)[３3]/.test(s)) return true
-  return /安打|ヒット/.test(s)
-}
-
-/** 塁打数を取得（単打=1, 二塁=2, 三塁=3, 本塁打=4） */
-function getTotalBases(r: string): number {
-  const s = (r || '').trim()
-  if (/本塁打|ホームラン|HR/i.test(s)) return 4
-  if (/三塁打/.test(s)) return 3
-  if (/二塁打/.test(s)) return 2
-  if (/^(右|左|中)[３3]/.test(s)) return 3
-  if (/^(右|左|中)[２2]/.test(s)) return 2
-  if (isHit(s)) return 1
-  return 0
-}
-
-/** 本塁打か */
-function isHomeRun(r: string): boolean {
-  return getTotalBases(r) === 4
-}
-
-/** 死球か */
-function isHBP(r: string): boolean {
-  return /死球/.test((r || '').trim())
-}
-
-/** 犠飛・犠打（投犠打／捕犠打。ゾーン集計では sf 欄に寄せる） */
-function isSF(r: string): boolean {
-  return /犠飛|投犠打|捕犠打/.test((r || '').trim())
-}
-
-/** 三振か（決着球が空振り・見逃し） */
-function isStrikeout(r: string): boolean {
-  const s = (r || '').trim()
-  return /^空振り|^見逃し|三振|空三振|見三振/.test(s)
-}
-
 /** 投球詳細から球種別成績を集計 */
 export function aggregateByPitchType(plateAppearances: PlateAppearancePitches[]): PitchTypeStats[] {
   const allPitches = plateAppearances.flatMap((pa) => pa.pitches)
@@ -210,28 +176,44 @@ export function aggregateByPitchType(plateAppearances: PlateAppearancePitches[])
     const t = last.pitch_type || '不明'
     if (!settlementByType.has(t)) settlementByType.set(t, { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 })
     const rec = settlementByType.get(t)!
-    if (isSettlementResult(last.result)) {
+    if (isSettlementPitchResultJa(last.result)) {
       rec.ab += 1
-      if (isHit(last.result)) {
+      if (isHitResultJa(last.result)) {
         rec.h += 1
-        rec.tb += getTotalBases(last.result)
-        if (isHomeRun(last.result)) rec.hr += 1
+        rec.tb += getTotalBasesFromResultJa(last.result)
+        if (isHomeRunFromResultJa(last.result)) rec.hr += 1
       }
     }
-    if (isStrikeout(last.result)) rec.so += 1
+    if (isStrikeoutResultJa(last.result)) rec.so += 1
     if (isWalkLikeResultText(last.result)) rec.bb += 1
-    if (isHBP(last.result)) rec.hbp += 1
-    if (isSF(last.result)) rec.sf += 1
+    if (isHbpResultJa(last.result)) rec.hbp += 1
+    if (isSfResultJa(last.result)) rec.sf += 1
   }
 
   const result: PitchTypeStats[] = []
   for (const [pitchType, pitches] of byType.entries()) {
-    const balls = pitches.filter((p) => /^ボール/.test(p.result)).length
-    const swingMiss = pitches.filter((p) => /^空振り/.test(p.result)).length
-    const taken = pitches.filter((p) => /^見逃し/.test(p.result)).length
-    const foul = pitches.filter((p) => /^ファウル/.test(p.result)).length
+    let balls = 0
+    let swingMiss = 0
+    let taken = 0
+    let foul = 0
+    for (const p of pitches) {
+      switch (bucketPitchResultForTypeRow(p.result)) {
+        case 'balls':
+          balls += 1
+          break
+        case 'swing_miss':
+          swingMiss += 1
+          break
+        case 'taken':
+          taken += 1
+          break
+        case 'foul':
+          foul += 1
+          break
+      }
+    }
     const set = settlementByType.get(pitchType) || { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 }
-    // ストライク = 空振り+見逃し+ファウル+インプレイ（打数でアウト/安打＝三振以外のAB）
+    // ストライク = 空振り相当+見逃し+ファウル+インプレイ（打数でアウト/安打＝三振以外のAB）
     const inPlay = set.ab - set.so
     const strikes = swingMiss + taken + foul + inPlay
 
@@ -287,12 +269,13 @@ export type ZoneStats = {
   hbp: number
   sf: number
   avg: string
-  ops: string
+  /** Isolated power: (TB − H) / AB */
+  isop: string
 }
 
 /** 決着球でゾーンに何か記録されるか（AB/BB/HBP/SF） */
 function isZoneSettlement(r: string): boolean {
-  return isSettlementResult(r) || isWalkLikeResultText(r) || isHBP(r) || isSF(r)
+  return isSettlementPitchResultJa(r) || isWalkLikeResultText(r) || isHbpResultJa(r) || isSfResultJa(r)
 }
 
 /** 投球詳細からゾーン別成績を集計 */
@@ -322,16 +305,16 @@ export function aggregateByZone(
         const rec = byZone.get(zid)!
         if (isWalkLikeResultText(last.result)) {
           rec.bb += 1
-        } else if (isHBP(last.result)) {
+        } else if (isHbpResultJa(last.result)) {
           rec.hbp += 1
-        } else if (isSF(last.result)) {
+        } else if (isSfResultJa(last.result)) {
           rec.sf += 1
-        } else if (isSettlementResult(last.result)) {
+        } else if (isSettlementPitchResultJa(last.result)) {
           rec.ab += 1
-          if (isHit(last.result)) {
+          if (isHitResultJa(last.result)) {
             rec.h += 1
-            rec.tb += getTotalBases(last.result)
-            if (isHomeRun(last.result)) rec.hr += 1
+            rec.tb += getTotalBasesFromResultJa(last.result)
+            if (isHomeRunFromResultJa(last.result)) rec.hr += 1
           }
         }
       }
@@ -352,11 +335,7 @@ export function aggregateByZone(
     }
     const { ab, h, hr, tb, bb, hbp, sf } = rec
     const avg = ab > 0 ? (h / ab).toFixed(3) : '—'
-    const pa = ab + bb + hbp + sf
-    const obp = pa > 0 ? (h + bb + hbp) / pa : 0
-    const slg = ab > 0 ? tb / ab : 0
-    const opsVal = obp + slg
-    const ops = pa > 0 ? opsVal.toFixed(3) : '—'
+    const isopStr = ab > 0 ? ((tb - h) / ab).toFixed(3) : '—'
 
     result.push({
       zoneId: z,
@@ -369,7 +348,7 @@ export function aggregateByZone(
       hbp: rec.hbp,
       sf: rec.sf,
       avg,
-      ops,
+      isop: isopStr,
     })
   }
   return result
@@ -377,14 +356,28 @@ export function aggregateByZone(
 
 /** Phase 14 派生 JSON（canonical 由来の球種・ゾーン・球速帯） */
 export type SpeedBandStatsRow = {
-  ops: string
+  /** Isolated Power: (TB − H) / AB */
+  isop: string
   avg: string
   hr: number
-  strike_pct: string
+  /** 二塁打（打席確定かつ最終球がストレートの帯に属する場合） */
+  h2: number
+  /** 全ストレート投球に占める当該球速帯の投球数の割合 */
+  pitch_share_pct: string
   whiff_pct: string
 }
 
 export type SpeedBandStatsMap = Partial<Record<string, SpeedBandStatsRow>>
+
+/** Phase14 JSON ルートに付く speedBandStats 内フィールドの日本語意味（ドキュメント用） */
+export type Phase14SpeedBandStatsFieldJa = {
+  /** 全ストレート投球に占める当該球速帯の投球数の割合 */
+  pitch_share_pct: '投球割合'
+}
+
+export const PHASE14_SPEED_BAND_STATS_FIELD_JA: Phase14SpeedBandStatsFieldJa = {
+  pitch_share_pct: '投球割合',
+}
 
 export type Phase14PitchFile = {
   schemaVersion?: string
@@ -393,20 +386,13 @@ export type Phase14PitchFile = {
   pitchTypeStats?: PitchTypeStats[]
   zoneStats?: ZoneStats[]
   speedBandStats?: SpeedBandStatsMap
+  /** speedBandStats 各プロパティの意味（投球割合＝pitch_share_pct など） */
+  speedBandStatsFieldJa?: Phase14SpeedBandStatsFieldJa
 }
-
-export const STRAIGHT_SPEED_BAND_KEYS = [
-  '160-',
-  '155-159',
-  '150-154',
-  '145-149',
-  '140-144',
-  '-139',
-] as const
 
 function phase14PitchJsonPath(yahooId: string, year: string): string {
   return path.join(
-    process.cwd(),
+    getProjectRoot(),
     '_data',
     'derived',
     'player_pitch_from_canonical',
@@ -471,16 +457,6 @@ export function canonicalPlateAppearanceToPilot(
   }
 }
 
-function kmhToStraightBand(kmh: number): string | null {
-  if (!Number.isFinite(kmh)) return null
-  if (kmh >= 160) return '160-'
-  if (kmh >= 155) return '155-159'
-  if (kmh >= 150) return '150-154'
-  if (kmh >= 145) return '145-149'
-  if (kmh >= 140) return '140-144'
-  return '-139'
-}
-
 export function isStraightPitchKind(pitchType: string): boolean {
   const s = (pitchType || '').trim()
   if (!s || s === '不明') return false
@@ -496,16 +472,29 @@ export function aggregateSpeedBandsStraightOnly(
     for (const p of pa.pitches) {
       if (!isStraightPitchKind(p.pitch_type)) continue
       const kmh = parseInt(p.speed_kmh, 10)
-      const band = kmhToStraightBand(kmh)
+      const band = kmhToStraightBandKey(kmh)
       if (!band) continue
       if (!byBand.has(band)) byBand.set(band, [])
       byBand.get(band)!.push(p)
     }
   }
 
+  let totalStraightPitches = 0
+  for (const arr of byBand.values()) totalStraightPitches += arr.length
+
   const settlementByBand = new Map<
     string,
-    { ab: number; h: number; hr: number; tb: number; so: number; bb: number; hbp: number; sf: number }
+    {
+      ab: number
+      h: number
+      hr: number
+      h2: number
+      tb: number
+      so: number
+      bb: number
+      hbp: number
+      sf: number
+    }
   >()
 
   for (const pa of plateAppearances) {
@@ -513,24 +502,36 @@ export function aggregateSpeedBandsStraightOnly(
     const last = pa.pitches[pa.pitches.length - 1]
     if (!isStraightPitchKind(last.pitch_type)) continue
     const kmh = parseInt(last.speed_kmh, 10)
-    const band = kmhToStraightBand(kmh)
+    const band = kmhToStraightBandKey(kmh)
     if (!band) continue
     if (!settlementByBand.has(band)) {
-      settlementByBand.set(band, { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 })
+      settlementByBand.set(band, {
+        ab: 0,
+        h: 0,
+        hr: 0,
+        h2: 0,
+        tb: 0,
+        so: 0,
+        bb: 0,
+        hbp: 0,
+        sf: 0,
+      })
     }
     const rec = settlementByBand.get(band)!
-    if (isSettlementResult(last.result)) {
+    if (isSettlementPitchResultJa(last.result)) {
       rec.ab += 1
-      if (isHit(last.result)) {
+      if (isHitResultJa(last.result)) {
         rec.h += 1
-        rec.tb += getTotalBases(last.result)
-        if (isHomeRun(last.result)) rec.hr += 1
+        const tbAdd = getTotalBasesFromResultJa(last.result)
+        rec.tb += tbAdd
+        if (isHomeRunFromResultJa(last.result)) rec.hr += 1
+        if (tbAdd === 2) rec.h2 += 1
       }
     }
-    if (isStrikeout(last.result)) rec.so += 1
+    if (isStrikeoutResultJa(last.result)) rec.so += 1
     if (isWalkLikeResultText(last.result)) rec.bb += 1
-    if (isHBP(last.result)) rec.hbp += 1
-    if (isSF(last.result)) rec.sf += 1
+    if (isHbpResultJa(last.result)) rec.hbp += 1
+    if (isSfResultJa(last.result)) rec.sf += 1
   }
 
   const out: SpeedBandStatsMap = {}
@@ -540,6 +541,7 @@ export function aggregateSpeedBandsStraightOnly(
       ab: 0,
       h: 0,
       hr: 0,
+      h2: 0,
       tb: 0,
       so: 0,
       bb: 0,
@@ -550,26 +552,37 @@ export function aggregateSpeedBandsStraightOnly(
       continue
     }
 
-    const swingMiss = pitches.filter((p) => /^空振り/.test(p.result)).length
-    const taken = pitches.filter((p) => /^見逃し/.test(p.result)).length
-    const foul = pitches.filter((p) => /^ファウル/.test(p.result)).length
-    const inPlay = set.ab - set.so
-    const strikes = swingMiss + taken + foul + inPlay
-    const strikePct =
-      pitches.length > 0 ? ((strikes / pitches.length) * 100).toFixed(1) + '%' : '—'
+    let swingMiss = 0
+    let taken = 0
+    let foul = 0
+    for (const p of pitches) {
+      switch (bucketPitchResultForTypeRow(p.result)) {
+        case 'swing_miss':
+          swingMiss += 1
+          break
+        case 'taken':
+          taken += 1
+          break
+        case 'foul':
+          foul += 1
+          break
+      }
+    }
     const swingTotal = swingMiss + foul + set.ab
     const whiffPct = swingTotal > 0 ? ((swingMiss / swingTotal) * 100).toFixed(1) + '%' : '—'
     const avg = set.ab > 0 ? (set.h / set.ab).toFixed(3) : '—'
-    const paTot = set.ab + set.bb + set.hbp + set.sf
-    const obp = paTot > 0 ? (set.h + set.bb + set.hbp) / paTot : 0
-    const slg = set.ab > 0 ? set.tb / set.ab : 0
-    const ops = set.ab > 0 || paTot > 0 ? (obp + slg).toFixed(3) : '—'
+    const isop = set.ab > 0 ? ((set.tb - set.h) / set.ab).toFixed(3) : '—'
+    const pitchSharePct =
+      totalStraightPitches > 0
+        ? ((pitches.length / totalStraightPitches) * 100).toFixed(1) + '%'
+        : '—'
 
     out[band] = {
-      ops,
+      isop,
       avg,
       hr: set.hr,
-      strike_pct: strikePct,
+      h2: set.h2,
+      pitch_share_pct: pitchSharePct,
       whiff_pct: whiffPct,
     }
   }
@@ -591,8 +604,72 @@ export function loadSpeedBandStats(
   year: string = DERIVED_SEASON_YEAR_DEFAULT
 ): SpeedBandStatsMap {
   const b = loadPhase14PitchBundle(yahooId, year)
-  if (b?.speedBandStats && Object.keys(b.speedBandStats).length > 0) return b.speedBandStats
-  return {}
+  const raw = b?.speedBandStats
+  if (!raw || Object.keys(raw).length === 0) return {}
+
+  const out: SpeedBandStatsMap = {}
+  for (const [band, row] of Object.entries(raw)) {
+    const nk = resolveStraightSpeedBandKey(band)
+    if (!nk) continue
+    const r = row as Partial<SpeedBandStatsRow> & { ops?: string; strike_pct?: string }
+    const next: SpeedBandStatsRow = {
+      isop: typeof r.isop === 'string' ? r.isop : '—',
+      avg: typeof r.avg === 'string' ? r.avg : '—',
+      hr: typeof r.hr === 'number' ? r.hr : 0,
+      h2: typeof r.h2 === 'number' ? r.h2 : 0,
+      pitch_share_pct: typeof r.pitch_share_pct === 'string' ? r.pitch_share_pct : '—',
+      whiff_pct: typeof r.whiff_pct === 'string' ? r.whiff_pct : '—',
+    }
+    const prev = out[nk]
+    if (prev) {
+      out[nk] = {
+        isop: prev.isop,
+        avg: prev.avg,
+        hr: prev.hr + next.hr,
+        h2: prev.h2 + next.h2,
+        pitch_share_pct: prev.pitch_share_pct,
+        whiff_pct: prev.whiff_pct,
+      }
+    } else {
+      out[nk] = next
+    }
+  }
+  return out
+}
+
+function migrateLegacyZoneStatsRow(raw: unknown): ZoneStats | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  const zoneId = Number(r.zoneId)
+  if (!Number.isFinite(zoneId)) return null
+  const pitches = Number(r.pitches) || 0
+  const ab = Number(r.ab) || 0
+  const h = Number(r.h) || 0
+  const hr = Number(r.hr) || 0
+  const tb = typeof r.tb === 'number' && Number.isFinite(r.tb) ? r.tb : 0
+  const bb = Number(r.bb) || 0
+  const hbp = Number(r.hbp) || 0
+  const sf = Number(r.sf) || 0
+  const avg =
+    typeof r.avg === 'string' ? r.avg : ab > 0 ? (h / ab).toFixed(3) : '—'
+  let isop: string
+  if (typeof r.isop === 'string') isop = r.isop
+  else if (ab > 0 && typeof r.tb === 'number' && Number.isFinite(r.tb))
+    isop = ((r.tb - h) / ab).toFixed(3)
+  else isop = '—'
+  return {
+    zoneId,
+    pitches,
+    ab,
+    h,
+    hr,
+    tb,
+    bb,
+    hbp,
+    sf,
+    avg,
+    isop,
+  }
 }
 
 /** ゾーン別成績：Phase 14 派生があれば優先 */
@@ -601,7 +678,11 @@ export function loadZoneStats(
   year: string = DERIVED_SEASON_YEAR_DEFAULT
 ): ZoneStats[] {
   const b = loadPhase14PitchBundle(yahooId, year)
-  if (b?.zoneStats && b.zoneStats.length > 0) return b.zoneStats
+  if (b?.zoneStats && b.zoneStats.length > 0) {
+    return b.zoneStats
+      .map(migrateLegacyZoneStatsRow)
+      .filter((x): x is ZoneStats => x != null)
+  }
   const pas = loadPitchDetails(yahooId)
   return aggregateByZone(pas)
 }
@@ -609,7 +690,7 @@ export function loadZoneStats(
 type HandBucket = 'vsRight' | 'vsLeft'
 
 function isZoneSettlementForPitch(r: string): boolean {
-  return isSettlementResult(r) || isWalkLikeResultText(r) || isHBP(r) || isSF(r)
+  return isSettlementPitchResultJa(r) || isWalkLikeResultText(r) || isHbpResultJa(r) || isSfResultJa(r)
 }
 
 /** ゾーン集計用: 両打は投手の投球腕に応じて対右 or 対左の片側のみ。腕不明の両打のみ従来どおり両ゾーンに配分 */
@@ -641,8 +722,9 @@ export function buildPitcherZoneStatsFromCanonicalPlateAppearances(
 
   let sawPitch = false
   for (const pa of plateAppearances) {
-    if ((pa.yahooPitcherId ?? '').trim() !== pid) continue
-    if ((pa.pitchEvents?.length ?? 0) > 0) {
+    const pilotProbe = canonicalPlateAppearanceToPilot(gameId, pa)
+    if (!pilotProbe?.pitches.length) continue
+    if (pilotProbe.pitches.some((p) => (p.pitcher_id ?? '').trim() === pid)) {
       sawPitch = true
       break
     }
@@ -669,15 +751,17 @@ export function buildPitcherZoneStatsFromCanonicalPlateAppearances(
   }
 
   for (const pa of plateAppearances) {
-    if ((pa.yahooPitcherId ?? '').trim() !== pid) continue
     const pilot = canonicalPlateAppearanceToPilot(gameId, pa)
     if (!pilot || pilot.pitches.length === 0) continue
+
+    const pitchesForPid = pilot.pitches.filter((p) => (p.pitcher_id ?? '').trim() === pid)
+    if (pitchesForPid.length === 0) continue
 
     const batterId = (pa.yahooBatterId ?? '').trim()
     const bat = resolveBatHandJa(batterId)
     const hands = handBucketsForZonePitcherVsBatter(bat, pitcherThrow)
 
-    for (const p of pilot.pitches) {
+    for (const p of pitchesForPid) {
       const zid = parseInt(p.zone_id, 10)
       if (zid < 1 || zid > 25) continue
       for (const h of hands) {
@@ -687,6 +771,7 @@ export function buildPitcherZoneStatsFromCanonicalPlateAppearances(
 
     const sorted = [...pilot.pitches].sort((a, b) => (a.pitch_no ?? 0) - (b.pitch_no ?? 0))
     const finalPitch = sorted[sorted.length - 1]!
+    if ((finalPitch.pitcher_id ?? '').trim() !== pid) continue
     /** 決着の結果は常に最終球。ゾーンだけ直前の有効マスを借りる（fetch_pitcher_zone_stats.py と同じ） */
     const settlementResult = finalPitch.result
 
@@ -707,16 +792,16 @@ export function buildPitcherZoneStatsFromCanonicalPlateAppearances(
       const rec = ensureRec(hb, zid)
       if (isWalkLikeResultText(settlementResult)) {
         rec.bb += 1
-      } else if (isHBP(settlementResult)) {
+      } else if (isHbpResultJa(settlementResult)) {
         rec.hbp += 1
-      } else if (isSF(settlementResult)) {
+      } else if (isSfResultJa(settlementResult)) {
         rec.sf += 1
-      } else if (isSettlementResult(settlementResult)) {
+      } else if (isSettlementPitchResultJa(settlementResult)) {
         rec.ab += 1
-        if (isHit(settlementResult)) {
+        if (isHitResultJa(settlementResult)) {
           rec.h += 1
-          rec.tb += getTotalBases(settlementResult)
-          if (isHomeRun(settlementResult)) rec.hr += 1
+          rec.tb += getTotalBasesFromResultJa(settlementResult)
+          if (isHomeRunFromResultJa(settlementResult)) rec.hr += 1
         }
       }
     }
@@ -737,11 +822,10 @@ export function buildPitcherZoneStatsFromCanonicalPlateAppearances(
       }
       const { ab, h, hr, tb, bb, hbp, sf } = rec
       const avg = ab > 0 ? (h / ab).toFixed(3) : '—'
-      const paTot = ab + bb + hbp + sf
-      const obp = paTot > 0 ? (h + bb + hbp) / paTot : 0
-      const slg = ab > 0 ? tb / ab : 0
-      const ops = paTot > 0 ? (obp + slg).toFixed(3) : '—'
-      out.push({ zoneId: z, pitches, ab, h, hr, ops, avg })
+      const isop = ab > 0 ? ((tb - h) / ab).toFixed(3) : '—'
+      const row: ZoneStat = { zoneId: z, pitches, ab, h, hr, isop, avg }
+      if (tb > 0 || ab > 0) row.tb = tb
+      out.push(row)
     }
     return out
   }

@@ -147,6 +147,21 @@ export type PitcherSeasonPocPayload = {
     bySituation: Array<
       PitcherSeasonPocPaAgg & { key: string; label: string }
     >
+    /**
+     * 巡目別（1〜5巡目以上）: 打者側「pa_round」に相当する区分で、投手の被打撃成績を合算。
+     * 未実装/未生成のシーズンでは省略される（UI は「—」で表示）。
+     */
+    byPaRound?: Array<PitcherSeasonPocPaAgg & { key: string; label: string }>
+    /**
+     * 巡目別の球種一覧: 巡目（1〜5巡目以上）ごとの投球数（pitchEvents）を球種で集計。
+     * pct は当該巡目の総投球数に対する割合（0〜100）。
+     */
+    byPaRoundPitchTypes?: Array<{
+      key: string
+      label: string
+      pitches_total: number
+      rows: Array<{ pitch_type: string; pitches: number; pct: number }>
+    }>
     byInning: Array<PitcherSeasonPocPaAgg & { inning: number }>
     /**
      * 球場別: 試合ごとの pitchingLines を球場（yahoo_game_meta.stadiumName）で合算。

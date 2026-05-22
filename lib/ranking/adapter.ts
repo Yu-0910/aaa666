@@ -7,6 +7,8 @@
 import type { BattingCsvRow, RankingRow, MetricDefinition } from './types'
 import { formatStat } from '@/lib/formatStat'
 import { getJsonKey, loadMetricMap } from './metricMap'
+import { calculateXRNf3 } from '@/lib/xr'
+import { calculateRCNf3 } from '@/lib/rc'
 
 /**
  * 計算で補完される指標の値を計算
@@ -174,29 +176,55 @@ function calculateDerivedValue(row: BattingCsvRow, csvKey: string): number | nul
       return obp - avg
     }
   } else if (csvKey === 'RC' || csvKey === 'rc') {
-    // RC = ((H + BB) * TB) / (AB + BB)
+    // nf3互換RC（丸めは表示側で行う）
     const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
     const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
-    const tb = calculateTB(row)
+    const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
+    const cs = getNumericValue(row, ['CS', 'cs', '盗塁死', '盗塁刺']) ?? 0
+    const gidp = getNumericValue(row, ['GIDP', 'gidp', 'GDP', 'gdp', '併殺打']) ?? 0
+    const tb = calculateTB(row) ?? 0
+    const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
+    const sh = getNumericValue(row, ['SH', 'sh', '犠打']) ?? 0
+    const sb = getNumericValue(row, ['SB', 'sb', '盗塁']) ?? 0
+    const so = getNumericValue(row, ['SO', 'so', 'K', 'k', '三振']) ?? 0
     const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
-    const denominator = ab + bb
-    if (denominator > 0 && tb !== null) {
-      return ((h + bb) * tb) / denominator
-    }
+
+    return calculateRCNf3({ h, bb, hbp, cs, gidp, tb, sf, sh, sb, so, ab })
   } else if (csvKey === 'XR' || csvKey === 'xr') {
-    // XR = 0.50*1B + 0.72*2B + 1.04*3B + 1.44*HR + 0.33*(BB+HBP) + 0.18*SB - 0.32*CS - 0.098*(AB-H)
+    // nf3互換XR（丸めは表示側で行う）
+    const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
     const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
     const doubles = getNumericValue(row, ['2B', 'doubles', '二塁打']) ?? 0
     const triples = getNumericValue(row, ['3B', 'triples', '三塁打']) ?? 0
     const hr = getNumericValue(row, ['HR', 'hr', '本塁打']) ?? 0
     const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
+    const ibb = getNumericValue(row, ['IBB', 'ibb', '敬遠']) ?? 0
     const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
     const sb = getNumericValue(row, ['SB', 'sb', '盗塁']) ?? 0
     const cs = getNumericValue(row, ['CS', 'cs', '盗塁死', '盗塁刺']) ?? 0
-    const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
-    const singles = h > 0 ? h - doubles - triples - hr : 0
-    return 0.50 * singles + 0.72 * doubles + 1.04 * triples + 1.44 * hr +
-           0.33 * (bb + hbp) + 0.18 * sb - 0.32 * cs - 0.098 * (ab - h)
+    const so = getNumericValue(row, ['SO', 'so', 'K', 'k', '三振']) ?? 0
+    const gidp = getNumericValue(row, ['GIDP', 'gidp', 'GDP', 'gdp', '併殺打']) ?? 0
+    const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
+    const sh = getNumericValue(row, ['SH', 'sh', '犠打']) ?? 0
+
+    const singles = Math.max(0, h - doubles - triples - hr)
+    return calculateXRNf3({
+      singles,
+      doubles,
+      triples,
+      hr,
+      bb,
+      ibb,
+      hbp,
+      sb,
+      cs,
+      ab,
+      h,
+      so,
+      gidp,
+      sf,
+      sh,
+    })
   } else if (csvKey === 'BABIP' || csvKey === 'babip') {
     // BABIP = (H - HR) / (AB - SO - HR + SF)
     const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
@@ -232,28 +260,20 @@ function calculateDerivedValue(row: BattingCsvRow, csvKey: string): number | nul
     }
   } else if (csvKey === 'NOI' || csvKey === 'noi') {
     // NOI = (OBP + SLG/3) * 1000
-    let obp = getNumericValue(row, ['OBP', 'obp', '出塁率'])
-    if (obp === null) {
-      const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
-      const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
-      const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
-      const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
-      const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
-      const denominator = ab + bb + hbp + sf
-      if (denominator > 0) {
-        obp = (h + bb + hbp) / denominator
-      }
-    }
-    let slg = getNumericValue(row, ['SLG', 'slg', '長打率'])
-    if (slg === null) {
-      const tb = calculateTB(row)
-      const ab = getNumericValue(row, ['AB', 'ab', '打数'])
-      if (ab !== null && ab > 0 && tb !== null) {
-        slg = tb / ab
-      }
-    }
-    if (obp !== null) {
-      return (obp + (slg ?? 0) / 3) * 1000
+    // 注意: 表示用に丸められた OBP/SLG を使わず、カウントから未丸めの実数を作って計算する
+    const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
+    const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
+    const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
+    const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
+    const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
+    const obpDen = ab + bb + hbp + sf
+    const obp = obpDen > 0 ? (h + bb + hbp) / obpDen : null
+
+    const tb = calculateTB(row)
+    const slg = ab > 0 && tb !== null ? tb / ab : null
+
+    if (obp !== null && slg !== null) {
+      return (obp + slg / 3) * 1000
     }
   } else if (csvKey === 'GPA' || csvKey === 'gpa') {
     // GPA = (1.8 * OBP + SLG) / 4
@@ -478,6 +498,11 @@ function getMetricValue(row: BattingCsvRow, metric: MetricDefinition): number | 
     
     // その他の計算可能な指標の場合
     if (calculatedValue !== null) {
+      // NOI は CSV 側の値が誤っているケースがあるため、常に計算値を優先する
+      // 例: CSV の NOI が OBP*1000 のみになっている等
+      if (csvKey === 'NOI' || csvKey === 'noi') {
+        return calculatedValue
+      }
       // CSVの値が存在しない場合は計算値を返す
       if (csvValue === null) {
         return calculatedValue
@@ -557,6 +582,15 @@ function getMetricValue(row: BattingCsvRow, metric: MetricDefinition): number | 
           }
           return calculatedValue
         }
+      }
+
+      // XR は nf3 互換式に統一するため、常に計算値を使用（CSVの値は無視）
+      if (csvKey === 'XR' || csvKey === 'xr') {
+        return calculatedValue
+      }
+      // RC も nf3 互換式に統一するため、常に計算値を使用（CSVの値は無視）
+      if (csvKey === 'RC' || csvKey === 'rc') {
+        return calculatedValue
       }
     }
   }

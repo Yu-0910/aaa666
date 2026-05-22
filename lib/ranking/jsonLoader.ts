@@ -7,12 +7,19 @@ import { getRankingsUrl } from './url'
 
 import { sanitizeMetricForPath } from './url'
 
+/** サーバー側 fetch 用のサイト origin（Vercel では VERCEL_URL を利用） */
+function getServerSiteOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (explicit) return explicit.replace(/\/+$/, '')
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, '')}`
+  return 'http://localhost:3000'
+}
+
 function buildRankingFetchUrl(relativeUnderRankings: string): string {
   const url = getRankingsUrl(`data/rankings/${relativeUnderRankings}`)
   const baseUrl =
-    typeof window === 'undefined'
-      ? process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-      : window.location.origin
+    typeof window === 'undefined' ? getServerSiteOrigin() : window.location.origin
   return `${baseUrl}${url}`
 }
 
@@ -61,7 +68,7 @@ async function fetchPitchingRankingJsonForYear(
  * パス形式: data/rankings/{year}/{season}/{metric}.json または {metric}_all.json
  * R2 およびローカル構造と一致。
  *
- * Phase 7: 年度はそのまま参照（2026 → data/rankings/2026/...）。
+ * 年度はそのまま参照（2026 → `data/rankings/2026/...`。計画書 Phase 8 の公開 JSON 配置）。
  * ファイル未配置時のみ 2025 をフォールバック（`npm run rankings:bootstrap-2026` で 2026 を生成可能）。
  *
  * @param year 年度（例: '2025', '2026'）
@@ -130,7 +137,7 @@ export async function loadRankingJsons(
 
 /**
  * 投手ランキング JSON（`public/data/rankings/pitching/{year}/{season}/…`）を取得。
- * 打撃用 `loadRankingJson` とは異なり、**2026 欠損時の 2025 フォールバックは行わない**（計画書 Phase 6）。
+ * 打撃用 `loadRankingJson` とは異なり、**2026 欠損時の 2025 フォールバックは行わない**（計画書 Phase 8）。
  *
  * @param year 年度（完成品は `'2026'` のみ想定）
  * @param season `CL` | `PL` 等
@@ -145,6 +152,74 @@ export async function loadPitchingRankingJson(
   const response = await fetchPitchingRankingJsonForYear(year, season, metric, useAllPlayers)
   if (!response.ok) {
     throw new Error(`Failed to fetch pitching ranking data: ${response.status} ${response.statusText}`)
+  }
+  return response.json()
+}
+
+async function fetchWeeklyBattingRankingJson(
+  year: string,
+  weekKey: string,
+  season: string,
+  metric: string
+): Promise<Response> {
+  const fileBase = sanitizeMetricForPath(metric)
+  const relative = `weekly/${year}/${weekKey}/${season}/${fileBase}.json`
+  const fullUrl = buildRankingFetchUrl(relative)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[loadWeeklyRankingJson] Fetching: ${fullUrl}`)
+  }
+  return fetch(fullUrl, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+}
+
+async function fetchWeeklyPitchingRankingJson(
+  year: string,
+  weekKey: string,
+  season: string,
+  metric: string
+): Promise<Response> {
+  const fileBase = sanitizeMetricForPath(metric)
+  const relative = `pitching/weekly/${year}/${weekKey}/${season}/${fileBase}.json`
+  const fullUrl = buildRankingFetchUrl(relative)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[loadWeeklyPitchingRankingJson] Fetching: ${fullUrl}`)
+  }
+  return fetch(fullUrl, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  })
+}
+
+/** 週間打撃ランキング（Phase 28 出力）。率系の規定フィルタは UI（team-games.json）で適用。 */
+export async function loadWeeklyRankingJson(
+  year: string,
+  weekKey: string,
+  season: string,
+  metric: string
+): Promise<unknown> {
+  const response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch weekly ranking data: ${response.status} ${response.statusText}`)
+  }
+  return response.json()
+}
+
+/** 週間投手ランキング（Phase 28 出力） */
+export async function loadWeeklyPitchingRankingJson(
+  year: string,
+  weekKey: string,
+  season: string,
+  metric: string
+): Promise<unknown> {
+  const response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric)
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch weekly pitching ranking data: ${response.status} ${response.statusText}`
+    )
   }
   return response.json()
 }

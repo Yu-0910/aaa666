@@ -119,17 +119,16 @@ export async function loadBattingCSV(
     throw new Error(`CSV file not found: ${csvPath}`)
   }
 
-  // CSVファイルを読み込む（文字コード自動判定）
+  // CSVファイルを読み込む（BOM 付き UTF-8 対応）
   let fileContent: string
   try {
-    fileContent = fs.readFileSync(csvPath, 'utf-8-sig')
-  } catch (e) {
-    // UTF-8-SIGで失敗した場合はUTF-8を試す
-    try {
-      fileContent = fs.readFileSync(csvPath, 'utf-8')
-    } catch (e2) {
-      throw new Error(`Failed to read CSV file: ${csvPath}`)
+    const buf = fs.readFileSync(csvPath)
+    fileContent = buf.toString('utf8')
+    if (fileContent.charCodeAt(0) === 0xfeff) {
+      fileContent = fileContent.slice(1)
     }
+  } catch (e) {
+    throw new Error(`Failed to read CSV file: ${csvPath}`)
   }
   
   const lines = fileContent.split('\n').filter(line => line.trim())

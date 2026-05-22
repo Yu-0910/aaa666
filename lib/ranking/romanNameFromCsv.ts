@@ -7,6 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import { getNpbRoster2026, rosterEnglishShortForRanking } from '@/lib/npbRoster'
 import { normalizeRomanMapKey, normalizeRomanMapKeyNoSpace } from '@/lib/ranking/romanNameLookup'
+import { readFsTextWithLegacyEncodings } from '@/lib/ranking/readFsTextWithLegacyEncodings'
 
 /** スクリプト向けに re-export（phase12 / phase19 等） */
 export { normalizeRomanMapKey, normalizeRomanMapKeyNoSpace } from '@/lib/ranking/romanNameLookup'
@@ -149,16 +150,7 @@ export function getRomanNameMap(year: string, league: string): Record<string, st
 
   const csvPath = findBattingCsvForRoman(dataYear, upperLeague)
   if (csvPath) {
-    let content: string | null = null
-    const encodings: BufferEncoding[] = ['utf-8-sig', 'utf-8', 'shift_jis', 'cp932']
-    for (const enc of encodings) {
-      try {
-        content = fs.readFileSync(csvPath, enc)
-        break
-      } catch {
-        continue
-      }
-    }
+    const content = readFsTextWithLegacyEncodings(csvPath)
     if (content) {
       const rows = parseCsvSimple(content)
       for (const row of rows) {

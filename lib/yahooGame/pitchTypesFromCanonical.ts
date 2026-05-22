@@ -3,6 +3,8 @@
  */
 
 import type { GamePitchTypeRow, GamePitchTypesResponse } from "./gamePitcherPilotFiles"
+import { bucketPitchResultForTypeRow } from "./pitchCountSim"
+import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import type { PlateAppearance, PitchEvent } from "./types"
 
 type SettlementAcc = {
@@ -20,11 +22,6 @@ function emptyAcc(): SettlementAcc {
   return { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 }
 }
 
-/** 打席結果テキスト（resultSummaryJa 優先） */
-function isStrikeoutSummary(s: string): boolean {
-  return /三振|空三振|見三振/.test(s)
-}
-
 function isWalkSummary(s: string): boolean {
   return /四球|敬遠|故意四球/.test(s)
 }
@@ -34,7 +31,7 @@ function isHbpSummary(s: string): boolean {
 }
 
 function isSfSummary(s: string): boolean {
-  return /犠飛|犠牲飛/.test(s)
+  return /犠飛|犠牲フライ|犠牲飛/.test(s)
 }
 
 function isSacHitSummary(s: string): boolean {
@@ -64,7 +61,7 @@ function countsAtBat(s: string): boolean {
   if (!t) return false
   if (isWalkSummary(t) || isHbpSummary(t)) return false
   if (isSfSummary(t) || isSacHitSummary(t)) return false
-  if (isStrikeoutSummary(t)) return true
+  if (isStrikeoutResultJa(t)) return true
   if (/ゴロ|ライナー|併殺/.test(t)) return true
   if (/飛|フライ/.test(t)) return true
   if (isHitSummary(t)) return true
@@ -100,9 +97,7 @@ export function buildPitchTypesResponseFromCanonical(
   const pid = yahooPitcherId.trim()
   if (!pid) return null
 
-  const pas = plateAppearances.filter(
-    (p) => (p.yahooPitcherId ?? "").trim() === pid && (p.pitchEvents?.length ?? 0) > 0
-  )
+  const pas = plateAppearances.filter((p) => (p.pitchEvents?.length ?? 0) > 0)
   if (!pas.length) return null
 
   const pitchesByType: Record<string, PitchEvent[]> = {}
@@ -112,13 +107,21 @@ export function buildPitchTypesResponseFromCanonical(
     const events = sortEvents(pa.pitchEvents ?? [])
     if (!events.length) continue
 
-    for (const e of events) {
+    const eventsForPid = events.filter(
+      (e) => (String(e.yahooPitcherId ?? "").trim() || (pa.yahooPitcherId ?? "").trim()) === pid,
+    )
+    if (!eventsForPid.length) continue
+
+    for (const e of eventsForPid) {
       const pt = (e.pitchTypeJa ?? "").trim() || "不明"
       if (!pitchesByType[pt]) pitchesByType[pt] = []
       pitchesByType[pt].push(e)
     }
 
     const last = events[events.length - 1]!
+    const lastPid = (String(last.yahooPitcherId ?? "").trim() || (pa.yahooPitcherId ?? "").trim())
+    if (lastPid !== pid) continue
+
     const pt = (last.pitchTypeJa ?? "").trim() || "不明"
     const summary = (pa.resultSummaryJa ?? last.resultJa ?? "").trim()
     if (!settlementByType[pt]) settlementByType[pt] = emptyAcc()
@@ -133,7 +136,7 @@ export function buildPitchTypesResponseFromCanonical(
         if (tb === 4) rec.hr += 1
       }
     }
-    if (isStrikeoutSummary(summary)) rec.so += 1
+    if (isStrikeoutResultJa(summary)) rec.so += 1
     if (isWalkSummary(summary)) rec.bb += 1
     if (isHbpSummary(summary)) rec.hbp += 1
     if (isSfSummary(summary)) rec.sf += 1
@@ -158,10 +161,20 @@ export function buildPitchTypesResponseFromCanonical(
     let foul = 0
     for (const p of pitches) {
       const r = (p.resultJa ?? "").trim()
-      if (/^ボール/.test(r)) balls += 1
-      else if (/^空振り/.test(r)) swingMiss += 1
-      else if (/^見逃し/.test(r)) taken += 1
-      else if (/^ファウル/.test(r)) foul += 1
+      switch (bucketPitchResultForTypeRow(r)) {
+        case "balls":
+          balls += 1
+          break
+        case "swing_miss":
+          swingMiss += 1
+          break
+        case "taken":
+          taken += 1
+          break
+        case "foul":
+          foul += 1
+          break
+      }
     }
 
     const inPlay = setRec.ab - setRec.so
@@ -257,8 +270,12 @@ export function yahooPitcherIdsWithPitchEvents(plateAppearances: PlateAppearance
   const set = new Set<string>()
   for (const pa of plateAppearances) {
     if ((pa.pitchEvents?.length ?? 0) === 0) continue
-    const id = (pa.yahooPitcherId ?? "").trim()
-    if (id) set.add(id)
+    const paPid = (pa.yahooPitcherId ?? "").trim()
+    if (paPid) set.add(paPid)
+    for (const e of pa.pitchEvents ?? []) {
+      const id = String(e.yahooPitcherId ?? "").trim()
+      if (id) set.add(id)
+    }
   }
   return [...set].sort()
 }

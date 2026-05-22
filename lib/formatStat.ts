@@ -3,7 +3,14 @@
  * baseballdata.jp の表示ルールに準拠
  */
 
-export type MetricFormat = "decimal3_no0" | "percent1" | "decimal2" | "decimal3_with0" | "int";
+export type MetricFormat =
+  | "decimal3_no0"
+  | "percent1"
+  | "decimal2"
+  | "decimal3_with0"
+  | "int"
+  /** formatMap に無い指標用（ランキング UI 全体が落ちないようにする） */
+  | "auto";
 
 /**
  * 防御率（ERA）表示の統一ルール。
@@ -21,8 +28,7 @@ export function formatEra(value: unknown): string {
 /**
  * 指標ラベル（日本語）から表示フォーマットを取得
  * @param metricLabel 指標ラベル（例: "OPS", "打率", "BB%"）
- * @returns 表示フォーマット種別
- * @throws Error マッピングに存在しない指標の場合
+ * @returns 表示フォーマット種別（未登録ラベルは `auto`）
  */
 export function getMetricFormat(metricLabel: string): MetricFormat {
   // 完全マッピングテーブル
@@ -57,13 +63,12 @@ export function getMetricFormat(metricLabel: string): MetricFormat {
     'XR': 'decimal2',
     'NOI': 'decimal2',
     
-    // decimal3_with0
-    'BB/K': 'decimal3_with0',
-    'BB-K': 'decimal3_with0',
-    'BBK': 'decimal3_with0',
-    'BB_K': 'decimal3_with0',
-    'bb_k': 'decimal3_with0',
-    'bb_k': 'decimal3_with0',
+    // BB/K は小数2桁表示に統一（小数第3位を四捨五入）
+    'BB/K': 'decimal2',
+    'BB-K': 'decimal2',
+    'BBK': 'decimal2',
+    'BB_K': 'decimal2',
+    'bb_k': 'decimal2',
     
     // int
     '安打': 'int',
@@ -118,12 +123,12 @@ export function getMetricFormat(metricLabel: string): MetricFormat {
     '勝率': 'decimal3_no0',
     '投球回': 'decimal2',
     'K-BB％': 'percent1',
+    'K-BB%': 'percent1',
     '勝利': 'int',
     '敗戦': 'int',
     'HLD': 'int',
     'Ｓ': 'int',
     'ＨＰ': 'int',
-    '試合': 'int',
     '先発': 'int',
     '完封': 'int',
     '回数': 'decimal2',
@@ -145,9 +150,14 @@ export function getMetricFormat(metricLabel: string): MetricFormat {
 
   const format = formatMap[metricLabel];
   if (!format) {
-    throw new Error(`Unknown metric label: ${metricLabel}. Please add it to formatMap in formatStat.ts`);
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `[formatStat] Unknown metric label "${metricLabel}". Add it to formatMap in formatStat.ts. Using heuristic display.`
+      );
+    }
+    return "auto";
   }
-  
+
   return format;
 }
 
@@ -156,7 +166,6 @@ export function getMetricFormat(metricLabel: string): MetricFormat {
  * @param metricLabel 指標ラベル（例: "OPS", "打率", "BB%"）
  * @param value 指標値（数値、文字列、null、undefined など）
  * @returns フォーマット済み文字列
- * @throws Error マッピングに存在しない指標の場合
  */
 export function formatStat(metricLabel: string, value: unknown): string {
   // 欠損値の統一処理
@@ -167,8 +176,8 @@ export function formatStat(metricLabel: string, value: unknown): string {
   // 数値化
   const numValue = typeof value === 'number' ? value : Number(value);
   
-  // NaN の場合は "-" を返す
-  if (Number.isNaN(numValue)) {
+  // NaN / 非有限は "-" を返す
+  if (Number.isNaN(numValue) || !Number.isFinite(numValue)) {
     return '-';
   }
 
@@ -192,7 +201,9 @@ export function formatStat(metricLabel: string, value: unknown): string {
     }
 
     case 'decimal2': {
-      return numValue.toFixed(2);
+      // 二進浮動小数の誤差で .xx5 が下に丸められるのを防ぐ
+      const rounded = Math.round((numValue + 1e-12) * 100) / 100
+      return rounded.toFixed(2);
     }
 
     case 'decimal3_with0': {
@@ -202,6 +213,22 @@ export function formatStat(metricLabel: string, value: unknown): string {
     case 'int': {
       // 整数表示（四捨五入は行わず、文字列化のみ）
       return String(Math.round(numValue));
+    }
+
+    case 'auto': {
+      // 整数に近い値は整数表示、それ以外は小数第3位（先頭0省略は rate 向け）
+      const roundedInt = Math.round(numValue)
+      if (Math.abs(numValue - roundedInt) < 1e-9) {
+        return String(roundedInt)
+      }
+      const formatted = numValue.toFixed(3)
+      if (formatted.startsWith("0.")) {
+        return "." + formatted.slice(2)
+      }
+      if (formatted.startsWith("-0.")) {
+        return "-." + formatted.slice(3)
+      }
+      return formatted
     }
 
     default: {

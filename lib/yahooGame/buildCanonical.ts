@@ -8,8 +8,10 @@ import type {
   TeamBlock,
   TextPlaySection,
 } from "./types"
+import { capExtraBaseHitsToHitLineTotal, countExtraBaseHitsFromStatsRowTextCells } from "./resultJaHitBases"
 import type { NormalizedGameV0 } from "./normalizedV0"
 import { createHash } from "crypto"
+import { extractAppearanceStatSlotsFromCells } from "./appearanceStatsTrailingCells"
 
 function compositeFingerprint(sources: NormalizedGameV0["sources"]): string {
   const keys = Object.keys(sources).sort()
@@ -69,10 +71,18 @@ function asTeamBlocks(
 function asTextSections(rows: unknown[]): TextPlaySection[] {
   return rows
     .filter((r): r is Record<string, unknown> => r != null && typeof r === "object")
-    .map((r) => ({
-      sectionTitle: String(r.sectionTitle ?? ""),
-      lines: Array.isArray(r.lines) ? r.lines.map(String) : [],
-    }))
+    .map((r) => {
+      const lines = Array.isArray(r.lines) ? r.lines.map(String) : []
+      const rawH = r.playHeadlineJa
+      const playHeadlineJa = Array.isArray(rawH)
+        ? rawH.map((x) => (x == null || x === "" ? null : String(x)))
+        : undefined
+      const sec: TextPlaySection = { sectionTitle: String(r.sectionTitle ?? ""), lines }
+      if (playHeadlineJa && playHeadlineJa.length === lines.length) {
+        sec.playHeadlineJa = playHeadlineJa as (string | null)[]
+      }
+      return sec
+    })
 }
 
 function asStatsRows(rows: unknown[]): StatsPlayerRowV0[] {
@@ -86,6 +96,8 @@ function asStatsRows(rows: unknown[]): StatsPlayerRowV0[] {
 }
 
 const DIGITS = /^\d+$/
+
+/** Sportsnavi Phase2（Node のみ実行向け）でも同一式を使う場合は lib/yahooGame/sportsnaviStatsTextParse.mjs と同期すること */
 
 /** 防御率っぽい（0.00 / 3.60 / 13.50）。打率1.000はここに含めない */
 function isEraTwoDecimals(s: string): boolean {
@@ -111,14 +123,18 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
   if (ab > 15) return null
   const avgOk = avg === "-" || /^\.\d{3}$/.test(avg) || /^\d\.\d{3}$/.test(avg)
   if (!avgOk) return null
-  return {
+  const hOpt = parseCellInt(5, c)
+  const hrOpt = parseCellInt(13, c)
+  const raw23 = countExtraBaseHitsFromStatsRowTextCells(c)
+  const capped = capExtraBaseHitsToHitLineTotal(raw23.h2, raw23.h3, hOpt ?? 0, hrOpt ?? 0)
+  const line: BattingLine = {
     yahooPlayerId: row.yahooPlayerId,
     playerName: row.playerName,
     positionCell: p0,
     avg,
     ab,
     r: parseCellInt(4, c),
-    h: parseCellInt(5, c),
+    h: hOpt,
     rbi: parseCellInt(6, c),
     so: parseCellInt(7, c),
     bb: parseCellInt(8, c),
@@ -126,9 +142,16 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
     sh: parseCellInt(10, c),
     sb: parseCellInt(11, c),
     e: parseCellInt(12, c),
-    hr: parseCellInt(13, c),
+    hr: hrOpt,
     inferredFrom: "stats_row_v0",
   }
+  if (c.length > 14 && (capped.h2 > 0 || capped.h3 > 0)) {
+    line.h2 = capped.h2
+    line.h3 = capped.h3
+  }
+  const slots = extractAppearanceStatSlotsFromCells(c)
+  if (slots.length > 0) line.appearancePaSlotsJa = slots
+  return line
 }
 
 /** 投手成績行（投のみ打撃なし / H・敗・勝 / 先頭空＋防御率） */
@@ -138,10 +161,12 @@ export function inferPitchingLineFromStatsRow(row: StatsPlayerRowV0): PitchingLi
   const p0 = c[0] ?? ""
 
   if (p0 === "投" && c[2] === "-") {
+    const slotsEarly = extractAppearanceStatSlotsFromCells(c)
     return {
       yahooPlayerId: row.yahooPlayerId,
       playerName: row.playerName,
       inferredFrom: "stats_row_v0",
+      ...(slotsEarly.length > 0 ? { appearanceVsBfSlotsJa: slotsEarly } : {}),
     }
   }
 
@@ -160,7 +185,7 @@ export function inferPitchingLineFromStatsRow(row: StatsPlayerRowV0): PitchingLi
   else if (p0 === "敗") decision = "loss"
   else if (p0 === "H") decision = "hold"
 
-  return {
+  const pl: PitchingLine = {
     yahooPlayerId: row.yahooPlayerId,
     playerName: row.playerName,
     era: c[2],
@@ -178,6 +203,9 @@ export function inferPitchingLineFromStatsRow(row: StatsPlayerRowV0): PitchingLi
     decision,
     inferredFrom: "stats_row_v0",
   }
+  const slots = extractAppearanceStatSlotsFromCells(c)
+  if (slots.length > 0) pl.appearanceVsBfSlotsJa = slots
+  return pl
 }
 
 export function buildCanonicalFromNormalizedV0(input: NormalizedGameV0): CanonicalGameDocument {

@@ -24,8 +24,8 @@ export function loadMetricMap(): Record<string, string> {
   }
 
   const content = fs.readFileSync(metricMapPath, 'utf-8')
-  cachedMetricMap = JSON.parse(content)
-  
+  cachedMetricMap = JSON.parse(content) as Record<string, string>
+
   return cachedMetricMap
 }
 

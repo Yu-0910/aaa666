@@ -144,6 +144,37 @@ export function parsePregameInfoFromTextPbp(doc: CanonicalGameDocument): Pregame
   }
 }
 
+/** `paId` / `inningHalf` から「表」「裏」を取り出す */
+export function inningHalfTokenFromPlateAppearance(pa: {
+  paId?: string
+  inningHalf?: string
+}): "表" | "裏" | "" {
+  const ih = String(pa.inningHalf ?? "").trim()
+  const m1 = ih.match(/(表|裏)/u)
+  if (m1?.[1] === "表" || m1?.[1] === "裏") return m1[1]
+  const m2 = String(pa.paId ?? "")
+    .trim()
+    .match(/^\d+-\d+-(表|裏)-/u)
+  if (m2?.[1] === "表" || m2?.[1] === "裏") return m2[1]
+  return ""
+}
+
+/**
+ * 打席の半回から守備側（投手の所属）の名簿 `team` 正式名。
+ * 試合前情報が取れない・半回不明のときは ""（略称名簿照合は行わない）。
+ */
+export function defendingTeamFullNameFromPlateAppearance(
+  doc: CanonicalGameDocument,
+  pa: { paId?: string; inningHalf?: string },
+): string {
+  const pre = parsePregameInfoFromTextPbp(doc)
+  if (!pre?.visitorFullName || !pre?.homeFullName) return ""
+  const half = inningHalfTokenFromPlateAppearance(pa)
+  if (half === "表") return pre.homeFullName
+  if (half === "裏") return pre.visitorFullName
+  return ""
+}
+
 /**
  * 試合前情報から推定されるチーム情報を canonical に注入したコピーを返す。
  * `scoreboard` と `teams` が既に埋まっている場合は元の doc を返す。

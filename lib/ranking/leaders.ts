@@ -6,21 +6,20 @@
 import type { BattingCsvRow, MetricDefinition } from './types'
 import { loadBattingCsv } from './loaders'
 import { shouldRequireQualifyingPA, calculateMinPA } from './qualifyingPA'
+import { calculateXRNf3 } from '@/lib/xr'
+import { calculateRCNf3 } from '@/lib/rc'
+import { BATTING_TOP_2025_RBI_TOP_N } from '@/lib/topPageBatting2025Grid'
+import {
+  buildBattingLeadersConfigFromRankings,
+  hasBattingRankingsJsonForLeague,
+} from '@/lib/ranking/leadersFromRankingsJson'
+import {
+  readTopLeadersSnapshot,
+  TOP_LEADERS_SNAPSHOT_YEAR,
+} from '@/lib/topPage/leadersSnapshot2026'
 
-export type LeaderRow = {
-  rank: 1 | 2 | 3
-  name: string
-  team: string
-  teamName: string
-  value: string | number
-  romanName?: string
-}
-
-export type LeadersConfig = {
-  top3Metrics: string[]
-  miniMetrics: string[]
-  leaders: Record<string, LeaderRow[]>
-}
+export type { LeaderRow, LeadersConfig } from './leadersTypes'
+import type { LeaderRow, LeadersConfig } from './leadersTypes'
 
 // チーム名のマッピング
 const teamCodeToName: Record<string, string> = {
@@ -290,17 +289,21 @@ function getMetricValueForLeader(row: BattingCsvRow, metric: MetricDefinition): 
       return null
     }
     
-    // RC = ((H + BB) * TB) / (AB + BB)
+    // RC（nf3互換 Technical RC。丸めは表示側）
     if (csvKey === 'RC' || csvKey === 'rc') {
       const h = getNumericValue(row, ['H', 'h', 'Hits', 'hits', '安打']) ?? 0
       const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
-      const tb = calculateTB(row)
+      const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
+      const cs = getNumericValue(row, ['CS', 'cs', '盗塁死', '盗塁刺']) ?? 0
+      const gidp = getNumericValue(row, ['GIDP', 'gidp', 'GDP', 'gdp', '併殺打']) ?? 0
+      const tb = calculateTB(row) ?? 0
+      const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
+      const sh = getNumericValue(row, ['SH', 'sh', '犠打']) ?? 0
+      const sb = getNumericValue(row, ['SB', 'sb', '盗塁']) ?? 0
+      const so = getNumericValue(row, ['SO', 'so', 'K', 'k', '三振']) ?? 0
       const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
-      const denominator = ab + bb
-      if (denominator > 0 && tb !== null) {
-        return ((h + bb) * tb) / denominator
-      }
-      return null
+
+      return calculateRCNf3({ h, bb, hbp, cs, gidp, tb, sf, sh, sb, so, ab })
     }
     
     // XR = 0.50*1B + 0.72*2B + 1.04*3B + 1.44*HR + 0.33*(BB+HBP) + 0.18*SB - 0.32*CS - 0.098*(AB-H)
@@ -310,13 +313,34 @@ function getMetricValueForLeader(row: BattingCsvRow, metric: MetricDefinition): 
       const triples = getNumericValue(row, ['3B', 'triples', '三塁打']) ?? 0
       const hr = getNumericValue(row, ['HR', 'hr', '本塁打']) ?? 0
       const bb = getNumericValue(row, ['BB', 'bb', '四球']) ?? 0
+      const ibb = getNumericValue(row, ['IBB', 'ibb', '敬遠']) ?? 0
       const hbp = getNumericValue(row, ['HBP', 'hbp', '死球']) ?? 0
       const sb = getNumericValue(row, ['SB', 'sb', '盗塁']) ?? 0
       const cs = getNumericValue(row, ['CS', 'cs', '盗塁死', '盗塁刺']) ?? 0
       const ab = getNumericValue(row, ['AB', 'ab', '打数']) ?? 0
-      const singles = h > 0 ? h - doubles - triples - hr : 0
-      return 0.50 * singles + 0.72 * doubles + 1.04 * triples + 1.44 * hr +
-             0.33 * (bb + hbp) + 0.18 * sb - 0.32 * cs - 0.098 * (ab - h)
+      const so = getNumericValue(row, ['SO', 'so', 'K', 'k', '三振']) ?? 0
+      const gidp = getNumericValue(row, ['GIDP', 'gidp', 'GDP', 'gdp', '併殺打']) ?? 0
+      const sf = getNumericValue(row, ['SF', 'sf', '犠飛']) ?? 0
+      const sh = getNumericValue(row, ['SH', 'sh', '犠打']) ?? 0
+
+      const singles = Math.max(0, h - doubles - triples - hr)
+      return calculateXRNf3({
+        singles,
+        doubles,
+        triples,
+        hr,
+        bb,
+        ibb,
+        hbp,
+        sb,
+        cs,
+        ab,
+        h,
+        so,
+        gidp,
+        sf,
+        sh,
+      })
     }
     
     // BABIP = (H - HR) / (AB - SO - HR + SF)
@@ -615,20 +639,49 @@ function findMetricByName(
 
 /**
  * 指定年度・リーグの打撃成績リーダーを取得（汎用関数）
+ * 2026: 事前生成 `public/data/top-leaders/2026/{league}/batting.json` を優先（無ければランキング JSON から切り出し）
+ * 2025 以前: CSV から算出（従来）
  */
 export function getBattingLeaders(year: string, league: string): LeadersConfig {
+  const upperLeague = league.toUpperCase()
+
+  const top3Metrics = ['OPS', '打率', '本塁打']
+  const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
+
+  if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
+    const fromSnapshot = readTopLeadersSnapshot(year, upperLeague, 'batting')
+    if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[getBattingLeaders] ${year} ${upperLeague}: top-leaders snapshot`)
+      }
+      return fromSnapshot
+    }
+  }
+
+  if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
+    const fromRankings = buildBattingLeadersConfigFromRankings(year, upperLeague)
+    if (fromRankings) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[getBattingLeaders] ${year} ${upperLeague}: extracted from rankings JSON`)
+      }
+      return fromRankings
+    }
+    if (year === '2026') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          `[getBattingLeaders] ${year} ${upperLeague}: rankings JSON missing or empty; run npm run rankings:rebuild after pipeline`
+        )
+      }
+      return { top3Metrics, miniMetrics, leaders: {} }
+    }
+  }
+
   const { rows, availableMetrics } = loadBattingCsv(year, league)
   
   if (process.env.NODE_ENV === 'development') {
     console.log(`[getBattingLeaders] ${year} ${league}: ${rows.length} rows, ${availableMetrics.length} metrics`)
     console.log(`[getBattingLeaders] Available metrics:`, availableMetrics.map(m => ({ key: m.key, label: m.label, csvKey: m.csvKey })))
   }
-  
-  // トップ3表示の指標
-  const top3Metrics = ['OPS', '打率', '本塁打']
-  
-  // トップ1表示の指標
-  const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
   
   const leaders: Record<string, LeaderRow[]> = {}
   
@@ -660,12 +713,16 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
     
     if (metric) {
       const sortOrder = (metric.key === 'kpct' || metric.csvKey === 'K%') ? 'asc' : 'desc'
-      const top1 = getTopNForMetric(rows, metric, 1, sortOrder, year, league)
+      const topN =
+        metricName === '打点' && (year === '2025' || year === '2026')
+          ? BATTING_TOP_2025_RBI_TOP_N
+          : 1
+      const topLeaders = getTopNForMetric(rows, metric, topN, sortOrder, year, league)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[getBattingLeaders] Top 1 for "${metricName}":`, top1.length, 'leaders')
+        console.log(`[getBattingLeaders] Top ${topN} for "${metricName}":`, topLeaders.length, 'leaders')
       }
-      if (top1.length > 0) {
-        leaders[metricName] = top1
+      if (topLeaders.length > 0) {
+        leaders[metricName] = topLeaders
       }
     }
   }

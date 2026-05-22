@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import type { MetricDefinition } from './types'
 import { getJsonKey } from './metricMap'
+import { readFsTextWithLegacyEncodings } from './readFsTextWithLegacyEncodings'
 
 /**
  * Record.csvのパスを探索（優先順位順）
@@ -39,27 +40,15 @@ export function loadMetricsFromRecord(): MetricDefinition[] {
     return getDefaultMetrics()
   }
 
-  // CSVファイルを読み込む（複数エンコーディング対応）
-  const encodings: BufferEncoding[] = ['utf-8-sig', 'utf-8', 'shift_jis', 'cp932']
-  let firstLine: string | null = null
+  const content = readFsTextWithLegacyEncodings(recordCsvPath)
+  const rawFirstLine = content ? content.split(/\r?\n/)[0] ?? null : null
 
-  for (const encoding of encodings) {
-    try {
-      const content = fs.readFileSync(recordCsvPath, encoding)
-      firstLine = content.split('\n')[0]
-      if (firstLine) break
-    } catch (error) {
-      continue
-    }
-  }
-
-  if (!firstLine) {
+  if (!rawFirstLine) {
     console.warn('Record.csvの読み込みに失敗しました。デフォルト指標を使用します。')
     return getDefaultMetrics()
   }
 
-  // 改行文字を除去
-  firstLine = firstLine.replace(/\r?\n$/, '')
+  const firstLine = rawFirstLine.replace(/\r?\n$/, '')
 
   // 区切り文字を判定（カンマ区切りを優先）
   let metricsRaw = firstLine.split(',')
