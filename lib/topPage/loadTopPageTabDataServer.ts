@@ -1,20 +1,39 @@
 /**
- * トップ TOP / 今週タブ用スナップショットのサーバー読み込み（fs のみ・クライアントから import しない）
+ * トップ TOP / 今週タブ用スナップショットのサーバー読み込み（クライアントから import しない）
+ * 本番: public/data は無い → RANKINGS_BASE_URL 経由で R2 直読み
  */
 
 import fs from "fs"
 import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
+import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { getProjectRoot } from "@/lib/projectRoot"
-import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
+import { readTopLeadersSnapshotAsync } from "@/lib/topPage/leadersSnapshot2026"
 import { TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshotShared"
 import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
-import { readWeeklyCurrentWeekJson } from "@/lib/topPage/weeklyCurrentWeekMeta"
+import {
+  readWeeklyCurrentWeekJson,
+  type WeeklyCurrentWeekJson,
+} from "@/lib/topPage/weeklyCurrentWeekMeta"
 import { topWeeklyLeadersSnapshotFilePath } from "@/lib/topPage/weeklyLeadersSnapshotBuild"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/weeklyLeadersSnapshotShared"
+import {
+  topWeeklyCurrentWeekPublicUrl,
+  topWeeklyLeadersSnapshotPublicUrl,
+  TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR,
+} from "@/lib/topPage/weeklyLeadersSnapshotShared"
 
-function readWeeklyTopLeadersSnapshot(
+function parseWeeklyLeadersConfig(raw: unknown): LeadersConfig | null {
+  const o = raw as LeadersConfig & { leaders?: Record<string, unknown[]> }
+  if (!o?.leaders || Object.keys(o.leaders).length === 0) return null
+  return {
+    top3Metrics: o.top3Metrics ?? [],
+    miniMetrics: o.miniMetrics ?? [],
+    leaders: o.leaders,
+  }
+}
+
+function readWeeklyTopLeadersSnapshotLocal(
   projectRoot: string,
   year: string,
   weekKey: string,
@@ -24,18 +43,42 @@ function readWeeklyTopLeadersSnapshot(
   const p = topWeeklyLeadersSnapshotFilePath(projectRoot, year, weekKey, league, category)
   if (!fs.existsSync(p)) return null
   try {
-    const raw = JSON.parse(fs.readFileSync(p, "utf-8")) as LeadersConfig & {
-      leaders?: Record<string, unknown[]>
-    }
-    if (!raw.leaders || Object.keys(raw.leaders).length === 0) return null
-    return {
-      top3Metrics: raw.top3Metrics ?? [],
-      miniMetrics: raw.miniMetrics ?? [],
-      leaders: raw.leaders,
-    }
+    return parseWeeklyLeadersConfig(JSON.parse(fs.readFileSync(p, "utf-8")))
   } catch {
     return null
   }
+}
+
+async function readWeeklyTopLeadersSnapshotAsync(
+  projectRoot: string,
+  year: string,
+  weekKey: string,
+  league: string,
+  category: TopLeadersCategory
+): Promise<LeadersConfig | null> {
+  const local = readWeeklyTopLeadersSnapshotLocal(
+    projectRoot,
+    year,
+    weekKey,
+    league,
+    category
+  )
+  if (local) return local
+  const raw = await fetchDisplayJsonServer<unknown>(
+    topWeeklyLeadersSnapshotPublicUrl(year, weekKey, league, category)
+  )
+  return parseWeeklyLeadersConfig(raw)
+}
+
+async function readWeeklyCurrentWeekMetaAsync(
+  projectRoot: string,
+  year: string
+): Promise<WeeklyCurrentWeekJson | null> {
+  const local = readWeeklyCurrentWeekJson(projectRoot, year)
+  if (local) return local
+  return fetchDisplayJsonServer<WeeklyCurrentWeekJson>(
+    topWeeklyCurrentWeekPublicUrl(year)
+  )
 }
 
 export async function loadSeasonTabPayloadServer(
@@ -45,10 +88,10 @@ export async function loadSeasonTabPayloadServer(
   if (yearStr !== TOP_LEADERS_SNAPSHOT_YEAR) return null
 
   const [clBat, plBat, clPitch, plPitch] = await Promise.all([
-    Promise.resolve(readTopLeadersSnapshot(yearStr, "CL", "batting")),
-    Promise.resolve(readTopLeadersSnapshot(yearStr, "PL", "batting")),
-    Promise.resolve(readTopLeadersSnapshot(yearStr, "CL", "pitching")),
-    Promise.resolve(readTopLeadersSnapshot(yearStr, "PL", "pitching")),
+    readTopLeadersSnapshotAsync(yearStr, "CL", "batting"),
+    readTopLeadersSnapshotAsync(yearStr, "PL", "batting"),
+    readTopLeadersSnapshotAsync(yearStr, "CL", "pitching"),
+    readTopLeadersSnapshotAsync(yearStr, "PL", "pitching"),
   ])
 
   if (!clBat || !plBat) return null
@@ -69,7 +112,7 @@ export async function loadWeeklyTabPayloadServer(
   if (yearStr !== TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR) return null
 
   const root = getProjectRoot()
-  const metaRaw = readWeeklyCurrentWeekJson(root, yearStr)
+  const metaRaw = await readWeeklyCurrentWeekMetaAsync(root, yearStr)
   if (!metaRaw?.weekKey) return null
 
   const weekMeta = {
@@ -82,10 +125,10 @@ export async function loadWeeklyTabPayloadServer(
 
   const weekKey = weekMeta.weekKey
   const [clBat, plBat, clPitch, plPitch] = await Promise.all([
-    Promise.resolve(readWeeklyTopLeadersSnapshot(root, yearStr, weekKey, "CL", "batting")),
-    Promise.resolve(readWeeklyTopLeadersSnapshot(root, yearStr, weekKey, "PL", "batting")),
-    Promise.resolve(readWeeklyTopLeadersSnapshot(root, yearStr, weekKey, "CL", "pitching")),
-    Promise.resolve(readWeeklyTopLeadersSnapshot(root, yearStr, weekKey, "PL", "pitching")),
+    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "batting"),
+    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "batting"),
+    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "pitching"),
+    readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "pitching"),
   ])
 
   if (!clBat || !plBat || !clPitch || !plPitch) return null

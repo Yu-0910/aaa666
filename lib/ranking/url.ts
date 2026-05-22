@@ -3,6 +3,8 @@
  * すべてのランキングデータ参照を一元化
  */
 
+import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
+
 /** Windowsで禁止の文字を "_" に置換（Python sanitize_filename と同一） */
 const FORBIDDEN_FILENAME_CHARS = /[\\/:*?"<>|]/g
 
@@ -72,19 +74,6 @@ export function getRankingsUrl(path: string): string {
  * @returns 外部ストレージの完全URL
  */
 export function getExternalRankingsUrl(path: string): string {
-  const baseUrl = process.env.RANKINGS_BASE_URL
-  if (!baseUrl) {
-    throw new Error('RANKINGS_BASE_URL is not configured')
-  }
-  
-  // パスを正規化
   const normalizedPath = path.replace(/^\/+/, '').replace(/\/+/g, '/')
-  
-  // 外部ストレージのURLを生成
-  // baseUrl が既に /data/rankings を含む場合は追加しない
-  if (baseUrl.endsWith('/data/rankings') || baseUrl.endsWith('/data/rankings/')) {
-    return `${baseUrl.replace(/\/+$/, '')}/${normalizedPath}`
-  }
-  
-  return `${baseUrl.replace(/\/+$/, '')}/data/rankings/${normalizedPath}`
+  return getExternalDisplayDataUrl(`data/rankings/${normalizedPath}`)
 }
