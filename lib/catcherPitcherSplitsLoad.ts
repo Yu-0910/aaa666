@@ -1,6 +1,5 @@
-import fs from "fs"
 import path from "path"
-import { getProjectRoot } from "@/lib/projectRoot"
+import { loadDerivedNpbJsonAsync, loadDerivedNpbJsonSync } from "@/lib/derived/loadDerivedNpbJson"
 import type { CatcherPitcherSplitsDerived } from "@/lib/catcherPitcherSplits"
 
 export function catcherPitcherSplitsFilePath(
@@ -20,20 +19,40 @@ export function catcherPitcherSplitsFilePath(
   )
 }
 
+function parseCatcherPitcherSplits(
+  j: CatcherPitcherSplitsDerived | null,
+  npbCatcherId: string
+): CatcherPitcherSplitsDerived | null {
+  if (j?.schemaVersion !== "player-catcher-pitcher-splits-v1") return null
+  if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
+  return j
+}
+
 export function loadCatcherPitcherSplitsFromRepo(
   year: string,
   npbCatcherId: string
 ): CatcherPitcherSplitsDerived | null {
-  const root = getProjectRoot()
-  const p = catcherPitcherSplitsFilePath(root, year, npbCatcherId)
-  if (!fs.existsSync(p)) return null
-  try {
-    const j = JSON.parse(fs.readFileSync(p, "utf8")) as CatcherPitcherSplitsDerived
-    if (j?.schemaVersion !== "player-catcher-pitcher-splits-v1") return null
-    if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
-    return j
-  } catch {
-    return null
-  }
+  return parseCatcherPitcherSplits(
+    loadDerivedNpbJsonSync<CatcherPitcherSplitsDerived>(
+      "player_catcher_pitcher_splits",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
+}
+
+export async function loadCatcherPitcherSplitsFromRepoAsync(
+  year: string,
+  npbCatcherId: string
+): Promise<CatcherPitcherSplitsDerived | null> {
+  return parseCatcherPitcherSplits(
+    await loadDerivedNpbJsonAsync<CatcherPitcherSplitsDerived>(
+      "player_catcher_pitcher_splits",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
 }
 

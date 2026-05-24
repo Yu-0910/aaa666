@@ -9,9 +9,7 @@ import {
   jsonDerivedResponse,
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
-import { getProjectRoot } from "@/lib/projectRoot"
-import { getYahooIdForPilot } from "@/lib/seasonStatsPilot"
-import { loadPitcherZoneSeasonDerived } from "@/lib/yahooGame/gamePitcherPilotFiles"
+import { loadPitcherZoneSeasonDerivedAsync } from "@/lib/yahooGame/gamePitcherPilotFiles"
 import type { ZoneStat } from "@/lib/yahooGame/gamePitcherPilotFiles"
 
 export const dynamic = "force-dynamic"
@@ -57,8 +55,7 @@ export async function GET(
       } satisfies PitcherZoneStatsApiResponse)
     }
 
-    const root = getProjectRoot()
-    const derived = loadPitcherZoneSeasonDerived(root, yahooId, year)
+    const derived = await loadPitcherZoneSeasonDerivedAsync(yahooId, year)
     if (!derived) {
       return jsonDerivedResponse({
         hasData: false,

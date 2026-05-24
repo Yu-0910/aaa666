@@ -16,6 +16,8 @@ import {
   rowPassesQualifyingPAWithMinMap,
 } from "@/lib/ranking/qualifyingThresholds"
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
+import { fetchRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
+import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
 import { BATTING_TOP_2025_RBI_TOP_N } from "@/lib/topPageBatting2025Grid"
 
 const TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
@@ -114,6 +116,8 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const teamCode = getTeamCode(teamRaw)
   const romanRaw = String(row.romanName ?? "").trim()
   const rank = Math.min(3, Math.max(1, displayRank)) as 1 | 2 | 3
+  const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
+  const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
 
   return {
     rank,
@@ -122,6 +126,8 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
     teamName: getTeamName(teamCode),
     value: metricValueFromRow(row, metricLabel),
     romanName: romanRaw || undefined,
+    playerId: yahooPlayerId || undefined,
+    npbPlayerId,
   }
 }
 
@@ -170,6 +176,28 @@ function topNForMetricLabel(metricLabel: string, year: string): number {
 /**
  * ランキング JSON から LeadersConfig を組み立てる（ファイルが無ければ null）
  */
+function buildBattingLeadersFromRowMaps(
+  year: string,
+  league: string,
+  metricRows: Map<string, RankingJsonRow[]>
+): LeadersConfig | null {
+  const upperLeague = league.toUpperCase()
+  const leaders: Record<string, LeaderRow[]> = {}
+  for (const metricLabel of ALL_TOP_METRICS) {
+    const rows = metricRows.get(metricLabel)
+    if (!rows?.length) continue
+    const topN = topNForMetricLabel(metricLabel, year)
+    const top = extractTopLeadersFromRankingRows(rows, metricLabel, topN, year, upperLeague)
+    if (top.length > 0) leaders[metricLabel] = top
+  }
+  if (Object.keys(leaders).length === 0) return null
+  return {
+    top3Metrics: [...TOP3_METRICS],
+    miniMetrics: [...MINI_METRICS],
+    leaders,
+  }
+}
+
 export function buildBattingLeadersConfigFromRankings(
   year: string,
   league: string
@@ -177,20 +205,28 @@ export function buildBattingLeadersConfigFromRankings(
   const upperLeague = league.toUpperCase()
   if (!hasBattingRankingsJsonForLeague(year, upperLeague)) return null
 
-  const leaders: Record<string, LeaderRow[]> = {}
+  const metricRows = new Map<string, RankingJsonRow[]>()
   for (const metricLabel of ALL_TOP_METRICS) {
     const rows = readRankingMetricJson(year, upperLeague, metricLabel)
-    if (!rows?.length) continue
-    const topN = topNForMetricLabel(metricLabel, year)
-    const top = extractTopLeadersFromRankingRows(rows, metricLabel, topN, year, upperLeague)
-    if (top.length > 0) leaders[metricLabel] = top
+    if (rows?.length) metricRows.set(metricLabel, rows)
   }
+  return buildBattingLeadersFromRowMaps(year, league, metricRows)
+}
 
-  if (Object.keys(leaders).length === 0) return null
-
-  return {
-    top3Metrics: [...TOP3_METRICS],
-    miniMetrics: [...MINI_METRICS],
-    leaders,
+/** Phase 7: 本番で fs が無いときプロキシ経由 */
+export async function buildBattingLeadersConfigFromRankingsAsync(
+  year: string,
+  league: string
+): Promise<LeadersConfig | null> {
+  const upperLeague = league.toUpperCase()
+  const metricRows = new Map<string, RankingJsonRow[]>()
+  for (const metricLabel of ALL_TOP_METRICS) {
+    let rows = readRankingMetricJson(year, upperLeague, metricLabel)
+    if (!rows?.length) {
+      rows = await fetchRankingMetricJsonServer(year, upperLeague, metricLabel, sanitizeMetricForPath)
+    }
+    if (rows?.length) metricRows.set(metricLabel, rows)
   }
+  if (metricRows.size === 0) return null
+  return buildBattingLeadersFromRowMaps(year, league, metricRows)
 }

@@ -19,6 +19,7 @@ import {
   PITCHING_TOP_2026_MINI_METRICS,
 } from "@/lib/topPagePitching2026Grid"
 import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
+import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
 import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshot2026"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 
@@ -127,6 +128,8 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const teamCode = getTeamCode(teamRaw)
   const romanRaw = String(row.romanName ?? "").trim()
   const rank = Math.min(3, Math.max(1, displayRank)) as 1 | 2 | 3
+  const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
+  const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
 
   return {
     rank,
@@ -135,6 +138,8 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
     teamName: getTeamName(teamCode),
     value: metricValueFromRow(row, metricLabel),
     romanName: romanRaw || undefined,
+    playerId: yahooPlayerId || undefined,
+    npbPlayerId,
   }
 }
 

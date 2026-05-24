@@ -4,6 +4,10 @@
 
 import fs from "fs"
 import path from "path"
+import {
+  fetchDerivedJsonServer,
+  readDerivedJsonLocalSync,
+} from "@/lib/derived/fetchDerivedJsonServer"
 import type {
   PitcherSeasonPitchingPeriodPayload,
   PitcherSeasonPitchingPeriodRow,
@@ -38,24 +42,60 @@ export function pitcherSeasonPitchingPeriodFilePath(
   )
 }
 
+function parsePitcherSeasonPitchingPeriodPayload(
+  raw: PitcherSeasonPitchingPeriodPayload | null
+): PitcherSeasonPitchingPeriodPayload | null {
+  if (raw?.schemaVersion !== "phase7-player-season-pitching-period-v0" || !raw.npbPlayerId) {
+    return null
+  }
+  return {
+    ...raw,
+    rows: (raw.rows ?? []).map(normalizeCalendarMonthLabel),
+  }
+}
+
 export function loadPitcherSeasonPitchingPeriodPayload(
   projectRoot: string,
   year: string,
   npbPlayerId: string
 ): PitcherSeasonPitchingPeriodPayload | null {
-  const p = pitcherSeasonPitchingPeriodFilePath(projectRoot, year, npbPlayerId)
-  if (!fs.existsSync(p)) return null
-  try {
-    const raw = fs.readFileSync(p, "utf8")
-    const j = JSON.parse(raw) as PitcherSeasonPitchingPeriodPayload
-    if (j?.schemaVersion !== "phase7-player-season-pitching-period-v0" || !j.npbPlayerId) return null
-    return {
-      ...j,
-      rows: (j.rows ?? []).map(normalizeCalendarMonthLabel),
-    }
-  } catch {
-    return null
-  }
+  const safeYear = String(year).replace(/[^\d]/g, "") || "2026"
+  const safeNpb = String(npbPlayerId).replace(/[^\d]/g, "")
+  return parsePitcherSeasonPitchingPeriodPayload(
+    readDerivedJsonLocalSync<PitcherSeasonPitchingPeriodPayload>(
+      "player_season_pitching_period",
+      safeYear,
+      `npb_${safeNpb}.json`
+    )
+  )
+}
+
+async function loadPitcherSeasonPitchingPeriodPayloadAsync(
+  year: string,
+  npbPlayerId: string
+): Promise<PitcherSeasonPitchingPeriodPayload | null> {
+  const safeYear = String(year).replace(/[^\d]/g, "") || "2026"
+  const safeNpb = String(npbPlayerId).replace(/[^\d]/g, "")
+  return parsePitcherSeasonPitchingPeriodPayload(
+    await fetchDerivedJsonServer<PitcherSeasonPitchingPeriodPayload>(
+      "player_season_pitching_period",
+      safeYear,
+      `npb_${safeNpb}.json`
+    )
+  )
+}
+
+export async function loadPitcherSeasonPitchingPeriodPayloadFromRepoAsync(
+  year: string,
+  npbPlayerId: string
+): Promise<PitcherSeasonPitchingPeriodPayload | null> {
+  const direct = await loadPitcherSeasonPitchingPeriodPayloadAsync(year, npbPlayerId)
+  if (direct) return direct
+  const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
+  if (!altNpb) return null
+  const base = await loadPitcherSeasonPitchingPeriodPayloadAsync(year, altNpb)
+  if (!base) return null
+  return withPilotPitcherPeriodFallbackShell(base, npbPlayerId)
 }
 
 /** `getProjectRoot()` を使う短縮形 */

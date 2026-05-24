@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
+import { fetchDerivedJsonServer, readDerivedJsonLocalSync } from "@/lib/derived/fetchDerivedJsonServer"
 
 export type GamePitchTypeRow = {
   pitch_type: string
@@ -142,20 +143,37 @@ export function loadPitcherZoneSeasonDerived(
   yahooPitcherId: string,
   year: string
 ): PitcherZoneSeasonDerivedPayload | null {
-  const yid = yahooPitcherId.trim()
-  const y = year.trim()
-  if (!yid || !y) return null
-  const filePath = join(
-    projectRoot,
-    "_data",
-    "derived",
-    "pitcher_zone_from_canonical",
-    y,
-    `yahoo_${yid}.json`
+  return parsePitcherZoneSeasonDerived(
+    readDerivedJsonLocalSync<unknown>(
+      "pitcher_zone_from_canonical",
+      year.trim(),
+      `yahoo_${yahooPitcherId.trim()}.json`
+    ),
+    year
   )
-  if (!existsSync(filePath)) return null
+}
+
+export async function loadPitcherZoneSeasonDerivedAsync(
+  yahooPitcherId: string,
+  year: string
+): Promise<PitcherZoneSeasonDerivedPayload | null> {
+  return parsePitcherZoneSeasonDerived(
+    await fetchDerivedJsonServer<unknown>(
+      "pitcher_zone_from_canonical",
+      year.trim(),
+      `yahoo_${yahooPitcherId.trim()}.json`
+    ),
+    year
+  )
+}
+
+function parsePitcherZoneSeasonDerived(
+  raw: unknown,
+  year: string
+): PitcherZoneSeasonDerivedPayload | null {
+  const y = year.trim()
+  if (!raw) return null
   try {
-    const raw: unknown = JSON.parse(readFileSync(filePath, "utf-8"))
     const zoneStats = normalizeZoneStatsResponse(raw)
     if (!zoneStats) return null
     const o = raw as Record<string, unknown>

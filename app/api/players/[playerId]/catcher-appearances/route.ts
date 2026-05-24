@@ -5,7 +5,7 @@ import {
 } from "@/lib/api/derivedPlayerApiShared"
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
-import { loadCatcherAppearancesFromRepo } from "@/lib/catcherAppearancesLoad"
+import { loadCatcherAppearancesFromRepoAsync } from "@/lib/catcherAppearancesLoad"
 
 export const dynamic = "force-dynamic"
 
@@ -38,7 +38,7 @@ export async function GET(
       } satisfies CatcherAppearancesApiResponse)
     }
 
-    const d = loadCatcherAppearancesFromRepo(year, npb)
+    const d = await loadCatcherAppearancesFromRepoAsync(year, npb)
     return jsonDerivedResponse(
       d
         ? {

@@ -5,6 +5,10 @@
 
 import fs from 'fs'
 import path from 'path'
+import {
+  fetchDerivedJsonServer,
+  readDerivedJsonLocalSync,
+} from '@/lib/derived/fetchDerivedJsonServer'
 import type { PlateAppearance } from '@/lib/yahooGame/types'
 import { bucketPitchResultForTypeRow } from '@/lib/yahooGame/pitchCountSim'
 import {
@@ -405,13 +409,22 @@ export function loadPhase14PitchBundle(
   yahooId: string,
   year: string = DERIVED_SEASON_YEAR_DEFAULT
 ): Phase14PitchFile | null {
-  const p = phase14PitchJsonPath(yahooId, year)
-  if (!fs.existsSync(p)) return null
-  try {
-    return JSON.parse(fs.readFileSync(p, 'utf-8')) as Phase14PitchFile
-  } catch {
-    return null
-  }
+  return readDerivedJsonLocalSync<Phase14PitchFile>(
+    'player_pitch_from_canonical',
+    year,
+    `yahoo_${yahooId}.json`
+  )
+}
+
+export async function loadPhase14PitchBundleAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): Promise<Phase14PitchFile | null> {
+  return fetchDerivedJsonServer<Phase14PitchFile>(
+    'player_pitch_from_canonical',
+    year,
+    `yahoo_${yahooId}.json`
+  )
 }
 
 export function normalizePitchTypeFromCanonical(raw: string): string {
@@ -599,6 +612,16 @@ export function loadPitchTypeStats(
   return aggregateByPitchType(pas)
 }
 
+export async function loadPitchTypeStatsAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): Promise<PitchTypeStats[]> {
+  const b = await loadPhase14PitchBundleAsync(yahooId, year)
+  if (b?.pitchTypeStats && b.pitchTypeStats.length > 0) return b.pitchTypeStats
+  const pas = loadPitchDetails(yahooId)
+  return aggregateByPitchType(pas)
+}
+
 export function loadSpeedBandStats(
   yahooId: string,
   year: string = DERIVED_SEASON_YEAR_DEFAULT
@@ -637,6 +660,74 @@ export function loadSpeedBandStats(
   return out
 }
 
+export async function loadSpeedBandStatsAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): Promise<SpeedBandStatsMap> {
+  const b = await loadPhase14PitchBundleAsync(yahooId, year)
+  const raw = b?.speedBandStats
+  if (!raw || Object.keys(raw).length === 0) return {}
+
+  const out: SpeedBandStatsMap = {}
+  for (const [band, row] of Object.entries(raw)) {
+    const nk = resolveStraightSpeedBandKey(band)
+    if (!nk) continue
+    const r = row as Partial<SpeedBandStatsRow> & { ops?: string; strike_pct?: string }
+    const next: SpeedBandStatsRow = {
+      isop: typeof r.isop === 'string' ? r.isop : '—',
+      avg: typeof r.avg === 'string' ? r.avg : '—',
+      hr: typeof r.hr === 'number' ? r.hr : 0,
+      h2: typeof r.h2 === 'number' ? r.h2 : 0,
+      pitch_share_pct: typeof r.pitch_share_pct === 'string' ? r.pitch_share_pct : '—',
+      whiff_pct: typeof r.whiff_pct === 'string' ? r.whiff_pct : '—',
+    }
+    const prev = out[nk]
+    if (prev) {
+      out[nk] = {
+        isop: prev.isop,
+        avg: prev.avg,
+        hr: prev.hr + next.hr,
+        h2: prev.h2 + next.h2,
+        pitch_share_pct: prev.pitch_share_pct,
+        whiff_pct: prev.whiff_pct,
+      }
+    } else {
+      out[nk] = next
+    }
+  }
+  return out
+}
+
+function zoneStatsFromPhase14Bundle(b: Phase14PitchFile | null): ZoneStats[] {
+  if (b?.zoneStats && b.zoneStats.length > 0) {
+    return b.zoneStats
+      .map(migrateLegacyZoneStatsRow)
+      .filter((x): x is ZoneStats => x != null)
+  }
+  return []
+}
+
+/** ゾーン別成績：Phase 14 派生があれば優先 */
+export function loadZoneStats(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): ZoneStats[] {
+  const fromBundle = zoneStatsFromPhase14Bundle(loadPhase14PitchBundle(yahooId, year))
+  if (fromBundle.length > 0) return fromBundle
+  const pas = loadPitchDetails(yahooId)
+  return aggregateByZone(pas)
+}
+
+export async function loadZoneStatsAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): Promise<ZoneStats[]> {
+  const fromBundle = zoneStatsFromPhase14Bundle(await loadPhase14PitchBundleAsync(yahooId, year))
+  if (fromBundle.length > 0) return fromBundle
+  const pas = loadPitchDetails(yahooId)
+  return aggregateByZone(pas)
+}
+
 function migrateLegacyZoneStatsRow(raw: unknown): ZoneStats | null {
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
@@ -672,20 +763,6 @@ function migrateLegacyZoneStatsRow(raw: unknown): ZoneStats | null {
   }
 }
 
-/** ゾーン別成績：Phase 14 派生があれば優先 */
-export function loadZoneStats(
-  yahooId: string,
-  year: string = DERIVED_SEASON_YEAR_DEFAULT
-): ZoneStats[] {
-  const b = loadPhase14PitchBundle(yahooId, year)
-  if (b?.zoneStats && b.zoneStats.length > 0) {
-    return b.zoneStats
-      .map(migrateLegacyZoneStatsRow)
-      .filter((x): x is ZoneStats => x != null)
-  }
-  const pas = loadPitchDetails(yahooId)
-  return aggregateByZone(pas)
-}
 
 type HandBucket = 'vsRight' | 'vsLeft'
 

@@ -22,6 +22,7 @@ import {
   usesTopPageModernLeaderRow,
 } from "@/lib/topPageBatting2025Grid"
 import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
+import { playerPageHref } from "@/lib/playerPageHref"
 import { fetchTopWeeklyLeadersForPage } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import {
   getWeeklyBattingRankingUrl,
@@ -101,7 +102,12 @@ const LeaderRow = ({
         style={{ backgroundColor: teamColors[leader.team] || "#666" }}
       />
       <Link
-        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        href={playerPageHref({
+          npbPlayerId: leader.npbPlayerId,
+          playerId: leader.playerId,
+          name: leader.name,
+          romanName: romanShort,
+        })}
         className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
         {modernLeaderRow ? (
@@ -145,7 +151,12 @@ const MiniLeaderRow = ({ leader, stat, year }: { leader: any; stat: any; year: n
         style={{ backgroundColor: teamColors[leader.team] || "#666" }}
       />
       <Link
-        href={`/players/${leader.name}?name=${encodeURIComponent((leader.name || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        href={playerPageHref({
+          npbPlayerId: leader.npbPlayerId,
+          playerId: leader.playerId,
+          name: leader.name,
+          romanName: romanShort,
+        })}
         className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
         {modernLeaderRow ? (

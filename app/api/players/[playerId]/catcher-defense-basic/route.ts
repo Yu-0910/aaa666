@@ -5,7 +5,7 @@ import {
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
-import { loadCatcherDefenseBasicFromRepo } from "@/lib/catcherDefenseBasicLoad"
+import { loadCatcherDefenseBasicFromRepoAsync } from "@/lib/catcherDefenseBasicLoad"
 
 export const dynamic = "force-dynamic"
 
@@ -40,7 +40,7 @@ export async function GET(
       } satisfies CatcherDefenseBasicApiResponse)
     }
 
-    const d = loadCatcherDefenseBasicFromRepo(year, npb)
+    const d = await loadCatcherDefenseBasicFromRepoAsync(year, npb)
     return jsonDerivedResponse(
       d
         ? {

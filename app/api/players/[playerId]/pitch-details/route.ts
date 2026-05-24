@@ -9,10 +9,10 @@ import {
 } from "@/lib/api/derivedPlayerApiShared"
 import { getYahooIdForPilot } from "@/lib/seasonStatsPilot"
 import {
-  loadPhase14PitchBundle,
+  loadPhase14PitchBundleAsync,
   loadPitchDetails,
-  loadPitchTypeStats,
-  loadZoneStats,
+  loadPitchTypeStatsAsync,
+  loadZoneStatsAsync,
 } from "@/lib/pitchDetailsPilot"
 import type { PlateAppearancePitches, PitchTypeStats, ZoneStats } from "@/lib/pitchDetailsPilot"
 
@@ -51,10 +51,12 @@ export async function GET(
         code: "NO_YAHOO_ID",
       } satisfies PitchDetailsApiResponse)
     }
+    const [pitchTypeStats, zoneStats, fromCanonical] = await Promise.all([
+      loadPitchTypeStatsAsync(yahooId, year),
+      loadZoneStatsAsync(yahooId, year),
+      loadPhase14PitchBundleAsync(yahooId, year),
+    ])
     const plateAppearances = loadPitchDetails(yahooId)
-    const pitchTypeStats = loadPitchTypeStats(yahooId, year)
-    const zoneStats = loadZoneStats(yahooId, year)
-    const fromCanonical = loadPhase14PitchBundle(yahooId, year)
     const isPilot =
       plateAppearances.length > 0 ||
       fromCanonical != null ||

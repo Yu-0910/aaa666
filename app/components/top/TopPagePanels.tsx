@@ -31,6 +31,7 @@ import {
   getWeeklyPitchingStatsListUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
 import { leaderListReactKey } from "@/lib/ranking/leadersTypes"
+import { playerPageHref } from "@/lib/playerPageHref"
 
 export type TopPageLayoutMode = "mobile" | "desktop"
 
@@ -63,7 +64,13 @@ const LeaderRow = ({
   modernLeaderRow: boolean
 }) => {
   const formattedValue = formatStat(String(stat ?? ""), leader.value)
-  const l = leader as { romanName?: string; name?: string; team?: string }
+  const l = leader as {
+    romanName?: string
+    name?: string
+    team?: string
+    playerId?: string
+    npbPlayerId?: string
+  }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
@@ -79,7 +86,12 @@ const LeaderRow = ({
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
-        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        href={playerPageHref({
+          npbPlayerId: l.npbPlayerId,
+          playerId: l.playerId,
+          name: playerName,
+          romanName: romanShort,
+        })}
         className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
         {modernLeaderRow ? (
@@ -118,7 +130,13 @@ const MiniLeaderRow = ({
   modernLeaderRow: boolean
 }) => {
   const formattedValue = formatStat(String(stat ?? ""), leader.value)
-  const l = leader as { romanName?: string; name?: string; team?: string }
+  const l = leader as {
+    romanName?: string
+    name?: string
+    team?: string
+    playerId?: string
+    npbPlayerId?: string
+  }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
 
   const playerName = typeof leader.name === "string" ? leader.name : ""
@@ -134,7 +152,12 @@ const MiniLeaderRow = ({
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
-        href={`/players/${playerName}?name=${encodeURIComponent((playerName || "").replace(/\s+/g, ""))}${romanShort ? `&roman=${encodeURIComponent(romanShort)}` : ""}`}
+        href={playerPageHref({
+          npbPlayerId: l.npbPlayerId,
+          playerId: l.playerId,
+          name: playerName,
+          romanName: romanShort,
+        })}
         className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
       >
         {modernLeaderRow ? (

@@ -5,7 +5,7 @@ import {
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
-import { loadCatcherPitcherSplitsFromRepo } from "@/lib/catcherPitcherSplitsLoad"
+import { loadCatcherPitcherSplitsFromRepoAsync } from "@/lib/catcherPitcherSplitsLoad"
 
 export const dynamic = "force-dynamic"
 
@@ -60,7 +60,7 @@ export async function GET(
       } satisfies CatcherPitchersApiResponse)
     }
 
-    const d = loadCatcherPitcherSplitsFromRepo(year, npb)
+    const d = await loadCatcherPitcherSplitsFromRepoAsync(year, npb)
     return jsonDerivedResponse(
       d
         ? { hasData: true, year, payload: { rows: d.rows } }

@@ -4,6 +4,10 @@
 
 import fs from "fs"
 import path from "path"
+import {
+  fetchDerivedJsonServer,
+  readDerivedJsonLocalSync,
+} from "@/lib/derived/fetchDerivedJsonServer"
 import type { PitcherSeasonPocPayload } from "./pitcherSeasonPocTypes"
 import {
   PILOT_DERIVED_FALLBACK_NPB,
@@ -123,16 +127,30 @@ export function loadPitcherSeasonPocPayload(
   year: string,
   npbPlayerId: string
 ): PitcherSeasonPocPayload | null {
-  const p = pitcherSeasonPocFilePath(projectRoot, year, npbPlayerId)
-  if (!fs.existsSync(p)) return null
-  try {
-    const raw = fs.readFileSync(p, "utf8")
-    const j = JSON.parse(raw) as PitcherSeasonPocPayload
-    if (j?.schemaVersion !== "phase-pitcher-poc-season-v1" || !j.npbPlayerId) return null
-    return j
-  } catch {
-    return null
-  }
+  const safeYear = String(year).replace(/[^\d]/g, "") || "2026"
+  const safeNpb = String(npbPlayerId).replace(/[^\d]/g, "")
+  const j = readDerivedJsonLocalSync<PitcherSeasonPocPayload>(
+    "player_season_pitching_poc",
+    safeYear,
+    `npb_${safeNpb}.json`
+  )
+  if (j?.schemaVersion !== "phase-pitcher-poc-season-v1" || !j.npbPlayerId) return null
+  return j
+}
+
+async function loadPitcherSeasonPocPayloadAsync(
+  year: string,
+  npbPlayerId: string
+): Promise<PitcherSeasonPocPayload | null> {
+  const safeYear = String(year).replace(/[^\d]/g, "") || "2026"
+  const safeNpb = String(npbPlayerId).replace(/[^\d]/g, "")
+  const j = await fetchDerivedJsonServer<PitcherSeasonPocPayload>(
+    "player_season_pitching_poc",
+    safeYear,
+    `npb_${safeNpb}.json`
+  )
+  if (j?.schemaVersion !== "phase-pitcher-poc-season-v1" || !j.npbPlayerId) return null
+  return j
 }
 
 /** `getProjectRoot()` を使う短縮形（API ルートと同じルート解決） */
@@ -146,6 +164,21 @@ export function loadPitcherSeasonPocPayloadFromRepo(
   const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
   if (!altNpb) return null
   const base = loadPitcherSeasonPocPayload(root, year, altNpb)
+  if (!base) return null
+  const shelled = withPilotPitcherPocFallbackShell(base, npbPlayerId)
+  return mergeNf3MetricsFromAggregate(shelled, root, year, npbPlayerId)
+}
+
+export async function loadPitcherSeasonPocPayloadFromRepoAsync(
+  year: string,
+  npbPlayerId: string
+): Promise<PitcherSeasonPocPayload | null> {
+  const root = getProjectRoot()
+  const direct = await loadPitcherSeasonPocPayloadAsync(year, npbPlayerId)
+  if (direct) return mergeNf3MetricsFromAggregate(direct, root, year, npbPlayerId)
+  const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
+  if (!altNpb) return null
+  const base = await loadPitcherSeasonPocPayloadAsync(year, altNpb)
   if (!base) return null
   const shelled = withPilotPitcherPocFallbackShell(base, npbPlayerId)
   return mergeNf3MetricsFromAggregate(shelled, root, year, npbPlayerId)

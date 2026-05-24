@@ -4,7 +4,7 @@ import {
   jsonDerivedResponse,
   yearFromRequest,
 } from '@/lib/api/derivedPlayerApiShared'
-import { loadPitcherSeasonPocPayloadFromRepo } from '@/lib/pitcherSeasonPocLoad'
+import { loadPitcherSeasonPocPayloadFromRepoAsync } from '@/lib/pitcherSeasonPocLoad'
 import { resolvePilotPitcherNpbFromUrlSegment } from '@/lib/pitcherSeasonPocPilotFallback'
 import type { PitcherSeasonPitchingApiResponse } from '@/lib/pitcherSeasonPocTypes'
 import { DERIVED_SEASON_YEAR_DEFAULT } from '@/lib/seasonStatsPilotShared'
@@ -30,9 +30,9 @@ export async function GET(
     // 名簿照合が外れるケースがある（橋渡し未整備の Yahoo 数値 ID、表記揺れなど）。
     // その場合でも、URL セグメント自体が NPB player_id で派生ファイルが存在するなら直接読む。
     let payload =
-      npb ? loadPitcherSeasonPocPayloadFromRepo(year, npb) : null
+      npb ? await loadPitcherSeasonPocPayloadFromRepoAsync(year, npb) : null
     if (!payload && /^\d+$/.test(decoded)) {
-      payload = loadPitcherSeasonPocPayloadFromRepo(year, decoded)
+      payload = await loadPitcherSeasonPocPayloadFromRepoAsync(year, decoded)
       if (payload) npb = decoded
     }
     return jsonDerivedResponse({

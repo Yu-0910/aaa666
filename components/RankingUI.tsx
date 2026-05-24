@@ -12,10 +12,12 @@
 import { Fragment } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import type { RankingViewModel, RankingRow } from '@/lib/ranking/types'
 import { formatRomanNameForRanking } from '@/lib/ranking/formatRomanNameForRanking'
 import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
+import { playerPageHref } from '@/lib/playerPageHref'
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -31,6 +33,14 @@ interface RankingUIProps {
   yearOptions?: number[]
   /** メイン見出し直下の補足（例: 投手規定の説明） */
   titleSubNote?: string
+  /** 週間ランキング: ヘッダー右の週セレクト（年度セレクトの代わり） */
+  weekSelector?: {
+    weekKey: string
+    options: Array<{ weekKey: string; weekLabel: string }>
+    onWeekChange: (weekKey: string) => void
+  }
+  /** タイトル行の週ラベル（例: 5/12〜5/17） */
+  weekLabelInTitle?: string
 }
 
 // 左ブロック（順＋フレーム＋選手）を1層にまとめ、隙間を防ぐ（問題29・二層構造の理想に合わせる）
@@ -49,6 +59,8 @@ export default function RankingUI({
   metricLabelFallback = '打撃成績',
   yearOptions,
   titleSubNote,
+  weekSelector,
+  weekLabelInTitle,
 }: RankingUIProps) {
   const { season, league, metrics } = viewModel
   const router = useRouter()
@@ -68,11 +80,13 @@ export default function RankingUI({
           : league === 'PRE_fall'
             ? '秋季リーグ'
             : league
-  const displayTitle = `${leagueName}　${metricLabel}ランキング (${season}年)`
+  const weekRangeInTitle = weekLabelInTitle?.trim() ? ` (${weekLabelInTitle.trim()})` : ''
+  const displayTitle = weekSelector
+    ? `${leagueName}　週間${metricLabel}ランキング${weekRangeInTitle}`
+    : `${leagueName}　${metricLabel}ランキング (${season}年)`
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
 
-  // 年度変更ハンドラ
   const handleYearChange = (newYear: number) => {
     router.push(
       `${rankingPathBase}/${newYear}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`
@@ -94,22 +108,36 @@ export default function RankingUI({
           </button>
 
           {/* Center: Logo */}
-          <Link href="/" className="absolute left-1/2 transform -translate-x-1/2">
+          <Link href={SITE_TOP_HREF} className="absolute left-1/2 transform -translate-x-1/2">
             <img src="/logo.png" alt="Logo" className="w-7 h-7 cursor-pointer hover:opacity-80 transition-opacity" />
           </Link>
 
-          {/* Right: Year Selector */}
-          <select
-            value={season}
-            onChange={(e) => handleYearChange(Number(e.target.value))}
-            className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
-          >
-            {yearSelectOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
+          {weekSelector ? (
+            <select
+              value={weekSelector.weekKey}
+              onChange={(e) => weekSelector.onWeekChange(e.target.value)}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors max-w-[7.5rem]"
+              aria-label="週を選択"
+            >
+              {weekSelector.options.map((w) => (
+                <option key={w.weekKey} value={w.weekKey}>
+                  {w.weekLabel}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value={season}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+            >
+              {yearSelectOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -300,7 +328,15 @@ export default function RankingUI({
                               <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: rankingTeamStripeColor(row.team) }} />
                               <div className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05] h-8">
                                 <Link
-                                  href={`/players/${row.playerId}?name=${encodeURIComponent(row.name.replace(/\s+/g, ''))}${hasRomanName && row.romanName ? `&roman=${encodeURIComponent(formatRomanNameForRanking(row.romanName))}` : ''}`}
+                                  href={playerPageHref({
+                                    npbPlayerId: row.npbPlayerId,
+                                    playerId: row.playerId,
+                                    name: row.name,
+                                    romanName:
+                                      hasRomanName && row.romanName
+                                        ? formatRomanNameForRanking(row.romanName)
+                                        : undefined,
+                                  })}
                                   className="block truncate"
                                 >
                                   <span className="text-white hover:text-[#ffff44] text-[13px] font-semibold truncate">

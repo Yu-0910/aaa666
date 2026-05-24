@@ -1,6 +1,5 @@
-import fs from "fs"
 import path from "path"
-import { getProjectRoot } from "@/lib/projectRoot"
+import { loadDerivedNpbJsonAsync, loadDerivedNpbJsonSync } from "@/lib/derived/loadDerivedNpbJson"
 import type { CatcherStartingSummaryDerived } from "@/lib/catcherStartingSummary"
 
 export function catcherStartingSummaryFilePath(
@@ -20,20 +19,40 @@ export function catcherStartingSummaryFilePath(
   )
 }
 
+function parseCatcherStartingSummary(
+  j: CatcherStartingSummaryDerived | null,
+  npbCatcherId: string
+): CatcherStartingSummaryDerived | null {
+  if (j?.schemaVersion !== "player-catcher-starting-summary-v1") return null
+  if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
+  return j
+}
+
 export function loadCatcherStartingSummaryFromRepo(
   year: string,
   npbCatcherId: string
 ): CatcherStartingSummaryDerived | null {
-  const root = getProjectRoot()
-  const p = catcherStartingSummaryFilePath(root, year, npbCatcherId)
-  if (!fs.existsSync(p)) return null
-  try {
-    const j = JSON.parse(fs.readFileSync(p, "utf8")) as CatcherStartingSummaryDerived
-    if (j?.schemaVersion !== "player-catcher-starting-summary-v1") return null
-    if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
-    return j
-  } catch {
-    return null
-  }
+  return parseCatcherStartingSummary(
+    loadDerivedNpbJsonSync<CatcherStartingSummaryDerived>(
+      "player_catcher_starting_summary",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
+}
+
+export async function loadCatcherStartingSummaryFromRepoAsync(
+  year: string,
+  npbCatcherId: string
+): Promise<CatcherStartingSummaryDerived | null> {
+  return parseCatcherStartingSummary(
+    await loadDerivedNpbJsonAsync<CatcherStartingSummaryDerived>(
+      "player_catcher_starting_summary",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
 }
 

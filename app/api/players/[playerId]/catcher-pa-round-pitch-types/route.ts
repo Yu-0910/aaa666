@@ -5,7 +5,7 @@ import {
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
-import { loadCatcherPaRoundPitchTypesFromRepo } from "@/lib/catcherPaRoundPitchTypesLoad"
+import { loadCatcherPaRoundPitchTypesFromRepoAsync } from "@/lib/catcherPaRoundPitchTypesLoad"
 
 export const dynamic = "force-dynamic"
 
@@ -41,7 +41,7 @@ export async function GET(
       } satisfies CatcherPaRoundPitchTypesApiResponse)
     }
 
-    const d = loadCatcherPaRoundPitchTypesFromRepo(year, npb)
+    const d = await loadCatcherPaRoundPitchTypesFromRepoAsync(year, npb)
     return jsonDerivedResponse(
       d
         ? {

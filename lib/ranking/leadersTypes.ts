@@ -9,6 +9,10 @@ export type LeaderRow = {
   teamName: string
   value: string | number
   romanName?: string
+  /** ランキング JSON の Yahoo playerId */
+  playerId?: string
+  /** 名簿 NPB player_id（個人ページ URL 用） */
+  npbPlayerId?: string
 }
 
 export type LeadersConfig = {

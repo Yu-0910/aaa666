@@ -13,6 +13,10 @@ import {
 } from '@/lib/pilotPlayerConstants'
 import { createFielderPlaceholderTotalRow } from '@/lib/fielderSeasonPlaceholderRow'
 import { findRosterPlayerByPublicId } from '@/lib/npbRoster'
+import {
+  fetchDerivedJsonServer,
+  readDerivedJsonLocalSync,
+} from '@/lib/derived/fetchDerivedJsonServer'
 import { invalidateYahooNpbBatterMapsCache, resolveYahooPilotIdForStats } from '@/lib/yahooNpbBatterIdMap'
 import { formatWeekRangeTueToSunFromTuesdayYmd } from '@/lib/yahooGame/jstPeriodKeys'
 import {
@@ -1594,103 +1598,94 @@ function computeBattingTotalFromBattingLinesFallback(yahooId: string): SeasonSta
 }
 
 /** `_data/derived/player_season_batting/{year}/yahoo_*.json`（Phase 11） */
-export function loadPhase11DerivedBattingRows(yahooId: string, year: string): SeasonStatsRow[] {
-  const jsonPath = path.join(
-    getProjectRoot(),
-    '_data',
-    'derived',
-    'player_season_batting',
+function parseDerivedBattingRowsFile(raw: { rows?: SeasonStatsRow[] } | null): SeasonStatsRow[] {
+  if (!raw) return []
+  return (raw.rows ?? []).map(normalizeDerivedRowLabels)
+}
+
+async function loadDerivedBattingRowsAsync(
+  category: string,
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  const raw = await fetchDerivedJsonServer<{ rows?: SeasonStatsRow[] }>(
+    category,
     year,
     `yahoo_${yahooId}.json`
   )
-  if (!fs.existsSync(jsonPath)) return []
-  try {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
-    const rows = raw.rows ?? []
-    return rows.map(normalizeDerivedRowLabels)
-  } catch {
-    return []
-  }
+  return parseDerivedBattingRowsFile(raw)
+}
+
+function loadDerivedBattingRowsSync(
+  category: string,
+  yahooId: string,
+  year: string
+): SeasonStatsRow[] {
+  const raw = readDerivedJsonLocalSync<{ rows?: SeasonStatsRow[] }>(
+    category,
+    year,
+    `yahoo_${yahooId}.json`
+  )
+  return parseDerivedBattingRowsFile(raw)
+}
+
+export function loadPhase11DerivedBattingRows(yahooId: string, year: string): SeasonStatsRow[] {
+  return loadDerivedBattingRowsSync('player_season_batting', yahooId, year)
+}
+
+export async function loadPhase11DerivedBattingRowsAsync(
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  return loadDerivedBattingRowsAsync('player_season_batting', yahooId, year)
 }
 
 /** `_data/derived/player_season_batting_context/{year}/yahoo_*.json`（Phase 13） */
 export function loadPhase13ContextBattingRows(yahooId: string, year: string): SeasonStatsRow[] {
-  const jsonPath = path.join(
-    getProjectRoot(),
-    '_data',
-    'derived',
-    'player_season_batting_context',
-    year,
-    `yahoo_${yahooId}.json`
-  )
-  if (!fs.existsSync(jsonPath)) return []
-  try {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
-    const rows = raw.rows ?? []
-    return rows.map(normalizeDerivedRowLabels)
-  } catch {
-    return []
-  }
+  return loadDerivedBattingRowsSync('player_season_batting_context', yahooId, year)
+}
+
+export async function loadPhase13ContextBattingRowsAsync(
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  return loadDerivedBattingRowsAsync('player_season_batting_context', yahooId, year)
 }
 
 /** `_data/derived/player_season_batting_splits/{year}/yahoo_*.json`（Phase 15: 打席別巡目等） */
 export function loadPhase15BattingSplitRows(yahooId: string, year: string): SeasonStatsRow[] {
-  const jsonPath = path.join(
-    getProjectRoot(),
-    '_data',
-    'derived',
-    'player_season_batting_splits',
-    year,
-    `yahoo_${yahooId}.json`
-  )
-  if (!fs.existsSync(jsonPath)) return []
-  try {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
-    const rows = raw.rows ?? []
-    return rows.map(normalizeDerivedRowLabels)
-  } catch {
-    return []
-  }
+  return loadDerivedBattingRowsSync('player_season_batting_splits', yahooId, year)
+}
+
+export async function loadPhase15BattingSplitRowsAsync(
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  return loadDerivedBattingRowsAsync('player_season_batting_splits', yahooId, year)
 }
 
 /** `_data/derived/player_season_batting_count/{year}/yahoo_*.json`（Phase 16: カウント別） */
 export function loadPhase16BattingCountRows(yahooId: string, year: string): SeasonStatsRow[] {
-  const jsonPath = path.join(
-    getProjectRoot(),
-    '_data',
-    'derived',
-    'player_season_batting_count',
-    year,
-    `yahoo_${yahooId}.json`
-  )
-  if (!fs.existsSync(jsonPath)) return []
-  try {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
-    const rows = raw.rows ?? []
-    return rows.map(normalizeDerivedRowLabels)
-  } catch {
-    return []
-  }
+  return loadDerivedBattingRowsSync('player_season_batting_count', yahooId, year)
+}
+
+export async function loadPhase16BattingCountRowsAsync(
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  return loadDerivedBattingRowsAsync('player_season_batting_count', yahooId, year)
 }
 
 /** `_data/derived/player_season_batting_period/{year}/yahoo_*.json`（Phase 17: 月間・週間） */
 export function loadPhase17BattingPeriodRows(yahooId: string, year: string): SeasonStatsRow[] {
-  const jsonPath = path.join(
-    getProjectRoot(),
-    '_data',
-    'derived',
-    'player_season_batting_period',
-    year,
-    `yahoo_${yahooId}.json`
-  )
-  if (!fs.existsSync(jsonPath)) return []
-  try {
-    const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as { rows?: SeasonStatsRow[] }
-    const rows = raw.rows ?? []
-    return rows.map(normalizeDerivedRowLabels)
-  } catch {
-    return []
-  }
+  return loadDerivedBattingRowsSync('player_season_batting_period', yahooId, year)
+}
+
+export async function loadPhase17BattingPeriodRowsAsync(
+  yahooId: string,
+  year: string
+): Promise<SeasonStatsRow[]> {
+  return loadDerivedBattingRowsAsync('player_season_batting_period', yahooId, year)
 }
 
 /**
@@ -1717,19 +1712,18 @@ export type MergePilotSeasonStatsResult = {
   battingVsHandReconciliation: BattingVsHandTotalReconciliation | null
 }
 
-export function mergePilotSeasonStatsWithDerived(
+function mergePilotSeasonStatsCore(
   yahooId: string,
-  year: string = DERIVED_SEASON_YEAR_DEFAULT
+  csvAll: SeasonStatsRow[],
+  phase11: SeasonStatsRow[],
+  phase13: SeasonStatsRow[],
+  phase15: SeasonStatsRow[],
+  phase16: SeasonStatsRow[],
+  phase17: SeasonStatsRow[]
 ): MergePilotSeasonStatsResult {
-  const csvAll = loadPilotBattingStats(yahooId)
   const csvNonTotal = csvAll.filter(
     (r) => !(r.split_type === 'total' && r.split_value === 'total')
   )
-  const phase11 = loadPhase11DerivedBattingRows(yahooId, year)
-  const phase13 = loadPhase13ContextBattingRows(yahooId, year)
-  const phase15 = loadPhase15BattingSplitRows(yahooId, year)
-  const phase16 = loadPhase16BattingCountRows(yahooId, year)
-  const phase17 = loadPhase17BattingPeriodRows(yahooId, year)
 
   // 実務方針: 打撃の表示は canonical→derived（Phase11/13/15/16/17）を唯一の正とする。
   // pilot CSV は欠損・更新遅延があり得るため、Phase11 がある限り UI 集計に混ぜない。
@@ -1808,6 +1802,37 @@ export function mergePilotSeasonStatsWithDerived(
   })
   const battingVsHandReconciliation = computeBattingVsHandTotalReconciliation(merged)
   return { rows: merged, battingTotalRowSource: totalSource, battingVsHandReconciliation }
+}
+
+export function mergePilotSeasonStatsWithDerived(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): MergePilotSeasonStatsResult {
+  const csvAll = loadPilotBattingStats(yahooId)
+  return mergePilotSeasonStatsCore(
+    yahooId,
+    csvAll,
+    loadPhase11DerivedBattingRows(yahooId, year),
+    loadPhase13ContextBattingRows(yahooId, year),
+    loadPhase15BattingSplitRows(yahooId, year),
+    loadPhase16BattingCountRows(yahooId, year),
+    loadPhase17BattingPeriodRows(yahooId, year)
+  )
+}
+
+export async function mergePilotSeasonStatsWithDerivedAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT
+): Promise<MergePilotSeasonStatsResult> {
+  const csvAll = loadPilotBattingStats(yahooId)
+  const [phase11, phase13, phase15, phase16, phase17] = await Promise.all([
+    loadPhase11DerivedBattingRowsAsync(yahooId, year),
+    loadPhase13ContextBattingRowsAsync(yahooId, year),
+    loadPhase15BattingSplitRowsAsync(yahooId, year),
+    loadPhase16BattingCountRowsAsync(yahooId, year),
+    loadPhase17BattingPeriodRowsAsync(yahooId, year),
+  ])
+  return mergePilotSeasonStatsCore(yahooId, csvAll, phase11, phase13, phase15, phase16, phase17)
 }
 
 function int(v: unknown): number {

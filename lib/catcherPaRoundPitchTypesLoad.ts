@@ -1,6 +1,5 @@
-import fs from "fs"
 import path from "path"
-import { getProjectRoot } from "@/lib/projectRoot"
+import { loadDerivedNpbJsonAsync, loadDerivedNpbJsonSync } from "@/lib/derived/loadDerivedNpbJson"
 import type { CatcherPaRoundPitchTypesDerived } from "@/lib/catcherPaRoundPitchTypes"
 
 export function catcherPaRoundPitchTypesFilePath(
@@ -20,20 +19,40 @@ export function catcherPaRoundPitchTypesFilePath(
   )
 }
 
+function parseCatcherPaRoundPitchTypes(
+  j: CatcherPaRoundPitchTypesDerived | null,
+  npbCatcherId: string
+): CatcherPaRoundPitchTypesDerived | null {
+  if (j?.schemaVersion !== "player-catcher-pa-round-pitch-types-v1") return null
+  if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
+  return j
+}
+
 export function loadCatcherPaRoundPitchTypesFromRepo(
   year: string,
   npbCatcherId: string
 ): CatcherPaRoundPitchTypesDerived | null {
-  const root = getProjectRoot()
-  const p = catcherPaRoundPitchTypesFilePath(root, year, npbCatcherId)
-  if (!fs.existsSync(p)) return null
-  try {
-    const j = JSON.parse(fs.readFileSync(p, "utf8")) as CatcherPaRoundPitchTypesDerived
-    if (j?.schemaVersion !== "player-catcher-pa-round-pitch-types-v1") return null
-    if (String(j.npbCatcherId ?? "").trim() !== String(npbCatcherId).trim()) return null
-    return j
-  } catch {
-    return null
-  }
+  return parseCatcherPaRoundPitchTypes(
+    loadDerivedNpbJsonSync<CatcherPaRoundPitchTypesDerived>(
+      "player_catcher_pa_round_pitch_types",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
+}
+
+export async function loadCatcherPaRoundPitchTypesFromRepoAsync(
+  year: string,
+  npbCatcherId: string
+): Promise<CatcherPaRoundPitchTypesDerived | null> {
+  return parseCatcherPaRoundPitchTypes(
+    await loadDerivedNpbJsonAsync<CatcherPaRoundPitchTypesDerived>(
+      "player_catcher_pa_round_pitch_types",
+      year,
+      npbCatcherId
+    ),
+    npbCatcherId
+  )
 }
 

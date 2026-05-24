@@ -6,6 +6,7 @@
  * `battingTotalRowSource` で UI が区別できる（`mergePilotSeasonStatsWithDerived`）。
  */
 
+import { derivedJsonExistsAsync } from '@/lib/derived/fetchDerivedJsonServer'
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
 import {
   decodePlayerPathSegment,
@@ -21,15 +22,12 @@ import {
   loadVsHandRowsFromCanonicalWithDebug,
   loadPilotBlocksData,
   loadPilotRispStats,
-  mergePilotSeasonStatsWithDerived,
+  mergePilotSeasonStatsWithDerivedAsync,
 } from "@/lib/seasonStatsPilot"
 import type { PilotBlocksData, SeasonStatsRow } from "@/lib/seasonStatsPilotShared"
-import { loadPitchTypeStats, loadSpeedBandStats } from "@/lib/pitchDetailsPilot"
+import { loadPitchTypeStatsAsync, loadSpeedBandStatsAsync } from "@/lib/pitchDetailsPilot"
 import type { PitchTypeStats, SpeedBandStatsMap } from "@/lib/pitchDetailsPilot"
 import { resolveYahooPilotIdForStats } from "@/lib/yahooNpbBatterIdMap"
-import fs from "node:fs"
-import path from "node:path"
-import { getProjectRoot } from "@/lib/projectRoot"
 
 export const dynamic = "force-dynamic"
 
@@ -92,52 +90,19 @@ function fielderPlaceholderPayload(): SeasonStatsApiPayload {
   }
 }
 
-function derivedSeasonBattingExists(yahooBatterId: string, year: string): boolean {
+async function derivedSeasonBattingExists(yahooBatterId: string, year: string): Promise<boolean> {
   const id = (yahooBatterId || "").trim()
   if (!/^\d+$/.test(id)) return false
   const y = (year || "").trim() || DERIVED_SEASON_YEAR_DEFAULT
-  // Next の実行環境によっては process.cwd() がルート以外を指すことがあるため、
-  // `_data/derived` を見つけられるまで複数候補で探索する。
-  const roots = (() => {
-    const out: string[] = []
-    try {
-      out.push(getProjectRoot())
-    } catch {
-      // ignore
-    }
-    try {
-      out.push(process.cwd())
-    } catch {
-      // ignore
-    }
-    // cwd から親を辿る（最大 6 階層）
-    try {
-      let d = process.cwd()
-      for (let i = 0; i < 6; i++) {
-        const parent = path.dirname(d)
-        if (!parent || parent === d) break
-        out.push(parent)
-        d = parent
-      }
-    } catch {
-      // ignore
-    }
-    return Array.from(new Set(out.map((r) => (r || "").trim()).filter(Boolean)))
-  })()
-
-  const relCandidates = [
-    path.join("_data", "derived", "player_season_batting", y, `yahoo_${id}.json`),
-    path.join("_data", "derived", "player_season_batting_context", y, `yahoo_${id}.json`),
-    path.join("_data", "derived", "player_season_batting_splits", y, `yahoo_${id}.json`),
-    path.join("_data", "derived", "player_season_batting_count", y, `yahoo_${id}.json`),
-    path.join("_data", "derived", "player_season_batting_period", y, `yahoo_${id}.json`),
-  ]
-
-  for (const root of roots) {
-    for (const rel of relCandidates) {
-      const p = path.join(root, rel)
-      if (fs.existsSync(p)) return true
-    }
+  const categories = [
+    "player_season_batting",
+    "player_season_batting_context",
+    "player_season_batting_splits",
+    "player_season_batting_count",
+    "player_season_batting_period",
+  ] as const
+  for (const category of categories) {
+    if (await derivedJsonExistsAsync(category, y, `yahoo_${id}.json`)) return true
   }
   return false
 }
@@ -165,7 +130,7 @@ export async function GET(
     // - 非数値: 名簿で NPB を解決→bridge で Yahoo
     let yahooId: string | null = resolveYahooPilotIdForStats(decoded)
     // bridge に載っていない Yahoo ID でも、派生 JSON が存在するなら Yahoo とみなして読む
-    if (!yahooId && /^\d+$/.test(decoded) && derivedSeasonBattingExists(decoded, year)) {
+    if (!yahooId && /^\d+$/.test(decoded) && (await derivedSeasonBattingExists(decoded, year))) {
       yahooId = decoded
     }
     if (!yahooId) {
@@ -195,7 +160,7 @@ export async function GET(
       } satisfies SeasonStatsApiResponse)
     }
     const { rows: mergedStats, battingTotalRowSource, battingVsHandReconciliation } =
-      mergePilotSeasonStatsWithDerived(yahooId, year)
+      await mergePilotSeasonStatsWithDerivedAsync(yahooId, year)
     let stats = mergedStats
     const blocks = loadPilotBlocksData(yahooId)
     if (blocks?.meta?.date && blocks.blocks?.F) {
@@ -204,8 +169,10 @@ export async function GET(
         blocks.blocks.F.by_risp_stats = byRispStats
       }
     }
-    const pitchTypeStats = loadPitchTypeStats(yahooId, year)
-    const speedBandStats = loadSpeedBandStats(yahooId, year)
+    const [pitchTypeStats, speedBandStats] = await Promise.all([
+      loadPitchTypeStatsAsync(yahooId, year),
+      loadSpeedBandStatsAsync(yahooId, year),
+    ])
 
     if (stats.length === 0) {
       const rosterPlayer = findRosterPlayerByPublicId(decoded)
