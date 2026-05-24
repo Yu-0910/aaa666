@@ -714,15 +714,11 @@ function PlayerPageClient({
   /**
    * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
    * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
+   * 数値 ID（NPB/Yahoo）URL も名簿待ちせず今季 UI を出す（41045153 等）。
    */
-  const showFielderSeasonPilotUi =
-    !showPitcherSeasonSuganoUi &&
-    ((isRosterPlayer &&
-      isFielderRegistrationPosition(rosterMatchedPosition, {
-        rosterNpbPlayerId: rosterMatchedNpbId,
-      })) ||
-      isFabianPage ||
-      isKikuchiPage)
+  const numericPilotIdFromPath = /^\d+$/.test(
+    String(playerIdNormalized || playerSegmentCore || "").trim()
+  )
   const seasonPilotPlayerId = resolveSeasonStatsPilotQueryId({
     pathname,
     playerIdNormalized,
@@ -731,12 +727,27 @@ function PlayerPageClient({
     displayName,
     displayRomanName,
   })
+  const rosterKnownPitcher =
+    isRosterPlayer &&
+    isPitcherRegistrationPosition(rosterMatchedPosition, {
+      rosterNpbPlayerId: rosterMatchedNpbId,
+    })
+  const showFielderSeasonPilotUi =
+    !showPitcherSeasonSuganoUi &&
+    (isFabianPage ||
+      isKikuchiPage ||
+      (isRosterPlayer &&
+        isFielderRegistrationPosition(rosterMatchedPosition, {
+          rosterNpbPlayerId: rosterMatchedNpbId,
+        })) ||
+      (numericPilotIdFromPath && !rosterKnownPitcher))
   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
   const showSeasonCareerTabs =
     isRosterPlayer ||
     isAoyagiPage ||
     isKikuchiPage ||
     isFabianPage ||
+    numericPilotIdFromPath ||
     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
 
   /**
@@ -1243,6 +1254,10 @@ function PlayerPageClient({
     [pitcherSeasonPocPayload]
   )
 
+  /** 数値 ID URL は名簿 API 待ちで全画面スピナーにしない */
+  const pageShellReady =
+    rosterMainReady || numericPilotIdFromPath || Boolean(playerIdNormalized.trim())
+
   return (
     <div
       className="player-page-fonts min-h-screen text-white"
@@ -1325,7 +1340,7 @@ function PlayerPageClient({
         }
         style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
       >
-        {!rosterMainReady ? (
+        {!pageShellReady ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center py-20">
             <SectionLoadingSpinner className="py-8" />
           </div>
