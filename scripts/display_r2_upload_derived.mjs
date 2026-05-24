@@ -74,6 +74,8 @@ const DERIVED_CATEGORIES = [
   'player_catcher_pa_round_pitch_types',
 ]
 
+const META_UPLOADS = [{ local: '_data/scraped_games/derived/yahoo_to_npb_full.json', key: 'data/derived/meta/yahoo_to_npb_full.json' }]
+
 const UPLOADS = DERIVED_CATEGORIES.map((cat) => ({
   local: `_data/derived/${cat}`,
   keyPrefix: `data/derived/${cat}`,
@@ -134,6 +136,14 @@ async function main() {
       if (YEAR_FILTER && !matchesYearFilter(rel, YEAR_FILTER)) continue
       files.push({ local: f, key: `${u.keyPrefix}/${rel}` })
     }
+  }
+  for (const m of META_UPLOADS) {
+    const abs = path.join(ROOT, m.local)
+    if (!fs.existsSync(abs)) {
+      console.warn(`Skip missing meta: ${m.local}`)
+      continue
+    }
+    files.push({ local: abs, key: m.key })
   }
 
   if (YEAR_FILTER) console.log(`Filter: year=${YEAR_FILTER}`)

@@ -27,7 +27,7 @@ import {
 import type { PilotBlocksData, SeasonStatsRow } from "@/lib/seasonStatsPilotShared"
 import { loadPitchTypeStatsAsync, loadSpeedBandStatsAsync } from "@/lib/pitchDetailsPilot"
 import type { PitchTypeStats, SpeedBandStatsMap } from "@/lib/pitchDetailsPilot"
-import { resolveYahooPilotIdForStats } from "@/lib/yahooNpbBatterIdMap"
+import { resolveYahooPilotIdForStatsAsync } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
 
@@ -128,7 +128,7 @@ export async function GET(
     // 全選手対応: URL セグメント（Yahoo/NPB 数値・日本語名など）から Yahoo 打者 ID を解決する。
     // - 数値: bridge で NPB→Yahoo 変換 or Yahoo のまま
     // - 非数値: 名簿で NPB を解決→bridge で Yahoo
-    let yahooId: string | null = resolveYahooPilotIdForStats(decoded)
+    let yahooId: string | null = await resolveYahooPilotIdForStatsAsync(decoded)
     // bridge に載っていない Yahoo ID でも、派生 JSON が存在するなら Yahoo とみなして読む
     if (!yahooId && /^\d+$/.test(decoded) && (await derivedSeasonBattingExists(decoded, year))) {
       yahooId = decoded
@@ -136,7 +136,7 @@ export async function GET(
     if (!yahooId) {
       const rosterPlayer = findRosterPlayerByPublicId(decoded)
       if (rosterPlayer?.npb_player_id) {
-        yahooId = resolveYahooPilotIdForStats(rosterPlayer.npb_player_id)
+        yahooId = await resolveYahooPilotIdForStatsAsync(rosterPlayer.npb_player_id)
       }
     }
     if (!yahooId) {

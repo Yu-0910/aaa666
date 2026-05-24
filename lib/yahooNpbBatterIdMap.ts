@@ -23,6 +23,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
+import { fetchDerivedJsonServer } from "@/lib/derived/fetchDerivedJsonServer"
 import { getProjectRoot } from "@/lib/projectRoot"
 
 type Maps = { yahooToNpb: Map<string, string>; npbToYahoo: Map<string, string> }
@@ -190,5 +191,24 @@ export function resolveYahooPilotIdForStats(raw: string): string | null {
   const { npbToYahoo, yahooToNpb } = loadMaps()
   if (npbToYahoo.has(id)) return npbToYahoo.get(id)!
   if (yahooToNpb.has(id)) return id
+  return null
+}
+
+/** Vercel 本番で `_data/scraped_games/derived` が無いとき R2 の full index から解決 */
+export async function resolveYahooPilotIdForStatsAsync(raw: string): Promise<string | null> {
+  const sync = resolveYahooPilotIdForStats(raw)
+  if (sync) return sync
+  const id = (raw || "").trim()
+  if (!id || !/^\d+$/.test(id)) return null
+  const full = await fetchDerivedJsonServer<{ map?: Record<string, string> }>(
+    "meta",
+    "yahoo_to_npb_full.json"
+  )
+  const m = full?.map ?? {}
+  if (m[id]) return id
+  for (const [yahoo, npb] of Object.entries(m)) {
+    const n = String(npb).trim().replace(/[^\d]/g, "")
+    if (n === id && /^\d+$/.test(String(yahoo).trim())) return String(yahoo).trim()
+  }
   return null
 }

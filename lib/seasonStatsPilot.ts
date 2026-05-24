@@ -17,7 +17,7 @@ import {
   fetchDerivedJsonServer,
   readDerivedJsonLocalSync,
 } from '@/lib/derived/fetchDerivedJsonServer'
-import { invalidateYahooNpbBatterMapsCache, resolveYahooPilotIdForStats } from '@/lib/yahooNpbBatterIdMap'
+import { invalidateYahooNpbBatterMapsCache, resolveYahooPilotIdForStats, resolveYahooPilotIdForStatsAsync } from '@/lib/yahooNpbBatterIdMap'
 import { formatWeekRangeTueToSunFromTuesdayYmd } from '@/lib/yahooGame/jstPeriodKeys'
 import {
   aggregateBattingSeasonByYahooBatterFromBattingLines,
@@ -114,6 +114,21 @@ export function getYahooIdForPilot(playerIdOrName: string): string | null {
   if (rosterPlayer?.npb_player_id) {
     const y = resolveYahooPilotIdForStats(rosterPlayer.npb_player_id)
     if (y) return y
+  }
+  return null
+}
+
+/** Vercel 本番: ローカル bridge CSV が無いとき R2 meta から NPB→Yahoo を解決 */
+export async function getYahooIdForPilotAsync(playerIdOrName: string): Promise<string | null> {
+  const sync = getYahooIdForPilot(playerIdOrName)
+  if (sync) return sync
+  const trimmed = String(playerIdOrName || '').trim()
+  if (!trimmed) return null
+  const fromBridge = await resolveYahooPilotIdForStatsAsync(trimmed)
+  if (fromBridge) return fromBridge
+  const rosterPlayer = findRosterPlayerByPublicId(trimmed)
+  if (rosterPlayer?.npb_player_id) {
+    return resolveYahooPilotIdForStatsAsync(rosterPlayer.npb_player_id)
   }
   return null
 }

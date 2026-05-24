@@ -7,7 +7,7 @@ import {
   jsonDerivedResponse,
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
-import { getYahooIdForPilot } from "@/lib/seasonStatsPilot"
+import { getYahooIdForPilotAsync } from "@/lib/seasonStatsPilot"
 import {
   loadPhase14PitchBundleAsync,
   loadPitchDetails,
@@ -42,7 +42,7 @@ export async function GET(
       context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const year = yearFromRequest(request)
-    const yahooId = getYahooIdForPilot(decoded)
+    const yahooId = await getYahooIdForPilotAsync(decoded)
     if (!yahooId) {
       return jsonDerivedResponse({
         hasData: false,

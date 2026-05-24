@@ -9,6 +9,7 @@ import {
   jsonDerivedResponse,
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
+import { getYahooIdForPilotAsync } from "@/lib/seasonStatsPilot"
 import { loadPitcherZoneSeasonDerivedAsync } from "@/lib/yahooGame/gamePitcherPilotFiles"
 import type { ZoneStat } from "@/lib/yahooGame/gamePitcherPilotFiles"
 
@@ -43,7 +44,7 @@ export async function GET(
       context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim()).replace(/^player-/, "").trim()
     const year = yearFromRequest(request)
-    const yahooId = getYahooIdForPilot(decoded)
+    const yahooId = await getYahooIdForPilotAsync(decoded)
     if (!yahooId) {
       return jsonDerivedResponse({
         hasData: false,
