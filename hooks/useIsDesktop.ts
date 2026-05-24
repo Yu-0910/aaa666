@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
-import { usePathname } from "next/navigation"
 
 /**
  * デスクトップ判定
@@ -60,6 +59,22 @@ function getServerSearchSnapshot(): string {
   return ""
 }
 
+function getPathnameSnapshot(): string {
+  return typeof window !== "undefined" ? window.location.pathname : ""
+}
+
+function getServerPathnameSnapshot(): string {
+  return ""
+}
+
+/**
+ * `usePathname()` の代替。Next.js 16 では pathname が Promise 経由になり、親の Suspense が永続フォールバックになることがある。
+ * クエリと同様に History API を購読し、`window.location.pathname` を返す。
+ */
+export function useClientPathname(): string {
+  return useSyncExternalStore(subscribeSearch, getPathnameSnapshot, getServerPathnameSnapshot)
+}
+
 /** クライアントのクエリ文字列（useSearchParams の代替・サスペンドしない） */
 export function useClientSearchString(): string {
   return useSyncExternalStore(subscribeSearch, getSearchSnapshot, getServerSearchSnapshot)
@@ -86,7 +101,7 @@ export function computeForceMobile(pathname: string, search: string): boolean {
 }
 
 export function useViewportLayout(): { isDesktop: boolean; forceMobile: boolean } {
-  const pathname = usePathname()
+  const pathname = useClientPathname()
   const search = useClientSearchString()
   const forceMobile = useMemo(() => computeForceMobile(pathname, search), [pathname, search])
   const [isDesktopMedia, setIsDesktopMedia] = useState(false)
