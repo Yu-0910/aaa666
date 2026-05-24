@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
+import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
 export type DisplayDataKind = 'rankings' | 'top-leaders'
 
@@ -68,7 +69,7 @@ export async function handleDisplayDataGet(
     if (data != null) return jsonResponseWithCache(data)
   }
 
-  const baseUrl = process.env.RANKINGS_BASE_URL
+  const baseUrl = getRankingsBaseUrl()
   if (!baseUrl) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)

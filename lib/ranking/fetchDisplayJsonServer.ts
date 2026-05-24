@@ -6,12 +6,12 @@
 
 import { displaySitePathToObjectKey } from '@/lib/displayData/sitePath'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
+import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
 export { displaySitePathToObjectKey, displaySitePathToPublicUrl } from '@/lib/displayData/sitePath'
 
 async function fetchFromR2Direct<T>(sitePath: string): Promise<T | null> {
-  const base = process.env.RANKINGS_BASE_URL?.trim()
-  if (!base) return null
+  if (!getRankingsBaseUrl()) return null
   try {
     const url = getExternalDisplayDataUrl(displaySitePathToObjectKey(sitePath))
     const res = await fetch(url, {

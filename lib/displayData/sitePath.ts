@@ -2,6 +2,8 @@
  * /data/* パス ↔ R2 オブジェクトキー（クライアント・サーバー共通・fetch なし）
  */
 
+import { getPublicRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
+
 /** `/data/rankings/...` → `data/rankings/...` */
 export function displaySitePathToObjectKey(sitePath: string): string {
   const normalized = sitePath.startsWith('/') ? sitePath.slice(1) : sitePath
@@ -12,7 +14,7 @@ export function displaySitePathToObjectKey(sitePath: string): string {
 }
 
 export function displaySitePathToPublicUrl(sitePath: string): string | null {
-  const base = process.env.NEXT_PUBLIC_RANKINGS_BASE_URL?.trim()
+  const base = getPublicRankingsBaseUrl()
   if (!base) return null
   try {
     return `${base.replace(/\/+$/, '')}/${displaySitePathToObjectKey(sitePath)}`
