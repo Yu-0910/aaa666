@@ -419,7 +419,7 @@ function PlayerPageClient({
   const [catcherPaRoundPitchTypes, setCatcherPaRoundPitchTypes] = useState<
     { key: "1" | "2" | "3" | "4" | "5"; pitches_total: number; rows: { pitch_type: string; pitches: number; pct: number }[] }[]
   >([])
-  const [displayName, setDisplayName] = useState(playerData.name)
+  const [displayName, setDisplayName] = useState("")
   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
@@ -505,6 +505,9 @@ function PlayerPageClient({
 
   useLayoutEffect(() => {
     setRosterMainReady(false)
+    if (playerIdNormalized) {
+      setDisplayName((prev) => prev || playerIdNormalized)
+    }
   }, [playerIdNormalized])
 
   useEffect(() => {
@@ -512,11 +515,13 @@ function PlayerPageClient({
     const id = playerIdNormalized.trim()
     const qs =
       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
-    fetch(`/api/roster/2026${qs}`)
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+    fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
       .then((r) => r.json())
       .then(
         (data: {
-          players: Array<{
+          players?: Array<{
             npb_player_id: string
             name_ja: string
             name_en: string
@@ -583,6 +588,9 @@ function PlayerPageClient({
           setIsRosterPlayer(!!matched)
           setRosterMatchedPosition((matched?.position ?? "").trim())
           setRosterMatchedNpbId((matched?.npb_player_id ?? "").trim())
+          if (matched?.name_ja) {
+            setDisplayName(matched.name_ja)
+          }
           if (matched) {
             const stripeKey =
               (matched.team_code ?? "").trim() || (matched.team ?? "").trim()
@@ -591,10 +599,17 @@ function PlayerPageClient({
             setRosterStripeKey("")
           }
           const extra: Record<string, string> = {}
-          for (const p of players) {
-            const full = rosterEnglishFullFromCsvRow(p)
-            if (!full) continue
-            Object.assign(extra, rosterEnglishAliasKeys(p.name_ja, full))
+          if (matched) {
+            const full = rosterEnglishFullFromCsvRow(matched)
+            if (full) {
+              Object.assign(extra, rosterEnglishAliasKeys(matched.name_ja, full))
+            }
+          } else {
+            for (const p of players) {
+              const full = rosterEnglishFullFromCsvRow(p)
+              if (!full) continue
+              Object.assign(extra, rosterEnglishAliasKeys(p.name_ja, full))
+            }
           }
           setRosterRomanExtra(extra)
         }
@@ -607,10 +622,13 @@ function PlayerPageClient({
         setRosterStripeKey("")
       })
       .finally(() => {
+        window.clearTimeout(timeoutId)
         if (!cancelled) setRosterMainReady(true)
       })
     return () => {
       cancelled = true
+      controller.abort()
+      window.clearTimeout(timeoutId)
     }
   }, [displayName, playerIdNormalized])
 

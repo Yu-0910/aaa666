@@ -23,12 +23,16 @@ export async function fetchJsonCached<T>(url: string): Promise<T> {
   if (hit) return hit as Promise<T>
 
   const pending = (async () => {
-    const r2Url = url.startsWith('/data/') ? displaySitePathToPublicUrl(url) : null
-    if (r2Url) {
-      try {
-        return await fetchOneUrl<T>(r2Url)
-      } catch {
-        /* fall through to /data proxy */
+    // ブラウザから R2 直は CORS 非対応のため同一オリジン /data のみ（サーバーは R2 直も可）
+    const isBrowser = typeof window !== 'undefined'
+    if (!isBrowser && url.startsWith('/data/')) {
+      const r2Url = displaySitePathToPublicUrl(url)
+      if (r2Url) {
+        try {
+          return await fetchOneUrl<T>(r2Url)
+        } catch {
+          /* /data プロキシへ */
+        }
       }
     }
     return fetchOneUrl<T>(url)

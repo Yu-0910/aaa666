@@ -6,6 +6,7 @@
 import fs from "fs"
 import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
+import { getRankingsBaseUrl } from "@/lib/displayData/rankingsBaseUrl"
 import { getProjectRoot } from "@/lib/projectRoot"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
@@ -82,9 +83,9 @@ async function readWeeklyCurrentWeekMetaAsync(
   )
 }
 
-/** Vercel 本番: R2 URL が無いときはサーバー先読みしない（落ちるのを防ぐ） */
+/** Vercel 本番: R2 フォールバック（rankingsBaseUrl）が使えるときはサーバー先読み可 */
 export function canPreload2026TabDataOnServer(): boolean {
-  if (process.env.RANKINGS_BASE_URL?.trim()) return true
+  if (getRankingsBaseUrl()) return true
   if (!process.env.VERCEL) return true
   return false
 }
