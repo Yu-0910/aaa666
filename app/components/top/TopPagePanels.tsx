@@ -172,7 +172,7 @@ export function LeadersPanel({
                     </Link>
                     <Link
                       href={getStatsListUrl()}
-                      className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
                     </Link>
@@ -231,7 +231,7 @@ export function LeadersPanel({
                     </Link>
                     <Link
                       href={getStatsListUrl()}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${useModernMetricTitle ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
                     </Link>
@@ -267,7 +267,7 @@ export function LeadersPanel({
                 </Link>
                 <Link
                   href={getStatsListUrl()}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${useModernMetricTitle ? "text-[9px]" : "text-[10px]"} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
                 </Link>
@@ -305,7 +305,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl()}
-                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -320,7 +320,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl()}
-                    className="bg-black py-0.5 px-1 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -363,7 +363,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl()}
-                    className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -382,7 +382,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl()}
-                    className="bg-black py-0.5 px-0.5 text-[10px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
+                    className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>

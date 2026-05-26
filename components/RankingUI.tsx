@@ -46,13 +46,17 @@ interface RankingUIProps {
 // 左ブロック（順＋フレーム＋選手）を1層にまとめ、隙間を防ぐ（問題29・二層構造の理想に合わせる）
 const RANK_WIDTH = 30
 const PLAYER_WIDTH = 90
+const PLAYER_WIDTH_2025 = PLAYER_WIDTH * 0.9 // 9割
 const FRAME_WIDTH = 2 // 順列と選手列の間のグレーフレーム
-const LEFT_BLOCK_WIDTH = RANK_WIDTH + FRAME_WIDTH + PLAYER_WIDTH // 122
 /** 指標列の最小幅（w-full だと本番で全列が画面幅に押し潰され横スクロール不能になる） */
 const METRIC_COL_MIN_WIDTH = 60
+const METRIC_COL_MIN_WIDTH_2025 = METRIC_COL_MIN_WIDTH * 0.85 // 8.5割
+/** 選手名ブロックの縦サイズ（px） */
+const PLAYER_NAME_BLOCK_HEIGHT = 32
+const PLAYER_NAME_BLOCK_HEIGHT_2025 = 32.3
 
-function rankingTableMinWidthPx(metricCount: number): number {
-  return LEFT_BLOCK_WIDTH + metricCount * METRIC_COL_MIN_WIDTH
+function rankingTableMinWidthPx(leftBlockWidth: number, metricColMinWidth: number, metricCount: number): number {
+  return leftBlockWidth + metricCount * metricColMinWidth
 }
 
 export default function RankingUI({
@@ -70,6 +74,12 @@ export default function RankingUI({
 }: RankingUIProps) {
   const { season, league, metrics } = viewModel
   const router = useRouter()
+  const is2025Season = season === '2025'
+  const playerWidth = is2025Season ? PLAYER_WIDTH_2025 : PLAYER_WIDTH
+  const leftBlockWidth = RANK_WIDTH + FRAME_WIDTH + playerWidth
+  const playerNameBlockHeight = is2025Season ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
+  const metricColMinWidth = is2025Season ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
+  const metricValueTextClass = is2025Season ? 'text-[16.83px]' : 'text-lg'
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
   const activeMetric = metrics.find(m => m.key === sortKey)
@@ -92,7 +102,7 @@ export default function RankingUI({
     : `${leagueName}　${metricLabel}ランキング (${season}年)`
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
-  const tableMinWidthPx = rankingTableMinWidthPx(metrics.length)
+  const tableMinWidthPx = rankingTableMinWidthPx(leftBlockWidth, metricColMinWidth, metrics.length)
 
   const handleYearChange = (newYear: number) => {
     router.push(
@@ -175,9 +185,9 @@ export default function RankingUI({
               }}
             >
               <colgroup>
-                <col style={{ width: `${LEFT_BLOCK_WIDTH}px` }} />
+                <col style={{ width: `${leftBlockWidth}px` }} />
                 {metrics.map((metric) => (
-                  <col key={metric.key} style={{ width: `${METRIC_COL_MIN_WIDTH}px` }} />
+                  <col key={metric.key} style={{ width: `${metricColMinWidth}px` }} />
                 ))}
               </colgroup>
               <thead>
@@ -190,17 +200,17 @@ export default function RankingUI({
                       top: 0,
                       left: 0,
                       zIndex: 100,
-                      width: `${LEFT_BLOCK_WIDTH}px`,
-                      maxWidth: `${LEFT_BLOCK_WIDTH}px`,
+                      width: `${leftBlockWidth}px`,
+                      maxWidth: `${leftBlockWidth}px`,
                       boxSizing: 'border-box',
                       padding: 0,
                       verticalAlign: 'middle',
                     }}
                   >
-                    <div className="flex flex-nowrap items-stretch w-full" style={{ width: LEFT_BLOCK_WIDTH }}>
+                    <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
                       <div className="px-2 py-3 text-[10px] font-bold bg-[#ffff44] text-black flex-shrink-0" style={{ width: RANK_WIDTH, boxSizing: 'border-box' }}>順</div>
                       <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
-                      <div className="px-2 py-3 text-[10px] font-bold bg-[#ffff44] text-black flex-shrink-0" style={{ width: PLAYER_WIDTH, boxSizing: 'border-box' }}>選手名</div>
+                      <div className="px-2 py-3 text-[10px] font-bold bg-[#ffff44] text-black flex-shrink-0" style={{ width: playerWidth, boxSizing: 'border-box' }}>選手名</div>
                     </div>
                   </th>
                   {metrics.map((metric, metricIdx) => {
@@ -211,8 +221,8 @@ export default function RankingUI({
                         data-active={isActive}
                         className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#ffff44] text-black ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                         style={{
-                          width: `${METRIC_COL_MIN_WIDTH}px`,
-                          minWidth: `${METRIC_COL_MIN_WIDTH}px`,
+                          width: `${metricColMinWidth}px`,
+                          minWidth: `${metricColMinWidth}px`,
                           backgroundColor: '#ffff44',
                           color: '#000000',
                           paddingLeft: metricIdx === 0 ? 0 : undefined,
@@ -260,17 +270,17 @@ export default function RankingUI({
                               position: 'sticky',
                               left: 0,
                               zIndex: 100,
-                              width: `${LEFT_BLOCK_WIDTH}px`,
-                              maxWidth: `${LEFT_BLOCK_WIDTH}px`,
+                              width: `${leftBlockWidth}px`,
+                              maxWidth: `${leftBlockWidth}px`,
                               boxSizing: 'border-box',
                               padding: 0,
                               verticalAlign: 'middle',
                             }}
                           >
-                            <div className="flex flex-nowrap items-stretch w-full" style={{ width: LEFT_BLOCK_WIDTH }}>
+                            <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
                               <div className="px-2 py-3 text-[10px] font-bold bg-[#4a4a4a] text-white flex-shrink-0" style={{ width: RANK_WIDTH, boxSizing: 'border-box' }}>順</div>
                               <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
-                              <div className="px-2 py-3 text-[10px] font-bold bg-[#4a4a4a] text-white flex-shrink-0" style={{ width: PLAYER_WIDTH, boxSizing: 'border-box' }}>選手名</div>
+                              <div className="px-2 py-3 text-[10px] font-bold bg-[#4a4a4a] text-white flex-shrink-0" style={{ width: playerWidth, boxSizing: 'border-box' }}>選手名</div>
                             </div>
                           </th>
                           {metrics.map((metric, metricIdx) => {
@@ -281,8 +291,8 @@ export default function RankingUI({
                                 data-active={isActive}
                                 className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#4a4a4a] text-white ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                                 style={{
-                                  width: `${METRIC_COL_MIN_WIDTH}px`,
-                                  minWidth: `${METRIC_COL_MIN_WIDTH}px`,
+                                  width: `${metricColMinWidth}px`,
+                                  minWidth: `${metricColMinWidth}px`,
                                   backgroundColor: '#4a4a4a',
                                   color: '#ffffff',
                                   paddingLeft: metricIdx === 0 ? 0 : undefined,
@@ -324,14 +334,14 @@ export default function RankingUI({
                           position: 'sticky',
                           left: 0,
                           zIndex: 40,
-                          width: `${LEFT_BLOCK_WIDTH}px`,
-                          maxWidth: `${LEFT_BLOCK_WIDTH}px`,
+                          width: `${leftBlockWidth}px`,
+                          maxWidth: `${leftBlockWidth}px`,
                           boxSizing: 'border-box',
                           padding: 0,
                           verticalAlign: 'middle',
                         }}
                       >
-                        <div className="flex flex-nowrap items-stretch w-full" style={{ width: LEFT_BLOCK_WIDTH }}>
+                        <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
                           <div
                             className="text-center tabular-nums font-normal text-white flex-shrink-0 flex items-center justify-center"
                             style={{ width: RANK_WIDTH, minHeight: 32, backgroundColor: '#1f1f1f', padding: '2px 4px', boxSizing: 'border-box' }}
@@ -340,12 +350,30 @@ export default function RankingUI({
                           </div>
                           <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
                           <div
-                            className="overflow-hidden flex-shrink-0 flex items-center"
-                            style={{ width: PLAYER_WIDTH, minHeight: 32, backgroundColor: '#1f1f1f', padding: '2px 2px', boxSizing: 'border-box' }}
+                            className={`overflow-hidden flex-shrink-0 flex items-center ${is2025Season ? 'self-center' : ''}`}
+                            style={{
+                              width: playerWidth,
+                              minHeight: playerNameBlockHeight,
+                              ...(is2025Season
+                                ? { height: playerNameBlockHeight, maxHeight: playerNameBlockHeight }
+                                : {}),
+                              backgroundColor: '#1f1f1f',
+                              padding: is2025Season ? '1.9px 2px' : '2px 2px',
+                              boxSizing: 'border-box',
+                            }}
                           >
                             <div className="flex items-center gap-0.5 w-full min-w-0">
-                              <div className="w-1 h-8 flex-shrink-0" style={{ backgroundColor: rankingTeamStripeColor(row.team) }} />
-                              <div className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05] h-8">
+                              <div
+                                className="w-1 flex-shrink-0"
+                                style={{
+                                  height: playerNameBlockHeight,
+                                  backgroundColor: rankingTeamStripeColor(row.team),
+                                }}
+                              />
+                              <div
+                                className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05]"
+                                style={{ height: playerNameBlockHeight }}
+                              >
                                 <Link
                                   href={playerPageHref({
                                     npbPlayerId: row.npbPlayerId,
@@ -389,14 +417,16 @@ export default function RankingUI({
                               isActive ? 'bg-[#3a3a3a]' : ''
                             } ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                             style={{
-                              width: `${METRIC_COL_MIN_WIDTH}px`,
-                              minWidth: `${METRIC_COL_MIN_WIDTH}px`,
+                              width: `${metricColMinWidth}px`,
+                              minWidth: `${metricColMinWidth}px`,
                               backgroundColor: activeBgColor,
                               paddingLeft: metricIdx === 0 ? 0 : undefined,
                               marginLeft: metricIdx === 0 ? '-2px' : undefined,
                             }}
                           >
-                            <span className="bebas tabular-nums text-lg tracking-wide">{formattedValue}</span>
+                            <span className={`bebas tabular-nums ${metricValueTextClass} tracking-wide`}>
+                              {formattedValue}
+                            </span>
                           </td>
                         )
                       })}
