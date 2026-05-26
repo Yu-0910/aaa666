@@ -37,18 +37,29 @@ export function TopPageModernLeaderRow({
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
   const teamBarHeight = miniTeamBar ?? (modernLeaderRow ? typography.teamBar : "h-6")
+  const rankLabel = String(index + 1)
 
   return (
     <div
-      className={`flex ${typography.leaderRowGap} ${typography.rowPy} ${modernLeaderRow ? "items-stretch" : "items-center"}`}
+      className={`flex min-w-0 w-full ${typography.leaderRowGap} ${typography.rowPy} ${
+        typography.rankBebas ? "overflow-hidden" : ""
+      } ${modernLeaderRow ? "items-stretch" : "items-center"}`}
     >
       <div
-        className={`${typography.rankBadge} ${typography.rankInset} shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center`}
+        className={`${typography.rankBadge} ${typography.rankInset} shrink-0 flex items-center justify-center self-center ${
+          typography.rankBebas ? "" : "rounded-full bg-[#2a2a2a]"
+        }`}
       >
-        <span className={`text-white ${typography.rankText} latin tabular-nums`}>{index + 1}</span>
+        <span
+          className={`${typography.rankTextColor ?? "text-white"} ${typography.rankText} ${
+            typography.rankBebas ? "bebas tabular-nums font-normal" : "latin tabular-nums"
+          }`}
+        >
+          {rankLabel}
+        </span>
       </div>
       <div
-        className={`w-1 mr-0.5 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${teamBarHeight}` : "h-6 self-center"}`}
+        className={`${typography.teamBarWidth ?? "w-1"} ${typography.teamBarInset ?? ""} mr-0.5 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${teamBarHeight}` : "h-6 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
@@ -66,7 +77,7 @@ export function TopPageModernLeaderRow({
               className={`flex items-center justify-between ${typography.nameValueGap} w-full min-w-0`}
             >
               <span
-                className={`flex-1 min-w-0 text-white ${typography.playerName} font-semibold leading-tight ${typography.playerNameLine}`}
+                className={`flex-1 min-w-0 text-white ${typography.playerName} font-semibold leading-tight ${typography.playerNameLine} ${typography.playerTextShift ?? ""}`}
               >
                 {playerName}
               </span>
@@ -78,7 +89,7 @@ export function TopPageModernLeaderRow({
             </div>
             {romanShort && (
               <span
-                className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide truncate`}
+                className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide truncate ${typography.playerTextShift ?? ""}`}
               >
                 {romanShort}
               </span>

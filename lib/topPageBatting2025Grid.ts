@@ -1,8 +1,6 @@
 import type { LeaderRow } from "@/lib/ranking/leadersTypes"
 
-/** 2025 TOP 打撃（シーズン）: OPS｜打率｜本塁打（3等分）｜打点 */
-export const BATTING_TOP_2025_SEASON_PAIR_METRICS = ["打率", "本塁打"] as const
-
+/** 2025 シーズン TOP: OPS｜打率｜本塁打（3等分）｜打点。2026 シーズンは 2×2 */
 /** 2025 シーズン TOP のみ: 各指標5位まで（デザイン確認用。4–5位は不足時プレースホルダ） */
 export const BATTING_TOP_2025_SEASON_TOP_METRICS = ["OPS", "打率", "本塁打"] as const
 export const BATTING_TOP_2025_SEASON_TOP_N = 5
@@ -21,13 +19,12 @@ export function usesTopBattingModernLayout(year: number): boolean {
   return year === 2025 || year === 2026
 }
 
-/** 指標見出し（中央の黄色タイトル）をモダン表示するか。2025年は打撃・投球とも従来どおり */
+/** 指標見出し（中央の黄色タイトル）をモダン表示するか */
 export function usesTopPageModernMetricTitle(
   year: number,
   statsCategory: "batting" | "pitching"
 ): boolean {
   return (
-    year === 2025 ||
     (usesTopBattingModernLayout(year) && statsCategory === "batting") ||
     (year === 2026 && statsCategory === "pitching")
   )
@@ -41,8 +38,7 @@ export function usesTopPageModernLeaderRow(
   year: number,
   statsCategory: "batting" | "pitching"
 ): boolean {
-  if (year === 2025) return true
-  if (year === 2026 && (statsCategory === "batting" || statsCategory === "pitching")) {
+  if (year === 2026 && statsCategory === "pitching") {
     return true
   }
   return usesTopBattingModernLayout(year) && statsCategory === "batting"
@@ -54,12 +50,12 @@ export const BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS =
 export const BATTING_TOP_2025_FOUR_GRID_CLASS = "batting-top-2025-four-grid"
 export const BATTING_TOP_2025_SEASON_GRID_CLASS = "batting-top-2025-season-grid"
 
-/** 2025 シーズン TOP のみ: 打率と本塁打を同一行セル内で横並び */
+/** 2025 シーズン TOP のみ: OPS｜打率｜本塁打（3等分）＋打点 */
 export function usesTopBatting2025SeasonPairedLayout(year: number, isWeeklyTab: boolean): boolean {
   return year === 2025 && !isWeeklyTab
 }
 
-/** 2025 シーズン TOP のみ: 選手名・数値などを一段小さく */
+/** 2025 シーズン TOP のみ: 2026 比 90% の typography（比率は同じ） */
 export function usesTopBatting2025CompactTypography(year: number, isWeeklyTab: boolean): boolean {
   return year === 2025 && !isWeeklyTab
 }
@@ -67,7 +63,9 @@ export function usesTopBatting2025CompactTypography(year: number, isWeeklyTab: b
 export type TopLeaderRowTypography = {
   rankBadge: string
   rankText: string
+  rankTextColor?: string
   teamBar: string
+  teamBarWidth?: string
   playerName: string
   statValue: string
   romanName: string
@@ -80,6 +78,11 @@ export type TopLeaderRowTypography = {
   nameValueGap: string
   statValueShift: string
   rowPy: string
+  /** 2025: 名前・英字名のみ左へ（数値は動かさない） */
+  playerTextShift?: string
+  teamBarInset?: string
+  /** 2025 シーズン TOP: 1～5 を数値と同じ bebas 表示（グレー丸バッジなし） */
+  rankBebas?: boolean
 }
 
 export function battingTop2025SeasonTopN(metricLabel: string, year: string): number | null {
@@ -128,20 +131,23 @@ export function topLeaderRowTypography(
     usesTopBatting2025CompactTypography(year, isWeeklyTab) && statsCategory === "batting"
   if (compact) {
     return {
-      rankBadge: "w-[18px] h-[18px]",
-      rankText: "text-xs",
-      teamBar: "h-[1.95rem]",
-      playerName: "text-[10.5px]",
-      statValue: "text-[14.7px]",
-      romanName: "text-xs leading-none",
-      metricTitle: "text-[17px]",
-      statsListLink: "text-xs",
-      metricHeaderMinH: "min-h-[30px]",
-      leaderRowGap: "gap-0",
-      rankInset: "-ml-0.5",
-      playerNameLine: "whitespace-nowrap",
-      nameValueGap: "gap-1",
-      statValueShift: "",
+      rankBadge: "w-4 h-4",
+      rankText: "text-[10px]",
+      rankInset: "",
+      teamBarInset: "-ml-0.5",
+      playerTextShift: "translate-x-[0.5px]",
+      teamBar: "h-[1.544rem]",
+      teamBarWidth: "w-[3.5px]",
+      playerName: "text-[12px]",
+      statValue: "text-[14.3px]",
+      romanName: "text-[7.9px] leading-none",
+      metricTitle: "text-[11.7px]",
+      statsListLink: "text-[8.1px]",
+      metricHeaderMinH: "min-h-[19.8px]",
+      leaderRowGap: "gap-0.5",
+      playerNameLine: "truncate",
+      nameValueGap: "gap-1.5",
+      statValueShift: "-translate-x-1",
       rowPy: "py-0.5",
     }
   }

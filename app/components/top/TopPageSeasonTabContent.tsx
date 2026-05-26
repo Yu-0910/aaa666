@@ -43,12 +43,15 @@ export function TopPageSeasonTabContent({
       fetchTopLeadersForPage(year, "PL", "batting"),
     ]).then(([CL, PL]) => ({ CL, PL }))
 
+    // 2025 は投球 JSON が無いため取得しない（404 で打撃まで落ちないようにする）
     const loadPitching =
       year === 2026
         ? Promise.all([
             fetchTopLeadersForPage(year, "CL", "pitching"),
             fetchTopLeadersForPage(year, "PL", "pitching"),
-          ]).then(([CL, PL]) => ({ CL, PL }))
+          ])
+            .then(([CL, PL]) => ({ CL, PL }))
+            .catch(() => undefined)
         : Promise.resolve(undefined)
 
     Promise.all([loadBatting, loadPitching])
@@ -92,7 +95,7 @@ export function TopPageSeasonTabContent({
         layout={layout}
         initialData={payload.batting[league]}
       />
-      {year === 2026 && payload.pitching ? (
+      {payload.pitching ? (
         <TopPagePitchingLeadersClient
           year={year}
           league={league}

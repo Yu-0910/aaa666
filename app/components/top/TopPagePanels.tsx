@@ -344,7 +344,7 @@ export function LeadersPanel({
       )}
 
       <div className={effectiveMiniGrid}>
-        {(statsCategory === "batting" && year === 2025 ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+        {(isTopBattingModern ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (

@@ -48,6 +48,12 @@ const RANK_WIDTH = 30
 const PLAYER_WIDTH = 90
 const FRAME_WIDTH = 2 // 順列と選手列の間のグレーフレーム
 const LEFT_BLOCK_WIDTH = RANK_WIDTH + FRAME_WIDTH + PLAYER_WIDTH // 122
+/** 指標列の最小幅（w-full だと本番で全列が画面幅に押し潰され横スクロール不能になる） */
+const METRIC_COL_MIN_WIDTH = 60
+
+function rankingTableMinWidthPx(metricCount: number): number {
+  return LEFT_BLOCK_WIDTH + metricCount * METRIC_COL_MIN_WIDTH
+}
 
 export default function RankingUI({
   viewModel,
@@ -86,6 +92,7 @@ export default function RankingUI({
     : `${leagueName}　${metricLabel}ランキング (${season}年)`
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
+  const tableMinWidthPx = rankingTableMinWidthPx(metrics.length)
 
   const handleYearChange = (newYear: number) => {
     router.push(
@@ -154,13 +161,23 @@ export default function RankingUI({
         ) : null}
 
         {/* ランキングテーブル */}
-        <div className="bg-[#1a1a1a] overflow-hidden border border-[#333]">
-          <div className="overflow-x-auto pl-0 ml-0">
-            <table className="w-full border-collapse border-spacing-0" style={{ tableLayout: 'fixed' }}>
+        <div className="bg-[#1a1a1a] border border-[#333]">
+          <div
+            className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            <table
+              className="border-collapse border-spacing-0 max-w-none"
+              style={{
+                tableLayout: "fixed",
+                width: `${tableMinWidthPx}px`,
+                minWidth: `${tableMinWidthPx}px`,
+              }}
+            >
               <colgroup>
-                <col style={{ width: `${LEFT_BLOCK_WIDTH}px`, minWidth: `${LEFT_BLOCK_WIDTH}px` }} />
+                <col style={{ width: `${LEFT_BLOCK_WIDTH}px` }} />
                 {metrics.map((metric) => (
-                  <col key={metric.key} style={{ minWidth: '60px' }} />
+                  <col key={metric.key} style={{ width: `${METRIC_COL_MIN_WIDTH}px` }} />
                 ))}
               </colgroup>
               <thead>
@@ -194,7 +211,8 @@ export default function RankingUI({
                         data-active={isActive}
                         className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#ffff44] text-black ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                         style={{
-                          minWidth: '60px',
+                          width: `${METRIC_COL_MIN_WIDTH}px`,
+                          minWidth: `${METRIC_COL_MIN_WIDTH}px`,
                           backgroundColor: '#ffff44',
                           color: '#000000',
                           paddingLeft: metricIdx === 0 ? 0 : undefined,
@@ -263,7 +281,8 @@ export default function RankingUI({
                                 data-active={isActive}
                                 className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#4a4a4a] text-white ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                                 style={{
-                                  minWidth: '60px',
+                                  width: `${METRIC_COL_MIN_WIDTH}px`,
+                                  minWidth: `${METRIC_COL_MIN_WIDTH}px`,
                                   backgroundColor: '#4a4a4a',
                                   color: '#ffffff',
                                   paddingLeft: metricIdx === 0 ? 0 : undefined,
@@ -370,7 +389,8 @@ export default function RankingUI({
                               isActive ? 'bg-[#3a3a3a]' : ''
                             } ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
                             style={{
-                              minWidth: '60px',
+                              width: `${METRIC_COL_MIN_WIDTH}px`,
+                              minWidth: `${METRIC_COL_MIN_WIDTH}px`,
                               backgroundColor: activeBgColor,
                               paddingLeft: metricIdx === 0 ? 0 : undefined,
                               marginLeft: metricIdx === 0 ? '-2px' : undefined,

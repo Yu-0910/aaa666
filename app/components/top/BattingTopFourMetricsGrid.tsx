@@ -8,7 +8,7 @@ import {
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_SEASON_GRID_CLASS,
-  BATTING_TOP_2025_SEASON_PAIR_METRICS,
+  BATTING_TOP_2025_SEASON_TOP_METRICS,
   pad2025SeasonTopMetricLeaders,
   topLeaderRowTypography,
   usesTopBatting2025SeasonPairedLayout,
@@ -102,7 +102,7 @@ function MetricPanel({
         </Link>
         <StatsListControl href={getStatsListUrl()} onNavigate={onStatsListNavigate} className={statsListClass} />
       </div>
-      <div className="space-y-0">
+      <div className="min-w-0 space-y-0 overflow-hidden">
         {rows.map((leader, leaderIndex) =>
           renderLeaderRow({ leader: leader as Record<string, unknown>, stat: metric, index: leaderIndex })
         )}
@@ -127,51 +127,37 @@ export function BattingTopFourMetricsGrid({
     : leaders
 
   if (usePairedLayout) {
-    const hasOps = (displayLeaders.OPS?.length ?? 0) > 0
-    const hasPair = BATTING_TOP_2025_SEASON_PAIR_METRICS.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
+    const seasonAreaClass: Record<string, string> = {
+      OPS: "batting-top-2025-season-ops",
+      打率: "batting-top-2025-season-avg",
+      本塁打: "batting-top-2025-season-hr",
+    }
+    const hasTopRow = BATTING_TOP_2025_SEASON_TOP_METRICS.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
     const hasRbi = (displayLeaders.打点?.length ?? 0) > 0
-    if (!hasOps && !hasPair && !hasRbi) return null
+    if (!hasTopRow && !hasRbi) return null
 
-    const seasonPanelClass = "p-1 min-w-0 h-full"
+    const seasonPanelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
 
     return (
       <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
         <div className={BATTING_TOP_2025_SEASON_GRID_CLASS}>
-          {hasOps ? (
-            <div className="batting-top-2025-season-ops min-w-0">
-              <MetricPanel
-                metric="OPS"
-                leaders={displayLeaders}
-                getRankingUrl={getRankingUrl}
-                getStatsListUrl={getStatsListUrl}
-                onStatsListNavigate={onStatsListNavigate}
-                renderLeaderRow={renderLeaderRow}
-                typography={typography}
-                panelClassName={seasonPanelClass}
-              />
-            </div>
-          ) : null}
-          {hasPair
-            ? BATTING_TOP_2025_SEASON_PAIR_METRICS.map((metric) => {
-                const areaClass =
-                  metric === "打率" ? "batting-top-2025-season-avg" : "batting-top-2025-season-hr"
-                if (!(displayLeaders[metric]?.length ?? 0)) return null
-                return (
-                  <div key={metric} className={`${areaClass} min-w-0`}>
-                    <MetricPanel
-                      metric={metric}
-                      leaders={displayLeaders}
-                      getRankingUrl={getRankingUrl}
-                      getStatsListUrl={getStatsListUrl}
-                      onStatsListNavigate={onStatsListNavigate}
-                      renderLeaderRow={renderLeaderRow}
-                      typography={typography}
-                      panelClassName={seasonPanelClass}
-                    />
-                  </div>
-                )
-              })
-            : null}
+          {BATTING_TOP_2025_SEASON_TOP_METRICS.map((metric) => {
+            if (!(displayLeaders[metric]?.length ?? 0)) return null
+            return (
+              <div key={metric} className={`${seasonAreaClass[metric]} min-w-0`}>
+                <MetricPanel
+                  metric={metric}
+                  leaders={displayLeaders}
+                  getRankingUrl={getRankingUrl}
+                  getStatsListUrl={getStatsListUrl}
+                  onStatsListNavigate={onStatsListNavigate}
+                  renderLeaderRow={renderLeaderRow}
+                  typography={typography}
+                  panelClassName={seasonPanelClass}
+                />
+              </div>
+            )
+          })}
           {hasRbi ? (
             <div className="batting-top-2025-season-rbi min-w-0">
               <MetricPanel
@@ -182,6 +168,7 @@ export function BattingTopFourMetricsGrid({
                 onStatsListNavigate={onStatsListNavigate}
                 renderLeaderRow={renderLeaderRow}
                 typography={typography}
+                panelClassName={seasonPanelClass}
               />
             </div>
           ) : null}
