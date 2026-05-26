@@ -180,7 +180,7 @@
     letter-spacing: 0.05em;
   }
 
-  /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 従来 max-w-md 幅を下限に、横は親幅まで伸縮 */
+  /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 狭い幅でも縮むよう下限を抑え、親より狭いときは横スクロール */
   .batting-top-2025-four-metrics {
     width: 100%;
     max-width: 100%;
@@ -190,9 +190,38 @@
   .batting-top-2025-four-grid {
     display: grid;
     width: 100%;
-    min-width: 28rem;
+    min-width: 18rem;
     max-width: 100%;
-    grid-template-columns: repeat(2, minmax(13.875rem, 1fr));
+    grid-template-columns: repeat(2, minmax(8.75rem, 1fr));
     gap: 0.25rem;
+  }
+
+  /* 2025 シーズン TOP: OPS | 打率 | 本塁打（3等分） / 打点（下段全幅） */
+  .batting-top-2025-season-grid {
+    display: grid;
+    width: 100%;
+    min-width: 18rem;
+    max-width: 100%;
+    grid-template-columns: repeat(3, minmax(5.5rem, 1fr));
+    grid-template-areas:
+      "ops avg hr"
+      "rbi rbi rbi";
+    gap: 0.25rem;
+  }
+
+  .batting-top-2025-season-grid > .batting-top-2025-season-ops {
+    grid-area: ops;
+  }
+
+  .batting-top-2025-season-grid > .batting-top-2025-season-avg {
+    grid-area: avg;
+  }
+
+  .batting-top-2025-season-grid > .batting-top-2025-season-hr {
+    grid-area: hr;
+  }
+
+  .batting-top-2025-season-grid > .batting-top-2025-season-rbi {
+    grid-area: rbi;
   }
 }

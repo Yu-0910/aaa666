@@ -15,12 +15,14 @@ import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
 import {
   BATTING_TOP_2025_FOUR_GRID_CLASS,
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
-  BATTING_TOP_2025_GRID_METRICS,
   shouldShowTopBattingFourGrid,
+  topLeaderRowTypography,
+  type TopLeaderRowTypography,
   usesTopBattingModernLayout,
   usesTopPageModernLeaderRow,
   usesTopPageModernMetricTitle,
 } from "@/lib/topPageBatting2025Grid"
+import { BattingTopFourMetricsGrid } from "@/app/components/top/BattingTopFourMetricsGrid"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
   shouldShowTopPitchingFourGrid,
@@ -30,7 +32,7 @@ import {
   getWeeklyPitchingRankingUrl,
   getWeeklyPitchingStatsListUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
-import { leaderListReactKey } from "@/lib/ranking/leadersTypes"
+import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
 import { playerPageHref } from "@/lib/playerPageHref"
 
 export type TopPageLayoutMode = "mobile" | "desktop"
@@ -57,11 +59,13 @@ const LeaderRow = ({
   stat,
   index,
   modernLeaderRow,
+  typography,
 }: {
   leader: Record<string, unknown>
   index: number
   stat: unknown
   modernLeaderRow: boolean
+  typography: TopLeaderRowTypography
 }) => {
   const formattedValue = formatStat(String(stat ?? ""), leader.value)
   const l = leader as {
@@ -78,11 +82,13 @@ const LeaderRow = ({
 
   return (
     <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
-      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
-        <span className="text-white text-[10px] latin tabular-nums">{index + 1}</span>
+      <div
+        className={`${typography.rankBadge} shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center`}
+      >
+        <span className={`text-white ${typography.rankText} latin tabular-nums`}>{index + 1}</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-[1.95rem]" : "h-6 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${typography.teamBar}` : "h-6 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
@@ -97,24 +103,38 @@ const LeaderRow = ({
         {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
-              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+              <span
+                className={`text-white ${typography.playerName} font-semibold leading-tight truncate`}
+              >
+                {playerName}
+              </span>
+              <span
+                className={`text-white ${typography.statValue} bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1`}
+              >
+                {formattedValue}
+              </span>
             </div>
             {romanShort && (
-              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+              <span className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide`}>
+                {romanShort}
+              </span>
             )}
           </>
         ) : (
           <>
-            <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
+            <span className={`text-white ${typography.playerName} font-semibold leading-tight`}>
+              {playerName}
+            </span>
             {romanShort && (
-              <span className="latin text-[10px] text-gray-400 leading-tight">{romanShort}</span>
+              <span className={`latin ${typography.romanName} text-gray-400 leading-tight`}>{romanShort}</span>
             )}
           </>
         )}
       </Link>
       {!modernLeaderRow && (
-        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+        <div className={`text-white ${typography.statValue} bebas tabular-nums font-normal self-center shrink-0`}>
+          {formattedValue}
+        </div>
       )}
     </div>
   )
@@ -124,10 +144,12 @@ const MiniLeaderRow = ({
   leader,
   stat,
   modernLeaderRow,
+  typography,
 }: {
   leader: Record<string, unknown>
   stat: unknown
   modernLeaderRow: boolean
+  typography: TopLeaderRowTypography
 }) => {
   const formattedValue = formatStat(String(stat ?? ""), leader.value)
   const l = leader as {
@@ -142,13 +164,17 @@ const MiniLeaderRow = ({
   const playerName = typeof leader.name === "string" ? leader.name : ""
   const teamKey = typeof leader.team === "string" ? leader.team : ""
 
+  const miniTeamBar = typography.teamBar === "h-[1.65rem]" ? "h-7" : "h-8"
+
   return (
     <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
-      <div className="w-4 h-4 shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center">
-        <span className="text-white text-[10px] latin tabular-nums">1</span>
+      <div
+        className={`${typography.rankBadge} shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center`}
+      >
+        <span className={`text-white ${typography.rankText} latin tabular-nums`}>1</span>
       </div>
       <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? "self-center h-8" : "h-10 self-center"}`}
+        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${miniTeamBar}` : "h-10 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || "#666" }}
       />
       <Link
@@ -163,24 +189,38 @@ const MiniLeaderRow = ({
         {modernLeaderRow ? (
           <>
             <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span className="text-white text-sm font-semibold leading-tight truncate">{playerName}</span>
-              <span className="text-white text-lg bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1">{formattedValue}</span>
+              <span
+                className={`text-white ${typography.playerName} font-semibold leading-tight truncate`}
+              >
+                {playerName}
+              </span>
+              <span
+                className={`text-white ${typography.statValue} bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1`}
+              >
+                {formattedValue}
+              </span>
             </div>
             {romanShort && (
-              <span className="latin text-[10px] text-gray-400 leading-snug tracking-wide">{romanShort}</span>
+              <span className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide`}>
+                {romanShort}
+              </span>
             )}
           </>
         ) : (
           <>
-            <span className="text-white text-sm font-semibold leading-tight">{playerName}</span>
+            <span className={`text-white ${typography.playerName} font-semibold leading-tight`}>
+              {playerName}
+            </span>
             {romanShort && (
-              <span className="latin text-[10px] text-gray-400 leading-tight">{romanShort}</span>
+              <span className={`latin ${typography.romanName} text-gray-400 leading-tight`}>{romanShort}</span>
             )}
           </>
         )}
       </Link>
       {!modernLeaderRow && (
-        <div className="text-white text-base bebas tabular-nums font-normal self-center shrink-0">{formattedValue}</div>
+        <div className={`text-white ${typography.statValue} bebas tabular-nums font-normal self-center shrink-0`}>
+          {formattedValue}
+        </div>
       )}
     </div>
   )
@@ -259,6 +299,7 @@ export function LeadersPanel({
   const miniGrid = layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"
   const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory)
   const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory)
+  const rowTypography = topLeaderRowTypography(year, statsCategory, Boolean(weekKey))
   const isTopBattingModern = usesTopBattingModernLayout(year) && statsCategory === "batting"
   const isTopPitchingModern = usesTopPitchingModernLayout(year) && statsCategory === "pitching"
   const effectiveMiniGrid =
@@ -312,6 +353,7 @@ export function LeadersPanel({
                         stat={metric}
                         index={leaderIndex}
                         modernLeaderRow={panelModernLeaderRow}
+                        typography={rowTypography}
                       />
                     ))}
                   </div>
@@ -321,45 +363,23 @@ export function LeadersPanel({
           </div>
         </div>
       ) : isTopBattingModern && shouldShowTopBattingFourGrid(data.leaders) ? (
-        <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
-          <div className={BATTING_TOP_2025_FOUR_GRID_CLASS}>
-            {BATTING_TOP_2025_GRID_METRICS.map((metric) =>
-              data.leaders[metric] ? (
-                <div key={metric} className="bg-black border border-[#555] p-1 relative">
-                  <div className="relative mb-1 flex min-h-[22px] items-center">
-                    <Link
-                      href={getRankingUrl(metric)}
-                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
-                    >
-                      <span
-                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
-                      >
-                        {metric}
-                      </span>
-                    </Link>
-                    <Link
-                      href={getStatsListUrl()}
-                      className="relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 text-[9px] text-[#e8e8e8] hover:text-white transition-colors flex items-center"
-                    >
-                      成績一覧
-                    </Link>
-                  </div>
-                  <div className="space-y-0">
-                    {data.leaders[metric]?.map((leader, leaderIndex) => (
-                      <LeaderRow
-                        key={leaderListReactKey(leader, leaderIndex)}
-                        leader={leader as Record<string, unknown>}
-                        stat={metric}
-                        index={leaderIndex}
-                        modernLeaderRow={panelModernLeaderRow}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null
-            )}
-          </div>
-        </div>
+        <BattingTopFourMetricsGrid
+          year={year}
+          isWeeklyTab={Boolean(weekKey)}
+          leaders={data.leaders}
+          getRankingUrl={getRankingUrl}
+          getStatsListUrl={getStatsListUrl}
+          renderLeaderRow={({ leader, stat, index }) => (
+            <LeaderRow
+              key={leaderListReactKey(leader as LeaderRow, index)}
+              leader={leader}
+              stat={stat}
+              index={index}
+              modernLeaderRow={panelModernLeaderRow}
+              typography={rowTypography}
+            />
+          )}
+        />
       ) : isTopBattingModern && data.top3Metrics.length >= 3 ? (
         <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
           <div className="grid grid-cols-2 gap-1">
@@ -392,6 +412,7 @@ export function LeadersPanel({
                         stat={metric}
                         index={leaderIndex}
                         modernLeaderRow={panelModernLeaderRow}
+                        typography={rowTypography}
                       />
                     ))}
                   </div>
@@ -427,6 +448,7 @@ export function LeadersPanel({
                     stat={data.top3Metrics[2]!}
                     index={leaderIndex}
                     modernLeaderRow={panelModernLeaderRow}
+                    typography={rowTypography}
                   />
                 ))}
               </div>
@@ -480,6 +502,7 @@ export function LeadersPanel({
                     stat={metric}
                     index={leaderIndex}
                     modernLeaderRow={panelModernLeaderRow}
+                    typography={rowTypography}
                   />
                 ))}
               </div>
@@ -537,6 +560,7 @@ export function LeadersPanel({
                 leader={leader as Record<string, unknown>}
                 stat={metric}
                 modernLeaderRow={panelModernLeaderRow}
+                typography={rowTypography}
               />
             </div>
           )
