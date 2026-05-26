@@ -200,10 +200,9 @@
   .batting-top-2025-season-grid {
     display: grid;
     width: 100%;
-    min-width: 27rem;
+    min-width: 18rem;
     max-width: 100%;
-    /* 5文字の選手名＋数値（約1.5倍 typography）が重ならない列幅 */
-    grid-template-columns: repeat(3, minmax(11.5rem, 1fr));
+    grid-template-columns: repeat(3, minmax(5.5rem, 1fr));
     grid-template-areas:
       "ops avg hr"
       "rbi rbi rbi";

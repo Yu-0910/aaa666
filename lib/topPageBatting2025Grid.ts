@@ -59,7 +59,7 @@ export function usesTopBatting2025SeasonPairedLayout(year: number, isWeeklyTab: 
   return year === 2025 && !isWeeklyTab
 }
 
-/** 2025 シーズン TOP のみ: 3列グリッド向けのコンパクト行 typography（OPS/打率/本塁打） */
+/** 2025 シーズン TOP のみ: 選手名・数値などを一段小さく */
 export function usesTopBatting2025CompactTypography(year: number, isWeeklyTab: boolean): boolean {
   return year === 2025 && !isWeeklyTab
 }
@@ -140,7 +140,7 @@ export function topLeaderRowTypography(
       leaderRowGap: "gap-0",
       rankInset: "-ml-0.5",
       playerNameLine: "whitespace-nowrap",
-      nameValueGap: "gap-1.5",
+      nameValueGap: "gap-1",
       statValueShift: "",
       rowPy: "py-0.5",
     }
