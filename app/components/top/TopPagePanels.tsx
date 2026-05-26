@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { formatStat } from "@/lib/formatStat"
 import metricMap from "@/config/metric_map.json"
 import pitchingMetricMap from "@/config/pitching_metric_map.json"
 import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
@@ -11,7 +10,7 @@ import {
   standingsPL,
   type LeadersConfig,
 } from "@/app/components/top/topPageConstants"
-import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
+import { TopPageModernLeaderRow } from "@/app/components/top/TopPageModernLeaderRow"
 import {
   BATTING_TOP_2025_FOUR_GRID_CLASS,
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
@@ -33,7 +32,6 @@ import {
   getWeeklyPitchingStatsListUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
 import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
-import { playerPageHref } from "@/lib/playerPageHref"
 
 export type TopPageLayoutMode = "mobile" | "desktop"
 
@@ -54,176 +52,10 @@ type LeadersPanelProps = {
 /** 投手ランキング完成品は 2026 のみ（計画書 §3.1） */
 const PITCHING_RANKING_SEASON = 2026
 
-const LeaderRow = ({
-  leader,
-  stat,
-  index,
-  modernLeaderRow,
-  typography,
-}: {
-  leader: Record<string, unknown>
-  index: number
-  stat: unknown
-  modernLeaderRow: boolean
-  typography: TopLeaderRowTypography
-}) => {
-  const formattedValue = formatStat(String(stat ?? ""), leader.value)
-  const l = leader as {
-    romanName?: string
-    name?: string
-    team?: string
-    playerId?: string
-    npbPlayerId?: string
-  }
-  const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
-
-  const playerName = typeof leader.name === "string" ? leader.name : ""
-  const teamKey = typeof leader.team === "string" ? leader.team : ""
-
-  return (
-    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
-      <div
-        className={`${typography.rankBadge} shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center`}
-      >
-        <span className={`text-white ${typography.rankText} latin tabular-nums`}>{index + 1}</span>
-      </div>
-      <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${typography.teamBar}` : "h-6 self-center"}`}
-        style={{ backgroundColor: teamColors[teamKey] || "#666" }}
-      />
-      <Link
-        href={playerPageHref({
-          npbPlayerId: l.npbPlayerId,
-          playerId: l.playerId,
-          name: playerName,
-          romanName: romanShort,
-        })}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
-      >
-        {modernLeaderRow ? (
-          <>
-            <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span
-                className={`text-white ${typography.playerName} font-semibold leading-tight truncate`}
-              >
-                {playerName}
-              </span>
-              <span
-                className={`text-white ${typography.statValue} bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1`}
-              >
-                {formattedValue}
-              </span>
-            </div>
-            {romanShort && (
-              <span className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide`}>
-                {romanShort}
-              </span>
-            )}
-          </>
-        ) : (
-          <>
-            <span className={`text-white ${typography.playerName} font-semibold leading-tight`}>
-              {playerName}
-            </span>
-            {romanShort && (
-              <span className={`latin ${typography.romanName} text-gray-400 leading-tight`}>{romanShort}</span>
-            )}
-          </>
-        )}
-      </Link>
-      {!modernLeaderRow && (
-        <div className={`text-white ${typography.statValue} bebas tabular-nums font-normal self-center shrink-0`}>
-          {formattedValue}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const MiniLeaderRow = ({
-  leader,
-  stat,
-  modernLeaderRow,
-  typography,
-}: {
-  leader: Record<string, unknown>
-  stat: unknown
-  modernLeaderRow: boolean
-  typography: TopLeaderRowTypography
-}) => {
-  const formattedValue = formatStat(String(stat ?? ""), leader.value)
-  const l = leader as {
-    romanName?: string
-    name?: string
-    team?: string
-    playerId?: string
-    npbPlayerId?: string
-  }
-  const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
-
-  const playerName = typeof leader.name === "string" ? leader.name : ""
-  const teamKey = typeof leader.team === "string" ? leader.team : ""
-
-  const miniTeamBar = typography.teamBar === "h-[1.65rem]" ? "h-7" : "h-8"
-
-  return (
-    <div className={`flex gap-0.5 py-0.5 ${modernLeaderRow ? "items-stretch" : "items-center"}`}>
-      <div
-        className={`${typography.rankBadge} shrink-0 rounded-full bg-[#2a2a2a] flex items-center justify-center self-center`}
-      >
-        <span className={`text-white ${typography.rankText} latin tabular-nums`}>1</span>
-      </div>
-      <div
-        className={`w-1 mr-1 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${miniTeamBar}` : "h-10 self-center"}`}
-        style={{ backgroundColor: teamColors[teamKey] || "#666" }}
-      />
-      <Link
-        href={playerPageHref({
-          npbPlayerId: l.npbPlayerId,
-          playerId: l.playerId,
-          name: playerName,
-          romanName: romanShort,
-        })}
-        className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex flex-col justify-center"}`}
-      >
-        {modernLeaderRow ? (
-          <>
-            <div className="flex items-center justify-between gap-2 w-full min-w-0">
-              <span
-                className={`text-white ${typography.playerName} font-semibold leading-tight truncate`}
-              >
-                {playerName}
-              </span>
-              <span
-                className={`text-white ${typography.statValue} bebas tabular-nums font-normal shrink-0 leading-none tracking-[-0.01em] -translate-x-1`}
-              >
-                {formattedValue}
-              </span>
-            </div>
-            {romanShort && (
-              <span className={`latin ${typography.romanName} text-gray-400 leading-snug tracking-wide`}>
-                {romanShort}
-              </span>
-            )}
-          </>
-        ) : (
-          <>
-            <span className={`text-white ${typography.playerName} font-semibold leading-tight`}>
-              {playerName}
-            </span>
-            {romanShort && (
-              <span className={`latin ${typography.romanName} text-gray-400 leading-tight`}>{romanShort}</span>
-            )}
-          </>
-        )}
-      </Link>
-      {!modernLeaderRow && (
-        <div className={`text-white ${typography.statValue} bebas tabular-nums font-normal self-center shrink-0`}>
-          {formattedValue}
-        </div>
-      )}
-    </div>
-  )
+function miniTeamBarFor(typography: TopLeaderRowTypography): string | undefined {
+  if (typography.teamBar === "h-[1.3rem]") return "h-6"
+  if (typography.teamBar === "h-[1.65rem]") return "h-7"
+  return "h-8"
 }
 
 export function LeadersPanel({
@@ -347,8 +179,8 @@ export function LeadersPanel({
                   </div>
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
-                      <LeaderRow
-                        key={leaderListReactKey(leader, leaderIndex)}
+                      <TopPageModernLeaderRow
+                        key={leaderListReactKey(leader as LeaderRow, leaderIndex)}
                         leader={leader as Record<string, unknown>}
                         stat={metric}
                         index={leaderIndex}
@@ -370,7 +202,7 @@ export function LeadersPanel({
           getRankingUrl={getRankingUrl}
           getStatsListUrl={getStatsListUrl}
           renderLeaderRow={({ leader, stat, index }) => (
-            <LeaderRow
+            <TopPageModernLeaderRow
               key={leaderListReactKey(leader as LeaderRow, index)}
               leader={leader}
               stat={stat}
@@ -406,8 +238,8 @@ export function LeadersPanel({
                   </div>
                   <div className="space-y-0">
                     {data.leaders[metric]?.map((leader, leaderIndex) => (
-                      <LeaderRow
-                        key={leaderListReactKey(leader, leaderIndex)}
+                      <TopPageModernLeaderRow
+                        key={leaderListReactKey(leader as LeaderRow, leaderIndex)}
                         leader={leader as Record<string, unknown>}
                         stat={metric}
                         index={leaderIndex}
@@ -442,8 +274,8 @@ export function LeadersPanel({
               </div>
               <div className="space-y-0">
                 {data.leaders[data.top3Metrics[2]!]?.map((leader, leaderIndex) => (
-                  <LeaderRow
-                    key={leaderListReactKey(leader, leaderIndex)}
+                  <TopPageModernLeaderRow
+                    key={leaderListReactKey(leader as LeaderRow, leaderIndex)}
                     leader={leader as Record<string, unknown>}
                     stat={data.top3Metrics[2]!}
                     index={leaderIndex}
@@ -496,8 +328,8 @@ export function LeadersPanel({
               )}
               <div className="space-y-0">
                 {data.leaders[metric]?.map((leader, leaderIndex) => (
-                  <LeaderRow
-                    key={leaderListReactKey(leader, leaderIndex)}
+                  <TopPageModernLeaderRow
+                    key={leaderListReactKey(leader as LeaderRow, leaderIndex)}
                     leader={leader as Record<string, unknown>}
                     stat={metric}
                     index={leaderIndex}
@@ -556,11 +388,13 @@ export function LeadersPanel({
                   </Link>
                 </div>
               )}
-              <MiniLeaderRow
+              <TopPageModernLeaderRow
                 leader={leader as Record<string, unknown>}
                 stat={metric}
+                index={0}
                 modernLeaderRow={panelModernLeaderRow}
                 typography={rowTypography}
+                miniTeamBar={miniTeamBarFor(rowTypography)}
               />
             </div>
           )

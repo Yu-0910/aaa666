@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import type { ReactNode } from "react"
+import type { LeaderRow } from "@/lib/ranking/leadersTypes"
 import {
   BATTING_TOP_2025_FOUR_GRID_CLASS,
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_SEASON_GRID_CLASS,
   BATTING_TOP_2025_SEASON_PAIR_METRICS,
+  pad2025SeasonTopMetricLeaders,
   topLeaderRowTypography,
   usesTopBatting2025SeasonPairedLayout,
 } from "@/lib/topPageBatting2025Grid"
@@ -120,11 +122,14 @@ export function BattingTopFourMetricsGrid({
 }: BattingTopFourMetricsGridProps) {
   const typography = topLeaderRowTypography(year, "batting", isWeeklyTab)
   const usePairedLayout = usesTopBatting2025SeasonPairedLayout(year, isWeeklyTab)
+  const displayLeaders = usePairedLayout
+    ? pad2025SeasonTopMetricLeaders(leaders as Record<string, LeaderRow[] | undefined>)
+    : leaders
 
   if (usePairedLayout) {
-    const hasOps = (leaders.OPS?.length ?? 0) > 0
-    const hasPair = BATTING_TOP_2025_SEASON_PAIR_METRICS.some((m) => (leaders[m]?.length ?? 0) > 0)
-    const hasRbi = (leaders.打点?.length ?? 0) > 0
+    const hasOps = (displayLeaders.OPS?.length ?? 0) > 0
+    const hasPair = BATTING_TOP_2025_SEASON_PAIR_METRICS.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
+    const hasRbi = (displayLeaders.打点?.length ?? 0) > 0
     if (!hasOps && !hasPair && !hasRbi) return null
 
     const seasonPanelClass = "p-1 min-w-0 h-full"
@@ -136,7 +141,7 @@ export function BattingTopFourMetricsGrid({
             <div className="batting-top-2025-season-ops min-w-0">
               <MetricPanel
                 metric="OPS"
-                leaders={leaders}
+                leaders={displayLeaders}
                 getRankingUrl={getRankingUrl}
                 getStatsListUrl={getStatsListUrl}
                 onStatsListNavigate={onStatsListNavigate}
@@ -150,12 +155,12 @@ export function BattingTopFourMetricsGrid({
             ? BATTING_TOP_2025_SEASON_PAIR_METRICS.map((metric) => {
                 const areaClass =
                   metric === "打率" ? "batting-top-2025-season-avg" : "batting-top-2025-season-hr"
-                if (!(leaders[metric]?.length ?? 0)) return null
+                if (!(displayLeaders[metric]?.length ?? 0)) return null
                 return (
                   <div key={metric} className={`${areaClass} min-w-0`}>
                     <MetricPanel
                       metric={metric}
-                      leaders={leaders}
+                      leaders={displayLeaders}
                       getRankingUrl={getRankingUrl}
                       getStatsListUrl={getStatsListUrl}
                       onStatsListNavigate={onStatsListNavigate}
@@ -171,7 +176,7 @@ export function BattingTopFourMetricsGrid({
             <div className="batting-top-2025-season-rbi min-w-0">
               <MetricPanel
                 metric="打点"
-                leaders={leaders}
+                leaders={displayLeaders}
                 getRankingUrl={getRankingUrl}
                 getStatsListUrl={getStatsListUrl}
                 onStatsListNavigate={onStatsListNavigate}

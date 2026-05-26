@@ -8,7 +8,7 @@ import { loadBattingCsv } from './loaders'
 import { shouldRequireQualifyingPA, calculateMinPA } from './qualifyingPA'
 import { calculateXRNf3 } from '@/lib/xr'
 import { calculateRCNf3 } from '@/lib/rc'
-import { BATTING_TOP_2025_RBI_TOP_N } from '@/lib/topPageBatting2025Grid'
+import { BATTING_TOP_2025_RBI_TOP_N, battingTop2025SeasonTopN } from '@/lib/topPageBatting2025Grid'
 import {
   buildBattingLeadersConfigFromRankings,
   buildBattingLeadersConfigFromRankingsAsync,
@@ -698,9 +698,9 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
     
     if (metric) {
       const sortOrder = (metric.key === 'kpct' || metric.csvKey === 'K%') ? 'asc' : 'desc'
-      const topN = getTopNForMetric(rows, metric, 3, sortOrder, year, league)
+      const topN = getTopNForMetric(rows, metric, battingTop2025SeasonTopN(metricName, year) ?? 3, sortOrder, year, league)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[getBattingLeaders] Top 3 for "${metricName}":`, topN.length, 'leaders')
+        console.log(`[getBattingLeaders] Top ${battingTop2025SeasonTopN(metricName, year) ?? 3} for "${metricName}":`, topN.length, 'leaders')
       }
       leaders[metricName] = topN
     }
@@ -757,8 +757,14 @@ export async function getBattingLeadersAsync(
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
       return fromSnapshot
     }
+    if (process.env.RANKINGS_BASE_URL?.trim() || process.env.NODE_ENV === 'production') {
+      return { top3Metrics, miniMetrics, leaders: {} }
+    }
   }
 
+  const { buildBattingLeadersConfigFromRankingsAsync } = await import(
+    '@/lib/ranking/leadersFromRankingsJson'
+  )
   const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
   if (fromRankings) return fromRankings
 

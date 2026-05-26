@@ -224,4 +224,11 @@
   .batting-top-2025-season-grid > .batting-top-2025-season-rbi {
     grid-area: rbi;
   }
+
+  /* 狭い列でも5文字の選手名が切れにくいよう overflow を緩める */
+  .batting-top-2025-season-grid .batting-top-2025-season-ops,
+  .batting-top-2025-season-grid .batting-top-2025-season-avg,
+  .batting-top-2025-season-grid .batting-top-2025-season-hr {
+    overflow: visible;
+  }
 }

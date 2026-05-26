@@ -1,5 +1,11 @@
+import type { LeaderRow } from "@/lib/ranking/leadersTypes"
+
 /** 2025 TOP 打撃（シーズン）: OPS｜打率｜本塁打（3等分）｜打点 */
 export const BATTING_TOP_2025_SEASON_PAIR_METRICS = ["打率", "本塁打"] as const
+
+/** 2025 シーズン TOP のみ: 各指標5位まで（デザイン確認用。4–5位は不足時プレースホルダ） */
+export const BATTING_TOP_2025_SEASON_TOP_METRICS = ["OPS", "打率", "本塁打"] as const
+export const BATTING_TOP_2025_SEASON_TOP_N = 5
 
 /** 2×2 または週間タブ: OPS / 打率 / 本塁打 / 打点 を各セルに配置 */
 export const BATTING_TOP_2025_GRID_METRICS = ["OPS", "打率", "本塁打", "打点"] as const
@@ -68,6 +74,49 @@ export type TopLeaderRowTypography = {
   metricTitle: string
   statsListLink: string
   metricHeaderMinH: string
+  leaderRowGap: string
+  rankInset: string
+  playerNameLine: string
+  nameValueGap: string
+  statValueShift: string
+  rowPy: string
+}
+
+export function battingTop2025SeasonTopN(metricLabel: string, year: string): number | null {
+  if (year !== "2025") return null
+  if ((BATTING_TOP_2025_SEASON_TOP_METRICS as readonly string[]).includes(metricLabel)) {
+    return BATTING_TOP_2025_SEASON_TOP_N
+  }
+  return null
+}
+
+/** 4–5位が無いときデザイン確認用のプレースホルダを補う */
+export function pad2025SeasonTopMetricLeaders(
+  leaders: Record<string, LeaderRow[] | undefined>
+): Record<string, LeaderRow[]> {
+  const out: Record<string, LeaderRow[]> = { ...leaders }
+  const placeholderValue: Record<string, string | number> = {
+    OPS: ".900",
+    打率: ".300",
+    本塁打: 35,
+  }
+
+  for (const metric of BATTING_TOP_2025_SEASON_TOP_METRICS) {
+    const rows = [...(out[metric] ?? [])]
+    while (rows.length < BATTING_TOP_2025_SEASON_TOP_N) {
+      const rank = (rows.length + 1) as LeaderRow["rank"]
+      rows.push({
+        rank,
+        name: `テスト${rank}位`,
+        team: "G",
+        teamName: "巨人",
+        value: placeholderValue[metric] ?? "—",
+        romanName: "SAMPLE",
+      })
+    }
+    out[metric] = rows.slice(0, BATTING_TOP_2025_SEASON_TOP_N)
+  }
+  return out
 }
 
 export function topLeaderRowTypography(
@@ -79,15 +128,21 @@ export function topLeaderRowTypography(
     usesTopBatting2025CompactTypography(year, isWeeklyTab) && statsCategory === "batting"
   if (compact) {
     return {
-      rankBadge: "w-3.5 h-3.5",
-      rankText: "text-[9px]",
-      teamBar: "h-[1.65rem]",
-      playerName: "text-xs",
-      statValue: "text-base",
-      romanName: "text-[9px]",
+      rankBadge: "w-3 h-3",
+      rankText: "text-[8px]",
+      teamBar: "h-[1.3rem]",
+      playerName: "text-[10px]",
+      statValue: "text-sm",
+      romanName: "text-[8px] leading-none",
       metricTitle: "text-[11px]",
       statsListLink: "text-[8px]",
       metricHeaderMinH: "min-h-[20px]",
+      leaderRowGap: "gap-0",
+      rankInset: "-ml-0.5",
+      playerNameLine: "whitespace-nowrap",
+      nameValueGap: "gap-0.5",
+      statValueShift: "",
+      rowPy: "py-px",
     }
   }
   return {
@@ -100,6 +155,12 @@ export function topLeaderRowTypography(
     metricTitle: "text-[13px]",
     statsListLink: "text-[9px]",
     metricHeaderMinH: "min-h-[22px]",
+    leaderRowGap: "gap-0.5",
+    rankInset: "",
+    playerNameLine: "truncate",
+    nameValueGap: "gap-2",
+    statValueShift: "-translate-x-1",
+    rowPy: "py-0.5",
   }
 }
 

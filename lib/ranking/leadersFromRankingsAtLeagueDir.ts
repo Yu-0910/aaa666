@@ -24,6 +24,7 @@ import {
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_RBI_TOP_N,
   BATTING_WEEKLY_TAB_TOP_N,
+  battingTop2025SeasonTopN,
 } from "@/lib/topPageBatting2025Grid"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
@@ -233,6 +234,8 @@ function battingTopN(metricLabel: string, year: string, weekKey?: string): numbe
   if (metricLabel === "打点" && (year === "2025" || year === "2026")) {
     return BATTING_TOP_2025_RBI_TOP_N
   }
+  const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
+  if (seasonTopN != null) return seasonTopN
   if ((BATTING_TOP3_METRICS as readonly string[]).includes(metricLabel)) return 3
   return 1
 }

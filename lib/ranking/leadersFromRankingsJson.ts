@@ -18,7 +18,7 @@ import {
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
-import { BATTING_TOP_2025_RBI_TOP_N } from "@/lib/topPageBatting2025Grid"
+import { BATTING_TOP_2025_RBI_TOP_N, battingTop2025SeasonTopN } from "@/lib/topPageBatting2025Grid"
 
 const TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
 const MINI_METRICS = ["出塁率", "長打率", "打点", "安打", "盗塁"] as const
@@ -169,6 +169,8 @@ function topNForMetricLabel(metricLabel: string, year: string): number {
   if (metricLabel === "打点" && (year === "2025" || year === "2026")) {
     return BATTING_TOP_2025_RBI_TOP_N
   }
+  const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
+  if (seasonTopN != null) return seasonTopN
   if ((TOP3_METRICS as readonly string[]).includes(metricLabel)) return 3
   return 1
 }
