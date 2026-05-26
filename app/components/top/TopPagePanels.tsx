@@ -129,11 +129,12 @@ export function LeadersPanel({
 
   const topGrid = layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"
   const miniGrid = layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"
-  const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory)
-  const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory)
-  const rowTypography = topLeaderRowTypography(year, statsCategory, Boolean(weekKey))
-  const isTopBattingModern = usesTopBattingModernLayout(year) && statsCategory === "batting"
-  const isTopPitchingModern = usesTopPitchingModernLayout(year) && statsCategory === "pitching"
+  const isWeeklyTab = Boolean(weekKey)
+  const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory, isWeeklyTab)
+  const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory, isWeeklyTab)
+  const rowTypography = topLeaderRowTypography(year, statsCategory, isWeeklyTab)
+  const isTopBattingModern = usesTopBattingModernLayout(year, isWeeklyTab) && statsCategory === "batting"
+  const isTopPitchingModern = usesTopPitchingModernLayout(year, isWeeklyTab) && statsCategory === "pitching"
   const effectiveMiniGrid =
     isTopPitchingModern && layout === "desktop" ? "grid grid-cols-4 gap-1" : miniGrid
 

@@ -35,7 +35,8 @@ export function TopPageClient({
   const [activeMainTab, setActiveMainTab] = useState(0)
   const [selectedYear, setSelectedYear] = useState(initialYear)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const isTopBattingModernPage = usesTopBattingModernLayout(selectedYear)
+  const isWeeklyMainTab = activeMainTab === 1
+  const isTopBattingModernPage = usesTopBattingModernLayout(selectedYear, isWeeklyMainTab)
 
   const router = useRouter()
 
@@ -45,11 +46,7 @@ export function TopPageClient({
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year)
-    if (year === 2025) {
-      router.push("/")
-    } else {
-      router.push(`/${year}`)
-    }
+    router.push(`/${year}`)
   }
 
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)

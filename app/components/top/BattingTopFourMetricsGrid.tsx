@@ -123,7 +123,9 @@ export function BattingTopFourMetricsGrid({
   const typography = topLeaderRowTypography(year, "batting", isWeeklyTab)
   const usePairedLayout = usesTopBatting2025SeasonPairedLayout(year, isWeeklyTab)
   const displayLeaders = usePairedLayout
-    ? pad2025SeasonTopMetricLeaders(leaders as Record<string, LeaderRow[] | undefined>)
+    ? year === 2025
+      ? pad2025SeasonTopMetricLeaders(leaders as Record<string, LeaderRow[] | undefined>)
+      : (leaders as Record<string, LeaderRow[] | undefined>)
     : leaders
 
   if (usePairedLayout) {

@@ -18,6 +18,7 @@ import { formatRomanNameForRanking } from '@/lib/ranking/formatRomanNameForRanki
 import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
 import { playerPageHref } from '@/lib/playerPageHref'
+import { usesRanking2025CompactTableUi } from '@/lib/ranking/rankingUiVariant'
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -74,12 +75,12 @@ export default function RankingUI({
 }: RankingUIProps) {
   const { season, league, metrics } = viewModel
   const router = useRouter()
-  const is2025Season = season === '2025'
-  const playerWidth = is2025Season ? PLAYER_WIDTH_2025 : PLAYER_WIDTH
+  const compactTableUi = usesRanking2025CompactTableUi(season)
+  const playerWidth = compactTableUi ? PLAYER_WIDTH_2025 : PLAYER_WIDTH
   const leftBlockWidth = RANK_WIDTH + FRAME_WIDTH + playerWidth
-  const playerNameBlockHeight = is2025Season ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
-  const metricColMinWidth = is2025Season ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
-  const metricValueTextClass = is2025Season ? 'text-[16.83px]' : 'text-lg'
+  const playerNameBlockHeight = compactTableUi ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
+  const metricColMinWidth = compactTableUi ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
+  const metricValueTextClass = compactTableUi ? 'text-[16.83px]' : 'text-lg'
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
   const activeMetric = metrics.find(m => m.key === sortKey)
@@ -350,15 +351,15 @@ export default function RankingUI({
                           </div>
                           <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
                           <div
-                            className={`overflow-hidden flex-shrink-0 flex items-center ${is2025Season ? 'self-center' : ''}`}
+                            className={`overflow-hidden flex-shrink-0 flex items-center ${compactTableUi ? 'self-center' : ''}`}
                             style={{
                               width: playerWidth,
                               minHeight: playerNameBlockHeight,
-                              ...(is2025Season
+                              ...(compactTableUi
                                 ? { height: playerNameBlockHeight, maxHeight: playerNameBlockHeight }
                                 : {}),
                               backgroundColor: '#1f1f1f',
-                              padding: is2025Season ? '1.9px 2px' : '2px 2px',
+                              padding: compactTableUi ? '1.9px 2px' : '2px 2px',
                               boxSizing: 'border-box',
                             }}
                           >

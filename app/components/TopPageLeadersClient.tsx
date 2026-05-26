@@ -205,10 +205,10 @@ export default function TopPageLeadersClient({
 
   const isWeeklyBattingTab = Boolean(weekKey)
   const yearNum = Number(year)
-  const modernLeaderRow = usesTopPageModernLeaderRow(yearNum, "batting")
+  const modernLeaderRow = usesTopPageModernLeaderRow(yearNum, "batting", isWeeklyBattingTab)
   const rowTypography = topLeaderRowTypography(yearNum, "batting", isWeeklyBattingTab)
   const showBattingFourGrid =
-    usesTopBattingModernLayout(yearNum) &&
+    usesTopBattingModernLayout(yearNum, isWeeklyBattingTab) &&
     (isWeeklyBattingTab || shouldShowTopBattingFourGrid(data.leaders))
 
   return (
@@ -251,7 +251,7 @@ export default function TopPageLeadersClient({
             />
           )}
         />
-      ) : !isWeeklyBattingTab && usesTopBattingModernLayout(yearNum) && data.top3Metrics.length >= 3 ? (
+      ) : !isWeeklyBattingTab && usesTopBattingModernLayout(yearNum, false) && data.top3Metrics.length >= 3 ? (
         <div className="flex flex-col gap-1 max-w-md mx-auto w-full">
           <div className="grid grid-cols-2 gap-1">
             {data.top3Metrics.slice(0, 2).map((metric) =>
@@ -346,7 +346,7 @@ export default function TopPageLeadersClient({
         <div className={layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"}>
           {data.top3Metrics.map((metric) => (
             <div key={metric} className="bg-black border border-[#555] p-1 relative">
-              {usesTopBattingModernLayout(Number(year)) ? (
+              {usesTopBattingModernLayout(Number(year), isWeeklyBattingTab) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}
@@ -416,12 +416,15 @@ export default function TopPageLeadersClient({
 
       {!isWeeklyBattingTab && (
       <div className={layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"}>
-        {(usesTopBattingModernLayout(Number(year)) ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+        {(usesTopBattingModernLayout(Number(year), isWeeklyBattingTab)
+          ? data.miniMetrics.filter((m) => m !== "打点")
+          : data.miniMetrics
+        ).map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
             <div key={metric} className="bg-black border border-[#555] p-0.5 relative">
-              {usesTopBattingModernLayout(Number(year)) ? (
+              {usesTopBattingModernLayout(Number(year), isWeeklyBattingTab) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
                     href={getRankingUrl(metric)}

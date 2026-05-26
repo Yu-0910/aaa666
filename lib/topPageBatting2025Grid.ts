@@ -1,6 +1,6 @@
 import type { LeaderRow } from "@/lib/ranking/leadersTypes"
 
-/** 2025 シーズン TOP: OPS｜打率｜本塁打（3等分）｜打点。2026 シーズンは 2×2 */
+/** 2025/2026 シーズン TOP: OPS｜打率｜本塁打（3等分）｜打点。今週タブは 2×2 */
 /** 2025 シーズン TOP のみ: 各指標5位まで（デザイン確認用。4–5位は不足時プレースホルダ） */
 export const BATTING_TOP_2025_SEASON_TOP_METRICS = ["OPS", "打率", "本塁打"] as const
 export const BATTING_TOP_2025_SEASON_TOP_N = 5
@@ -14,20 +14,22 @@ export const BATTING_TOP_2025_RBI_TOP_N = 3
 /** 今週タブ打撃：OPS・打率・本塁打・打点のみ、各指標トップ5 */
 export const BATTING_WEEKLY_TAB_TOP_N = 5
 
-/** トップページで 2025/2026 打撃の指標タイトル・行レイアウトを共通化する年度 */
-export function usesTopBattingModernLayout(year: number): boolean {
+function usesTopPage2025DesignYear(year: number): boolean {
   return year === 2025 || year === 2026
+}
+
+/** トップページで 2025 系モダン打撃レイアウト（シーズンは 3+1、今週は 2×2）を使うか */
+export function usesTopBattingModernLayout(year: number, _isWeeklyTab = false): boolean {
+  return usesTopPage2025DesignYear(year)
 }
 
 /** 指標見出し（中央の黄色タイトル）をモダン表示するか */
 export function usesTopPageModernMetricTitle(
   year: number,
-  statsCategory: "batting" | "pitching"
+  statsCategory: "batting" | "pitching",
+  isWeeklyTab = false
 ): boolean {
-  return (
-    (usesTopBattingModernLayout(year) && statsCategory === "batting") ||
-    (year === 2026 && statsCategory === "pitching")
-  )
+  return usesTopBattingModernLayout(year, isWeeklyTab) && statsCategory === "batting"
 }
 
 /**
@@ -36,12 +38,10 @@ export function usesTopPageModernMetricTitle(
  */
 export function usesTopPageModernLeaderRow(
   year: number,
-  statsCategory: "batting" | "pitching"
+  statsCategory: "batting" | "pitching",
+  isWeeklyTab = false
 ): boolean {
-  if (year === 2026 && statsCategory === "pitching") {
-    return true
-  }
-  return usesTopBattingModernLayout(year) && statsCategory === "batting"
+  return usesTopBattingModernLayout(year, isWeeklyTab) && statsCategory === "batting"
 }
 
 /** 上4指標ブロック（globals.css の .batting-top-2025-four-*。グリッド下限は 18rem / 列 8.75rem） */
@@ -50,14 +50,14 @@ export const BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS =
 export const BATTING_TOP_2025_FOUR_GRID_CLASS = "batting-top-2025-four-grid"
 export const BATTING_TOP_2025_SEASON_GRID_CLASS = "batting-top-2025-season-grid"
 
-/** 2025 シーズン TOP のみ: OPS｜打率｜本塁打（3等分）＋打点 */
+/** 2025/2026 シーズン TOP: OPS｜打率｜本塁打（3等分）＋打点 */
 export function usesTopBatting2025SeasonPairedLayout(year: number, isWeeklyTab: boolean): boolean {
-  return year === 2025 && !isWeeklyTab
+  return usesTopPage2025DesignYear(year) && !isWeeklyTab
 }
 
-/** 2025 シーズン TOP のみ: 2026 比 90% の typography（比率は同じ） */
+/** 2025/2026 シーズン TOP: コンパクト typography */
 export function usesTopBatting2025CompactTypography(year: number, isWeeklyTab: boolean): boolean {
-  return year === 2025 && !isWeeklyTab
+  return usesTopPage2025DesignYear(year) && !isWeeklyTab
 }
 
 export type TopLeaderRowTypography = {
@@ -86,7 +86,7 @@ export type TopLeaderRowTypography = {
 }
 
 export function battingTop2025SeasonTopN(metricLabel: string, year: string): number | null {
-  if (year !== "2025") return null
+  if (!usesTopPage2025DesignYear(Number(year))) return null
   if ((BATTING_TOP_2025_SEASON_TOP_METRICS as readonly string[]).includes(metricLabel)) {
     return BATTING_TOP_2025_SEASON_TOP_N
   }
