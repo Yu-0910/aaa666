@@ -8,9 +8,10 @@ import {
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_SEASON_GRID_CLASS,
-  BATTING_TOP_2025_SEASON_TOP_METRICS,
+  battingSeasonGridMetrics,
   pad2025SeasonTopMetricLeaders,
   topLeaderRowTypography,
+  usesBatting2026SeasonSixMetricGrid,
   usesTopBatting2025SeasonPairedLayout,
 } from "@/lib/topPageBatting2025Grid"
 
@@ -133,20 +134,26 @@ export function BattingTopFourMetricsGrid({
       OPS: "batting-top-2025-season-ops",
       打率: "batting-top-2025-season-avg",
       本塁打: "batting-top-2025-season-hr",
+      打点: "batting-top-2026-season-rbi",
+      出塁率: "batting-top-2026-season-obp",
+      長打率: "batting-top-2026-season-slg",
     }
-    const hasTopRow = BATTING_TOP_2025_SEASON_TOP_METRICS.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
-    const hasRbi = (displayLeaders.打点?.length ?? 0) > 0
-    if (!hasTopRow && !hasRbi) return null
+    const seasonMetrics = battingSeasonGridMetrics(year)
+    const hasAny = seasonMetrics.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
+    if (!hasAny) return null
 
     const seasonPanelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
+    const gridClass = usesBatting2026SeasonSixMetricGrid(year, isWeeklyTab)
+      ? "batting-top-2026-season-grid"
+      : BATTING_TOP_2025_SEASON_GRID_CLASS
 
     return (
       <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
-        <div className={BATTING_TOP_2025_SEASON_GRID_CLASS}>
-          {BATTING_TOP_2025_SEASON_TOP_METRICS.map((metric) => {
+        <div className={gridClass}>
+          {seasonMetrics.map((metric) => {
             if (!(displayLeaders[metric]?.length ?? 0)) return null
             return (
-              <div key={metric} className={`${seasonAreaClass[metric]} min-w-0`}>
+              <div key={metric} className={`${seasonAreaClass[metric] ?? ""} min-w-0`}>
                 <MetricPanel
                   metric={metric}
                   leaders={displayLeaders}
@@ -160,20 +167,6 @@ export function BattingTopFourMetricsGrid({
               </div>
             )
           })}
-          {hasRbi ? (
-            <div className="batting-top-2025-season-rbi min-w-0">
-              <MetricPanel
-                metric="打点"
-                leaders={displayLeaders}
-                getRankingUrl={getRankingUrl}
-                getStatsListUrl={getStatsListUrl}
-                onStatsListNavigate={onStatsListNavigate}
-                renderLeaderRow={renderLeaderRow}
-                typography={typography}
-                panelClassName={seasonPanelClass}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     )

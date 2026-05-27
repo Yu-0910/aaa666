@@ -3,9 +3,9 @@
  * プロキシ経由（/data/rankings/...）でランキングJSONファイルを取得
  */
 
-import { getRankingsUrl } from './url'
-
-import { sanitizeMetricForPath } from './url'
+import { displaySitePathToPublicUrl } from '@/lib/displayData/sitePath'
+import { allowBatting2025Fallback } from './allowBatting2025Fallback'
+import { getRankingsUrl, sanitizeMetricForPath } from './url'
 
 /** サーバー側 fetch 用のサイト origin（Vercel では VERCEL_URL を利用） */
 function getServerSiteOrigin(): string {
@@ -23,6 +23,33 @@ function buildRankingFetchUrl(relativeUnderRankings: string): string {
   return `${baseUrl}${url}`
 }
 
+const jsonFetchInit: RequestInit = {
+  method: 'GET',
+  headers: { Accept: 'application/json' },
+  cache: 'no-store',
+}
+
+/** ブラウザ: NEXT_PUBLIC_RANKINGS_BASE_URL があれば R2 直 → 失敗時 /data プロキシ */
+async function fetchDisplayRankingsJson(relativeUnderRankings: string): Promise<Response> {
+  const sitePath = `/data/rankings/${relativeUnderRankings}`
+  if (typeof window !== 'undefined') {
+    const r2Url = displaySitePathToPublicUrl(sitePath)
+    if (r2Url) {
+      try {
+        const direct = await fetch(r2Url, jsonFetchInit)
+        if (direct.ok) return direct
+      } catch {
+        /* fall through to same-origin proxy */
+      }
+    }
+  }
+  const fullUrl = buildRankingFetchUrl(relativeUnderRankings)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[loadRankingJson] Fetching: ${fullUrl}`)
+  }
+  return fetch(fullUrl, jsonFetchInit)
+}
+
 async function fetchRankingJsonForYear(
   dataYear: string,
   season: string,
@@ -32,15 +59,7 @@ async function fetchRankingJsonForYear(
   const fileBase = sanitizeMetricForPath(metric)
   const fileName = useAllPlayers ? `${fileBase}_all.json` : `${fileBase}.json`
   const relative = `${dataYear}/${season}/${fileName}`
-  const fullUrl = buildRankingFetchUrl(relative)
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[loadRankingJson] Fetching: ${fullUrl}`)
-  }
-  return fetch(fullUrl, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
+  return fetchDisplayRankingsJson(relative)
 }
 
 async function fetchPitchingRankingJsonForYear(
@@ -52,15 +71,10 @@ async function fetchPitchingRankingJsonForYear(
   const fileBase = sanitizeMetricForPath(metric)
   const fileName = useAllPlayers ? `${fileBase}_all.json` : `${fileBase}.json`
   const relative = `pitching/${dataYear}/${season}/${fileName}`
-  const fullUrl = buildRankingFetchUrl(relative)
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[loadPitchingRankingJson] Fetching: ${fullUrl}`)
+    console.log(`[loadPitchingRankingJson] Fetching: ${buildRankingFetchUrl(relative)}`)
   }
-  return fetch(fullUrl, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
+  return fetchDisplayRankingsJson(relative)
 }
 
 /**
@@ -69,7 +83,7 @@ async function fetchPitchingRankingJsonForYear(
  * R2 およびローカル構造と一致。
  *
  * 年度はそのまま参照（2026 → `data/rankings/2026/...`。計画書 Phase 8 の公開 JSON 配置）。
- * ファイル未配置時のみ 2025 をフォールバック（`npm run rankings:bootstrap-2026` で 2026 を生成可能）。
+ * 開発時のみ: 2026 未配置なら 2025 をフォールバック（本番・R2 設定時は無効）。
  *
  * @param year 年度（例: '2025', '2026'）
  * @param season シーズン識別子（例: 'CL', 'PL', 'PRE_spring', 'PRE_fall'）
@@ -84,12 +98,15 @@ export async function loadRankingJson(
   useAllPlayers?: boolean
 ): Promise<any> {
   let response = await fetchRankingJsonForYear(year, season, metric, useAllPlayers)
-  if (!response.ok && year === '2026' && response.status === 404) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(
-        '[loadRankingJson] 2026 の JSON が無いため 2025 を参照しています。配置するには: npm run rankings:bootstrap-2026'
-      )
-    }
+  if (
+    allowBatting2025Fallback() &&
+    !response.ok &&
+    year === '2026' &&
+    response.status === 404
+  ) {
+    console.warn(
+      '[loadRankingJson] 2026 の JSON が無いため 2025 を参照しています。配置するには: npm run rankings:rebuild'
+    )
     response = await fetchRankingJsonForYear('2025', season, metric, useAllPlayers)
   }
   if (!response.ok) {
@@ -164,15 +181,10 @@ async function fetchWeeklyBattingRankingJson(
 ): Promise<Response> {
   const fileBase = sanitizeMetricForPath(metric)
   const relative = `weekly/${year}/${weekKey}/${season}/${fileBase}.json`
-  const fullUrl = buildRankingFetchUrl(relative)
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[loadWeeklyRankingJson] Fetching: ${fullUrl}`)
+    console.log(`[loadWeeklyRankingJson] Fetching: ${buildRankingFetchUrl(relative)}`)
   }
-  return fetch(fullUrl, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
+  return fetchDisplayRankingsJson(relative)
 }
 
 async function fetchWeeklyPitchingRankingJson(
@@ -183,15 +195,10 @@ async function fetchWeeklyPitchingRankingJson(
 ): Promise<Response> {
   const fileBase = sanitizeMetricForPath(metric)
   const relative = `pitching/weekly/${year}/${weekKey}/${season}/${fileBase}.json`
-  const fullUrl = buildRankingFetchUrl(relative)
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[loadWeeklyPitchingRankingJson] Fetching: ${fullUrl}`)
+    console.log(`[loadWeeklyPitchingRankingJson] Fetching: ${buildRankingFetchUrl(relative)}`)
   }
-  return fetch(fullUrl, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  })
+  return fetchDisplayRankingsJson(relative)
 }
 
 /** 週間打撃ランキング（Phase 28 出力）。率系の規定フィルタは UI（team-games.json）で適用。 */

@@ -14,7 +14,8 @@ import { TopPageModernLeaderRow } from "@/app/components/top/TopPageModernLeader
 import {
   BATTING_TOP_2025_FOUR_GRID_CLASS,
   BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS,
-  shouldShowTopBattingFourGrid,
+  battingMiniMetricsForSeasonTab,
+  shouldShowTopBattingMainGrid,
   topLeaderRowTypography,
   type TopLeaderRowTypography,
   usesTopBattingModernLayout,
@@ -22,11 +23,14 @@ import {
   usesTopPageModernMetricTitle,
 } from "@/lib/topPageBatting2025Grid"
 import { BattingTopFourMetricsGrid } from "@/app/components/top/BattingTopFourMetricsGrid"
+import { TopSeasonMetricsGrid } from "@/app/components/top/TopSeasonMetricsGrid"
+import { shouldShowTopPitchingFourGrid, usesTopPitchingModernLayout } from "@/lib/topPagePitching2026Grid"
 import {
-  PITCHING_TOP_2026_GRID_METRICS,
-  shouldShowTopPitchingFourGrid,
-  usesTopPitchingModernLayout,
-} from "@/lib/topPagePitching2026Grid"
+  PITCHING_TOP_2026_SEASON_AREA_CLASS,
+  PITCHING_TOP_2026_SEASON_GRID_CLASS,
+  PITCHING_TOP_2026_SEASON_ROWS,
+  topPagePitchingMetricTitle,
+} from "@/lib/topPageTopSeasonGrid2026"
 import {
   getWeeklyPitchingRankingUrl,
   getWeeklyPitchingStatsListUrl,
@@ -137,6 +141,10 @@ export function LeadersPanel({
   const isTopPitchingModern = usesTopPitchingModernLayout(year, isWeeklyTab) && statsCategory === "pitching"
   const effectiveMiniGrid =
     isTopPitchingModern && layout === "desktop" ? "grid grid-cols-4 gap-1" : miniGrid
+  const miniMetricsForPanel =
+    statsCategory === "batting"
+      ? battingMiniMetricsForSeasonTab(year, data.miniMetrics, isWeeklyTab)
+      : data.miniMetrics
 
   return (
     <div className="space-y-1">
@@ -155,47 +163,29 @@ export function LeadersPanel({
       </div>
 
       {isTopPitchingModern && shouldShowTopPitchingFourGrid(data.leaders) ? (
-        <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
-          <div className={BATTING_TOP_2025_FOUR_GRID_CLASS}>
-            {PITCHING_TOP_2026_GRID_METRICS.map((metric) =>
-              data.leaders[metric] ? (
-                <div key={metric} className="bg-black border border-[#555] p-1 relative">
-                  <div className="relative mb-1 flex min-h-[22px] items-center">
-                    <Link
-                      href={getRankingUrl(metric)}
-                      className="absolute left-1/2 top-1/2 z-10 max-w-[calc(100%-2.75rem)] -translate-x-1/2 -translate-y-1/2 text-center hover:opacity-80 transition-opacity"
-                    >
-                      <span
-                        className={`text-[#ffff44] text-[13px] tracking-wider ${/[a-zA-Z％%]/.test(metric) ? "latin" : ""}`}
-                      >
-                        {metric}
-                      </span>
-                    </Link>
-                    <Link
-                      href={getStatsListUrl()}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
-                    >
-                      成績一覧
-                    </Link>
-                  </div>
-                  <div className="space-y-0">
-                    {data.leaders[metric]?.map((leader, leaderIndex) => (
-                      <TopPageModernLeaderRow
-                        key={leaderListReactKey(leader as LeaderRow, leaderIndex)}
-                        leader={leader as Record<string, unknown>}
-                        stat={metric}
-                        index={leaderIndex}
-                        modernLeaderRow={panelModernLeaderRow}
-                        typography={rowTypography}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null
-            )}
-          </div>
-        </div>
-      ) : isTopBattingModern && shouldShowTopBattingFourGrid(data.leaders) ? (
+        <TopSeasonMetricsGrid
+          year={year}
+          statsCategory="pitching"
+          isWeeklyTab={Boolean(weekKey)}
+          leaders={data.leaders}
+          metricRows={PITCHING_TOP_2026_SEASON_ROWS}
+          areaClassByMetric={PITCHING_TOP_2026_SEASON_AREA_CLASS}
+          gridClassName={PITCHING_TOP_2026_SEASON_GRID_CLASS}
+          displayMetricTitle={topPagePitchingMetricTitle}
+          getRankingUrl={getRankingUrl}
+          getStatsListUrl={getStatsListUrl}
+          renderLeaderRow={({ leader, stat, index }) => (
+            <TopPageModernLeaderRow
+              key={leaderListReactKey(leader as LeaderRow, index)}
+              leader={leader}
+              stat={stat}
+              index={index}
+              modernLeaderRow={panelModernLeaderRow}
+              typography={rowTypography}
+            />
+          )}
+        />
+      ) : isTopBattingModern && shouldShowTopBattingMainGrid(year, isWeeklyTab, data.leaders) ? (
         <BattingTopFourMetricsGrid
           year={year}
           isWeeklyTab={Boolean(weekKey)}
@@ -344,8 +334,9 @@ export function LeadersPanel({
         </div>
       )}
 
+      {miniMetricsForPanel.length > 0 ? (
       <div className={effectiveMiniGrid}>
-        {(isTopBattingModern ? data.miniMetrics.filter((m) => m !== "打点") : data.miniMetrics).map((metric) => {
+        {miniMetricsForPanel.map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
@@ -401,6 +392,7 @@ export function LeadersPanel({
           )
         })}
       </div>
+      ) : null}
     </div>
   )
 }

@@ -16,12 +16,17 @@ import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import { runnerEventsFromTextPlayByPlay } from "./runnerEventsFromTextPlayByPlay"
 import { sortPitchEventsByPitchIndex } from "./sortPitchEventsByPitchIndex"
 import { supplementPlateAppearancesFromTextPlayByPlay } from "./supplementPlateAppearancesFromTextPlayByPlay"
+import { buildPaId, comparePaIdChronological } from "./paIdFormat"
 
 /** Python `parse_pitch_details` 行（JSON 経由） */
 export type Phase10PitchRow = {
   game_id?: string
   inning?: string
   top_bottom?: string
+  /**
+   * 半回内打席通し番号（= paId 末尾・score index）。**打順（1〜9番）ではない。**
+   * @see `lib/yahooGame/paIdFormat.ts`
+   */
   bat_order?: string
   pitcher_id?: string
   batter_id?: string
@@ -165,6 +170,17 @@ export function pickResultSummaryJaFromPitchRows(sorted: Phase10PitchRow[]): str
  * `ボール[ランエンドヒット]` 行を優先的に落とす（phase11 ハイブリッドの P0 を正とする）。
  * 出場成績行が無い打者（代打のみ等）は対象外。
  */
+/** 球種・球速・複数球がある打席は誤分裂の除去対象にしない（trim で events だけ落ちるのを防ぐ） */
+function hasSubstantivePitchEvents(p: PlateAppearance): boolean {
+  const pe = p.pitchEvents ?? []
+  if (pe.length >= 3) return true
+  return pe.some(
+    (e) =>
+      String(e.pitchTypeJa ?? "").trim().length > 0 ||
+      (typeof e.speedKmh === "number" && e.speedKmh > 0),
+  )
+}
+
 function trimPhase10PlateAppearancesAgainstBattingLines(
   doc: CanonicalGameDocument,
   pas: PlateAppearance[],
@@ -225,6 +241,7 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
         if (over <= 0) break
         const pid = String(p.paId ?? "").trim()
         if (!pid || dropIds.has(pid)) continue
+        if (hasSubstantivePitchEvents(p)) continue
         dropIds.add(pid)
         over -= 1
       }
@@ -240,6 +257,7 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
         if (over <= 0) break
         const pid = String(p.paId ?? "").trim()
         if (!pid || dropIds.has(pid)) continue
+        if (hasSubstantivePitchEvents(p)) continue
         dropIds.add(pid)
         over -= 1
       }
@@ -259,6 +277,7 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
         if (over <= 0) break
         const pid = String(p.paId ?? "").trim()
         if (!pid || dropIds.has(pid)) continue
+        if (hasSubstantivePitchEvents(p)) continue
         dropIds.add(pid)
         over -= 1
       }
@@ -296,8 +315,10 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
             const orphanStrikeoutPastLine = !cell && i >= lineTexts.length
             const strikeoutVsNonSoCell = !!cell && !isStrikeoutResultJa(cell)
             if (orphanStrikeoutPastLine || strikeoutVsNonSoCell) {
-              dropIds.add(pid)
-              over -= 1
+              if (!hasSubstantivePitchEvents(p)) {
+                dropIds.add(pid)
+                over -= 1
+              }
               break
             }
           }
@@ -317,6 +338,7 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
         if (over <= 0) break
         const pid = String(p.paId ?? "").trim()
         if (!pid || dropIds.has(pid)) continue
+        if (hasSubstantivePitchEvents(p)) continue
         dropIds.add(pid)
         over -= 1
       }
@@ -328,22 +350,6 @@ function trimPhase10PlateAppearancesAgainstBattingLines(
 }
 
 type BattingLineWithCells = BattingLine & { cells?: string[] }
-
-/** `paId` = `{gameId}-{inning}-{表|裏}-{打順}` を時系列で比較（文字列 sort だと 11回が 2回より前に来る） */
-function comparePaIdChronological(a: string, b: string): number {
-  const pa = String(a).split("-")
-  const pb = String(b).split("-")
-  if (pa.length < 4 || pb.length < 4) return String(a).localeCompare(String(b), "ja")
-  const innA = parseInt(pa[1] ?? "0", 10) || 0
-  const innB = parseInt(pb[1] ?? "0", 10) || 0
-  if (innA !== innB) return innA - innB
-  const tbA = pa[2] ?? ""
-  const tbB = pb[2] ?? ""
-  if (tbA !== tbB) return tbA.localeCompare(tbB, "ja")
-  const boA = parseInt(pa[3] ?? "0", 10) || 0
-  const boB = parseInt(pb[3] ?? "0", 10) || 0
-  return boA - boB
-}
 
 function resultTextsFromBattingLineCells(line: BattingLineWithCells): string[] {
   const c = line.cells
@@ -504,7 +510,7 @@ function alignSacBuntSummariesWithBattingLineCells(
  *
  * `resultSummaryJa` は `pickResultSummaryJaFromPitchRows` で決める（末尾が中間表記のときは
  * 同一打席内の直前行を優先。§6a・§6b）。**取得で決着行が欠けている**場合は要約は直らない。
- * 打席境界は `inning|表裏|打順`（2アウト・盗塁失敗後の相手先頭は別キーで混在しない）。
+ * 打席境界は `inning|表裏|paSeqInHalf`（半回内通し番号。打順ではない。2アウト・盗塁失敗後の相手先頭は別キーで混在しない）。
  * 取得ルール: `docs/yahoo_plate_appearance_batting_rules.md` §6a、`scripts/scrape_yahoo_pitch_details.py` で複数表を結合。
  *
  * **打席の `yahooPitcherId`**: 先頭行の `pitcher_id`（従来互換）。対左右は `yahooPitcherIdForVsHandFromPa` が
@@ -544,7 +550,7 @@ export function mergePhase10IntoCanonical(
     const inn = String(first?.inning ?? "")
     const tb = String(first?.top_bottom ?? "")
     const bo = String(first?.bat_order ?? "")
-    const paId = `${doc.gameId}-${inn}-${tb}-${bo}`
+    const paId = buildPaId(doc.gameId, parseInt(inn, 10) || 0, tb as "表" | "裏", parseInt(bo, 10) || 0)
     const inningHalf = inn && tb ? `${inn}回${tb}` : undefined
     const pevents: PitchEvent[] = sorted.map(rowToPitchEvent)
     const resultSummaryJa = pickResultSummaryJaFromPitchRows(sorted)

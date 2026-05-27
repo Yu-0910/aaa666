@@ -23,6 +23,7 @@ import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import {
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_RBI_TOP_N,
+  BATTING_TOP_2026_SEASON_ALL_METRICS,
   BATTING_WEEKLY_TAB_TOP_N,
   battingTop2025SeasonTopN,
 } from "@/lib/topPageBatting2025Grid"
@@ -230,6 +231,10 @@ function extractPitchingTop(
 }
 
 function battingTopN(metricLabel: string, year: string, weekKey?: string): number {
+  if (weekKey && Number(year) === 2026) {
+    const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
+    if (seasonTopN != null) return seasonTopN
+  }
   if (weekKey) return BATTING_WEEKLY_TAB_TOP_N
   if (metricLabel === "打点" && (year === "2025" || year === "2026")) {
     return BATTING_TOP_2025_RBI_TOP_N
@@ -240,8 +245,10 @@ function battingTopN(metricLabel: string, year: string, weekKey?: string): numbe
   return 1
 }
 
-function pitchingTopN(metricLabel: string): number {
-  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 3
+function pitchingTopN(metricLabel: string, year: string): number {
+  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) {
+    return Number(year) === 2026 ? 5 : 3
+  }
   return 1
 }
 
@@ -263,7 +270,11 @@ export function buildBattingLeadersConfigAtLeagueDir(
   const upperLeague = league.toUpperCase()
   const leaders: Record<string, LeaderRow[]> = {}
 
-  const battingMetrics = options.weekKey ? BATTING_TOP_2025_GRID_METRICS : BATTING_ALL_METRICS
+  const battingMetrics = options.weekKey
+    ? Number(year) === 2026
+      ? BATTING_TOP_2026_SEASON_ALL_METRICS
+      : BATTING_TOP_2025_GRID_METRICS
+    : BATTING_ALL_METRICS
 
   for (const metricLabel of battingMetrics) {
     const rows = readMetricJson(leagueDir, metricLabel, "batting")
@@ -276,11 +287,17 @@ export function buildBattingLeadersConfigAtLeagueDir(
   if (Object.keys(leaders).length === 0) return null
 
   return options.weekKey
-    ? {
-        top3Metrics: [...BATTING_TOP_2025_GRID_METRICS],
-        miniMetrics: [],
-        leaders,
-      }
+    ? Number(year) === 2026
+      ? {
+          top3Metrics: [...BATTING_TOP3_METRICS],
+          miniMetrics: [...BATTING_MINI_METRICS],
+          leaders,
+        }
+      : {
+          top3Metrics: [...BATTING_TOP_2025_GRID_METRICS],
+          miniMetrics: [],
+          leaders,
+        }
     : {
         top3Metrics: [...BATTING_TOP3_METRICS],
         miniMetrics: [...BATTING_MINI_METRICS],
@@ -302,7 +319,7 @@ export function buildPitchingLeadersConfigAtLeagueDir(
   for (const metricLabel of allMetrics) {
     const rows = readMetricJson(leagueDir, metricLabel, "pitching")
     if (!rows?.length) continue
-    const topN = pitchingTopN(metricLabel)
+    const topN = pitchingTopN(metricLabel, year)
     const top = extractPitchingTop(rows, metricLabel, topN, year, upperLeague, options)
     if (top.length > 0) leaders[metricLabel] = top
   }

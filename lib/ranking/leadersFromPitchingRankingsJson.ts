@@ -127,7 +127,7 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const teamRaw = String(row.team ?? "").trim()
   const teamCode = getTeamCode(teamRaw)
   const romanRaw = String(row.romanName ?? "").trim()
-  const rank = Math.min(3, Math.max(1, displayRank)) as 1 | 2 | 3
+  const rank = Math.min(5, Math.max(1, displayRank)) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
   const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
 
@@ -168,7 +168,7 @@ function extractTopPitchingLeadersFromRows(
 }
 
 function topNForPitchingMetric(metricLabel: string): number {
-  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 3
+  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 5
   return 1
 }
 

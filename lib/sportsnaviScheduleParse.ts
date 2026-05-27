@@ -10,6 +10,11 @@ export type ScheduleGameEntry = {
   stadiumName: string
 }
 
+/** 1日あたりの通常セ・パ公式戦は最大6（休養日は0）。Phase0 と共有。 */
+export const SCHEDULE_MAX_GAMES_PER_DAY = 6
+
+const SCHEDULE_ROWSPAN_CANDIDATES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const
+
 export function stripHtmlToText(fragment: string): string {
   return fragment
     .replace(/<br\s*\/?>/gi, " ")
@@ -26,9 +31,14 @@ export function normalizeStadiumNameFromSchedule(raw: string): string {
 
 const SCHEDULE_DAY_HEAD_MARKER = 'bb-scheduleTable__head" scope="row"'
 
+function jaNeedleFromYmd(ymd: string): string {
+  const month = parseInt(ymd.slice(5, 7), 10)
+  const day = parseInt(ymd.slice(8, 10), 10)
+  return `${month}月${day}日`
+}
+
 /** 当日セルだけに切る（休養日のあと tbody 全体を取らない）。 */
-function sliceScheduleDayBlock(html: string, dayThNeedle: string): string {
-  const start = html.indexOf(dayThNeedle)
+function sliceScheduleDayBlockAt(html: string, start: number, dayThNeedle: string): string {
   if (start < 0) return ""
   const afterStart = start + dayThNeedle.length
   const nextDayHead = html.indexOf(SCHEDULE_DAY_HEAD_MARKER, afterStart)
@@ -37,23 +47,84 @@ function sliceScheduleDayBlock(html: string, dayThNeedle: string): string {
   return tbodyEnd >= 0 ? html.slice(start, tbodyEnd) : html.slice(start)
 }
 
-export function scopeScheduleHtmlForDate(html: string, ymd: string): string {
-  const month = parseInt(ymd.slice(5, 7), 10)
-  const day = parseInt(ymd.slice(8, 10), 10)
-  const jaNeedle = `${month}月${day}日`
-  const rowspanCandidates = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+function dayThNeedleForRowspan(jaNeedle: string, rowspan: number): string {
+  return `${SCHEDULE_DAY_HEAD_MARKER} rowspan="${rowspan}">${jaNeedle}`
+}
 
-  for (const rowspan of rowspanCandidates) {
-    const dayThNeedle = `${SCHEDULE_DAY_HEAD_MARKER} rowspan="${rowspan}">${jaNeedle}`
-    const scoped = sliceScheduleDayBlock(html, dayThNeedle)
-    if (scoped) return scoped
+function dayThNeedleWithoutRowspan(jaNeedle: string): string {
+  return `${SCHEDULE_DAY_HEAD_MARKER}>${jaNeedle}`
+}
+
+/**
+ * 修正A: 同一日付の見出しを rowspan 1〜12 および rowspan 無しですべて列挙し、
+ * それぞれの scoped ブロックを返す（セ・パ別テーブルで見出しが複数ある日に対応）。
+ */
+export function enumerateScopedBlocksForDate(html: string, ymd: string): string[] {
+  const jaNeedle = jaNeedleFromYmd(ymd)
+  const blocks: string[] = []
+  const seenStarts = new Set<number>()
+
+  const needles: string[] = [
+    ...SCHEDULE_ROWSPAN_CANDIDATES.map((r) => dayThNeedleForRowspan(jaNeedle, r)),
+    dayThNeedleWithoutRowspan(jaNeedle),
+  ]
+
+  for (const needle of needles) {
+    let from = 0
+    while (from < html.length) {
+      const start = html.indexOf(needle, from)
+      if (start < 0) break
+      if (!seenStarts.has(start)) {
+        seenStarts.add(start)
+        const scoped = sliceScheduleDayBlockAt(html, start, needle)
+        if (scoped) blocks.push(scoped)
+      }
+      from = start + needle.length
+    }
   }
 
   const titleNeedle = `bb-head01__title">${jaNeedle}`
   const tStart = html.indexOf(titleNeedle)
-  if (tStart < 0) return ""
-  const tNext = html.indexOf(`bb-head01__title">`, tStart + titleNeedle.length)
-  return tNext >= 0 ? html.slice(tStart, tNext) : html.slice(tStart)
+  if (tStart >= 0) {
+    const tNext = html.indexOf(`bb-head01__title">`, tStart + titleNeedle.length)
+    const scoped = tNext >= 0 ? html.slice(tStart, tNext) : html.slice(tStart)
+    if (scoped) blocks.push(scoped)
+  }
+
+  return blocks
+}
+
+/**
+ * 後方互換: 修正Aのロジックで最も試合数が多い単一 scoped を返す（デバッグ用）。
+ */
+export function scopeScheduleHtmlForDate(html: string, ymd: string): string {
+  const jaNeedle = jaNeedleFromYmd(ymd)
+  const blocks = enumerateScopedBlocksForDate(html, ymd)
+  let best = ""
+  let bestCount = -1
+  for (const scoped of blocks) {
+    if (isNoGameScheduleDay(scoped, jaNeedle)) continue
+    const n = extractGamesFromScopedHtml(scoped).length
+    if (n > bestCount) {
+      bestCount = n
+      best = scoped
+    }
+  }
+  return best
+}
+
+/**
+ * 当日ブロックが「試合はありません」か。
+ * rowspan で翌日分の game リンクまで scoped に含まれても、
+ * 当日ラベル〜最初の game リンク手前までに「試合はありません」があれば休養日。
+ */
+export function isNoGameScheduleDay(scoped: string, jaNeedle: string): boolean {
+  const dayIdx = scoped.indexOf(jaNeedle)
+  if (dayIdx < 0) return false
+  const gameLinkIdx = scoped.search(/href="\/npb\/game\/\d+\/index"/)
+  const dayBlock =
+    gameLinkIdx < 0 ? scoped.slice(dayIdx) : scoped.slice(dayIdx, gameLinkIdx)
+  return /試合はありません/.test(dayBlock)
 }
 
 export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] {
@@ -95,15 +166,57 @@ export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] 
   return games
 }
 
+export function dedupeScheduleGamesById(games: ScheduleGameEntry[]): ScheduleGameEntry[] {
+  const byId = new Map<string, ScheduleGameEntry>()
+  for (const g of games) {
+    const prev = byId.get(g.gameId)
+    if (!prev) {
+      byId.set(g.gameId, g)
+      continue
+    }
+    const prevStadium = prev.stadiumName && prev.stadiumName !== "未設定"
+    const nextStadium = g.stadiumName && g.stadiumName !== "未設定"
+    if (!prevStadium && nextStadium) byId.set(g.gameId, g)
+  }
+  return [...byId.values()].sort((a, b) => a.gameId.localeCompare(b.gameId))
+}
+
+/**
+ * 修正A: 全 rowspan 候補・同一日の複数見出しから有効ブロックを集め、
+ * 和集合が 1〜6 件なら採用。7件以上なら単一ブロックの最多を採用。
+ */
+export function pickBestScheduleGamesForDate(html: string, ymd: string): ScheduleGameEntry[] {
+  const jaNeedle = jaNeedleFromYmd(ymd)
+  const blocks = enumerateScopedBlocksForDate(html, ymd)
+  if (blocks.length === 0) return []
+
+  const unionPieces: ScheduleGameEntry[] = []
+  let bestSingle: ScheduleGameEntry[] = []
+
+  for (const scoped of blocks) {
+    if (isNoGameScheduleDay(scoped, jaNeedle)) continue
+    const hasGameLink = /href="\/npb\/game\/\d+\/index"/.test(scoped)
+    if (!hasGameLink && /試合はありません/.test(scoped)) continue
+
+    const fromBlock = extractGamesFromScopedHtml(scoped)
+    unionPieces.push(...fromBlock)
+    if (fromBlock.length > bestSingle.length) bestSingle = fromBlock
+  }
+
+  const union = dedupeScheduleGamesById(unionPieces)
+  if (union.length > 0 && union.length <= SCHEDULE_MAX_GAMES_PER_DAY) {
+    return union
+  }
+  if (union.length > SCHEDULE_MAX_GAMES_PER_DAY) {
+    return dedupeScheduleGamesById(bestSingle)
+  }
+  return []
+}
+
 export function extractGamesFromScheduleHtml(html: string, ymd: string): ScheduleGameEntry[] {
-  const scoped = scopeScheduleHtmlForDate(html, ymd)
-  if (!scoped) return []
-  const hasGameLink = /href="\/npb\/game\/\d+\/index"/.test(scoped)
-  if (!hasGameLink && /試合はありません/.test(scoped)) return []
-  return extractGamesFromScopedHtml(scoped)
+  return pickBestScheduleGamesForDate(html, ymd)
 }
 
 export function extractGameIdsFromScheduleHtml(html: string, ymd: string): string[] {
-  const ids = extractGamesFromScheduleHtml(html, ymd).map((g) => g.gameId)
-  return [...new Set(ids)].sort()
+  return extractGamesFromScheduleHtml(html, ymd).map((g) => g.gameId)
 }

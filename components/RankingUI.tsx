@@ -81,6 +81,8 @@ export default function RankingUI({
   const playerNameBlockHeight = compactTableUi ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
   const metricColMinWidth = compactTableUi ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
   const metricValueTextClass = compactTableUi ? 'text-[16.83px]' : 'text-lg'
+  const gpaMetricIdx = metrics.findIndex((m) => m.key === 'gpa' || m.label === 'GPA')
+  const metricBgMaxIdx = gpaMetricIdx >= 0 ? gpaMetricIdx : metrics.length - 1
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
   const activeMetric = metrics.find(m => m.key === sortKey)
@@ -326,7 +328,8 @@ export default function RankingUI({
                       )}
                       <tr
                         key={`${row.playerId}-${idx}`}
-                        className="bg-[#1f1f1f] hover:bg-[#2a2a2a] transition-colors border-b border-[#333]"
+                        className="hover:bg-[#2a2a2a] transition-colors border-b border-[#333]"
+                        style={{ backgroundColor: row.rank % 2 === 0 ? '#292929' : '#1f1f1f' }}
                       >
                       {/* 層1: 順位＋グレーフレーム＋選手名を1セルで一塊に */}
                       <td
@@ -345,9 +348,15 @@ export default function RankingUI({
                         <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
                           <div
                             className="text-center tabular-nums font-normal text-white flex-shrink-0 flex items-center justify-center"
-                            style={{ width: RANK_WIDTH, minHeight: 32, backgroundColor: '#1f1f1f', padding: '2px 4px', boxSizing: 'border-box' }}
+                            style={{
+                              width: RANK_WIDTH,
+                              minHeight: 32,
+                              backgroundColor: row.rank % 2 === 0 ? '#292929' : '#1f1f1f',
+                              padding: '2px 4px',
+                              boxSizing: 'border-box',
+                            }}
                           >
-                            <span className="bebas tabular-nums text-lg tracking-wide">{row.rank}</span>
+                            <span className="bebas tabular-nums text-lg font-thin tracking-[0.02em] text-white/85">{row.rank}</span>
                           </div>
                           <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
                           <div
@@ -358,7 +367,7 @@ export default function RankingUI({
                               ...(compactTableUi
                                 ? { height: playerNameBlockHeight, maxHeight: playerNameBlockHeight }
                                 : {}),
-                              backgroundColor: '#1f1f1f',
+                              backgroundColor: row.rank % 2 === 0 ? '#292929' : '#1f1f1f',
                               padding: compactTableUi ? '1.9px 2px' : '2px 2px',
                               boxSizing: 'border-box',
                             }}
@@ -408,8 +417,14 @@ export default function RankingUI({
                           ? formatStat(metric.label, value)
                           : '-'
                         const isActive = sortKey === metric.key
-                        // アクティブな指標の場合、奇数/偶数行で背景色を変える
-                        const activeBgColor = isActive ? '#3a3a3a' : 'transparent'
+                        const isEvenRank = row.rank % 2 === 0
+                        const isWithinGpaRange = metricIdx <= metricBgMaxIdx
+                        // アクティブ列は従来どおり強調。非アクティブ列は偶数順位かつ（順〜GPA）範囲のみ背景を塗る。
+                        const cellBgColor = isActive
+                          ? '#3a3a3a'
+                          : isEvenRank && isWithinGpaRange
+                            ? '#292929'
+                            : 'transparent'
                         
                         return (
                           <td
@@ -420,12 +435,12 @@ export default function RankingUI({
                             style={{
                               width: `${metricColMinWidth}px`,
                               minWidth: `${metricColMinWidth}px`,
-                              backgroundColor: activeBgColor,
+                              backgroundColor: cellBgColor,
                               paddingLeft: metricIdx === 0 ? 0 : undefined,
                               marginLeft: metricIdx === 0 ? '-2px' : undefined,
                             }}
                           >
-                            <span className={`bebas tabular-nums ${metricValueTextClass} tracking-wide`}>
+                            <span className={`bebas tabular-nums ${metricValueTextClass} font-thin tracking-[0.02em] text-white/85`}>
                               {formattedValue}
                             </span>
                           </td>

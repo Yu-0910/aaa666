@@ -50,6 +50,11 @@ export type BatterEvent = {
 
 /** 打席（将来: 一球ログから構築） */
 export type PlateAppearance = {
+  /**
+   * `{gameId}-{inning}-{表|裏}-{paSeqInHalf}`。
+   * 末尾は **半回内の打席通し番号**（Yahoo score index / 実況「N：」）であり **打順（1〜9番）ではない**。
+   * @see `lib/yahooGame/paIdFormat.ts`
+   */
   paId: string
   inningHalf?: string
   /**
@@ -117,7 +122,7 @@ export type PitchingLine = {
   r?: number
   er?: number
   decision?: "win" | "loss" | "hold" | "save" | null
-  inferredFrom: "stats_row_v0" | "placeholder"
+  inferredFrom: "stats_row_v0" | "score_table_v0" | "placeholder"
   /**
    * Phase 1: 投手行の出場成績テーブル `cells[14..]`（対戦打者の結果が並ぶ列。空は未使用列）。
    * 対左右フォールバック（投手成績「打者」欄）の材料。

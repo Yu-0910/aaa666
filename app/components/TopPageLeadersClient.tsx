@@ -13,7 +13,8 @@ import metricMap from "@/config/metric_map.json"
 import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
 import { TopPageModernLeaderRow } from "@/app/components/top/TopPageModernLeaderRow"
 import {
-  shouldShowTopBattingFourGrid,
+  battingMiniMetricsForSeasonTab,
+  shouldShowTopBattingMainGrid,
   topLeaderRowTypography,
   type TopLeaderRowTypography,
   usesTopBattingModernLayout,
@@ -207,9 +208,14 @@ export default function TopPageLeadersClient({
   const yearNum = Number(year)
   const modernLeaderRow = usesTopPageModernLeaderRow(yearNum, "batting", isWeeklyBattingTab)
   const rowTypography = topLeaderRowTypography(yearNum, "batting", isWeeklyBattingTab)
-  const showBattingFourGrid =
+  const showBattingMainGrid =
     usesTopBattingModernLayout(yearNum, isWeeklyBattingTab) &&
-    (isWeeklyBattingTab || shouldShowTopBattingFourGrid(data.leaders))
+    shouldShowTopBattingMainGrid(yearNum, isWeeklyBattingTab, data.leaders)
+  const miniMetricsForTab = battingMiniMetricsForSeasonTab(
+    yearNum,
+    data.miniMetrics,
+    isWeeklyBattingTab
+  )
 
   return (
     <div className="space-y-1">
@@ -227,7 +233,7 @@ export default function TopPageLeadersClient({
         </div>
       </div>
 
-      {showBattingFourGrid ? (
+      {showBattingMainGrid ? (
         <BattingTopFourMetricsGrid
           year={yearNum}
           isWeeklyTab={isWeeklyBattingTab}
@@ -414,12 +420,9 @@ export default function TopPageLeadersClient({
         </div>
       ) : null}
 
-      {!isWeeklyBattingTab && (
+      {!isWeeklyBattingTab && miniMetricsForTab.length > 0 && (
       <div className={layout === "desktop" ? "grid grid-cols-5 gap-1" : "grid grid-cols-2 gap-1"}>
-        {(usesTopBattingModernLayout(Number(year), isWeeklyBattingTab)
-          ? data.miniMetrics.filter((m) => m !== "打点")
-          : data.miniMetrics
-        ).map((metric) => {
+        {miniMetricsForTab.map((metric) => {
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (

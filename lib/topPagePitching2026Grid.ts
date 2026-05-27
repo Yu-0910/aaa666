@@ -1,14 +1,14 @@
-/** 2026 TOP 投球：防御率｜K-BB％／勝利｜セーブの2×2（左→右、上→下） */
-export const PITCHING_TOP_2026_GRID_METRICS = ["防御率", "K-BB％", "勝利", "セーブ"] as const
+/** 2026 TOP 投球：打撃TOPと同じUIで各1〜5位を表示する指標（3×2） */
+// NOTE: ランキング JSON のファイル名は「セーブ」ではなく「Ｓ」（pitching_metric_map.json で同義）。
+// UI 表示は topPagePitchingMetricTitle で「セーブ」に置換する。
+export const PITCHING_TOP_2026_GRID_METRICS = ["防御率", "勝利", "K-BB％", "K％", "HLD", "Ｓ"] as const
 
-/** 2026 TOP 投球・1位のみ */
-export const PITCHING_TOP_2026_MINI_METRICS = ["K％", "QS率", "完封", "HLD"] as const
+/** 2026 TOP 投球：mini（1位のみ）は使わない */
+export const PITCHING_TOP_2026_MINI_METRICS = [] as const
 
-/** 2025 系トップでは投球 2×2 は使わない（3+5 レガシー）。データ指標は 2026 用メトリクス名のまま */
-export function usesTopPitchingModernLayout(_year: number, _isWeeklyTab = false): boolean {
-  return false
+/** 2026 TOP・今週タブで投球もモダンUI（3×2 グリッド） */
+export function usesTopPitchingModernLayout(year: number, _isWeeklyTab = false): boolean {
+  return year === 2026
 }
 
-export function shouldShowTopPitchingFourGrid(leaders: Record<string, unknown[] | undefined>): boolean {
-  return PITCHING_TOP_2026_GRID_METRICS.some((m) => (leaders[m]?.length ?? 0) > 0)
-}
+export { shouldShowTopPitchingSeasonGrid as shouldShowTopPitchingFourGrid } from "@/lib/topPageTopSeasonGrid2026"

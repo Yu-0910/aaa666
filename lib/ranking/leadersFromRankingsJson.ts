@@ -18,11 +18,24 @@ import {
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
-import { BATTING_TOP_2025_RBI_TOP_N, battingTop2025SeasonTopN } from "@/lib/topPageBatting2025Grid"
+import {
+  BATTING_TOP_2025_RBI_TOP_N,
+  BATTING_TOP_2026_SEASON_ALL_METRICS,
+  battingTop2025SeasonTopN,
+} from "@/lib/topPageBatting2025Grid"
 
 const TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
 const MINI_METRICS = ["出塁率", "長打率", "打点", "安打", "盗塁"] as const
 const ALL_TOP_METRICS = [...TOP3_METRICS, ...MINI_METRICS] as const
+
+function battingTopMetricsForYear(year: string): readonly string[] {
+  return Number(year) === 2026 ? BATTING_TOP_2026_SEASON_ALL_METRICS : ALL_TOP_METRICS
+}
+
+function battingMiniMetricsForYear(year: string): readonly string[] {
+  if (Number(year) === 2026) return []
+  return MINI_METRICS
+}
 
 const teamCodeToName: Record<string, string> = {
   H: "阪神",
@@ -115,7 +128,7 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const teamRaw = String(row.team ?? "").trim()
   const teamCode = getTeamCode(teamRaw)
   const romanRaw = String(row.romanName ?? "").trim()
-  const rank = Math.min(3, Math.max(1, displayRank)) as 1 | 2 | 3
+  const rank = Math.min(5, Math.max(1, displayRank)) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
   const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
 
@@ -166,11 +179,11 @@ function extractTopLeadersFromRankingRows(
 }
 
 function topNForMetricLabel(metricLabel: string, year: string): number {
-  if (metricLabel === "打点" && (year === "2025" || year === "2026")) {
-    return BATTING_TOP_2025_RBI_TOP_N
-  }
   const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
   if (seasonTopN != null) return seasonTopN
+  if (metricLabel === "打点" && year === "2025") {
+    return BATTING_TOP_2025_RBI_TOP_N
+  }
   if ((TOP3_METRICS as readonly string[]).includes(metricLabel)) return 3
   return 1
 }
@@ -185,7 +198,7 @@ function buildBattingLeadersFromRowMaps(
 ): LeadersConfig | null {
   const upperLeague = league.toUpperCase()
   const leaders: Record<string, LeaderRow[]> = {}
-  for (const metricLabel of ALL_TOP_METRICS) {
+  for (const metricLabel of battingTopMetricsForYear(year)) {
     const rows = metricRows.get(metricLabel)
     if (!rows?.length) continue
     const topN = topNForMetricLabel(metricLabel, year)
@@ -195,7 +208,7 @@ function buildBattingLeadersFromRowMaps(
   if (Object.keys(leaders).length === 0) return null
   return {
     top3Metrics: [...TOP3_METRICS],
-    miniMetrics: [...MINI_METRICS],
+    miniMetrics: [...battingMiniMetricsForYear(year)],
     leaders,
   }
 }
@@ -208,7 +221,7 @@ export function buildBattingLeadersConfigFromRankings(
   if (!hasBattingRankingsJsonForLeague(year, upperLeague)) return null
 
   const metricRows = new Map<string, RankingJsonRow[]>()
-  for (const metricLabel of ALL_TOP_METRICS) {
+  for (const metricLabel of battingTopMetricsForYear(year)) {
     const rows = readRankingMetricJson(year, upperLeague, metricLabel)
     if (rows?.length) metricRows.set(metricLabel, rows)
   }
@@ -222,7 +235,7 @@ export async function buildBattingLeadersConfigFromRankingsAsync(
 ): Promise<LeadersConfig | null> {
   const upperLeague = league.toUpperCase()
   const metricRows = new Map<string, RankingJsonRow[]>()
-  for (const metricLabel of ALL_TOP_METRICS) {
+  for (const metricLabel of battingTopMetricsForYear(year)) {
     let rows = readRankingMetricJson(year, upperLeague, metricLabel)
     if (!rows?.length) {
       rows = await fetchRankingMetricJsonServer(year, upperLeague, metricLabel, sanitizeMetricForPath)
