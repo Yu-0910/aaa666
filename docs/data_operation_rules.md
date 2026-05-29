@@ -142,7 +142,9 @@ Windows タスク スケジューラ例: `powershell -File scripts/invoke_watch_
 | トップ TOP タブ（指標名・数値・リンク先） | `public/data/top-leaders/{年}/{CL\|PL}/{batting\|pitching}.json`（**top-leaders:build**） | ランキング JSON を手編集しない |
 | トップ「今週」タブ | `public/data/top-leaders/weekly/...` + `public/data/rankings/weekly/{年}/current-week.json`（**phase28 → top-weekly-leaders**） | 通算 `top-leaders` だけ更新して週間を忘れない |
 | 一球・球種・ゾーン（試合単位） | canonical + Phase10/14、必要時 `_data/yahoo_games_pilot/` の JSON/HTML | `pitch_details.csv` は参照用に残っていても **本番の打撃通算には使わない** |
+| 個人ページ派生 JSON（今季・通算・分割ほか） | **R2** `data/derived/...`（`npm run display:r2:upload:derived:2026`） | **Git** の `_data/derived/`（`.gitignore`・ローカル工場出力のみ） |
 
+- **表示データの本番反映**: 派生・ランキング・トップは **`npm run display:publish:2026`**（または日次 `pipeline:sync:2026`）で R2 に上げる。**コード変更時のみ** `git push`（`_data/derived` は載せない）。
 - **日次・本番ビルドで CSV を更新・検証しない**（`validate:batting-stats` は削除済み）。
 - 個人ページ API（`mergePilotSeasonStatsWithDerived`）は **Phase11 がある選手は CSV を読まない**（ファイルが無ければ空配列）。
 - 3月パイロット用に `aggregate_phase3.py` で CSV を作る運用は **再開しない**。

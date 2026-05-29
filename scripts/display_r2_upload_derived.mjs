@@ -72,6 +72,8 @@ const DERIVED_CATEGORIES = [
   'player_catcher_pitcher_splits',
   'player_catcher_starting_summary',
   'player_catcher_pa_round_pitch_types',
+  /** 通算タブ: profile-merged API（fetchDerivedJsonServer） */
+  'player_profile',
 ]
 
 const META_UPLOADS = [{ local: '_data/scraped_games/derived/yahoo_to_npb_full.json', key: 'data/derived/meta/yahoo_to_npb_full.json' }]

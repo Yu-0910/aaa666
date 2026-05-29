@@ -16,6 +16,7 @@ const nextConfig = {
     '*': [
       '_data/master_csv__import_1950_2024/**',
       '_data/master_csv/**',
+      '_data/derived/**',
     ],
   },
   typescript: {

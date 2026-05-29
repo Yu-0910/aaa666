@@ -38,11 +38,8 @@ output/master/
 public/data/rankings/
 public/data/top-leaders/
 
+# 表示用派生 JSON（本番 SSOT は R2。ローカル工場出力のみ Git 外）
+_data/derived/
+
 # Phase2 Yahoo 試合スクレイプ生HTML（正規化JSONのみコミット可）
 _data/scraped_games/raw/
-
-# 退避コピー（旧新スモーク作業用・ローカル）
-_data/derived/_backup_player_season_batting_2026_before_smoke/
-
-# スモーク: zip オフ時の 3 打者ベースライン（旧比較用）
-_data/derived/_smoke_phase11_zip_off_three_baseline/

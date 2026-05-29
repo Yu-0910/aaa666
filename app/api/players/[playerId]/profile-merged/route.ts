@@ -1,9 +1,6 @@
-import { readFileSync } from "fs"
-import { join } from "path"
-
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
 import { decodePlayerPathSegment, jsonDerivedResponse } from "@/lib/api/derivedPlayerApiShared"
-import { getProjectRoot } from "@/lib/projectRoot"
+import { fetchDerivedJsonServer } from "@/lib/derived/fetchDerivedJsonServer"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
@@ -17,15 +14,16 @@ export type PlayerProfileMergedApiResponse = {
   message?: string
 }
 
-function readMergedByNpbId(npbPlayerId: string): PlayerProfileMergedApiPayload | null {
+async function readMergedByNpbId(
+  npbPlayerId: string,
+): Promise<PlayerProfileMergedApiPayload | null> {
   const id = (npbPlayerId || "").trim()
   if (!/^\d+$/.test(id)) return null
-  const path = join(getProjectRoot(), "_data", "derived", "player_profile", "merged", `${id}.json`)
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as PlayerProfileMergedApiPayload
-  } catch {
-    return null
-  }
+  return fetchDerivedJsonServer<PlayerProfileMergedApiPayload>(
+    "player_profile",
+    "merged",
+    `${id}.json`,
+  )
 }
 
 export async function GET(
@@ -39,7 +37,7 @@ export async function GET(
     const npbId =
       rosterPlayer?.npb_player_id ??
       (/^\d+$/.test(decoded) ? resolveNpbPlayerIdFromPublicId(decoded) : decoded)
-    const payload = readMergedByNpbId(npbId)
+    const payload = await readMergedByNpbId(npbId)
     if (!payload) {
       return jsonDerivedResponse<PlayerProfileMergedApiPayload>({
         hasData: false,
@@ -67,4 +65,3 @@ export async function GET(
     )
   }
 }
-
