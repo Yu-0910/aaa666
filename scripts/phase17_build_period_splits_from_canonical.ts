@@ -6,27 +6,30 @@
  *
  * 使い方:
  *   npx tsx scripts/phase17_build_period_splits_from_canonical.ts --year 2026
+ *
+ * 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）。
+ * 集計は Phase11 と同じ `aggregateBattingForBatterInGameForProfiles`（出場成績スロット優先）を試合×打者で適用する。
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "fs"
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
-import { isWalkLikeResultText } from "../lib/baseballWalkResult"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
 import { parseGameDateYmdFromCanonical } from "../lib/yahooGame/gameDateFromCanonical"
+import {
+  aggregateBattingForBatterInGameForProfiles,
+  emptyBattingSeasonAggYahoo,
+  mergeBattingSeasonAggYahoo,
+  type BattingSeasonAggYahoo,
+} from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import {
   monthKeyFromYmd,
   tuesdayWeekKeyFromYmd,
   formatWeekRangeTueToSunFromTuesdayYmd,
 } from "../lib/yahooGame/jstPeriodKeys"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -49,131 +52,15 @@ function fmtSlash3(n: number | null): string {
   return s.startsWith("0") ? s.slice(1) : s
 }
 
-function lastPitchResult(pa: PlateAppearance): string {
-  const pe = pa.pitchEvents ?? []
-  const last = pe.length > 0 ? pe[pe.length - 1] : null
-  return (
-    (pa.resultSummaryJa ?? "").trim() ||
-    ((last?.resultJa ?? "") as string).trim() ||
-    ""
-  )
-}
-
-function isStrikeout(result: string): boolean {
-  return /三振|空三振|見三振/.test(result) || /^(空振り|見逃し)/.test(result)
-}
-function isHbp(result: string): boolean {
-  return /死球/.test(result)
-}
-function isSacBunt(result: string): boolean {
-  return /犠打|送りバント/.test(result)
-}
-function isSacFly(result: string): boolean {
-  return /犠飛/.test(result)
-}
-function isGidp(result: string): boolean {
-  return /併殺/.test(result)
-}
-
-function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
-  if (/本塁打|ホームラン|HR/.test(result)) return 4
-  if (/三塁打/.test(result)) return 3
-  if (/二塁打/.test(result)) return 2
-  if (/安打|ヒット|左安|中安|右安/.test(result)) return 1
-  return 0
-}
-
-function isAtBat(result: string): boolean {
-  if (!result) return false
-  if (isWalkLikeResultText(result) || isHbp(result) || isSacBunt(result) || isSacFly(result)) return false
-  if (/妨害/.test(result)) return false
-  return true
-}
-
-type Agg = {
-  gameIds: Set<string>
-  pa: number
-  ab: number
-  r: number
-  h: number
-  h2: number
-  h3: number
-  hr: number
-  tb: number
-  rbi: number
-  so: number
-  bb: number
-  ibb: number
-  hbp: number
-  sh: number
-  sf: number
-  sb: number
-  cs: number
-  gidp: number
-  risp_ab: number
-  risp_h: number
-}
-
-function emptyAgg(): Agg {
-  return {
-    gameIds: new Set(),
-    pa: 0,
-    ab: 0,
-    r: 0,
-    h: 0,
-    h2: 0,
-    h3: 0,
-    hr: 0,
-    tb: 0,
-    rbi: 0,
-    so: 0,
-    bb: 0,
-    ibb: 0,
-    hbp: 0,
-    sh: 0,
-    sf: 0,
-    sb: 0,
-    cs: 0,
-    gidp: 0,
-    risp_ab: 0,
-    risp_h: 0,
-  }
-}
-
-function updateFromPa(agg: Agg, gameId: string, pa: PlateAppearance): void {
-  agg.gameIds.add(gameId)
-  agg.pa += 1
-  const result = lastPitchResult(pa)
-  if (isWalkLikeResultText(result)) agg.bb += 1
-  if (isHbp(result)) agg.hbp += 1
-  if (isSacBunt(result)) agg.sh += 1
-  if (isSacFly(result)) agg.sf += 1
-  if (isStrikeout(result)) agg.so += 1
-  if (isGidp(result)) agg.gidp += 1
-
-  if (isAtBat(result)) {
-    agg.ab += 1
-    const bases = hitBases(result)
-    if (bases > 0) agg.h += 1
-    if (bases === 2) agg.h2 += 1
-    if (bases === 3) agg.h3 += 1
-    if (bases === 4) agg.hr += 1
-    agg.tb += bases
-  }
-}
-
 function aggToRow(
   split_type: "calendar_month" | "calendar_week",
   split_value: string,
   split_label: string,
-  agg: Agg
+  agg: BattingSeasonAggYahoo
 ): SeasonStatsRow {
   const h1 = Math.max(0, agg.h - agg.h2 - agg.h3 - agg.hr)
-  const avg = agg.ab > 0 ? agg.h / agg.ab : null
-  const obpDen = agg.ab + agg.bb + agg.hbp + agg.sf
-  const obp = obpDen > 0 ? (agg.h + agg.bb + agg.hbp) / obpDen : null
-  const ops = obp != null ? obp + (agg.ab > 0 ? agg.tb / agg.ab : 0) : null
-  const rispAvg = agg.risp_ab > 0 ? agg.risp_h / agg.risp_ab : null
+  const slash = battingSlashRatesFromCounts(agg)
+  const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
   return {
@@ -199,12 +86,13 @@ function aggToRow(
     sf: agg.sf,
     sb: agg.sb,
     cs: agg.cs,
+    e: agg.e,
     gidp: agg.gidp,
-    avg: fmtSlash3(avg),
-    obp: fmtSlash3(obp),
-    slg: fmtSlash3(agg.ab > 0 ? agg.tb / agg.ab : null),
-    ops: fmtSlash3(ops),
-    risp_avg: fmtSlash3(rispAvg),
+    avg: slash.avg,
+    obp: slash.obp,
+    slg: slash.slg,
+    ops: slash.ops,
+    risp_avg,
     risp_ab: agg.risp_ab,
     risp_h: agg.risp_h,
     sb_pct: sbPct == null ? "" : (sbPct * 100).toFixed(1),
@@ -248,16 +136,16 @@ function monthLabel(mk: string): string {
 
 function main(): void {
   const { year } = parseArgs()
-  const docs = loadCanonicalFiles()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase17] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
-  const byBatterMonth = new Map<string, Map<string, Agg>>()
-  const byBatterWeek = new Map<string, Map<string, Agg>>()
+  const byBatterMonth = new Map<string, Map<string, BattingSeasonAggYahoo>>()
+  const byBatterWeek = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
-  function ensureMonthMap(bid: string): Map<string, Agg> {
+  function ensureMonthMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterMonth.get(bid)
     if (!m) {
       m = new Map()
@@ -265,7 +153,7 @@ function main(): void {
     }
     return m
   }
-  function ensureWeekMap(bid: string): Map<string, Agg> {
+  function ensureWeekMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterWeek.get(bid)
     if (!m) {
       m = new Map()
@@ -275,23 +163,38 @@ function main(): void {
   }
 
   for (const doc of docs) {
-    const gameId = doc.gameId
     const ymd = parseGameDateYmdFromCanonical(doc)
     if (!ymd) continue
     const mk = monthKeyFromYmd(ymd)
     const wk = tuesdayWeekKeyFromYmd(ymd)
     if (!wk) continue
 
+    const batterIds = new Set<string>()
+    for (const line of doc.domain?.battingLines ?? []) {
+      const bid = (line.yahooPlayerId ?? "").trim()
+      if (bid) batterIds.add(bid)
+    }
+    for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+      const bid = (row.yahooPlayerId ?? "").trim()
+      if (bid) batterIds.add(bid)
+    }
     for (const pa of doc.domain.plateAppearances ?? []) {
       const bid = (pa.yahooBatterId ?? "").trim()
-      if (!bid) continue
+      if (bid) batterIds.add(bid)
+    }
+
+    for (const bid of batterIds) {
+      const gameAgg = aggregateBattingForBatterInGameForProfiles(doc, bid)
+      if (!gameAgg) continue
+
       const mm = ensureMonthMap(bid)
-      const wm = ensureWeekMap(bid)
-      const ma = mm.get(mk) ?? emptyAgg()
-      updateFromPa(ma, gameId, pa)
+      const ma = mm.get(mk) ?? emptyBattingSeasonAggYahoo()
+      mergeBattingSeasonAggYahoo(ma, gameAgg)
       mm.set(mk, ma)
-      const wa = wm.get(wk) ?? emptyAgg()
-      updateFromPa(wa, gameId, pa)
+
+      const wm = ensureWeekMap(bid)
+      const wa = wm.get(wk) ?? emptyBattingSeasonAggYahoo()
+      mergeBattingSeasonAggYahoo(wa, gameAgg)
       wm.set(wk, wa)
     }
   }
@@ -342,6 +245,7 @@ function main(): void {
       meta: {
         gameDateSource: "game.meta.documentTitle / ogTitle（YYYY年M月D日）",
         weekRule: "火曜始まり・日曜終わり（jstPeriodKeys）",
+        battingAgg: "aggregateBattingForBatterInGameForProfiles（Phase11/12 と同一）",
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),

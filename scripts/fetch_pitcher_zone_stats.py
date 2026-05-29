@@ -29,9 +29,14 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from scrape_yahoo_pitch_details import fetch_html, build_index, parse_pitch_details
+from scrape_yahoo_pitch_details import (
+    fetch_html,
+    fetch_pitch_detail_score_pages_for_pa,
+    parse_pitch_details_merged_score_pages,
+)
 from fetch_game_pitch_types import parse_plate_appearances_from_html
 from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed
+from pa_outcome_from_ts import batch_pa_outcome_classifications
 
 BASE_URL = "https://baseball.yahoo.co.jp"
 
@@ -111,69 +116,12 @@ def resolve_batter_hand(
     return "", True  # 名簿に未登録
 
 
-def is_settlement_result(r: str) -> bool:
-    s = (r or "").strip()
-    # 飛球: 左飛・中飛・右飛・二飛(二塁飛)・邪飛(捕邪飛・三邪飛等)
-    if re.match(r"^(左飛|中飛|右飛|二飛|一飛|レフトフライ|センターフライ|ライトフライ|フライ)$", s):
-        return True
-    if re.search(r"邪飛|ゴロ|ライナー|併殺", s):
-        return True
-    if re.match(r"^(空振り|見逃し)", s):
-        return True
-    if re.search(r"三振|空三振|見三振", s):
-        return True
-    if re.search(r"安打|ヒット|二塁打|三塁打|本塁打", s):
-        return True
-    if re.match(r"^(左安|右安|中安)", s):
-        return True
-    if re.match(r"^(左２|右２|中２|左３|右３|中３)", s):
-        return True
-    return False
-
-
-def is_hit(r: str) -> bool:
-    s = (r or "").strip()
-    # 左安・右安・中安・左２(二塁打)・右２・中２・二塁打・三塁打・本塁打・安打・ヒット 等
-    return bool(
-        re.match(r"^(左安|右安|中安|左２|右２|中２|二塁|三塁|本塁|ソロ|満塁)", s)
-        or re.search(r"安打|ヒット|二塁打|三塁打|本塁打", s)
-    )
-
-
-def get_total_bases(r: str) -> int:
-    s = (r or "").strip()
-    if re.search(r"本塁打|ホームラン|HR", s, re.I):
-        return 4
-    if "三塁打" in s or re.match(r"^(左３|右３|中３)", s):
-        return 3
-    if "二塁打" in s or re.match(r"^(左２|右２|中２)", s):
-        return 2
-    if is_hit(s):
-        return 1
-    return 0
-
-
-def is_walk(r: str) -> bool:
-    return bool(re.search(r"四球|敬遠|故意四球", (r or "").strip()))
-
-
-def is_hbp(r: str) -> bool:
-    return "死球" in (r or "").strip()
-
-
-def is_sf(r: str) -> bool:
-    return "犠飛" in (r or "").strip()
-
-
-def is_home_run(r: str) -> bool:
-    return bool(re.search(r"本塁打|ホームラン|HR", (r or "").strip(), re.I))
-
-
 def aggregate_zone_by_hand(
     all_pitches: list[dict],
     pitcher_id: str,
     roster_bat_hand: dict[str, str] | None = None,
     debug_unmatched: list[tuple[str, str]] | None = None,
+    project_root: Path | None = None,
 ) -> dict:
     """
     投球リストを打者利き腕別・ゾーン別に集計。
@@ -194,6 +142,15 @@ def aggregate_zone_by_hand(
         if key not in pa_blocks:
             pa_blocks[key] = []
         pa_blocks[key].append(p)
+
+    root = project_root or Path(__file__).resolve().parent.parent
+    last_results: list[str] = []
+    for pitches in pa_blocks.values():
+        if not pitches:
+            continue
+        sp = sorted(pitches, key=lambda x: int(x.get("pitch_no") or 0))
+        last_results.append((sp[-1].get("result") or "").strip())
+    outcome_by_result = batch_pa_outcome_classifications(last_results, root)
 
     for key, pitches in pa_blocks.items():
         if not pitches:
@@ -245,7 +202,12 @@ def aggregate_zone_by_hand(
         if zid < 1 or zid > 25:
             continue
 
-        is_settle = is_settlement_result(result) or is_walk(result) or is_hbp(result) or is_sf(result)
+        is_settle = (
+            outcome_by_result.get(result, {}).get("settlement", False)
+            or is_walk(result)
+            or is_hbp(result)
+            or is_sf(result)
+        )
         if not is_settle:
             continue
 
@@ -260,7 +222,7 @@ def aggregate_zone_by_hand(
                 rec["hbp"] += 1
             elif is_sf(result):
                 rec["sf"] += 1
-            elif is_settlement_result(result):
+            elif outcome_by_result.get(result, {}).get("settlement", False):
                 rec["ab"] += 1
                 if is_hit(result):
                     rec["h"] += 1
@@ -276,11 +238,7 @@ def aggregate_zone_by_hand(
             ab, h, hr, tb, bb, hbp, sf = rec["ab"], rec["h"], rec["hr"], rec["tb"], rec["bb"], rec["hbp"], rec["sf"]
 
             avg = f"{(h / ab):.3f}" if ab > 0 else "—"
-            pa = ab + bb + hbp + sf
-            obp = (h + bb + hbp) / pa if pa > 0 else 0
-            slg = tb / ab if ab > 0 else 0
-            ops_val = obp + slg
-            ops = f"{ops_val:.3f}" if pa > 0 else "—"
+            isop = f"{((tb - h) / ab):.3f}" if ab > 0 else "—"
 
             result[hand].append({
                 "zoneId": z,
@@ -288,7 +246,8 @@ def aggregate_zone_by_hand(
                 "ab": ab,
                 "h": h,
                 "hr": hr,
-                "ops": ops,
+                "tb": tb,
+                "isop": isop,
                 "avg": avg,
             })
     return result
@@ -347,19 +306,24 @@ def main():
             inning = int(pa["inning"])
             top_bottom = pa["top_bottom"]
             bat_order = int(pa["bat_order"])
-            index = build_index(inning, top_bottom, bat_order)
-            url = f"{BASE_URL}/npb/game/{game_id}/score?index={index}"
             print(f"  [{i+1}/{len(pas_for_pitcher)}] {inning}{top_bottom} {bat_order}番 ... ", end="", flush=True)
-            html = fetch_html(url)
-            if not html:
+            chain = fetch_pitch_detail_score_pages_for_pa(
+                game_id, inning, top_bottom, bat_order, sleep_sec=args.sleep
+            )
+            if not chain:
                 print("❌")
                 time.sleep(args.sleep)
                 continue
-            rows = parse_pitch_details(html, game_id, inning, top_bottom, bat_order)
+            pages_html = [h for _ix, h in chain]
+            rows = parse_pitch_details_merged_score_pages(
+                pages_html, game_id, inning, top_bottom, bat_order
+            )
             if rows:
                 all_pitches.extend(rows)
                 hands = rows[0].get("batter_hand", "?")
-                print(f"✅ {len(rows)}球 (打者:{hands})")
+                npg = len(chain)
+                extra = f" [{npg}p]" if npg > 1 else ""
+                print(f"✅ {len(rows)}球 (打者:{hands}){extra}")
             else:
                 print("⚠️ 投球なし")
             time.sleep(args.sleep)
@@ -382,13 +346,25 @@ def main():
                 pa_blocks_debug[key] = []
             pa_blocks_debug[key].append(p)
         if args.debug or args.from_debug:
-            print("\n[DEBUG] 決着球の結果一覧:")
+            dbg_lines: list[tuple[tuple, str, str]] = []
+            dbg_strings: list[str] = []
             for key, pitches in sorted(pa_blocks_debug.items()):
                 last = sorted(pitches, key=lambda x: int(x.get("pitch_no") or 0))[-1]
                 result = (last.get("result") or "").strip()
                 zid = last.get("zone_id") or ""
-                is_h = is_hit(result)
-                is_settle = is_settlement_result(result)
+                dbg_lines.append((key, result, zid))
+                dbg_strings.append(result)
+            dbg_out = batch_pa_outcome_classifications(dbg_strings, root)
+            print("\n[DEBUG] 決着球の結果一覧:")
+            for key, result, zid in dbg_lines:
+                row = dbg_out.get(result, {})
+                is_h = bool(row.get("hit", False))
+                is_settle = bool(
+                    row.get("settlement", False)
+                    or row.get("walk", False)
+                    or row.get("hbp", False)
+                    or row.get("sf", False)
+                )
                 print(f"  {key[0]}{key[1]} {key[2]}番: result={result!r} zone={zid} is_hit={is_h} is_settle={is_settle}")
         if args.save_debug:
             debug_path = out_dir / f"debug_pitches_{game_id}_{pitcher_id}.json"
@@ -398,7 +374,11 @@ def main():
 
     debug_unmatched: list[tuple[str, str]] | None = [] if (args.debug or args.from_debug) else None
     aggregated = aggregate_zone_by_hand(
-        all_pitches, pitcher_id, roster_bat_hand, debug_unmatched=debug_unmatched
+        all_pitches,
+        pitcher_id,
+        roster_bat_hand,
+        debug_unmatched=debug_unmatched,
+        project_root=root,
     )
     if debug_unmatched:
         print("\n[DEBUG] 名簿に未照合の打者（対右に分類）:")

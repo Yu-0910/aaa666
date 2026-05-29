@@ -7,7 +7,7 @@
   ],
   "playerName": "アブレウ",
   "team": "中日ドラゴンズ",
-  "generatedAt": "2026-04-10T08:44:33.584Z",
+  "generatedAt": "2026-05-28T20:24:36.493Z",
   "source": {
     "canonicalGames": [
       "2021038624"
@@ -49,7 +49,7 @@
     "lossCount": 0,
     "saveCount": 0
   },
-  "opponentTeamName": "広島",
+  "opponentTeamName": "",
   "gameMeta": {
     "sourceGameId": "2021038624",
     "fetchedAt": "2026-04-07T08:30:21.930442+00:00",
@@ -70,28 +70,28 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": "1.000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       },
       "vsL": {
         "bf": 3,
         "ab": 2,
-        "h": 0,
+        "h": 1,
         "hr": 0,
         "so": 0,
         "bb": 1,
         "hbp": 0,
         "outs": 1,
-        "avg": ".000",
+        "er": 0,
+        "avg": ".500",
         "ipOuts": 1,
         "ip": "0.1",
-        "er": 4,
-        "era": 108,
-        "whip": 3
+        "era": 0,
+        "whip": 6
       },
       "vsB": {
         "bf": 0,
@@ -102,10 +102,10 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": ".000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       },
@@ -118,10 +118,10 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": ".000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       }
@@ -138,10 +138,10 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": "1.000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       },
@@ -156,10 +156,10 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": "1.000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       },
@@ -174,10 +174,10 @@
         "bb": 1,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": ".000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
       },
@@ -186,36 +186,36 @@
         "label": "満塁",
         "bf": 3,
         "ab": 3,
-        "h": 1,
+        "h": 2,
         "hr": 0,
         "so": 0,
         "bb": 0,
         "hbp": 0,
         "outs": 1,
-        "avg": ".333",
+        "er": 0,
+        "avg": ".667",
         "ipOuts": 1,
         "ip": "0.1",
-        "er": 4,
-        "era": 108,
-        "whip": 3
+        "era": 0,
+        "whip": 6
       },
       {
         "key": "risp",
         "label": "得点圏",
         "bf": 4,
         "ab": 3,
-        "h": 1,
+        "h": 2,
         "hr": 0,
         "so": 0,
         "bb": 1,
         "hbp": 0,
         "outs": 1,
-        "avg": ".333",
+        "er": 0,
+        "avg": ".667",
         "ipOuts": 1,
         "ip": "0.1",
-        "er": 4,
-        "era": 108,
-        "whip": 6
+        "era": 0,
+        "whip": 9
       },
       {
         "key": "no_risp",
@@ -228,12 +228,61 @@
         "bb": 0,
         "hbp": 0,
         "outs": 0,
+        "er": 0,
         "avg": "1.000",
         "ipOuts": 0,
         "ip": "0",
-        "er": 0,
         "era": null,
         "whip": null
+      }
+    ],
+    "byPaRound": [
+      {
+        "key": "1",
+        "label": "1巡目",
+        "bf": 6,
+        "ab": 5,
+        "h": 4,
+        "hr": 0,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 1,
+        "er": 0,
+        "avg": ".800",
+        "ipOuts": 1,
+        "ip": "0.1",
+        "era": 0,
+        "whip": 15
+      }
+    ],
+    "byPaRoundPitchTypes": [
+      {
+        "key": "1",
+        "label": "1巡目",
+        "pitches_total": 24,
+        "rows": [
+          {
+            "pitch_type": "ツーシーム",
+            "pitches": 13,
+            "pct": 54.2
+          },
+          {
+            "pitch_type": "スライダー",
+            "pitches": 7,
+            "pct": 29.2
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 2,
+            "pct": 8.3
+          },
+          {
+            "pitch_type": "チェンジアップ",
+            "pitches": 2,
+            "pct": 8.3
+          }
+        ]
       }
     ],
     "byInning": [
@@ -241,18 +290,18 @@
         "inning": 9,
         "bf": 6,
         "ab": 5,
-        "h": 3,
+        "h": 4,
         "hr": 0,
         "so": 0,
         "bb": 1,
         "hbp": 0,
         "outs": 1,
-        "avg": ".600",
+        "er": 0,
+        "avg": ".800",
         "ipOuts": 1,
         "ip": "0.1",
-        "er": 4,
-        "era": 108,
-        "whip": 12
+        "era": 0,
+        "whip": 15
       }
     ],
     "byStadium": [
@@ -281,8 +330,8 @@
     ],
     "byOpponentTeam": [
       {
-        "key": "広島",
-        "label": "広島",
+        "key": "未設定",
+        "label": "未設定",
         "ipOuts": 1,
         "ip": "0.1",
         "bf": 6,
@@ -327,31 +376,6 @@
         "qsCount": 0
       }
     ],
-    "byCatcher": [
-      {
-        "yahooCatcherId": "2105102",
-        "label": "石伊 雄太",
-        "bf": 6,
-        "ab": 5,
-        "h": 3,
-        "hr": 0,
-        "so": 0,
-        "bb": 1,
-        "hbp": 0,
-        "avg": ".600",
-        "era": 108,
-        "ip": "0.1",
-        "ipOuts": 1,
-        "wl": "0-0",
-        "kPct": 0,
-        "kBbPct": -16.7,
-        "whip": 12,
-        "games": 1,
-        "wins": 0,
-        "losses": 0,
-        "qsCount": 0,
-        "qsPct": 0
-      }
-    ]
+    "byCatcher": []
   }
 }

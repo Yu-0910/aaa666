@@ -2,6 +2,9 @@
  * Phase 10: derived/{gameId}_phase10_restored.json を canonical にマージして冪等 ingest
  *
  * npx tsx scripts/merge_yahoo_phase10_canonical.ts --game-id 2021038624
+ *
+ * マージ後、`raw_sportsnavi_text` がある場合は `npm run enrich:text-play-headlines` で
+ * 全プレーの一球上段見出し（playHeadlineJa）を canonical に載せる（日次パイプライン／phase3 先頭で実行）。
  */
 
 import { existsSync, readFileSync } from "fs"

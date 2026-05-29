@@ -116,19 +116,6 @@ def main() -> None:
         w.writeheader()
         w.writerows(kept_ps)
 
-    # --- pitch_details_kikuchi.csv: only Kikuchi / same game ---
-    kcsv = PILOT / "pitch_details_kikuchi.csv"
-    if kcsv.exists():
-        with kcsv.open(encoding="utf-8", newline="") as f:
-            r = csv.DictReader(f)
-            kr = list(r)
-            kf = r.fieldnames or []
-        kkept = [row for row in kr if row.get("game_id") != GAME_ID]
-        with kcsv.open("w", encoding="utf-8", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=kf)
-            w.writeheader()
-            w.writerows(kkept)
-
     # --- kikuchi_20260304_blocks.json: empty pilot (no 3/4 Orix game) ---
     kjson = PILOT / "kikuchi_20260304_blocks.json"
     empty_blocks = {

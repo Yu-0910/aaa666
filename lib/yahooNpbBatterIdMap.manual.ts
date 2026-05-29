@@ -28,6 +28,8 @@ export const MANUAL_YAHOO_TO_NPB: Record<string, string> = {
   "2103847": "2103847", // 大竹 風雅（ソフトバンク）
   // 藤原 大翔（ソフトバンク・投）— 2026/5 支配下移行。名簿未収録時は Phase19 の team/romanName verify が落ちる
   "2112130": "2112130",
+  // Ａ．アルメンタ（ソフトバンク・投）— NPB 33735155 / Yahoo 2105885（https://npb.jp/bis/players/33735155.html）
+  "2105885": "33735155",
 
   // 2026 打撃ランキング: 名簿に未収録の Yahoo ID の暫定受け皿（league/team 解決用）
   // NPB 公式IDが判明したら置き換える

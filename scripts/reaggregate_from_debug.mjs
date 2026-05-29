@@ -185,11 +185,8 @@ function aggregate(allPitches, pitcherId, roster) {
       const rec = byZone[hand][z] || { ab: 0, h: 0, hr: 0, tb: 0, bb: 0, hbp: 0, sf: 0 }
       const { ab, h, hr, tb, bb, hbp, sf } = rec
       const avg = ab > 0 ? (h / ab).toFixed(3) : '—'
-      const pa = ab + bb + hbp + sf
-      const obp = pa > 0 ? (h + bb + hbp) / pa : 0
-      const slg = ab > 0 ? tb / ab : 0
-      const ops = pa > 0 ? (obp + slg).toFixed(3) : '—'
-      result[hand].push({ zoneId: z, pitches, ab, h, hr, ops, avg })
+      const isop = ab > 0 ? ((tb - h) / ab).toFixed(3) : '—'
+      result[hand].push({ zoneId: z, pitches, ab, h, hr, tb, isop, avg })
     }
   }
   return result

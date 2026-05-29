@@ -81,7 +81,22 @@ def aggregate_batting(rows: list[dict]) -> dict:
     gpa = ((1.8 * obp + slg) / 4) if obp is not None and slg is not None else None
     rc_denom = ab + bb
     rc = ((h + bb) * tb / rc_denom) if rc_denom > 0 else None
-    xr = 0.50 * h1 + 0.72 * h2 + 1.04 * h3 + 1.44 * hr + 0.33 * (bb + hbp) + 0.18 * sb - 0.32 * cs - 0.098 * (ab - h)
+    # nf3互換XR
+    xr = (
+        0.50 * h1
+        + 0.72 * h2
+        + 1.04 * h3
+        + 1.44 * hr
+        + 0.34 * (bb + hbp - ibb)
+        + 0.25 * ibb
+        + 0.18 * sb
+        - 0.32 * cs
+        - 0.090 * (ab - h - so)
+        - 0.098 * so
+        - 0.37 * gidp
+        + 0.37 * sf
+        + 0.04 * sh
+    )
     seca = (bb + (tb - h)) / ab if ab > 0 else None
     ta_denom = ab + bb + hbp + cs
     ta = (tb + bb + hbp + sb) / ta_denom if ta_denom > 0 else None
@@ -221,6 +236,7 @@ def main():
             "ta": _float_fmt(agg["ta"]), "noi": _float_fmt(agg["noi"]),
         })
 
+    # 本番運用では廃止（正は Phase11）。再生成しないこと（docs/data_operation_rules.md）。
     bat_path = out_dir / "batting_stats.csv"
     bat_fields = ["player_id", "year", "split_type", "split_value", "g", "pa", "ab", "r", "h", "h1", "h2", "h3", "hr",
                   "bb", "ibb", "hbp", "so", "sh", "sf", "gidp", "rbi", "sb", "cs",

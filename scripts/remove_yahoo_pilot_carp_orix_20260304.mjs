@@ -112,13 +112,6 @@ const { headers: psf, rows: psRows } = parseCsv(fs.readFileSync(psPath, "utf8"))
 const keptPs = psRows.filter((row) => !carpPitchers.has(String(row.player_id || "").trim()))
 writeCsv(psPath, psf, keptPs)
 
-const kcsv = path.join(PILOT, "pitch_details_kikuchi.csv")
-if (fs.existsSync(kcsv)) {
-  const { headers: kf, rows: kr } = parseCsv(fs.readFileSync(kcsv, "utf8"))
-  const kk = kr.filter((row) => row.game_id !== GAME_ID)
-  writeCsv(kcsv, kf, kk)
-}
-
 const kjson = path.join(PILOT, "kikuchi_20260304_blocks.json")
 fs.writeFileSync(
   kjson,

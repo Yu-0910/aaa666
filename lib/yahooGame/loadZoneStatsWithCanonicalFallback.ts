@@ -29,6 +29,7 @@ export function loadZoneStatsJsonOrCanonical(
     gid,
     yid,
     doc.domain.plateAppearances ?? [],
-    (batterId) => resolveBatHandJaForBatter(doc, batterId, roster)
+    (batterId) => resolveBatHandJaForBatter(doc, batterId, roster),
+    { doc }
   )
 }

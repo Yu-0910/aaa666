@@ -347,7 +347,11 @@ python scripts/build_player_id_to_roman_full.py
    - **TA**: `(TB + HBP + BB + SB) / (AB - H + CS + GDP)`
    - **NOI**: `(OBP + (SLG / 3)) * 1000`
    - **GPA**: `(1.8 * OBP + SLG) / 4`
-   - **RC**: `((H + BB) * TB) / (AB + BB)`
+   - **RC**: nf3互換  
+     - \(A = H + BB + HBP - CS - GIDP\)  
+     - \(B = TB + 0.26 \times (BB + HBP) + 0.53 \times (SF + SH) + 0.64 \times SB - 0.03 \times SO\)  
+     - \(C = AB + BB + HBP + SF + SH\)  
+     - \(RC = \left(\frac{(A + 2.4B)(B + 3C)}{9C}\right) - 0.9C\)（ただし \(C \le 0\) のときは "—"）
    - **XR**: `0.50 * 1B + 0.72 * 2B + 1.04 * 3B + 1.44 * HR + 0.33 * (BB + HBP) + 0.18 * SB - 0.32 * CS - 0.098 * (AB - H)`
 
 4. **結果保存**

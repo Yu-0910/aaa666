@@ -2,7 +2,12 @@
 # -*- coding: utf-8 -*-
 """21打席の決着球が全て集計されているか検証"""
 import json
+import sys
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from pa_outcome_from_ts import batch_pa_outcome_classifications
 
 root = Path(__file__).resolve().parent.parent
 debug_path = root / "_data/yahoo_games_pilot/debug_pitches_2021040084_2103788.json"
@@ -19,36 +24,17 @@ for p in data:
         pa_blocks[key] = []
     pa_blocks[key].append(p)
 
-# 決着球の判定（fetch_pitcher_zone_stats と同じロジック）
-import re
 
-def is_settlement_result(r):
-    s = (r or "").strip()
-    if re.match(r"^(左飛|中飛|右飛|二飛|一飛|レフトフライ|センターフライ|ライトフライ|フライ)$", s):
-        return True
-    if re.search(r"邪飛|ゴロ|ライナー|併殺", s):
-        return True
-    if re.match(r"^(空振り|見逃し)", s):
-        return True
-    if re.search(r"三振|空三振|見三振", s):
-        return True
-    if re.search(r"安打|ヒット|二塁打|三塁打|本塁打", s):
-        return True
-    if re.match(r"^(左２|右２|中２|左３|右３|中３)", s):
-        return True
-    return False
+keys = sorted(pa_blocks.keys(), key=lambda x: (int(x[0]), 0 if x[1] == "表" else 1, int(x[2])))
+last_results: list[str] = []
+for key in keys:
+    pitches = pa_blocks[key]
+    last = max(pitches, key=lambda x: int(x.get("pitch_no") or 0))
+    last_results.append((last.get("result") or "").strip())
 
-def is_walk(r):
-    return bool(re.search(r"四球|敬遠|故意四球", (r or "").strip()))
-
-def is_hbp(r):
-    return "死球" in (r or "").strip()
-
-def is_sf(r):
-    return "犠飛" in (r or "").strip()
+outcome_by_result = batch_pa_outcome_classifications(last_results, root)
 
 print("=== 21打席の決着球 検証 ===\n")
-keys = sorted(pa_blocks.keys(), key=lambda x: (int(x[0]), 0 if x[1] == "表" else 1, int(x[2])))
 counted = 0
 skipped = []
 
@@ -57,10 +43,11 @@ for key in keys:
     last = max(pitches, key=lambda x: int(x.get("pitch_no") or 0))
     result = (last.get("result") or "").strip()
     zid = last.get("zone_id") or ""
-    
-    is_settle = is_settlement_result(result) or is_walk(result) or is_hbp(result) or is_sf(result)
+
+    o = outcome_by_result[result]
+    is_settle = bool(o["settlement"] or o["walk"] or o["hbp"] or o["sf"])
     has_zone = zid and 1 <= int(zid or 0) <= 25
-    
+
     if is_settle and has_zone:
         status = "✓ 集計"
         counted += 1
@@ -72,7 +59,7 @@ for key in keys:
             reason.append("zone_idなし")
         status = f"✗ スキップ ({', '.join(reason)})"
         skipped.append((f"{key[0]}{key[1]} {key[2]}番", result[:30], status))
-    
+
     print(f"  {key[0]}{key[1]} {key[2]}番: {result[:35]:<35} zone={zid:<2} -> {status}")
 
 print(f"\n集計済み: {counted}/21")

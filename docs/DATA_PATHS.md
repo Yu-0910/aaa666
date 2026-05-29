@@ -13,7 +13,9 @@
 | `_data/master_csv/` | 生CSVの別置き場（従来運用） | 必要に応じて import フォルダからコピーする運用も可。 |
 | `_data/master_csv_calculated/` | 指標計算済みの**全員用CSV**および**規定到達版CSV**の格納先 | 入力: 生CSV。出力: `*_from_master.csv`（全員用）、`*_qualifying.csv`（Phase 1 で生成）。 |
 | `public/data/rankings/` | ランキング用**JSON**の出力先 | 年度／リーグ／指標別。サイト頁が読みにいく。 |
-| `config/games_per_team_by_season.json` | 試合数マップ（規定打席算出用） | 未作成時は CSV の G 列から推定。 |
+| `public/data/rankings/{year}/{CL\|PL}/team-games.json` | **2026 球団別消化試合数**（canonical 集計） | Phase 12 と同時出力。率系 `minPA` / `minIp` の SSOT。 |
+| `public/data/rankings/weekly/{year}/{weekKey}/{CL\|PL}/team-games.json` | **当週**の球団別試合数 | Phase 28 と同時出力。 |
+| `config/games_per_team_by_season.json` | 試合数マップ（**2026 本番では使わない**） | 1950–2025 CSV 系の規定算出用。 |
 
 ---
 
@@ -61,6 +63,54 @@
 - **規定用CSVを decade 単位で生成**: `--year` は単年度指定のため、複数回実行する。例: 1950年代のみ → `python scripts/create_qualifying_csv_all_years.py --year 1950` から `--year 1959` まで順に実行（または一括で `create_qualifying_csv_all_years.py` を引数なしで実行）。
 - **ランキングビルドを年度・リーグで絞る**: `python scripts/build_rankings_from_calculated.py --year 2024 --league CL`（2024年CLのみ）。`--year 1975 --league PL` で1975年PLのみ。
 - **規定ルールや games_map を変更した場合**: 規定打席の算出ロジック（`qualifying_rules.py` / `games_per_team_by_season.json`）を変更したら、規定用CSVの再生成とランキングの再ビルドを行う。対象ファイル確認: `create_qualifying_csv_all_years.py --dry-run`。
+
+---
+
+## Yahoo canonical 派生とランキング再ビルド（2026・統一計画）
+
+canonical を増やしたあと、派生 JSON（Phase 11 / PoC1 等）を更新したら **必ず** 野手・投手ランキング JSON も揃える。
+
+- **派生一括（例）**: `npm run phase3:derived:2026`
+- **続けてランキング**: `npm run rankings:rebuild`（Phase 12 + 19 + 28 → `team-games.json` 同梱 → top-leaders）
+- **一括エイリアス**: `npm run phase3:derived:2026:and-rankings`（上記を連続実行）
+- **2026 規定の検証**: `npm run validate:ranking-qualifying-2026`（Phase 5。`--fail` で CI 用 exit 1）
+
+投手の Yahoo→NPB インデックスは `npm run build:yahoo-pitcher-npb-index`（PoC 由来＋ランキング掲載 ID の名簿補完）。PoC 生成の末尾でも実行される。
+
+個人の Phase 11 JSON と野手ランキング JSON が同じ canonical 由来か確認する: `npm run validate:batting-phase11-vs-phase12`（不一致は派生とランキングの**生成タイミングのズレ**が典型）。
+
+Yahoo 一球の **Phase10 取得**（同一打席が複数の投球表に分かれるケース・再取得の目安）は **`docs/yahoo_plate_appearance_batting_rules.md` §6a** を参照。
+
+---
+
+## 週間ランキング用パス（Phase 0 草案 → Phase 28 以降で使用）
+
+トップ「今週」タブ・週間ランキングの要件は **`docs/plan_top_weekly_phase0_spec.md`**。  
+週次の**集計**は Phase 17（打撃）/ Phase 7（投球）のみ。週間ランキング JSON はその派生を**読んで並べ替える**だけ（再集計しない）。
+
+| パス | 役割 |
+|------|------|
+| `_data/derived/player_season_batting_period/{year}/yahoo_*.json` | 打撃・週間行（`calendar_week`）。個人ページと共有 |
+| `_data/derived/player_season_pitching_period/{year}/npb_*.json` | 投球・週間行（`calendar_week`） |
+| `public/data/rankings/weekly/{year}/{weekKey}/{CL\|PL}/*.json` | 打撃・週間ランキング（率系は規定到達者のみ） |
+| `public/data/rankings/weekly/{year}/{weekKey}/{CL\|PL}/team-games.json` | 当週・球団別試合数（規定算出用） |
+| `public/data/rankings/pitching/weekly/{year}/{weekKey}/{CL\|PL}/*.json` | 投球・週間ランキング（率系は規定到達者のみ） |
+| `public/data/rankings/weekly/{year}/current-week.json` | ビルド時点の「今週」メタ（`weekKey` / `weekLabel`） |
+| `public/data/top-leaders/weekly/{year}/{weekKey}/{CL\|PL}/batting.json` | 今週タブ・打撃スナップショット |
+| `public/data/top-leaders/weekly/{year}/{weekKey}/{CL\|PL}/pitching.json` | 今週タブ・投球スナップショット |
+
+**生成**: `npm run phase28:build:weekly-rankings`（Phase 17 / Phase 7 派生を読むだけ。再集計しない）
+
+**トップ今週タブ用スナップショット**: `npm run top-weekly-leaders:build:2026`（週間 JSON + 当週 `team-games.json` で率系規定を適用して切り出し）
+
+**更新順**: `phase3:derived:2026`（Phase 17/7 含む）→ `npm run rankings:rebuild`（Phase 12/19/28 + top-leaders + top-weekly-leaders）
+
+### 2026 通算ランキング JSON の種類（Phase 4）
+
+| ファイル | 内容 |
+|----------|------|
+| `{指標}.json` | 率系: 規定到達者のみ（`team-games` 基準）。カウント系: 全員 |
+| `{指標}_all.json` | 通算のみ・全選手（安打・本塁打等はこちらを fetch） |
 
 ---
 

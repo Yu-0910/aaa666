@@ -9,10 +9,16 @@ globs: app/players/**/*.tsx,app/components/*Pilot*.tsx,lib/resolveSeasonPilotQue
 
 - 個人ページで `seasonPilotPlayerId` を **`displayName` を先にフォールバック**して組み立てない（`useState` 初期値がプレースホルダー選手のままだと、本番で `useParams` が遅延したとき **別人 ID で API が呼ばれる**）。
 - パイロット対象選手の API 用 ID をページ内にだけベタ書きして、`getYahooIdForPilot` と二重管理にしない。
+- **`batting_stats.csv` 等の pilot 集計 CSV を本番の正として更新・再生成しない**（廃止。正は Phase11）。
 
 ## 正しいパターン
 
-- 菊池のように **Yahoo ID で CSV と突き合わせるパイロット**は、`resolveSeasonStatsPilotQueryId` / `isKikuchiPlayerPage`（`lib/resolveSeasonPilotQueryId.ts`）を使う。
+- 菊池のように **Yahoo ID で派生 JSON と突き合わせるパイロット**は、`resolveSeasonStatsPilotQueryId` / `isKikuchiPlayerPage`（`lib/resolveSeasonPilotQueryId.ts`）を使う。
 - 定数は `lib/pilotPlayerConstants.ts` を唯一のソースにし、サーバの `seasonStatsPilot.ts` からも参照する。
-- 新しいパイロット選手を足すときは **クライアントの解決ロジック**と **`getYahooIdForPilot`** をセットで更新する。
+- 新しいパイロット選手を足すときは **クライアントの解決ロジック**と **`getYahooIdForPilot`**、および **Phase11 派生**をセットで確認する。
 - パイロット用 `fetch` は **`res.ok` を確認**し、500 の HTML/JSON 混在で `isPilot` が未定義になるのを防ぐ（`SeasonStatsPilot` / `PitchDetailsPilot` 参照）。
+
+## シーズン打撃の正
+
+- **通算・スプリット**: `_data/derived/player_season_batting/{年}/`（Phase11 ほか派生）。`mergePilotSeasonStatsWithDerived` は Phase11 がある限り CSV を混ぜない。
+- **日次**: `run_daily_npb_pipeline` は Phase11 直後に **`validate:appearance-slots-vs-line-ab:fail`** で打数整合を確認（CSV 検証は行わない）。

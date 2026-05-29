@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "diag-stale-sportsnavi-appearance-stats-v1",
+  "year": "2026",
+  "scannedGameIds": 256,
+  "counts": {
+    "stale_canonical_empty_stats": 3,
+    "raw_stats_incomplete": 0,
+    "canonical_missing": 0,
+    "canonical_and_raw_both_empty": 0,
+    "cancelled": 27,
+    "future_or_today": 0,
+    "main_html_pre_game_but_stats_ok": 0,
+    "ok": 226
+  },
+  "stale_canonical_empty_stats": [
+    {
+      "gameId": "2021038852",
+      "title": "2026年5月13日 読売ジャイアンツvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
+      "gameDate": "2026-05-13",
+      "rawParsedStatsRows": 58,
+      "rawPhase2Complete": true,
+      "canonicalStatsRows": 0,
+      "canonicalBattingLines": 0,
+      "canonicalTextSections": 0,
+      "canonicalPlateAppearances": 99,
+      "rebuildReason": "raw_fingerprint_changed",
+      "mainHtmlStillPreGame": true
+    },
+    {
+      "gameId": "2021038853",
+      "title": "2026年5月13日 東京ヤクルトスワローズvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
+      "gameDate": "2026-05-13",
+      "rawParsedStatsRows": 40,
+      "rawPhase2Complete": true,
+      "canonicalStatsRows": 0,
+      "canonicalBattingLines": 0,
+      "canonicalTextSections": 0,
+      "canonicalPlateAppearances": 70,
+      "rebuildReason": "raw_fingerprint_changed",
+      "mainHtmlStillPreGame": true
+    },
+    {
+      "gameId": "2021038854",
+      "title": "2026年5月13日 横浜DeNAベイスターズvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
+      "gameDate": "2026-05-13",
+      "rawParsedStatsRows": 37,
+      "rawPhase2Complete": true,
+      "canonicalStatsRows": 0,
+      "canonicalBattingLines": 0,
+      "canonicalTextSections": 0,
+      "canonicalPlateAppearances": 65,
+      "rebuildReason": "raw_fingerprint_changed",
+      "mainHtmlStillPreGame": true
+    }
+  ],
+  "raw_stats_incomplete": [],
+  "canonical_missing": [],
+  "canonical_and_raw_both_empty": [],
+  "byDate": {
+    "2026-05-13": [
+      "2021038852",
+      "2021038853",
+      "2021038854"
+    ]
+  }
+}

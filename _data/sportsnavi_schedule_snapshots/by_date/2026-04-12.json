@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-04-12",
+  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-04-12",
+  "gameIds": [
+    "2021038704",
+    "2021038705",
+    "2021038707",
+    "2021038708",
+    "2021038709"
+  ],
+  "games": [
+    {
+      "gameId": "2021038704",
+      "stadiumName": "東京ドーム"
+    },
+    {
+      "gameId": "2021038705",
+      "stadiumName": "横浜スタジアム"
+    },
+    {
+      "gameId": "2021038707",
+      "stadiumName": "エスコンＦ"
+    },
+    {
+      "gameId": "2021038708",
+      "stadiumName": "楽天モバイル"
+    },
+    {
+      "gameId": "2021038709",
+      "stadiumName": "ベルーナD"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038704": "東京ドーム",
+    "2021038705": "横浜スタジアム",
+    "2021038707": "エスコンＦ",
+    "2021038708": "楽天モバイル",
+    "2021038709": "ベルーナD"
+  }
+}

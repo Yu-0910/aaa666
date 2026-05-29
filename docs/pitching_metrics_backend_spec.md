@@ -82,9 +82,9 @@ canonical の `PitchingLine` と phase19 の集計範囲では、次は **実装
 | `gs` | 先発 | 先発登板回数（未集計 → 0） |
 | `cg` | 完投 | 未集計 → 0 |
 | `sho` | 完封 | 未集計 → 0 |
-| `qs_rate` | QS率 | **クオリティスタート率**。分子分母未定義のため **0 固定**。将来、公式定義または **「先発かつ 6IP 以上かつ失点 3 以下」等の自前定義を一文でここに追記**してから実装する |
-| `hqs_rate` | HQS率 | 同上。**定義確定後に実装** |
-| `sqs_rate` | SQS率 | 同上。**定義確定後に実装** |
+| `qs_rate` | QS率 | **クオリティスタート率**。`phase_pitcher_poc1` と同じ定義: 各試合で `collectStartersYahooIdsFromStatLines` により先発とみなした投手に限り、当該試合の pitchingLines を同一 Yahoo ID で合算した行について **18 outs（6回）以上かつ自責点 3 以下** を 1 QS と数え、**QS 回数 ÷ 先発回数**（先発なしは 0）。実装: `phase19_build_pitching_rankings_from_canonical.ts` |
+| `hqs_rate` | HQS率 | 先発のみ。**21 outs（7回）以上かつ自責点 2 以下** の試合数 ÷ 先発回数（先発なしは 0）。 |
+| `sqs_rate` | SQS率 | 先発のみ。**24 outs（8回）以上かつ自責点 1 以下** の試合数 ÷ 先発回数（先発なしは 0）。 |
 
 ---
 
@@ -108,7 +108,7 @@ canonical の `PitchingLine` と phase19 の集計範囲では、次は **実装
 
 | 内容 | パス |
 |---|---|
-| 集計・行生成 | `scripts/phase19_build_pitching_rankings_from_canonical.ts` |
+| 集計・行生成 | `scripts/phase19_build_pitching_rankings_from_canonical.ts`（canonical 投球のコア集計は `lib/yahooGame/canonicalPitchingSeasonAgg.ts` と `phase_pitcher_poc1` で共有） |
 | 一覧既定ソート | `lib/ranking/pitchingSortOrder.ts` |
 | 表示フォーマット | `lib/formatStat.ts` |
 | 指標順・ラベル正 | `_data/master_csv/Record_pitching.csv` |

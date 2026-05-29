@@ -1,282 +1,186 @@
 /**
- * Phase 11 (batting, minimal): canonical (Phase 10) から打者別の通算行を一括生成する。
+ * Phase 11 (batting, minimal): canonical から打者別の通算行を一括生成する。
  *
- * 出力（SSOT は canonical。これは派生の計算済みJSON）:
+ * 集計ロジックは `lib/yahooGame/canonicalBattingSeasonAgg.ts`（phase12 と共有）。
+ *
+ * 出力:
  *   _data/derived/player_season_batting/{year}/yahoo_{yahooBatterId}.json
+ *   各 JSON に `appearancePrimaryZipEnabled`（ビルド時の `TOPPAGE_APPEARANCE_PRIMARY` 相当）を付与する。
  *
  * 使い方:
  *   npx tsx scripts/phase11_build_season_stats_from_canonical.ts --year 2026
+ *
+ * 入力: `loadCanonicalGamesMergedForDerivedPipeline` と同じ（一球マージ済み canonical）。
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "fs"
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync, existsSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
-import { isWalkLikeResultText } from "../lib/baseballWalkResult"
-import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
-import type { CanonicalGameDocument, PlateAppearance, PitchEvent } from "../lib/yahooGame/types"
-import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { isAppearancePrimaryZipEnabled } from "../lib/yahooGame/appearancePrimaryFeatureFlag"
+import { battingSeasonAggSource } from "../lib/yahooGame/battingSeasonAggSourceFeatureFlag"
+import { isPlateResultAppearanceOnly } from "../lib/yahooGame/plateResultSourceFeatureFlag"
+import {
+  aggregateBattingSeasonForProfilesAndRankings,
+  buildEnrichedBattingSeasonRow,
+} from "../lib/yahooGame/canonicalBattingSeasonAgg"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): {
+  year: string
+  onlyYahooIds: string[] | null
+  reconcileGidpFromYahooTop: boolean
+} {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyYahooIds: string[] | null = null
+  let reconcileGidpFromYahooTop = false
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
+    } else if (args[i] === "--reconcile-gidp-from-yahoo-top") {
+      reconcileGidpFromYahooTop = true
     }
   }
-  return { year }
+  return { year, onlyYahooIds, reconcileGidpFromYahooTop }
 }
 
-function fmtSlash3(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return ".000"
-  const s = n.toFixed(3)
-  return s.startsWith("0") ? s.slice(1) : s
+function stripTags(s: string): string {
+  return String(s ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 }
 
-function lastPitchResult(pa: PlateAppearance): string {
-  const pe = pa.pitchEvents ?? []
-  const last = pe.length > 0 ? pe[pe.length - 1] : null
-  return (
-    (pa.resultSummaryJa ?? "").trim() ||
-    ((last?.resultJa ?? "") as string).trim() ||
-    ""
-  )
+function extractYahooTopSummaryTds(html: string): string[] | null {
+  const m = html.match(/bb-playerStatsTable--summary[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/)
+  if (!m) return null
+  const tbody = m[1]
+  const tds = [...tbody.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((x) => stripTags(x[1]))
+  if (tds.length < 20) return null
+  return tds
 }
 
-function isStrikeout(result: string): boolean {
-  return /三振|空三振|見三振/.test(result) || /^(空振り|見逃し)/.test(result)
-}
-function isHbp(result: string): boolean {
-  return /死球/.test(result)
-}
-function isSacBunt(result: string): boolean {
-  return /犠打|送りバント/.test(result)
-}
-function isSacFly(result: string): boolean {
-  return /犠飛/.test(result)
-}
-function isGidp(result: string): boolean {
-  return /併殺/.test(result)
+function normalizeNum(x: unknown): number | null {
+  const s = String(x ?? "").trim()
+  if (!s) return null
+  if (s === "-" || s === "—") return null
+  if (/^\.\d+$/.test(s)) return Number(`0${s}`)
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s)
+  return null
 }
 
-function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
-  if (/本塁打|ホームラン|HR/.test(result)) return 4
-  if (/三塁打/.test(result)) return 3
-  if (/二塁打/.test(result)) return 2
-  if (/安打|ヒット|左安|中安|右安/.test(result)) return 1
-  return 0
-}
-
-function isAtBat(result: string): boolean {
-  if (!result) return false
-  if (isWalkLikeResultText(result) || isHbp(result) || isSacBunt(result) || isSacFly(result)) return false
-  // 「打撃妨害」などは将来拡張。現状は AB に含めない扱いに寄せる
-  if (/妨害/.test(result)) return false
-  return true
-}
-
-type Agg = {
-  gameIds: Set<string>
-  pa: number
-  ab: number
-  r: number
-  h: number
-  h2: number
-  h3: number
-  hr: number
-  tb: number
-  rbi: number
-  so: number
-  bb: number
-  ibb: number
-  hbp: number
-  sh: number
-  sf: number
-  sb: number
-  cs: number
-  gidp: number
-  risp_ab: number
-  risp_h: number
-}
-
-function emptyAgg(): Agg {
-  return {
-    gameIds: new Set(),
-    pa: 0,
-    ab: 0,
-    r: 0,
-    h: 0,
-    h2: 0,
-    h3: 0,
-    hr: 0,
-    tb: 0,
-    rbi: 0,
-    so: 0,
-    bb: 0,
-    ibb: 0,
-    hbp: 0,
-    sh: 0,
-    sf: 0,
-    sb: 0,
-    cs: 0,
-    gidp: 0,
-    risp_ab: 0,
-    risp_h: 0,
-  }
-}
-
-function updateFromPa(agg: Agg, gameId: string, pa: PlateAppearance): void {
-  agg.gameIds.add(gameId)
-  agg.pa += 1
-  const result = lastPitchResult(pa)
-  if (isWalkLikeResultText(result)) agg.bb += 1
-  if (isHbp(result)) agg.hbp += 1
-  if (isSacBunt(result)) agg.sh += 1
-  if (isSacFly(result)) agg.sf += 1
-  if (isStrikeout(result)) agg.so += 1
-  if (isGidp(result)) agg.gidp += 1
-
-  if (isAtBat(result)) {
-    agg.ab += 1
-    const bases = hitBases(result)
-    if (bases > 0) agg.h += 1
-    if (bases === 2) agg.h2 += 1
-    if (bases === 3) agg.h3 += 1
-    if (bases === 4) agg.hr += 1
-    agg.tb += bases
-  }
-}
-
-function toSeasonStatsRow(agg: Agg): SeasonStatsRow {
-  const h1 = Math.max(0, agg.h - agg.h2 - agg.h3 - agg.hr)
-  const avg = agg.ab > 0 ? agg.h / agg.ab : null
-  const obpDen = agg.ab + agg.bb + agg.hbp + agg.sf
-  const obp = obpDen > 0 ? (agg.h + agg.bb + agg.hbp) / obpDen : null
-  const slg = agg.ab > 0 ? agg.tb / agg.ab : null
-  const ops = obp != null ? obp + (agg.ab > 0 ? agg.tb / agg.ab : 0) : null
-  const rispAvg = agg.risp_ab > 0 ? agg.risp_h / agg.risp_ab : null
-  const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
-
-  // SeasonStatsPilot が期待する全フィールドを埋める（未計算は 0 / ".000"）
-  return {
-    split_type: "total",
-    split_value: "total",
-    split_label: "通算",
-    g: agg.gameIds.size,
-    pa: agg.pa,
-    ab: agg.ab,
-    r: agg.r,
-    h: agg.h,
-    h1,
-    h2: agg.h2,
-    h3: agg.h3,
-    hr: agg.hr,
-    tb: agg.tb,
-    rbi: agg.rbi,
-    so: agg.so,
-    bb: agg.bb,
-    ibb: agg.ibb,
-    hbp: agg.hbp,
-    sh: agg.sh,
-    sf: agg.sf,
-    sb: agg.sb,
-    cs: agg.cs,
-    gidp: agg.gidp,
-    avg: fmtSlash3(avg),
-    obp: fmtSlash3(obp),
-    slg: fmtSlash3(slg),
-    ops: fmtSlash3(ops),
-    risp_avg: fmtSlash3(rispAvg),
-    risp_ab: agg.risp_ab,
-    risp_h: agg.risp_h,
-    sb_pct: sbPct == null ? "" : (sbPct * 100).toFixed(1),
-    isop: ".000",
-    isod: ".000",
-    babip: ".000",
-    bb_pct: ".000",
-    k_pct: ".000",
-    bbk: ".000",
-    gpa: ".000",
-    rc: ".0",
-    xr: ".0",
-    seca: ".000",
-    ta: ".000",
-    noi: ".000",
-  }
-}
-
-function loadCanonicalFiles(): CanonicalGameDocument[] {
-  const dir = join(projectRoot, "_data", "scraped_games", "canonical")
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json"))
-  const out: CanonicalGameDocument[] = []
-  for (const f of files) {
-    const p = join(dir, f)
+async function fetchYahooPlayerTopCached(playerId: string): Promise<string | null> {
+  const dir = join(projectRoot, "_data", "scraped_players", "raw_yahoo_player_top")
+  mkdirSync(dir, { recursive: true })
+  const p = join(dir, `${playerId}.html`)
+  if (existsSync(p)) {
     try {
-      const doc = JSON.parse(readFileSync(p, "utf8")) as CanonicalGameDocument
-      if (doc?.schemaVersion === "yahoo-game-canonical-v1" && doc?.gameId) out.push(doc)
+      return readFileSync(p, "utf8")
     } catch {
-      // ignore
+      // fallthrough
     }
   }
-  return out
+  const url = `https://baseball.yahoo.co.jp/npb/player/${encodeURIComponent(playerId)}/top`
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+      "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    },
+  })
+  if (!res.ok) return null
+  const html = await res.text()
+  try {
+    writeFileSync(p, html, "utf8")
+  } catch {
+    // ignore
+  }
+  return html
 }
 
-function main(): void {
-  const { year } = parseArgs()
-  const docs = loadCanonicalFiles()
+async function gidpFromYahooPlayerTop(playerId: string): Promise<number | null> {
+  const html = await fetchYahooPlayerTopCached(playerId)
+  if (!html) return null
+  const tds = extractYahooTopSummaryTds(html)
+  if (!tds) return null
+  // columns (24 tds): ... 18 = GIDP
+  return normalizeNum(tds[18])
+}
+
+async function main(): Promise<void> {
+  const { year, onlyYahooIds, reconcileGidpFromYahooTop } = parseArgs()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase11] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
-  const byBatter = new Map<string, Agg>()
-  for (const doc of docs) {
-    const gameId = doc.gameId
-    for (const pa of doc.domain.plateAppearances ?? []) {
-      const bid = (pa.yahooBatterId ?? "").trim()
-      if (!bid) continue
-      const agg = byBatter.get(bid) ?? emptyAgg()
-      updateFromPa(agg, gameId, pa)
-      byBatter.set(bid, agg)
+  const byBatter = aggregateBattingSeasonForProfilesAndRankings(docs)
+  if (byBatter.size === 0) {
+    let paRows = 0
+    for (const d of docs) {
+      paRows += d.domain?.plateAppearances?.length ?? 0
     }
+    console.error(
+      "[phase11] 打撃集計できるデータがありません。canonical の domain.plateAppearances が空、または yahooBatterId 付き打席がありません。",
+    )
+    console.error(
+      `  試合数: ${docs.length}, plateAppearance 行数の合計: ${paRows}`,
+    )
+    console.error(
+      "  対処: 一球ログ由来の打席を canonical にマージしてから再実行。Yahoo 系: npm run phase10:yahoo:restore または phase10:yahoo:merge。スポナビ canonical へ載せる場合: npm run phase4:merge:phase10（内容は各スクリプトの README コメント参照）。",
+    )
+    process.exit(1)
   }
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_batting", year)
   mkdirSync(outDir, { recursive: true })
 
-  // 生成物は「canonical から再計算可能な派生」なので、毎回クリーンに作り直す。
-  // 以前の実行で誤った打者ID（例: 投手ID）が出力されていた場合、ここで削除しないと残骸が混ざる。
-  for (const f of readdirSync(outDir)) {
-    if (f.startsWith("yahoo_") && f.endsWith(".json")) {
-      try {
-        unlinkSync(join(outDir, f))
-      } catch {
-        // ignore
+  if (!onlyYahooIds) {
+    for (const f of readdirSync(outDir)) {
+      if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+        try {
+          unlinkSync(join(outDir, f))
+        } catch {
+          // ignore
+        }
       }
     }
   }
 
-  const batterIds = [...byBatter.keys()].sort()
+  const batterIds = (onlyYahooIds ?? [...byBatter.keys()]).slice().sort()
   for (const bid of batterIds) {
     const agg = byBatter.get(bid)!
-    const row = enrichSeasonStatsRowSabermetrics(toSeasonStatsRow(agg))
+    if (!agg) continue
+    if (reconcileGidpFromYahooTop) {
+      try {
+        const gidpTop = await gidpFromYahooPlayerTop(bid)
+        if (typeof gidpTop === "number" && Number.isFinite(gidpTop) && gidpTop > agg.gidp) {
+          agg.gidp = gidpTop
+        }
+      } catch {
+        // skip
+      }
+    }
+    const row = buildEnrichedBattingSeasonRow(agg)
     const payload = {
       schemaVersion: "phase11-player-season-batting-v0",
       seasonYear: year,
       yahooBatterId: bid,
       generatedAt: new Date().toISOString(),
+      /** ビルド時点で `plateAppearanceResolvedResultText` が zip を使うか（`TOPPAGE_APPEARANCE_PRIMARY` の解釈結果） */
+      appearancePrimaryZipEnabled: isAppearancePrimaryZipEnabled(),
+      /** `TOPPAGE_PLATE_RESULT_SOURCE`：true なら zip 不足時に要約・一球へフォールバックしない */
+      plateResultAppearanceOnly: isPlateResultAppearanceOnly(),
+      /** `TOPPAGE_BATTING_SEASON_AGG`：`hybrid` | `appearance_slots` */
+      battingSeasonAggSource: battingSeasonAggSource(),
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),
       },
@@ -289,4 +193,3 @@ function main(): void {
 }
 
 main()
-

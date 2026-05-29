@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from "react"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
+import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { unwrapPitchDetailsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
@@ -179,7 +180,7 @@ export default function PitchDetailsPilot({
                 const hasSettlement =
                   stat != null && stat.ab + stat.bb + stat.hbp + stat.sf > 0
                 const isopDisplay = hasSettlement ? stat!.isop : "—"
-                const avgDisplay = hasSettlement ? stat!.avg : "—"
+                const avgDisplay = hasSettlement ? formatSlashStatDisplay(stat!.avg) : "—"
                 const hrDisplay = hasSettlement ? String(stat!.hr) : "—"
                 return (
                   <div

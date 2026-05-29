@@ -1,0 +1,347 @@
+/**
+ * Phase 0: スポナビ日程（1軍）を巡回し、日別スナップショットと gameId のインデックスを生成する。
+ *
+ * 入力:
+ *   https://baseball.yahoo.co.jp/npb/schedule/first/league?date=YYYY-MM-DD
+ *
+ * 出力:
+ *   _data/sportsnavi_schedule_snapshots/by_date/YYYY-MM-DD.json
+ *     - gameIds に加え games[]（gameId + stadiumName）と stadiumByGameId を保存
+ *   _data/sportsnavi_schedule_diff/YYYY-MM-DD.json（前回との差分。初回は作らない）
+ *   _data/sportsnavi_schedule_index/season_YYYY.json
+ *     - stadiumByGameId（全試合の gameId→球場名。Phase 13 球場別打撃で参照）
+ *
+ * 使い方:
+ *   npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year 2026 --from 2026-03-27 --to 2026-04-14
+ *   npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year 2026 --from 2026-04-17 --to 2026-04-18 --merge
+ *   npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year 2026 --from 2026-04-19 --to 2026-04-19 --merge
+ *
+ * 注意:
+ * - スポナビ側のHTMLは変わり得るため、パースは best-effort（gameId抽出を最優先）。
+ * - 日程表の `rowspan` は日によって変わるため、複数候補でスコープを探す。
+ * - **1日あたり gameId 件数が 0〜6 を超える**抽出結果はパース異常とみなし、**前回スナップショットを維持**し `_data/scraped_games/_meta/pipeline_bulk.log` に記録する。
+ * - **--merge** … 既存の `season_YYYY.json` とマージ（byDate は今回の日付だけ上書き、gameIds は和集合）。
+ *   狭い `--from`/`--to` だけの実行で **全試合の gameId を消さない**（日次パイプライン推奨）。
+ */
+
+import fs from "fs"
+import path from "path"
+import { getProjectRoot } from "@/lib/projectRoot"
+import { loadScheduleStadiumByGameId } from "@/lib/loadScheduleStadiumByGameId"
+import {
+  dedupeScheduleGamesById,
+  extractGamesFromScheduleHtml,
+  SCHEDULE_MAX_GAMES_PER_DAY,
+  type ScheduleGameEntry,
+} from "@/lib/sportsnaviScheduleParse"
+import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+
+type DaySnapshotV2 = {
+  schemaVersion: "sportsnavi-schedule-day-v2"
+  year: string
+  dateJst: string // YYYY-MM-DD
+  fetchedAt: string
+  sourceUrl: string
+  gameIds: string[]
+  games: ScheduleGameEntry[]
+  stadiumByGameId: Record<string, string>
+}
+
+type DayDiffV1 = {
+  schemaVersion: "sportsnavi-schedule-day-diff-v1"
+  year: string
+  dateJst: string
+  fetchedAt: string
+  addedGameIds: string[]
+  removedGameIds: string[]
+}
+
+type SeasonIndexV1 = {
+  schemaVersion: "sportsnavi-schedule-season-index-v1"
+  year: string
+  builtAt: string
+  from: string
+  to: string
+  gameIds: string[]
+  byDate: Record<string, string[]>
+  /** gameId → 日程表左上の球場名（Phase 13 等） */
+  stadiumByGameId: Record<string, string>
+}
+
+function parseArgs(argv: string[]) {
+  const yearIdx = argv.indexOf("--year")
+  const fromIdx = argv.indexOf("--from")
+  const toIdx = argv.indexOf("--to")
+  const throttleIdx = argv.indexOf("--throttle-ms")
+  const retriesIdx = argv.indexOf("--fetch-retries")
+  const merge = argv.includes("--merge")
+  const year = yearIdx >= 0 ? (argv[yearIdx + 1] ?? "").trim() : "2026"
+  // 2026年はペナントレース（リーグ戦）が 3/27 から開始する前提で、デフォルトは 3/27 以降に絞る
+  const from = fromIdx >= 0 ? (argv[fromIdx + 1] ?? "").trim() : `${year}-03-27`
+  const to = toIdx >= 0 ? (argv[toIdx + 1] ?? "").trim() : new Date().toISOString().slice(0, 10)
+  const throttleMsRaw = throttleIdx >= 0 ? (argv[throttleIdx + 1] ?? "").trim() : ""
+  const throttleMs = throttleMsRaw ? Math.max(0, parseInt(throttleMsRaw, 10) || 0) : 400
+  const retriesRaw = retriesIdx >= 0 ? (argv[retriesIdx + 1] ?? "").trim() : ""
+  const fetchRetries = retriesRaw ? Math.max(0, parseInt(retriesRaw, 10) || 0) : 4
+  return { year, from, to, throttleMs, merge, fetchRetries }
+}
+
+function minYmd(a: string, b: string): string {
+  return a <= b ? a : b
+}
+
+function maxYmd(a: string, b: string): string {
+  return a >= b ? a : b
+}
+
+function ensureDir(p: string) {
+  fs.mkdirSync(p, { recursive: true })
+}
+
+function isYmd(s: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
+function* dateRange(from: string, to: string): Generator<string> {
+  const d0 = new Date(from + "T00:00:00Z")
+  const d1 = new Date(to + "T00:00:00Z")
+  for (let d = d0; d.getTime() <= d1.getTime(); d = new Date(d.getTime() + 86400_000)) {
+    yield d.toISOString().slice(0, 10)
+  }
+}
+
+/** @deprecated 互換のため。正は `SCHEDULE_MAX_GAMES_PER_DAY`（`@/lib/sportsnaviScheduleParse`）。 */
+export const PHASE0_MAX_GAMES_PER_DAY = SCHEDULE_MAX_GAMES_PER_DAY
+
+function gamesToStadiumMap(games: ScheduleGameEntry[]): Record<string, string> {
+  const m: Record<string, string> = {}
+  for (const g of games) {
+    if (!g.gameId || !g.stadiumName || g.stadiumName === "未設定") continue
+    m[g.gameId] = g.stadiumName
+  }
+  return m
+}
+
+function readJsonIfExists<T>(p: string): T | null {
+  if (!fs.existsSync(p)) return null
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8")) as T
+  } catch {
+    return null
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+async function fetchText(url: string, fetchRetries: number): Promise<string> {
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+  }
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= fetchRetries; attempt++) {
+    try {
+      const res = await fetch(url, { headers, cache: "no-store" })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`)
+      }
+      return await res.text()
+    } catch (e) {
+      lastErr = e
+      if (attempt < fetchRetries) {
+        const waitMs = 1000 * Math.pow(2, attempt)
+        console.warn(
+          `[phase0] fetch failed (${attempt + 1}/${fetchRetries + 1}), retry in ${waitMs}ms: ${url}`,
+        )
+        await sleep(waitMs)
+      }
+    }
+  }
+  throw lastErr
+}
+
+async function main() {
+  const root = getProjectRoot()
+  const { year, from, to, throttleMs, merge, fetchRetries } = parseArgs(process.argv.slice(2))
+  if (!isYmd(from) || !isYmd(to)) {
+    console.error("[phase0] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+
+  const outByDate = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date")
+  const outDiff = path.join(root, "_data", "sportsnavi_schedule_diff")
+  const outIndexDir = path.join(root, "_data", "sportsnavi_schedule_index")
+  const idxPath = path.join(outIndexDir, `season_${year}.json`)
+  const existingIndex = merge ? readJsonIfExists<SeasonIndexV1>(idxPath) : null
+
+  ensureDir(outByDate)
+  ensureDir(outDiff)
+  ensureDir(outIndexDir)
+
+  const byDate: Record<string, string[]> = {}
+  const stadiumByGameId: Record<string, string> = {
+    ...(existingIndex?.stadiumByGameId ?? {}),
+  }
+  const all = new Set<string>()
+  const fetchedAt = new Date().toISOString()
+
+  const days = [...dateRange(from, to)]
+  for (let di = 0; di < days.length; di++) {
+    const ymd = days[di]!
+    const snapPath = path.join(outByDate, `${ymd}.json`)
+    const prevSnap = readJsonIfExists<DaySnapshotV2>(snapPath)
+
+    // 交流戦は `league` 側が「試合はありません」になるため、`inter` も併用する。
+    const urlLeague = `https://baseball.yahoo.co.jp/npb/schedule/first/league?date=${encodeURIComponent(ymd)}`
+    const urlInter = `https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=${encodeURIComponent(ymd)}`
+
+    const htmlLeague = await fetchText(urlLeague, fetchRetries)
+    const gamesLeague = extractGamesFromScheduleHtml(htmlLeague, ymd)
+
+    const htmlInter = await fetchText(urlInter, fetchRetries)
+    const gamesInter = extractGamesFromScheduleHtml(htmlInter, ymd)
+
+    const union = dedupeScheduleGamesById([...gamesLeague, ...gamesInter])
+    const extractedGames =
+      union.length > 0 && union.length <= SCHEDULE_MAX_GAMES_PER_DAY
+        ? union
+        : gamesLeague.length >= gamesInter.length
+          ? gamesLeague
+          : gamesInter
+
+    const extractedIds = extractedGames.map((g) => g.gameId)
+    let games = extractedGames
+    let gameIds = extractedIds
+    const url = gamesInter.length > gamesLeague.length ? urlInter : urlLeague
+
+    if (gameIds.length > PHASE0_MAX_GAMES_PER_DAY) {
+      const revertTo =
+        prevSnap &&
+        (prevSnap.schemaVersion === "sportsnavi-schedule-day-v2" ||
+          prevSnap.schemaVersion === "sportsnavi-schedule-day-v1") &&
+        Array.isArray(prevSnap.gameIds)
+          ? [...prevSnap.gameIds]
+          : []
+      const revertGames =
+        prevSnap?.schemaVersion === "sportsnavi-schedule-day-v2" && Array.isArray(prevSnap.games)
+          ? [...prevSnap.games]
+          : revertTo.map((id) => ({ gameId: id, stadiumName: prevSnap?.stadiumByGameId?.[id] ?? "未設定" }))
+      const msg = `date=${ymd} extracted ${extractedIds.length} gameIds (>${PHASE0_MAX_GAMES_PER_DAY}); sample=${extractedIds
+        .slice(0, 8)
+        .join(",")}; using ${revertTo.length} id(s) from previous snapshot (or empty)`
+      appendPipelineBulkLog(root, "phase0", msg)
+      console.error(`[phase0] ERROR: ${msg}`)
+      gameIds = revertTo
+      games = revertGames
+    }
+
+    const withStadium = games.filter((g) => g.stadiumName && g.stadiumName !== "未設定").length
+    console.log(
+      `[phase0] ${di + 1}/${days.length} ${ymd} … ${gameIds.length} game(s), stadium labeled ${withStadium}`,
+    )
+
+    const dayStadiumMap = gamesToStadiumMap(games)
+    for (const [gid, name] of Object.entries(dayStadiumMap)) {
+      stadiumByGameId[gid] = name
+    }
+
+    const snap: DaySnapshotV2 = {
+      schemaVersion: "sportsnavi-schedule-day-v2",
+      year,
+      dateJst: ymd,
+      fetchedAt,
+      sourceUrl: url,
+      gameIds,
+      games,
+      stadiumByGameId: dayStadiumMap,
+    }
+
+    const prev = prevSnap
+    fs.writeFileSync(snapPath, JSON.stringify(snap, null, 2), "utf8")
+
+    byDate[ymd] = gameIds
+    for (const id of gameIds) all.add(id)
+
+    if (
+      prev &&
+      (prev.schemaVersion === "sportsnavi-schedule-day-v2" || prev.schemaVersion === "sportsnavi-schedule-day-v1")
+    ) {
+      const prevSet = new Set(prev.gameIds ?? [])
+      const curSet = new Set(gameIds)
+      const added = [...curSet].filter((x) => !prevSet.has(x)).sort()
+      const removed = [...prevSet].filter((x) => !curSet.has(x)).sort()
+      if (added.length || removed.length) {
+        const diff: DayDiffV1 = {
+          schemaVersion: "sportsnavi-schedule-day-diff-v1",
+          year,
+          dateJst: ymd,
+          fetchedAt,
+          addedGameIds: added,
+          removedGameIds: removed,
+        }
+        fs.writeFileSync(path.join(outDiff, `${ymd}.json`), JSON.stringify(diff, null, 2), "utf8")
+      }
+    }
+
+    if (throttleMs > 0) await sleep(throttleMs)
+  }
+
+  let mergedByDate: Record<string, string[]> = { ...byDate }
+  let mergedGameIds = new Set<string>(all)
+  let mergedFrom = from
+  let mergedTo = to
+
+  if (
+    merge &&
+    existingIndex?.schemaVersion === "sportsnavi-schedule-season-index-v1" &&
+    existingIndex.year === year
+  ) {
+    mergedByDate = { ...(existingIndex.byDate ?? {}), ...byDate }
+    mergedGameIds = new Set<string>()
+    for (const ids of Object.values(mergedByDate)) {
+      for (const id of ids) mergedGameIds.add(id)
+    }
+    mergedFrom = minYmd(from, existingIndex.from)
+    mergedTo = maxYmd(to, existingIndex.to)
+    console.log(
+      `[phase0] merge: combined with existing index (games ${existingIndex.gameIds.length} → ${mergedGameIds.size})`,
+    )
+  } else if (merge && !existingIndex) {
+    console.log("[phase0] merge: no existing season index; writing fresh range only")
+  } else if (!merge && existingIndex?.schemaVersion === "sportsnavi-schedule-season-index-v1") {
+    const prevIds = new Set(existingIndex.gameIds ?? [])
+    const lost = [...prevIds].filter((id) => !all.has(id))
+    if (lost.length > 0) {
+      console.warn(
+        `[phase0] WARN: without --merge, ${lost.length} gameId(s) from the previous index are NOT in this run's range (example: ${lost.slice(0, 3).join(", ")}). Use --merge for incremental updates.`,
+      )
+    }
+  }
+
+  const stadiumByGameIdMerged = Object.fromEntries(loadScheduleStadiumByGameId(year, root))
+
+  const index: SeasonIndexV1 = {
+    schemaVersion: "sportsnavi-schedule-season-index-v1",
+    year,
+    builtAt: fetchedAt,
+    from: mergedFrom,
+    to: mergedTo,
+    gameIds: [...mergedGameIds].sort(),
+    byDate: mergedByDate,
+    stadiumByGameId: stadiumByGameIdMerged,
+  }
+  fs.writeFileSync(idxPath, JSON.stringify(index, null, 2), "utf8")
+  const stadiumCount = Object.keys(stadiumByGameIdMerged).length
+  console.log(
+    `[phase0] wrote index: ${idxPath} (games=${index.gameIds.length}, stadium=${stadiumCount}, days=${Object.keys(index.byDate).length}, merge=${merge})`,
+  )
+}
+
+main().catch((e) => {
+  console.error("[phase0] failed:", e)
+  process.exit(1)
+})
+

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-04-14",
+  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-04-14",
+  "gameIds": [
+    "2021038711",
+    "2021038712",
+    "2021038713",
+    "2021038714",
+    "2021038715"
+  ],
+  "games": [
+    {
+      "gameId": "2021038711",
+      "stadiumName": "地方球場"
+    },
+    {
+      "gameId": "2021038712",
+      "stadiumName": "甲子園球場"
+    },
+    {
+      "gameId": "2021038713",
+      "stadiumName": "ZOZOマリン"
+    },
+    {
+      "gameId": "2021038714",
+      "stadiumName": "京セラD大阪"
+    },
+    {
+      "gameId": "2021038715",
+      "stadiumName": "みずほPayPay"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038711": "地方球場",
+    "2021038712": "甲子園球場",
+    "2021038713": "ZOZOマリン",
+    "2021038714": "京セラD大阪",
+    "2021038715": "みずほPayPay"
+  }
+}

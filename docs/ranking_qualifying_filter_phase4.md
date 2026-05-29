@@ -39,10 +39,16 @@
 
 ---
 
-## オプション（Phase 4 では未実施）
+## 2026 ビルド時絞り込み（Phase 4・実施済み）
 
-- **JSON にメタ情報を付与**  
-  例: `"qualifyingFilterApplied": true` を付与し、アプリ側で「既に規定適用済みならフィルタをスキップ」とする実装は、意図の明確化やパフォーマンス測定に有用だが、Phase 4 では必須としない。将来実施する場合は、ビルドスクリプトと `loadRankingJson` / RankingPageClient の両方の変更が必要。
+- Phase 12 / 19: 率系は `{指標}.json` のみ規定到達者、`*_all.json` は全選手
+- Phase 28: 週間率系 JSON を当週 `team-games` で絞り込み
+- 実装: `lib/ranking/filterRankingsByQualifyingAtBuild.ts`
+- 検証: `npm run validate:ranking-qualifying-2026`
+
+## オプション（未実施）
+
+- **JSON にメタ情報を付与**（`qualifyingFilterApplied` 等）は将来用。Client フィルタは後方互換のため維持。
 
 ---
 

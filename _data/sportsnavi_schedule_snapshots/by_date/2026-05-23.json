@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-05-23",
+  "fetchedAt": "2026-05-24T15:18:52.173Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-23",
+  "gameIds": [
+    "2021038899",
+    "2021038897",
+    "2021038900",
+    "2021038901",
+    "2021038902"
+  ],
+  "games": [
+    {
+      "gameId": "2021038899",
+      "stadiumName": "バンテリンD"
+    },
+    {
+      "gameId": "2021038897",
+      "stadiumName": "東京ドーム"
+    },
+    {
+      "gameId": "2021038900",
+      "stadiumName": "楽天モバイル"
+    },
+    {
+      "gameId": "2021038901",
+      "stadiumName": "ベルーナD"
+    },
+    {
+      "gameId": "2021038902",
+      "stadiumName": "みずほPayPay"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038897": "東京ドーム",
+    "2021038899": "バンテリンD",
+    "2021038900": "楽天モバイル",
+    "2021038901": "ベルーナD",
+    "2021038902": "みずほPayPay"
+  }
+}

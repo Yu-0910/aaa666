@@ -1,0 +1,669 @@
+{
+  "schemaVersion": "phase-pitcher-poc-season-v1",
+  "seasonYear": "2026",
+  "npbPlayerId": "41545132",
+  "yahooPitcherIds": [
+    "1500110"
+  ],
+  "playerName": "加藤 貴之",
+  "team": "北海道日本ハムファイターズ",
+  "generatedAt": "2026-05-28T20:24:37.315Z",
+  "source": {
+    "canonicalGames": [
+      "2021038655",
+      "2021038690",
+      "2021038718",
+      "2021038753",
+      "2021038795",
+      "2021038838",
+      "2021038869",
+      "2021038919"
+    ],
+    "note": "1 試合または少数試合の合算。公式記録の代替ではない。",
+    "catcherNote": "捕手は各打席の守備側チームのスタメン「捕」（表裏とスコアボード先攻/後攻で守備チームを決定）。救援投手はスタメンに名前がなくても可。交替は未反映。防御率・回数は打席数比で投手全体の自責点・イニングを按分。"
+  },
+  "basic": {
+    "ip": "43.1",
+    "ipOuts": 130,
+    "era": 3.12,
+    "bf": 178,
+    "h": 43,
+    "hr": 6,
+    "so": 22,
+    "bb": 4,
+    "hbp": 0,
+    "bk": 0,
+    "r": 18,
+    "er": 15,
+    "pitches": 618,
+    "decision": "win",
+    "whip": 1.085,
+    "avgAgainstApprox": ".247",
+    "battedBallOuts": {
+      "ground": 53,
+      "air": 45
+    },
+    "gamesAppeared": 8,
+    "gamesStarted": 1,
+    "gamesInRelief": 7,
+    "holds": 0,
+    "completeGames": 0,
+    "shutouts": 0,
+    "intentionalWalks": 1,
+    "qsCount": 0,
+    "qsRate": 0,
+    "winCount": 5,
+    "lossCount": 1,
+    "saveCount": 0
+  },
+  "opponentTeamName": "",
+  "splits": {
+    "vsHand": {
+      "vsR": {
+        "bf": 76,
+        "ab": 73,
+        "h": 18,
+        "hr": 5,
+        "so": 11,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 56,
+        "er": 0,
+        "avg": ".247",
+        "ipOuts": 56,
+        "ip": "18.2",
+        "era": 0,
+        "whip": 1.018
+      },
+      "vsL": {
+        "bf": 102,
+        "ab": 98,
+        "h": 26,
+        "hr": 1,
+        "so": 11,
+        "bb": 3,
+        "hbp": 0,
+        "outs": 70,
+        "er": 0,
+        "avg": ".265",
+        "ipOuts": 70,
+        "ip": "23.1",
+        "era": 0,
+        "whip": 1.243
+      },
+      "vsB": {
+        "bf": 0,
+        "ab": 0,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 0,
+        "er": 0,
+        "avg": ".000",
+        "ipOuts": 0,
+        "ip": "0",
+        "era": null,
+        "whip": null
+      },
+      "vsUnknown": {
+        "bf": 0,
+        "ab": 0,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 0,
+        "er": 0,
+        "avg": ".000",
+        "ipOuts": 0,
+        "ip": "0",
+        "era": null,
+        "whip": null
+      }
+    },
+    "bySituation": [
+      {
+        "key": "none",
+        "label": "無し",
+        "bf": 119,
+        "ab": 117,
+        "h": 27,
+        "hr": 5,
+        "so": 16,
+        "bb": 2,
+        "hbp": 0,
+        "outs": 89,
+        "er": 0,
+        "avg": ".231",
+        "ipOuts": 89,
+        "ip": "29.2",
+        "era": 0,
+        "whip": 0.978
+      },
+      {
+        "key": "r1",
+        "label": "1塁",
+        "bf": 29,
+        "ab": 28,
+        "h": 11,
+        "hr": 0,
+        "so": 5,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 17,
+        "er": 0,
+        "avg": ".393",
+        "ipOuts": 17,
+        "ip": "5.2",
+        "era": 0,
+        "whip": 1.941
+      },
+      {
+        "key": "r2",
+        "label": "2塁",
+        "bf": 6,
+        "ab": 6,
+        "h": 2,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 4,
+        "er": 0,
+        "avg": ".333",
+        "ipOuts": 4,
+        "ip": "1.1",
+        "era": 0,
+        "whip": 1.5
+      },
+      {
+        "key": "r12",
+        "label": "1・2塁",
+        "bf": 15,
+        "ab": 13,
+        "h": 3,
+        "hr": 1,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 9,
+        "er": 0,
+        "avg": ".231",
+        "ipOuts": 9,
+        "ip": "3",
+        "era": 0,
+        "whip": 1.333
+      },
+      {
+        "key": "r13",
+        "label": "1・3塁",
+        "bf": 3,
+        "ab": 3,
+        "h": 1,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 2,
+        "er": 0,
+        "avg": ".333",
+        "ipOuts": 2,
+        "ip": "0.2",
+        "era": 0,
+        "whip": 1.5
+      },
+      {
+        "key": "r23",
+        "label": "2・3塁",
+        "bf": 3,
+        "ab": 2,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 2,
+        "er": 0,
+        "avg": ".000",
+        "ipOuts": 2,
+        "ip": "0.2",
+        "era": 0,
+        "whip": 1.5
+      },
+      {
+        "key": "loaded",
+        "label": "満塁",
+        "bf": 3,
+        "ab": 2,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 3,
+        "er": 0,
+        "avg": ".000",
+        "ipOuts": 3,
+        "ip": "1",
+        "era": 0,
+        "whip": 0
+      },
+      {
+        "key": "risp",
+        "label": "得点圏",
+        "bf": 30,
+        "ab": 26,
+        "h": 6,
+        "hr": 1,
+        "so": 1,
+        "bb": 2,
+        "hbp": 0,
+        "outs": 20,
+        "er": 0,
+        "avg": ".231",
+        "ipOuts": 20,
+        "ip": "6.2",
+        "era": 0,
+        "whip": 1.2
+      },
+      {
+        "key": "no_risp",
+        "label": "非得点圏",
+        "bf": 148,
+        "ab": 145,
+        "h": 38,
+        "hr": 5,
+        "so": 21,
+        "bb": 2,
+        "hbp": 0,
+        "outs": 106,
+        "er": 0,
+        "avg": ".262",
+        "ipOuts": 106,
+        "ip": "35.1",
+        "era": 0,
+        "whip": 1.132
+      }
+    ],
+    "byPaRound": [
+      {
+        "key": "1",
+        "label": "1巡目",
+        "bf": 72,
+        "ab": 69,
+        "h": 16,
+        "hr": 2,
+        "so": 11,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 57,
+        "er": 0,
+        "avg": ".232",
+        "ipOuts": 57,
+        "ip": "19",
+        "era": 0,
+        "whip": 0.895
+      },
+      {
+        "key": "2",
+        "label": "2巡目",
+        "bf": 72,
+        "ab": 69,
+        "h": 19,
+        "hr": 3,
+        "so": 10,
+        "bb": 2,
+        "hbp": 0,
+        "outs": 50,
+        "er": 0,
+        "avg": ".275",
+        "ipOuts": 50,
+        "ip": "16.2",
+        "era": 0,
+        "whip": 1.26
+      },
+      {
+        "key": "3",
+        "label": "3巡目",
+        "bf": 34,
+        "ab": 33,
+        "h": 9,
+        "hr": 1,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 19,
+        "er": 0,
+        "avg": ".273",
+        "ipOuts": 19,
+        "ip": "6.1",
+        "era": 0,
+        "whip": 1.579
+      }
+    ],
+    "byPaRoundPitchTypes": [
+      {
+        "key": "1",
+        "label": "1巡目",
+        "pitches_total": 238,
+        "rows": [
+          {
+            "pitch_type": "カットボール",
+            "pitches": 69,
+            "pct": 29
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 54,
+            "pct": 22.7
+          },
+          {
+            "pitch_type": "フォーク",
+            "pitches": 41,
+            "pct": 17.2
+          },
+          {
+            "pitch_type": "スライダー",
+            "pitches": 36,
+            "pct": 15.1
+          },
+          {
+            "pitch_type": "シュート",
+            "pitches": 25,
+            "pct": 10.5
+          },
+          {
+            "pitch_type": "スローカーブ",
+            "pitches": 8,
+            "pct": 3.4
+          },
+          {
+            "pitch_type": "チェンジアップ",
+            "pitches": 5,
+            "pct": 2.1
+          }
+        ]
+      },
+      {
+        "key": "2",
+        "label": "2巡目",
+        "pitches_total": 259,
+        "rows": [
+          {
+            "pitch_type": "カットボール",
+            "pitches": 70,
+            "pct": 27
+          },
+          {
+            "pitch_type": "フォーク",
+            "pitches": 64,
+            "pct": 24.7
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 56,
+            "pct": 21.6
+          },
+          {
+            "pitch_type": "シュート",
+            "pitches": 28,
+            "pct": 10.8
+          },
+          {
+            "pitch_type": "スライダー",
+            "pitches": 24,
+            "pct": 9.3
+          },
+          {
+            "pitch_type": "チェンジアップ",
+            "pitches": 9,
+            "pct": 3.5
+          },
+          {
+            "pitch_type": "スローカーブ",
+            "pitches": 7,
+            "pct": 2.7
+          },
+          {
+            "pitch_type": "不明",
+            "pitches": 1,
+            "pct": 0.4
+          }
+        ]
+      },
+      {
+        "key": "3",
+        "label": "3巡目",
+        "pitches_total": 125,
+        "rows": [
+          {
+            "pitch_type": "フォーク",
+            "pitches": 38,
+            "pct": 30.4
+          },
+          {
+            "pitch_type": "カットボール",
+            "pitches": 35,
+            "pct": 28
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 18,
+            "pct": 14.4
+          },
+          {
+            "pitch_type": "スライダー",
+            "pitches": 16,
+            "pct": 12.8
+          },
+          {
+            "pitch_type": "シュート",
+            "pitches": 13,
+            "pct": 10.4
+          },
+          {
+            "pitch_type": "スローカーブ",
+            "pitches": 4,
+            "pct": 3.2
+          },
+          {
+            "pitch_type": "チェンジアップ",
+            "pitches": 1,
+            "pct": 0.8
+          }
+        ]
+      }
+    ],
+    "byInning": [
+      {
+        "inning": 1,
+        "bf": 32,
+        "ab": 30,
+        "h": 8,
+        "hr": 0,
+        "so": 3,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 25,
+        "er": 0,
+        "avg": ".267",
+        "ipOuts": 25,
+        "ip": "8.1",
+        "era": 0,
+        "whip": 0.96
+      },
+      {
+        "inning": 2,
+        "bf": 30,
+        "ab": 29,
+        "h": 6,
+        "hr": 1,
+        "so": 6,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 23,
+        "er": 0,
+        "avg": ".207",
+        "ipOuts": 23,
+        "ip": "7.2",
+        "era": 0,
+        "whip": 0.913
+      },
+      {
+        "inning": 3,
+        "bf": 32,
+        "ab": 31,
+        "h": 8,
+        "hr": 3,
+        "so": 3,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 25,
+        "er": 0,
+        "avg": ".258",
+        "ipOuts": 25,
+        "ip": "8.1",
+        "era": 0,
+        "whip": 0.96
+      },
+      {
+        "inning": 4,
+        "bf": 33,
+        "ab": 31,
+        "h": 10,
+        "hr": 1,
+        "so": 8,
+        "bb": 2,
+        "hbp": 0,
+        "outs": 20,
+        "er": 0,
+        "avg": ".323",
+        "ipOuts": 20,
+        "ip": "6.2",
+        "era": 0,
+        "whip": 1.8
+      },
+      {
+        "inning": 5,
+        "bf": 30,
+        "ab": 30,
+        "h": 6,
+        "hr": 1,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 19,
+        "er": 0,
+        "avg": ".200",
+        "ipOuts": 19,
+        "ip": "6.1",
+        "era": 0,
+        "whip": 0.947
+      },
+      {
+        "inning": 6,
+        "bf": 14,
+        "ab": 13,
+        "h": 5,
+        "hr": 0,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "outs": 8,
+        "er": 0,
+        "avg": ".385",
+        "ipOuts": 8,
+        "ip": "2.2",
+        "era": 0,
+        "whip": 2.25
+      },
+      {
+        "inning": 7,
+        "bf": 3,
+        "ab": 3,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 3,
+        "er": 0,
+        "avg": ".000",
+        "ipOuts": 3,
+        "ip": "1",
+        "era": 0,
+        "whip": 0
+      },
+      {
+        "inning": 8,
+        "bf": 4,
+        "ab": 4,
+        "h": 1,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "outs": 3,
+        "er": 0,
+        "avg": ".250",
+        "ipOuts": 3,
+        "ip": "1",
+        "era": 0,
+        "whip": 1
+      }
+    ],
+    "byStadium": [
+      {
+        "key": "未設定",
+        "label": "未設定",
+        "ipOuts": 130,
+        "ip": "43.1",
+        "bf": 178,
+        "h": 43,
+        "hr": 6,
+        "so": 22,
+        "bb": 4,
+        "hbp": 0,
+        "bk": 0,
+        "r": 18,
+        "er": 15,
+        "pitches": 618,
+        "era": 3.12,
+        "whip": 1.085,
+        "wins": 5,
+        "losses": 1,
+        "games": 8,
+        "qsCount": 2
+      }
+    ],
+    "byOpponentTeam": [
+      {
+        "key": "未設定",
+        "label": "未設定",
+        "ipOuts": 130,
+        "ip": "43.1",
+        "bf": 178,
+        "h": 43,
+        "hr": 6,
+        "so": 22,
+        "bb": 4,
+        "hbp": 0,
+        "bk": 0,
+        "r": 18,
+        "er": 15,
+        "pitches": 618,
+        "era": 3.12,
+        "whip": 1.085,
+        "wins": 5,
+        "losses": 1,
+        "games": 8,
+        "qsCount": 2
+      }
+    ],
+    "byDayNight": [],
+    "byCatcher": []
+  }
+}

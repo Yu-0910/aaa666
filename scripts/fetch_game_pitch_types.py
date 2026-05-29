@@ -28,7 +28,13 @@ except ImportError:
 # 同じディレクトリの scrape_yahoo_pitch_details から取得・パースを流用
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from scrape_yahoo_pitch_details import fetch_html, build_index, parse_pitch_details
+from pa_outcome_from_ts import batch_pa_outcome_classifications
+from pitch_result_ja_from_ts import batch_pitch_result_classifications
+from scrape_yahoo_pitch_details import (
+    fetch_html,
+    fetch_pitch_detail_score_pages_for_pa,
+    parse_pitch_details_merged_score_pages,
+)
 from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed
 
 BASE_URL = "https://baseball.yahoo.co.jp"
@@ -229,6 +235,15 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
     if not all_pitch_rows:
         return [], {}
 
+    root = Path(__file__).resolve().parent.parent
+    result_texts = [(p.get("result") or "").strip() for p in all_pitch_rows]
+    type_bucket_by_result = {
+        s: pair[1]
+        for s, pair in batch_pitch_result_classifications(
+            result_texts, root
+        ).items()
+    }
+
     by_type = {}
     for p in all_pitch_rows:
         pt = (p.get("pitch_type") or "").strip() or "不明"
@@ -245,6 +260,14 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
             pa_blocks[key] = []
         pa_blocks[key].append(p)
 
+    last_strings: list[str] = []
+    for pitches in pa_blocks.values():
+        if not pitches:
+            continue
+        last_pa = sorted(pitches, key=lambda x: int(x.get("pitch_no") or 0))[-1]
+        last_strings.append((last_pa.get("result") or "").strip())
+    outcome_by = batch_pa_outcome_classifications(last_strings, root)
+
     settlement_by_type = {}
     for key, pitches in pa_blocks.items():
         if not pitches:
@@ -255,20 +278,21 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
             settlement_by_type[pt] = {"ab": 0, "h": 0, "hr": 0, "tb": 0, "so": 0, "bb": 0, "hbp": 0, "sf": 0}
         rec = settlement_by_type[pt]
         result = (last.get("result") or "").strip()
-        if is_settlement_result(result):
+        o = outcome_by[result]
+        if o["settlement"]:
             rec["ab"] += 1
-            if is_hit(result):
+            if o["hit"]:
                 rec["h"] += 1
-                rec["tb"] += get_total_bases(result)
-                if get_total_bases(result) == 4:
+                rec["tb"] += int(o["totalBases"])
+                if o["homeRun"]:
                     rec["hr"] += 1
-        if is_strikeout(result):
+        if o["strikeout"]:
             rec["so"] += 1
-        if is_walk(result):
+        if o["walk"]:
             rec["bb"] += 1
-        if is_hbp(result):
+        if o["hbp"]:
             rec["hbp"] += 1
-        if is_sf(result):
+        if o["sf"]:
             rec["sf"] += 1
 
     total_pitches = len(all_pitch_rows)
@@ -277,10 +301,22 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
     for pitch_type, pitches in by_type.items():
         n = len(pitches)
         set_rec = settlement_by_type.get(pitch_type, {"ab": 0, "h": 0, "hr": 0, "tb": 0, "so": 0, "bb": 0, "hbp": 0, "sf": 0})
-        balls = sum(1 for p in pitches if re.match(r"^ボール", (p.get("result") or "").strip()))
-        swing_miss = sum(1 for p in pitches if re.match(r"^空振り", (p.get("result") or "").strip()))
-        taken = sum(1 for p in pitches if re.match(r"^見逃し", (p.get("result") or "").strip()))
-        foul = sum(1 for p in pitches if re.match(r"^ファウル", (p.get("result") or "").strip()))
+        balls = 0
+        swing_miss = 0
+        taken = 0
+        foul_n = 0
+        for p in pitches:
+            rkey = (p.get("result") or "").strip()
+            bkt = type_bucket_by_result.get(rkey, "none")
+            if bkt == "balls":
+                balls += 1
+            elif bkt == "swing_miss":
+                swing_miss += 1
+            elif bkt == "taken":
+                taken += 1
+            elif bkt == "foul":
+                foul_n += 1
+        foul = foul_n
         in_play = set_rec["ab"] - set_rec["so"]
         strikes = swing_miss + taken + foul + in_play
         strike_pct = f"{(strikes / n * 100):.1f}%" if n else "—"
@@ -356,18 +392,23 @@ def main():
         inning = int(pa["inning"])
         top_bottom = pa["top_bottom"]
         bat_order = int(pa["bat_order"])
-        index = build_index(inning, top_bottom, bat_order)
-        url = f"{BASE_URL}/npb/game/{game_id}/score?index={index}"
         print(f"  [{i+1}/{len(pas_for_pitcher)}] {inning}{top_bottom} {bat_order}番 ... ", end="", flush=True)
-        html = fetch_html(url)
-        if not html:
+        chain = fetch_pitch_detail_score_pages_for_pa(
+            game_id, inning, top_bottom, bat_order, sleep_sec=args.sleep
+        )
+        if not chain:
             print("❌")
             time.sleep(args.sleep)
             continue
-        rows = parse_pitch_details(html, game_id, inning, top_bottom, bat_order)
+        pages_html = [h for _ix, h in chain]
+        rows = parse_pitch_details_merged_score_pages(
+            pages_html, game_id, inning, top_bottom, bat_order
+        )
         if rows:
             all_pitches.extend(rows)
-            print(f"✅ {len(rows)}球")
+            npg = len(chain)
+            extra = f" ({npg}ページ)" if npg > 1 else ""
+            print(f"✅ {len(rows)}球{extra}")
         else:
             print("⚠️ 投球なし")
         time.sleep(args.sleep)

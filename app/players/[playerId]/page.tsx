@@ -4,7 +4,7 @@ import type React from "react"
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useEffect, useLayoutEffect, useMemo } from "react"
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
@@ -27,6 +27,17 @@ import {
 import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
 import { rosterEnglishAliasKeys, rosterEnglishFullFromCsvRow } from "@/lib/rosterEnglishDisplay"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
+import { formatSlashStatDisplay, slashRate3FromCounts } from "@/lib/battingRateFormat"
+import {
+  appendCareerTotalRow,
+  careerAgeAtYear,
+  careerYearLabel,
+  formatCareerCell,
+  formatSalaryManFromRow,
+  splitBattingColumns,
+  splitPitchingColumns,
+  type CareerDisplayRow,
+} from "@/lib/playerCareerMergedDisplay"
 import type {
   PitcherSeasonPocPayload,
   PitcherSeasonPitchingApiResponse,
@@ -59,6 +70,7 @@ import {
   EMPTY_STADIUM_VS_ROWS,
 } from "@/lib/pitcherSeasonPocUi"
 import { formatEra } from "@/lib/formatStat"
+import { buildCareerHighBattingCards } from "@/lib/playerCareerHighBatting"
 import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327 } from "@/lib/yahooGame/pitcherPocDefaults"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 import { unwrapPitcherZoneStatsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
@@ -66,8 +78,19 @@ import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import DerivedPipelineEmptyNotice, {
   DerivedPipelineFielderHint,
 } from "@/app/components/DerivedPipelineEmptyNotice"
+import CareerBattingTableRankingStyle from "@/app/components/player/CareerBattingTableRankingStyle"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
+
+type ProfileMergedPayload = {
+  npb_player_id: string
+  name_ja: string
+  profile?: { birth_date_raw?: string; pro_debut_raw?: string; career_raw?: string }
+  salary_by_year?: Record<string, number>
+  career_total_salary_display?: string | null
+  career_batting?: { rows?: Array<Record<string, any>>; total?: Record<string, any> }
+  career_pitching?: { rows?: Array<Record<string, any>>; total?: Record<string, any> } | null
+} | null
 
 /** Phase 7 期間タブ: BF ベースの率表示 */
 function pctOfBf(num: number, bf: number): string {
@@ -129,28 +152,21 @@ const playerRomanNames: Record<string, string> = {
   川端慎吾: "Kawabata Shingo",
 }
 
-// サンプルデータ
-const playerData = {
-  name: "近本光司",
-  team: "H", // 阪神
-  birthDate: "1994年11月9日",
-  age: 30,
-  birthPlace: "兵庫県津名郡東浦町（現：淡路市）",
-  proDebut: "2018年 ドラフト2位（全体14位）",
-  career: "社高等学校 → 関西学院大学 → 大阪ガス → 阪神 (2019 - )",
-  totalSalary: "10億5000万円",
-  championships: "日本一：5回、リーグ優勝：7回",
-  faYear: "2027年",
+function parseBirthDateJa(raw: string): { y: number; m: number; d: number } | null {
+  const m = String(raw || "").match(/^(\d{4})年(\d{1,2})月(\d{1,2})日/)
+  if (!m) return null
+  return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) }
 }
 
-const careerHighs = [
-  { title: "OPS", value: "1.043", year: "2023年", 足: "" },
-  { title: "打率", value: ".338", year: "2023年", 足: "" },
-  { title: "本塁打", value: "21", year: "2023年", 足: "本" },
-  { title: "打点", value: "84", year: "2023年", 足: "点" },
-  { title: "出塁率", value: ".425", year: "2023年", 足: "" },
-  { title: "長打率", value: ".618", year: "2023年", 足: "" },
-]
+function calcAgeFromJaBirth(raw: string, now = new Date()): number | null {
+  const p = parseBirthDateJa(raw)
+  if (!p) return null
+  let age = now.getFullYear() - p.y
+  const mm = now.getMonth() + 1
+  const dd = now.getDate()
+  if (mm < p.m || (mm === p.m && dd < p.d)) age -= 1
+  return age
+}
 
 function stripQueryHash(s: string): string {
   return (s || "").split("?")[0]?.split("#")[0] || ""
@@ -183,188 +199,54 @@ function playerIdSegmentFromPathname(pathname: string): string {
 
 /** NPB 公式 player_id（master CSV / ランキングリンクでパスが数値のみになることがある） */
 const AOYAGI_NPB_ID = "71175132"
-const careerStats = [
-  {
-    year: 2019,
-    age: 24,
-    salary: 1200,
-    ops: 0.791,
-    avg: 0.271,
-    hits: 146,
-    hr: 8,
-    rbi: 47,
-    games: 143,
-    pa: 638,
-    ab: 539,
-    obp: 0.348,
-    slg: 0.443,
-    runs: 94,
-    doubles: 26,
-    triples: 7,
-    sb: 36,
-    cs: 7,
-    bb: 70,
-    so: 131,
-    isop: 0.172,
-    isod: 0.077,
-    bbp: 11.0,
-    kp: 20.5,
-    bbk: 0.53,
-    sh: 24,
-    sf: 5,
-    hbp: 4,
-  },
-  {
-    year: 2020,
-    age: 25,
-    salary: 2400,
-    ops: 0.765,
-    avg: 0.29,
-    hits: 124,
-    hr: 8,
-    rbi: 38,
-    games: 120,
-    pa: 547,
-    ab: 428,
-    obp: 0.376,
-    slg: 0.449,
-    runs: 70,
-    doubles: 20,
-    triples: 5,
-    sb: 24,
-    cs: 8,
-    bb: 67,
-    so: 89,
-    isop: 0.159,
-    isod: 0.086,
-    bbp: 12.2,
-    kp: 16.3,
-    bbk: 0.75,
-    sh: 19,
-    sf: 3,
-    hbp: 5,
-  },
-  {
-    year: 2021,
-    age: 26,
-    salary: 5000,
-    ops: 0.756,
-    avg: 0.288,
-    hits: 153,
-    hr: 4,
-    rbi: 39,
-    games: 143,
-    pa: 653,
-    ab: 531,
-    obp: 0.364,
-    slg: 0.392,
-    runs: 85,
-    doubles: 27,
-    triples: 7,
-    sb: 28,
-    cs: 4,
-    bb: 78,
-    so: 105,
-    isop: 0.104,
-    isod: 0.076,
-    bbp: 11.9,
-    kp: 16.1,
-    bbk: 0.74,
-    sh: 33,
-    sf: 2,
-    hbp: 9,
-  },
-  {
-    year: 2022,
-    age: 27,
-    salary: 9000,
-    ops: 0.853,
-    avg: 0.302,
-    hits: 170,
-    hr: 10,
-    rbi: 52,
-    games: 143,
-    pa: 666,
-    ab: 563,
-    obp: 0.383,
-    slg: 0.47,
-    runs: 103,
-    doubles: 32,
-    triples: 8,
-    sb: 25,
-    cs: 8,
-    bb: 72,
-    so: 100,
-    isop: 0.168,
-    isod: 0.081,
-    bbp: 10.8,
-    kp: 15.0,
-    bbk: 0.72,
-    sh: 23,
-    sf: 4,
-    hbp: 4,
-  },
-  {
-    year: 2023,
-    age: 28,
-    salary: 25000,
-    ops: 1.043,
-    avg: 0.338,
-    hits: 181,
-    hr: 21,
-    rbi: 84,
-    games: 140,
-    pa: 641,
-    ab: 536,
-    obp: 0.425,
-    slg: 0.618,
-    runs: 115,
-    doubles: 36,
-    triples: 4,
-    sb: 18,
-    cs: 5,
-    bb: 91,
-    so: 94,
-    isop: 0.28,
-    isod: 0.087,
-    bbp: 14.2,
-    kp: 14.7,
-    bbk: 0.97,
-    sh: 7,
-    sf: 5,
-    hbp: 2,
-  },
-  {
-    year: 2024,
-    age: 29,
-    salary: 52900,
-    ops: 0.829,
-    avg: 0.289,
-    hits: 162,
-    hr: 15,
-    rbi: 67,
-    games: 143,
-    pa: 649,
-    ab: 561,
-    obp: 0.366,
-    slg: 0.463,
-    runs: 91,
-    doubles: 28,
-    triples: 6,
-    sb: 22,
-    cs: 6,
-    bb: 66,
-    so: 112,
-    isop: 0.174,
-    isod: 0.077,
-    bbp: 10.2,
-    kp: 17.3,
-    bbk: 0.59,
-    sh: 15,
-    sf: 4,
-    hbp: 3,
-  },
-]
+/** Phase 7 通算打撃表 UI（ランキング風・1表横スクロール） */
+
+/**
+ * キャリアハイ打撃カード：枠幅（cqw）に連動して一括スケール。
+ * 指標名・黄色帯・数値の相互比率は em で固定。
+ */
+const CAREER_HIGH_CARD_SCALE_CQW = 8.5
+/** 数値エリアを含む枠線の太さ（基準 0.107em の 6 割） */
+const CAREER_HIGH_CARD_BORDER_EM = 0.107 * 0.6
+const CAREER_HIGH_LABEL_EM = 0.684
+const CAREER_HIGH_LABEL_PAD_EM = 1.364
+/** 指標名テキスト・黄色背景のスケール */
+const CAREER_HIGH_LABEL_TEXT_SCALE = 0.6 * 0.8
+const CAREER_HIGH_LABEL_BG_HEIGHT_SCALE = 0.9 * 0.7
+const CAREER_HIGH_LABEL_BG_TOP_EM = 0.17
+/** 黄色内で指標名を少し下げる（視覚的な中央合わせ） */
+const CAREER_HIGH_LABEL_TEXT_OFFSET_EM = 0.06
+const CAREER_HIGH_LABEL_TEXT_LETTER_SPACING_EM = 0.05
+const CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE = 1.1
+const CAREER_HIGH_VALUE_TOP_PERCENT = 50
+const CAREER_HIGH_LABEL_BG_WIDTH_SCALE = 1.3
+const CAREER_HIGH_LABEL_BG_WIDTH_FINAL_SCALE = 0.8
+/** 黄色背景の幅（指標名テキスト幅とは独立・枠より狭く黒を見せる） */
+const CAREER_HIGH_LABEL_BG_WIDTH_EM =
+  (CAREER_HIGH_LABEL_PAD_EM * CAREER_HIGH_LABEL_BG_WIDTH_SCALE * 2 +
+    CAREER_HIGH_LABEL_EM * 2.5) *
+  CAREER_HIGH_LABEL_BG_WIDTH_FINAL_SCALE *
+  CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE
+/** 枠幅に対する黄色の上限（左右に黒背景が見える割合） */
+const CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT = 76 * CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE
+const CAREER_HIGH_VALUE_EM = 2.3 * 0.4 * 1.1
+
+/**
+ * 今季ブロック scale(0.7) 内の見出しと同じ見え方（対左右別の対戦成績と揃える）
+ * titleBase 1.125/1.625rem × 0.7、左帯 6px × 0.7
+ */
+const FIELDER_PILOT_HEADING_SCALE = 0.7
+const FIELDER_PILOT_SECTION_STRIPE_PX = 6 * FIELDER_PILOT_HEADING_SCALE
+
+const { left: battingColsLeft, right: battingColsRight } = splitBattingColumns()
+const { left: pitchingColsLeft, right: pitchingColsRight } = splitPitchingColumns()
+
+const careerTh =
+  "px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0"
+const careerTd =
+  "px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500"
+const careerYearTd =
+  "px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500 first:border-l-0 font-bold"
 
 function PlayerPageClient({
   layout,
@@ -375,7 +257,7 @@ function PlayerPageClient({
 }) {
   const isMobile = layout === "mobile"
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
-  const BUILD_MARKER = "sugano-season-ui-20260326-01"
+  const BUILD_MARKER = "phase7-career-bat-all-players-20260528"
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedYear, setSelectedYear] = useState(2025)
   /** 既定は今季。名簿照合前は showSeasonCareerTabs が偽でも通算は (!showSeasonCareerTabs || …) で出るため、career 固定より安全 */
@@ -421,6 +303,8 @@ function PlayerPageClient({
   >([])
   const [displayName, setDisplayName] = useState("")
   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  const [profileMergedSettled, setProfileMergedSettled] = useState(false)
   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
@@ -632,6 +516,52 @@ function PlayerPageClient({
     }
   }, [displayName, playerIdNormalized])
 
+  useEffect(() => {
+    let cancelled = false
+    setProfileMergedSettled(false)
+    setProfileMerged(null)
+    const pathId = playerIdNormalized.trim()
+    const npbFromRoster = rosterMatchedNpbId.trim()
+    const fetchId = npbFromRoster || pathId
+    if (!fetchId) {
+      setProfileMergedSettled(true)
+      return
+    }
+
+    const PROFILE_MERGED_TIMEOUT_MS = 120_000
+
+    const loadMerged = (attempt: number) => {
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+      return fetch(`/api/players/${encodeURIComponent(fetchId)}/profile-merged`, {
+        signal: controller.signal,
+      })
+        .then((r) => r.json())
+        .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+          if (cancelled) return
+          setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+          setProfileMergedSettled(true)
+        })
+        .catch(() => {
+          if (cancelled) return
+          if (attempt < 1) {
+            return loadMerged(attempt + 1)
+          }
+          setProfileMerged(null)
+          setProfileMergedSettled(true)
+        })
+        .finally(() => {
+          window.clearTimeout(timeoutId)
+        })
+    }
+
+    void loadMerged(0)
+
+    return () => {
+      cancelled = true
+    }
+  }, [playerIdNormalized, rosterMatchedNpbId])
+
   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -750,24 +680,24 @@ function PlayerPageClient({
     numericPilotIdFromPath ||
     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
 
-  /**
-   * 今季ブロックは statsTab === "season" のときだけ描画。名簿照合が遅いと一時的に showSeasonCareerTabs が偽になるが、
-   * ここで career に落とすと照合成功後も通算のまま残り得た（初期 career との組み合わせ）。
-   * 非名簿ページは通算表示が (!showSeasonCareerTabs || statsTab === "career") で担保されるため、既定は season のまま維持する。
-   */
+  /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+  const lastStatsTabInitForPlayerRef = useRef("")
   useEffect(() => {
-    if (
-      showSeasonCareerTabs &&
-      (showPitcherSeasonSuganoUi || showFielderSeasonPilotUi)
-    ) {
-      setStatsTab("season")
+    const id = playerIdNormalized.trim()
+    if (!id || id === lastStatsTabInitForPlayerRef.current) return
+    lastStatsTabInitForPlayerRef.current = id
+    if (typeof window === "undefined") return
+    const tab = new URLSearchParams(window.location.search).get("tab")
+    if (tab === "career") {
+      setStatsTab("career")
+      return
     }
-  }, [
-    showSeasonCareerTabs,
-    showPitcherSeasonSuganoUi,
-    showFielderSeasonPilotUi,
-    playerIdNormalized,
-  ])
+    if (tab === "season") {
+      setStatsTab("season")
+      return
+    }
+    setStatsTab("season")
+  }, [playerIdNormalized])
 
   /** 捕手出場（途中出場含む）: 捕手を守ったことがある選手だけ「捕手成績」タブを出す */
   useEffect(() => {
@@ -1184,9 +1114,27 @@ function PlayerPageClient({
     () =>
       isRosterPlayer && rosterStripeKey
         ? rankingTeamStripeColor(rosterStripeKey)
-        : teamColors[playerData.team] || "#666",
+        : "#666",
     [isRosterPlayer, rosterStripeKey]
   )
+  /** 対左右別と同じ見出し文字・左帯（scale 0.7 後）。通算タブ先頭は上余白なし */
+  const careerHighSectionH2Class = showFielderSeasonPilotUi ? "mb-5 mt-0" : `${tb} mb-6 pl-4`
+  const careerBattingTotalSectionH2Class = showFielderSeasonPilotUi
+    ? "mb-5 mt-0"
+    : `${tb} mb-6 pl-4`
+  const careerBattingSectionH2Style = showFielderSeasonPilotUi
+    ? {
+        borderLeft: `${FIELDER_PILOT_SECTION_STRIPE_PX}px solid ${sectionStripeColor}`,
+        fontWeight: 900 as const,
+        fontSize: isMobile
+          ? `${1.625 * FIELDER_PILOT_HEADING_SCALE}rem`
+          : `${1.125 * FIELDER_PILOT_HEADING_SCALE}rem`,
+        paddingLeft: `${1 * FIELDER_PILOT_HEADING_SCALE}rem`,
+      }
+    : {
+        borderLeft: `6px solid ${sectionStripeColor}`,
+        fontWeight: 900 as const,
+      }
 
   const pitcherPocTeamTable = useMemo(
     () =>
@@ -1257,6 +1205,40 @@ function PlayerPageClient({
   /** 数値 ID URL は名簿 API 待ちで全画面スピナーにしない */
   const pageShellReady =
     rosterMainReady || numericPilotIdFromPath || Boolean(playerIdNormalized.trim())
+
+  const mergedBirthRaw = String(profileMerged?.profile?.birth_date_raw ?? "").trim()
+  const mergedAge = mergedBirthRaw ? calcAgeFromJaBirth(mergedBirthRaw) : null
+  const mergedProDebut = String(profileMerged?.profile?.pro_debut_raw ?? "").trim()
+  const mergedCareer = String(profileMerged?.profile?.career_raw ?? "").trim()
+  const mergedSalaryTotal = String(profileMerged?.career_total_salary_display ?? "").trim()
+  const mergedSalaryTotalPlain = mergedSalaryTotal
+    ? mergedSalaryTotal.split("（")[0]?.trim() || mergedSalaryTotal
+    : ""
+
+  const mergedBattingRowsForDisplay = useMemo(() => {
+    const rows = (profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]
+    const total = (profileMerged?.career_batting?.total ?? null) as CareerDisplayRow | null
+    return appendCareerTotalRow(rows, total)
+  }, [profileMerged])
+
+  const mergedPitchingRowsForDisplay = useMemo(() => {
+    const rows = (profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[]
+    const total = (profileMerged?.career_pitching?.total ?? null) as CareerDisplayRow | null
+    return appendCareerTotalRow(rows, total)
+  }, [profileMerged])
+
+  const hasMergedBatting = mergedBattingRowsForDisplay.length > 0
+  const hasMergedPitching = mergedPitchingRowsForDisplay.length > 0
+
+  const careerHighBattingCards = useMemo(
+    () =>
+      buildCareerHighBattingCards(
+        (profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[],
+      ),
+    [profileMerged],
+  )
+
+  const useRankingStyleCareerBattingTable = hasMergedBatting
 
   return (
     <div
@@ -1437,7 +1419,15 @@ function PlayerPageClient({
 
         {/* Profile Table */}
         <div
-          className={showPitcherSeasonSuganoUi ? "mb-6" : showFielderSeasonPilotUi ? "mb-6" : "mb-12"}
+          className={
+            showPitcherSeasonSuganoUi
+              ? "mb-6"
+              : showFielderSeasonPilotUi
+                ? statsTab === "career"
+                  ? "mb-2"
+                  : "mb-6"
+                : "mb-12"
+          }
           style={
             showPitcherSeasonSuganoUi || showFielderSeasonPilotUi
               ? {
@@ -1465,23 +1455,8 @@ function PlayerPageClient({
                   生年月日
                 </td>
                 <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.birthDate}（{playerData.age}歳）
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  出身地
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.birthPlace}
+                  {mergedBirthRaw || "—"}
+                  {mergedAge !== null ? `（${mergedAge}歳）` : ""}
                 </td>
               </tr>
               <tr>
@@ -1497,7 +1472,7 @@ function PlayerPageClient({
                   プロ入り
                 </td>
                 <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.proDebut}
+                  {mergedProDebut || "—"}
                 </td>
               </tr>
               <tr>
@@ -1513,7 +1488,7 @@ function PlayerPageClient({
                   経歴
                 </td>
                 <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.career}
+                  {mergedCareer || "—"}
                 </td>
               </tr>
               <tr>
@@ -1529,39 +1504,7 @@ function PlayerPageClient({
                   生涯年俸
                 </td>
                 <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.totalSalary}
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  チーム成績
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.championships}
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  FA取得（推定）
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {playerData.faYear}
+                  {mergedSalaryTotalPlain || "—"}
                 </td>
               </tr>
             </tbody>
@@ -1673,7 +1616,8 @@ function PlayerPageClient({
                       }
                       const pct = (num: number, den: number, digits = 1): string =>
                         den > 0 ? `${((num / den) * 100).toFixed(digits)}%` : na
-                      const avg = (h: number, ab: number): string => (ab > 0 ? (h / ab).toFixed(3) : na)
+                      const avg = (h: number, ab: number): string =>
+                        ab > 0 ? slashRate3FromCounts(h, ab) : na
 
                       const rows = catcherPitchers ?? []
                       const sum = rows.reduce(
@@ -3104,10 +3048,10 @@ function PlayerPageClient({
                                     {row.whiff_pct}
                                   </td>
                                   <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {row.avg}
+                                    {formatSlashStatDisplay(row.avg)}
                                   </td>
                                   <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {row.ops ?? "—"}
+                                    {formatSlashStatDisplay(row.ops ?? "—")}
                                   </td>
                                 </tr>
                               ))}
@@ -3502,7 +3446,7 @@ function PlayerPageClient({
                                 if (!r) return na
                                 const s = (r.avg ?? "").trim()
                                 if (s) return s
-                                return r.ab > 0 ? (r.h / r.ab).toFixed(3) : na
+                                return r.ab > 0 ? slashRate3FromCounts(r.h, r.ab) : na
                               }
 
                               return LABELS.map((item) => {
@@ -3728,7 +3672,7 @@ function PlayerPageClient({
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
                                 <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg}</td>
+                                <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.avg)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -4196,51 +4140,105 @@ function PlayerPageClient({
           <>
         {/* Section Title */}
         <h2
-          className={`${tb} mb-6 pl-4`}
-          style={{
-            borderLeft: `6px solid ${sectionStripeColor}`,
-            fontWeight: 900,
-          }}
+          className={careerHighSectionH2Class}
+          style={careerBattingSectionH2Style}
         >
-          キャリアハイの打撃成績（2023年）
+          キャリアハイの打撃成績
         </h2>
 
         {/* Career High Grid */}
-        <div className={isMobile ? "grid grid-cols-2 gap-4 mb-12" : "grid grid-cols-3 gap-4 mb-12"}>
-          {careerHighs.map((stat, idx) => (
+        <div className={isMobile ? "grid grid-cols-3 gap-2 mb-12" : "grid grid-cols-3 gap-4 mb-12"}>
+          {careerHighBattingCards.map((stat) => (
             <div
-              key={idx}
+              key={stat.title}
               className="overflow-hidden"
               style={{
-                background: "linear-gradient(145deg, #0c0c0c, #000000)",
-                border: "1.6px solid #555555",
+                containerType: "inline-size",
+                fontSize: `${CAREER_HIGH_CARD_SCALE_CQW}cqw`,
+                backgroundColor: "#000000",
+                border: `${CAREER_HIGH_CARD_BORDER_EM}em solid #555555`,
                 borderRadius: "0",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.5)",
+                boxShadow: "0 0.25em 0.625em rgba(0,0,0,0.5)",
                 aspectRatio: "3 / 2",
                 display: "flex",
                 flexDirection: "column",
               }}
             >
               <div
-                className="px-4 py-1.5 text-center latin font-light tabular-nums tracking-tight"
+                className="latin tabular-nums tracking-tight"
                 style={{
-                  backgroundColor: "#FFFF44",
-                  color: "#000000",
-                  fontWeight: 900,
+                  position: "relative",
+                  flexShrink: 0,
+                  width: "100%",
+                  backgroundColor: "#000000",
+                  paddingTop: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
+                  height: `calc(${CAREER_HIGH_LABEL_BG_TOP_EM}em + ${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em)`,
                 }}
               >
-                {stat.title}
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center px-2">
                 <div
-                  className={`${isMobile ? "text-[3.75rem]" : "text-[2.875rem]"} font-black leading-none mb-4`}
+                  aria-hidden
                   style={{
-                    fontFamily: 'var(--font-bebas-neue), "Bebas Neue", sans-serif',
-                    letterSpacing: "1.2px",
-                    fontVariantNumeric: "tabular-nums",
+                    position: "absolute",
+                    left: "50%",
+                    top: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
+                    transform: "translateX(-50%)",
+                    width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
+                    height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
+                    backgroundColor: "#FFFF44",
+                  }}
+                />
+                <div
+                  className="absolute z-[1] flex items-center justify-center"
+                  style={{
+                    left: "50%",
+                    top: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
+                    transform: "translateX(-50%)",
+                    width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
+                    height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
                   }}
                 >
-                  {stat.value}
+                  <span
+                    className="font-light leading-none whitespace-nowrap"
+                    style={{
+                      color: "#000000",
+                      fontWeight: 900,
+                      fontSize: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_TEXT_SCALE}em`,
+                      letterSpacing: `${CAREER_HIGH_LABEL_TEXT_LETTER_SPACING_EM}em`,
+                      transform: `translateY(${CAREER_HIGH_LABEL_TEXT_OFFSET_EM}em)`,
+                      whiteSpace: "nowrap",
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    {stat.title}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="flex-1 relative min-h-0"
+                style={{ backgroundColor: "#000000", paddingLeft: "0.5em", paddingRight: "0.5em" }}
+              >
+                <div
+                  className="absolute inset-x-0 flex justify-center"
+                  style={{
+                    top: `${CAREER_HIGH_VALUE_TOP_PERCENT}%`,
+                    transform: "translateY(-50%)",
+                    paddingLeft: "0.5em",
+                    paddingRight: "0.5em",
+                  }}
+                >
+                  <div
+                    className="font-black leading-none"
+                    style={{
+                      flexShrink: 0,
+                      fontSize: `${CAREER_HIGH_VALUE_EM}em`,
+                      lineHeight: 1,
+                      fontFamily: 'var(--font-bebas-neue), "Bebas Neue", sans-serif',
+                      letterSpacing: "0.032em",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {stat.value}
+                  </div>
                 </div>
               </div>
               {stat.year && (
@@ -4252,7 +4250,142 @@ function PlayerPageClient({
           ))}
         </div>
 
-        {/* Section Title */}
+        {!profileMergedSettled && (
+          <div className="mb-8">
+            <SectionLoadingSpinner className="py-6" />
+          </div>
+        )}
+
+        {profileMergedSettled && !profileMerged && (
+          <div
+            className="mb-8 max-w-3xl rounded border border-amber-600/50 bg-amber-950/35 px-3 py-2.5 text-[11px] leading-relaxed text-amber-100/95"
+            role="status"
+          >
+            <p className="font-bold text-amber-200">通算データの読み込みに失敗しました</p>
+            <p className="mt-1.5 text-[10px] text-amber-100/85">
+              初回は API のコンパイルに時間がかかることがあります。数十秒待ってからページを再読み込みしてください。
+              解消しない場合は{" "}
+              <code className="rounded bg-black/35 px-1 py-0.5 text-[9px]">npm run player-profile:phase6:merge</code>
+              を実行してください。
+            </p>
+          </div>
+        )}
+
+        {profileMergedSettled && profileMerged && !hasMergedBatting && !hasMergedPitching && (
+          <div
+            className="mb-8 max-w-3xl rounded border border-amber-600/50 bg-amber-950/35 px-3 py-2.5 text-[11px] leading-relaxed text-amber-100/95"
+            role="status"
+          >
+            <p className="font-bold text-amber-200">通算成績データがありません</p>
+            <p className="mt-1.5 text-[10px] text-amber-100/85">
+              マスタ CSV に通算成績が無い選手です（年俸のみの場合があります）。
+            </p>
+          </div>
+        )}
+
+        {hasMergedBatting && (
+          <>
+        <h2
+          className={careerBattingTotalSectionH2Class}
+          style={careerBattingSectionH2Style}
+        >
+          通算の打撃成績
+        </h2>
+
+        {useRankingStyleCareerBattingTable ? (
+          <CareerBattingTableRankingStyle
+            rows={mergedBattingRowsForDisplay}
+            birthRaw={mergedBirthRaw}
+          />
+        ) : (
+        <div className={isMobile ? "mb-4 grid grid-cols-1 gap-4" : "mb-4 grid grid-cols-2 gap-4"}>
+          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+            <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                  <th className={careerTh}>年度</th>
+                  <th className={careerTh}>年齢</th>
+                  {battingColsLeft.map((col) => (
+                    <th key={col.key} className={careerTh}>
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {mergedBattingRowsForDisplay.map((stat, idx) => {
+                  const isTotalRow = Boolean(stat.is_total) || stat.year === "通算"
+                  return (
+                  <tr
+                    key={`bat-l-${idx}`}
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                      ...(isTotalRow ? { borderTop: "2px solid #ffff44" } : {}),
+                    }}
+                  >
+                    <td className={careerYearTd} style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                      {careerYearLabel(stat)}
+                    </td>
+                    <td className={careerTd}>{careerAgeAtYear(mergedBirthRaw, stat)}</td>
+                    {battingColsLeft.map((col) => (
+                      <td key={col.key} className={careerTd}>
+                        {formatCareerCell(col, stat)}
+                      </td>
+                    ))}
+                  </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+            <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                  <th className={careerTh}>年度</th>
+                  <th className={careerTh}>年齢</th>
+                  {battingColsRight.map((col) => (
+                    <th key={col.key} className={careerTh}>
+                      {col.label}
+                    </th>
+                  ))}
+                  <th className={careerTh}>年俸（万）</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mergedBattingRowsForDisplay.map((stat, idx) => {
+                  const isTotalRow = Boolean(stat.is_total) || stat.year === "通算"
+                  return (
+                  <tr
+                    key={`bat-r-${idx}`}
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                      ...(isTotalRow ? { borderTop: "2px solid #ffff44" } : {}),
+                    }}
+                  >
+                    <td className={careerYearTd} style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                      {careerYearLabel(stat)}
+                    </td>
+                    <td className={careerTd}>{careerAgeAtYear(mergedBirthRaw, stat)}</td>
+                    {battingColsRight.map((col) => (
+                      <td key={col.key} className={careerTd}>
+                        {formatCareerCell(col, stat)}
+                      </td>
+                    ))}
+                    <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                  </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        )}
+          </>
+        )}
+
+        {hasMergedPitching && (
+          <>
         <h2
           className={`${tb} mb-6 pl-4`}
           style={{
@@ -4260,100 +4393,75 @@ function PlayerPageClient({
             fontWeight: 900,
           }}
         >
-          通算の打撃成績
+          通算の投手成績
         </h2>
 
-        {/* Career Stats Table - 縦2列、スライドなしで全表示 */}
-        <div className={isMobile ? "mb-4 grid grid-cols-1 gap-4" : "mb-4 grid grid-cols-2 gap-4"}>
-          <div className="rounded overflow-hidden min-w-0">
-            <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">年度</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">年齢</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">年俸</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">OPS</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">打率</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">安打</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">本塁</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">打点</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">試合</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">打席</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">打数</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">出塁</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">長打</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">得点</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {careerStats.map((stat, idx) => (
-                  <tr key={idx} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500 first:border-l-0 font-bold" style={{ backgroundColor: "#FFFF44", color: "#000000" }}>{stat.year}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.age}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.salary.toLocaleString()}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.ops.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.avg.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.hits}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.hr}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.rbi}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.games}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.pa}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.ab}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.obp.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.slg.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.runs}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          <div className="rounded overflow-hidden min-w-0">
+        <div className={isMobile ? "mb-12 grid grid-cols-1 gap-4" : "mb-12 grid grid-cols-2 gap-4"}>
+          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">年度</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">年齢</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">２Ｂ</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">３Ｂ</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">盗塁</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">盗塁死</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">四球</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">三振</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IsoP</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IsoD</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB%</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K%</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB/K</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">犠打</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">犠飛</th>
-                  <th className="px-1 py-0.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">死球</th>
+                  <th className={careerTh}>年度</th>
+                  <th className={careerTh}>年齢</th>
+                  {pitchingColsLeft.map((col) => (
+                    <th key={col.key} className={careerTh}>
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {careerStats.map((stat, idx) => (
-                  <tr key={idx} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500 first:border-l-0 font-bold" style={{ backgroundColor: "#FFFF44", color: "#000000" }}>{stat.year}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.age}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.doubles}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.triples}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.sb}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.cs}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.bb}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.so}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.isop.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.isod.toFixed(3)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.bbp.toFixed(1)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.kp.toFixed(1)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.bbk.toFixed(2)}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.sh}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.sf}</td>
-                    <td className="px-1 py-0.5 text-center latin font-black tabular-nums text-[10px] border-l border-gray-500">{stat.hbp}</td>
+                {mergedPitchingRowsForDisplay.map((stat, idx) => (
+                  <tr key={`pit-l-${idx}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                    <td className={careerYearTd} style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                      {careerYearLabel(stat)}
+                    </td>
+                    <td className={careerTd}>{careerAgeAtYear(mergedBirthRaw, stat)}</td>
+                    {pitchingColsLeft.map((col) => (
+                      <td key={col.key} className={careerTd}>
+                        {formatCareerCell(col, stat)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+            <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                  <th className={careerTh}>年度</th>
+                  <th className={careerTh}>年齢</th>
+                  {pitchingColsRight.map((col) => (
+                    <th key={col.key} className={careerTh}>
+                      {col.label}
+                    </th>
+                  ))}
+                  <th className={careerTh}>年俸（万）</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mergedPitchingRowsForDisplay.map((stat, idx) => (
+                  <tr key={`pit-r-${idx}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                    <td className={careerYearTd} style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                      {careerYearLabel(stat)}
+                    </td>
+                    <td className={careerTd}>{careerAgeAtYear(mergedBirthRaw, stat)}</td>
+                    {pitchingColsRight.map((col) => (
+                      <td key={col.key} className={careerTd}>
+                        {formatCareerCell(col, stat)}
+                      </td>
+                    ))}
+                    <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
+          </>
+        )}
           </>
         )}
         </>

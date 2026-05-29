@@ -1,16 +1,37 @@
 /**
- * Phase 12: Phase 11 の計算済みJSONから、ランキングページが読む静的JSONを生成する。
- * 行のキーは `config/metric_map.json` に合わせ、2025年ランキングJSONと同じ参照形（row.ops 等）にする。
+ * Phase 12: canonical から打撃ランキング用静的 JSON を生成する。
+ * 集計は `lib/yahooGame/canonicalBattingSeasonAgg.ts` を利用（phase11 の個人 JSON ファイルは不要）。
+ *
+ * 注意:
+ * - 一球ログ（plateAppearances）のみで集計すると、復元テキストの表記ゆれ等で AB/BB がズレることがある。
+ * - 既定（`TOPPAGE_BATTING_SEASON_AGG` 未設定）: ハイブリッド（出場行の H/AB 優先）。
+ * - **`TOPPAGE_BATTING_SEASON_AGG=appearance_slots`**: 出場末尾列のみから積み上げ（計画:
+ *   `docs/plan_ranking_profile_appearance_slots_only_phases.md`）。
  *
  * 実行:
  *   npx tsx scripts/phase12_build_rankings_from_phase11.ts --year 2026
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs"
+import { mkdirSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { BattingLine, CanonicalGameDocument, LineupPlayer } from "../lib/yahooGame/types"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import {
+  aggregateBattingSeasonForProfilesAndRankings,
+  buildEnrichedBattingSeasonRow,
+} from "../lib/yahooGame/canonicalBattingSeasonAgg"
+import {
+  CSV_TEAM_TO_RANKING_SHORT,
+  leagueBucketForTeamShort,
+} from "../lib/yahooGame/canonicalPitchingSeasonAgg"
+import { aggregateSeasonTeamGamesFromCanonical } from "../lib/yahooGame/aggregateTeamGamesFromCanonical"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { writeSeasonTeamGamesFromAggregate } from "../lib/ranking/teamGamesJson"
+import {
+  assignRanks,
+  filterBattingRowsForQualifyingAtBuild,
+} from "../lib/ranking/filterRankingsByQualifyingAtBuild"
 import { loadMetricsFromRecord } from "../lib/ranking/record"
 import { getJsonKey } from "../lib/ranking/metricMap"
 import { sanitizeMetricForPath } from "../lib/ranking/url"
@@ -24,13 +45,6 @@ import {
   findRosterPlayerByPublicIdOrJaName,
   rosterEnglishShortForRanking,
 } from "../lib/npbRoster"
-
-type Phase11BattingFile = {
-  schemaVersion?: string
-  seasonYear?: string
-  yahooBatterId?: string
-  rows?: SeasonStatsRow[]
-}
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -47,23 +61,6 @@ function parseArgs(): { year: string } {
   return { year }
 }
 
-function loadCanonicalDocs(): CanonicalGameDocument[] {
-  const dir = join(projectRoot, "_data", "scraped_games", "canonical")
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json"))
-  const out: CanonicalGameDocument[] = []
-  for (const f of files) {
-    const p = join(dir, f)
-    try {
-      const doc = JSON.parse(readFileSync(p, "utf8")) as CanonicalGameDocument
-      if (doc?.schemaVersion === "yahoo-game-canonical-v1" && doc?.gameId) out.push(doc)
-    } catch {
-      // ignore
-    }
-  }
-  return out
-}
-
 function teamForYahooId(doc: CanonicalGameDocument, yahooId: string): string {
   for (const team of doc.game.teams ?? []) {
     const teamName = String(team.teamName ?? "").trim()
@@ -72,22 +69,6 @@ function teamForYahooId(doc: CanonicalGameDocument, yahooId: string): string {
     }
   }
   return ""
-}
-
-/** 名簿の正式チーム名（CSVと同一）→ ランキング表示の略称（RankingUI の teamColors と整合） */
-const CSV_TEAM_TO_RANKING_SHORT: Record<string, string> = {
-  中日ドラゴンズ: "中日",
-  広島東洋カープ: "広島",
-  東京ヤクルトスワローズ: "ヤクルト",
-  読売ジャイアンツ: "巨人",
-  阪神タイガース: "阪神",
-  横浜DeNAベイスターズ: "DeNA",
-  オリックス・バファローズ: "オリックス",
-  千葉ロッテマリーンズ: "ロッテ",
-  北海道日本ハムファイターズ: "日本ハム",
-  東北楽天ゴールデンイーグルス: "楽天",
-  埼玉西武ライオンズ: "西武",
-  福岡ソフトバンクホークス: "ソフトバンク",
 }
 
 function rosterTeamToRankingShort(fullTeam: string): string {
@@ -110,6 +91,31 @@ function shouldPreferPlayerName(current: string, candidate: string): boolean {
 
 function pickPlayerName(current: string, candidate: string): string {
   return shouldPreferPlayerName(current, candidate) ? candidate.trim() : current.trim()
+}
+
+/**
+ * canonical 由来の meta が無い・氏名が Yahoo ID のまま等のとき、NPB 名簿で補完する。
+ * （例: 投手の代打のみ plateAppearances に載り battingLines / yahooPlayersMentioned に出てこない）
+ */
+function metaForRankingRow(
+  yahooId: string,
+  metaMap: Map<string, { name: string; team: string }>,
+): { name: string; team: string } {
+  const cur = metaMap.get(yahooId)
+  const nameTrim = (cur?.name ?? "").trim()
+  const teamTrim = (cur?.team ?? "").trim()
+  const badName = !nameTrim || nameTrim === yahooId
+  const roster = findRosterPlayerByPublicId(yahooId)
+  if (roster?.name_ja) {
+    const teamFromRoster = rosterTeamToRankingShort(roster.team)
+    if (badName || !teamTrim) {
+      return {
+        name: roster.name_ja.trim(),
+        team: teamTrim || teamFromRoster,
+      }
+    }
+  }
+  return cur ?? { name: yahooId, team: "" }
 }
 
 /**
@@ -211,26 +217,6 @@ function resolveRomanName(
   return undefined
 }
 
-function loadPhase11BattingRows(year: string): Array<{ yahooId: string; row: SeasonStatsRow }> {
-  const dir = join(projectRoot, "_data", "derived", "player_season_batting", year)
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.startsWith("yahoo_") && f.endsWith(".json"))
-  const out: Array<{ yahooId: string; row: SeasonStatsRow }> = []
-  for (const f of files) {
-    const p = join(dir, f)
-    try {
-      const data = JSON.parse(readFileSync(p, "utf8")) as Phase11BattingFile
-      const yahooId = String(data.yahooBatterId ?? "").trim()
-      const row = Array.isArray(data.rows) ? data.rows[0] : undefined
-      if (!yahooId || !row) continue
-      out.push({ yahooId, row })
-    } catch {
-      // ignore
-    }
-  }
-  return out
-}
-
 function numFromSlash(s: string): number {
   const v = String(s ?? "").trim()
   if (!v) return 0
@@ -245,6 +231,24 @@ function numFromLoose(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
+function computeObpFromCounts(h: number, bb: number, hbp: number, ab: number, sf: number): number | null {
+  const den = ab + bb + hbp + sf
+  if (den <= 0) return null
+  return (h + bb + hbp) / den
+}
+
+function computeSlgFromCounts(tb: number, ab: number): number | null {
+  if (ab <= 0) return null
+  return tb / ab
+}
+
+function computeNoiFromCounts(h: number, bb: number, hbp: number, ab: number, sf: number, tb: number): number | null {
+  const obp = computeObpFromCounts(h, bb, hbp, ab, sf)
+  const slg = computeSlgFromCounts(tb, ab)
+  if (obp == null || slg == null) return null
+  return (obp + slg / 3) * 1000
+}
+
 /** 2025 JSON と同じキーで 1 行分のベースオブジェクトを作る（指標列は metric.key で参照される） */
 function buildRankingRowBase(
   yahooId: string,
@@ -254,6 +258,15 @@ function buildRankingRowBase(
 ): Record<string, unknown> {
   const name = meta.name.trim() || yahooId
   const team = meta.team.trim()
+  const h = sr.h
+  const bb = sr.bb
+  const hbp = sr.hbp
+  const ab = sr.ab
+  const sf = sr.sf
+  const tb = sr.tb
+  const obpRaw = computeObpFromCounts(h, bb, hbp, ab, sf)
+  const slgRaw = computeSlgFromCounts(tb, ab)
+  const noiRaw = computeNoiFromCounts(h, bb, hbp, ab, sf, tb)
   const base: Record<string, unknown> = {
     playerId: yahooId,
     player: name,
@@ -273,8 +286,10 @@ function buildRankingRowBase(
     doubles: sr.h2,
     triples: sr.h3,
     runs: sr.r,
-    obp: numFromSlash(sr.obp),
-    slg: numFromSlash(sr.slg),
+    // 注意: OBP/SLG/NOI は表示用の丸め文字列（sr.obp/sr.slg/sr.noi）を信用せず、
+    // 元カウントから未丸めで再計算した実数を JSON に格納する（表示側でのみ丸める）。
+    obp: obpRaw,
+    slg: slgRaw,
     bb: sr.bb,
     ibb: sr.ibb,
     hbp: sr.hbp,
@@ -282,6 +297,7 @@ function buildRankingRowBase(
     tb: sr.tb,
     sb: sr.sb,
     cs: sr.cs,
+    e: sr.e,
     sh: sr.sh,
     sf: sr.sf,
     gidp: sr.gidp,
@@ -295,7 +311,7 @@ function buildRankingRowBase(
     babip: numFromSlash(sr.babip),
     seca: numFromLoose(sr.seca),
     ta: numFromLoose(sr.ta),
-    noi: numFromLoose(sr.noi),
+    noi: noiRaw,
     gpa: numFromLoose(sr.gpa),
   }
   if (romanName) base.romanName = romanName
@@ -312,48 +328,122 @@ function sortValueForMetricKey(metricKey: string, row: Record<string, unknown>):
   return 0
 }
 
+/**
+ * Phase 1 準拠: 名簿（所属）を主に CL/PL を決める。決められなければ null（両リーグに載せない）。
+ * @see docs/ranking_league_resolution_spec_2026.md
+ */
+function resolveBattingRankingLeagueBucket(
+  yahooId: string,
+  meta: { name: string; team: string } | undefined,
+): "CL" | "PL" | null {
+  const roster = findRosterPlayerByPublicId(yahooId)
+  if (roster?.team) {
+    const short = rosterTeamToRankingShort(roster.team).trim()
+    if (short) return leagueBucketForTeamShort(short)
+  }
+  const m = meta ?? { name: "", team: "" }
+  if (m.team.trim()) {
+    const short = rosterTeamToRankingShort(m.team).trim()
+    if (short) return leagueBucketForTeamShort(short)
+  }
+  const byJa = findRosterPlayerByPublicIdOrJaName(yahooId, m.name)
+  if (byJa?.team) {
+    const short = rosterTeamToRankingShort(byJa.team).trim()
+    if (short) return leagueBucketForTeamShort(short)
+  }
+  return null
+}
+
 function main(): void {
   process.chdir(projectRoot)
   const { year } = parseArgs()
 
-  const docs = loadCanonicalDocs()
-  const metaMap = yahooMetaFromCanonical(docs)
-  const batting = loadPhase11BattingRows(year)
-  if (batting.length === 0) {
-    console.error(`[phase12] no phase11 batting files under _data/derived/player_season_batting/${year}/`)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  if (docs.length === 0) {
+    console.error("[phase12] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
+  const teamGamesByLeague = aggregateSeasonTeamGamesFromCanonical(docs, year)
+  writeSeasonTeamGamesFromAggregate(projectRoot, year, teamGamesByLeague)
+  console.log(
+    `[phase12] team-games.json (canonical): CL=${JSON.stringify(teamGamesByLeague.CL)} PL=${JSON.stringify(teamGamesByLeague.PL)}`
+  )
+
+  const metaMap = yahooMetaFromCanonical(docs)
+  const byBatter = aggregateBattingSeasonForProfilesAndRankings(docs)
+  if (byBatter.size === 0) {
+    let paRows = 0
+    for (const d of docs) {
+      paRows += d.domain?.plateAppearances?.length ?? 0
+    }
+    console.error(
+      "[phase12] domain.plateAppearances から打撃ランキングを集計できません（yahooBatterId 付き打席が 0）。",
+    )
+    console.error(
+      `  試合数: ${docs.length}, plateAppearance 行数の合計: ${paRows}`,
+    )
+    console.error(
+      "  対処: 一球ログで domain.plateAppearances を埋めてから再実行（phase10:yahoo:restore / phase10:yahoo:merge または phase4:merge:phase10）。",
+    )
+    process.exit(1)
+  }
+  const batting: Array<{ yahooId: string; row: SeasonStatsRow }> = [...byBatter.entries()].map(
+    ([yahooId, agg]) => ({
+      yahooId,
+      row: buildEnrichedBattingSeasonRow(agg),
+    }),
+  )
+
   const metrics = loadMetricsFromRecord()
   const baseOut = join(projectRoot, "public", "data", "rankings", year)
-  const outDir = join(baseOut, "CL")
-  mkdirSync(outDir, { recursive: true })
+  const romanMapCL = getRomanNameMap(year, "CL")
+  const romanMapPL = getRomanNameMap(year, "PL")
 
-  const romanMap = getRomanNameMap(year, "CL")
-
-  for (const m of metrics) {
-    const metricKey = getJsonKey(m.label)
-    const rows: Record<string, unknown>[] = batting.map(({ yahooId, row }) => {
-      const meta = metaMap.get(yahooId) ?? { name: yahooId, team: "" }
-      const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap)
-      const base = buildRankingRowBase(yahooId, row, meta, roman)
-      base.metric = m.label
-      return base
-    })
-
-    const sorted = [...rows].sort((a, b) => sortValueForMetricKey(metricKey, b) - sortValueForMetricKey(metricKey, a))
-
-    const ranked = sorted.map((raw, idx) => ({
-      rank: idx + 1,
-      ...raw,
-    }))
-
-    const fileBase = sanitizeMetricForPath(m.label)
-    writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), "utf8")
-    writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(ranked, null, 2), "utf8")
+  let excluded = 0
+  const battingCL: typeof batting = []
+  const battingPL: typeof batting = []
+  for (const b of batting) {
+    const bucket = resolveBattingRankingLeagueBucket(b.yahooId, metaMap.get(b.yahooId))
+    if (bucket === "CL") battingCL.push(b)
+    else if (bucket === "PL") battingPL.push(b)
+    else excluded += 1
   }
 
-  console.log(`[phase12] wrote CL rankings (${metrics.length} metrics) → ${outDir}`)
+  for (const lg of ["CL", "PL"] as const) {
+    const outDir = join(baseOut, lg)
+    mkdirSync(outDir, { recursive: true })
+    const list = lg === "CL" ? battingCL : battingPL
+    const romanMap = lg === "CL" ? romanMapCL : romanMapPL
+
+    for (const m of metrics) {
+      const metricKey = getJsonKey(m.label)
+      const rows: Record<string, unknown>[] = list.map(({ yahooId, row }) => {
+        const meta = metaForRankingRow(yahooId, metaMap)
+        const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap)
+        const base = buildRankingRowBase(yahooId, row, meta, roman)
+        base.metric = m.label
+        return base
+      })
+
+      const sorted = [...rows].sort((a, b) => sortValueForMetricKey(metricKey, b) - sortValueForMetricKey(metricKey, a))
+      const rankedAll = assignRanks(sorted)
+      const teamGames = teamGamesByLeague[lg]
+      const filtered = filterBattingRowsForQualifyingAtBuild(sorted, metricKey, year, lg, teamGames)
+      const rankedPublic = assignRanks(filtered)
+
+      const fileBase = sanitizeMetricForPath(m.label)
+      writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(rankedPublic, null, 2), "utf8")
+      writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(rankedAll, null, 2), "utf8")
+    }
+
+    console.log(`[phase12] wrote ${lg} rankings (${metrics.length} metrics, ${list.length} batters) → ${outDir}`)
+  }
+
+  if (excluded > 0) {
+    console.warn(`[phase12] excluded ${excluded} batters (league unresolved; docs/ranking_league_resolution_spec_2026.md)`)
+  }
+
 }
 
 main()

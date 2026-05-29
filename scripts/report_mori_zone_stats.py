@@ -3,7 +3,7 @@
 """
 report_mori_zone_stats.py
 
-森翔平投手の 2026/3/15 広島vs阪神戦 コース別成績（被OPS・被打率・被本塁打）を算出・表示。
+森翔平投手の 2026/3/15 広島vs阪神戦 コース別成績（被ISOP・被打率・被本塁打）を算出・表示。
 
 使い方:
   1. 先に fetch_pitcher_zone_stats を実行して zone_stats JSON を生成:
@@ -39,17 +39,24 @@ def format_zone_table(zones: list[dict], hand_label: str) -> str:
         lines.append("  （打席結果なし）")
         return "\n".join(lines)
 
-    lines.append(f"{'ゾーン':<8} {'被打率':<8} {'被OPS':<8} {'被本塁打':<6} {'打数':<4} {'安打':<4}")
+    lines.append(f"{'ゾーン':<8} {'被打率':<8} {'被ISOP':<8} {'被本塁打':<6} {'打数':<4} {'安打':<4}")
     lines.append("-" * 50)
     for z in sorted(rows, key=lambda x: x["zoneId"]):
         zid = z["zoneId"]
         name = zone_name(zid)
         avg = z.get("avg", "—")
-        ops = z.get("ops", "—")
+        if "isop" in z:
+            isop_raw = z["isop"]
+        else:
+            isop_raw = z.get("ops", "—")
+        if isop_raw is None or isop_raw == "":
+            isop = "—"
+        else:
+            isop = str(isop_raw)
         hr = z.get("hr", 0)
         ab = z.get("ab", 0)
         h = z.get("h", 0)
-        lines.append(f"{name:<8} {avg:<8} {ops:<8} {hr:<6} {ab:<4} {h:<4}")
+        lines.append(f"{name:<8} {avg:<8} {isop:<8} {hr:<6} {ab:<4} {h:<4}")
     return "\n".join(lines)
 
 
@@ -96,7 +103,7 @@ def main():
 
     print("=" * 60)
     print("森翔平 2026/3/15 広島vs阪神戦 コース別投球成績")
-    print("  被OPS / 被打率 / 被本塁打（25マスゾーン、対右/対左）")
+    print("  被ISOP / 被打率 / 被本塁打（25マスゾーン、対右/対左）")
     print("=" * 60)
 
     for hand, label in [("vsRight", "対右打者"), ("vsLeft", "対左打者")]:
@@ -113,7 +120,7 @@ def main():
     print("\n=== 全体（対右+対左 統合） ===")
     if total_ab > 0:
         avg = total_h / total_ab
-        # OPSはゾーン別の加重平均ではなく、ここでは簡易表示
+        # ゾーン別指標の加重平均ではなく、ここでは打率のみ簡易表示
         print(f"  打数: {total_ab}, 安打: {total_h}, 被本塁打: {total_hr}")
         print(f"  被打率: {avg:.3f}")
     else:

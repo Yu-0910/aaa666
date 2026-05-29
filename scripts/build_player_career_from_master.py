@@ -1,0 +1,501 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Phase 1: 名簿固定 + 通算（マスタ CSV 結合）
+
+- _data/npb_roster_2026.csv を SSOT
+- batting_*_from_master.csv / pitching_*_from_master.csv から年度別成績を組み立て
+- NPB への HTTP は行わない
+
+Usage:
+  python scripts/build_player_career_from_master.py
+  python scripts/build_player_career_from_master.py --limit 50
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import io
+import json
+import re
+import sys
+import time
+from collections import defaultdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_ROSTER = ROOT / "_data" / "npb_roster_2026.csv"
+DEFAULT_MASTER_DIRS = [
+    ROOT / "_data" / "master_csv_calculated",
+    ROOT / "_data" / "master_csv__import_1950_2024",
+]
+OUT_TARGETS = ROOT / "_data" / "player_profile" / "_targets_2026.json"
+OUT_CAREER_DIR = ROOT / "_data" / "derived" / "player_profile" / "career_from_master"
+OUT_MISSING = ROOT / "_reports" / "player_profile_phase1_career_missing_in_master.csv"
+
+BATTING_GLOB = "batting_*_*_from_master.csv"
+PITCHING_GLOB = "pitching_*_*_from_master.csv"
+
+
+def log(msg: str) -> None:
+    print(msg, flush=True)
+
+
+def normalize_npb_id(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s or s.lower() in ("nan", "none", "-"):
+        return ""
+    digits = re.sub(r"\D", "", s)
+    if not digits:
+        return ""
+    return digits.lstrip("0") or "0"
+
+
+def normalize_name_key(name: str, team: str = "") -> str:
+    n = re.sub(r"[\s\u3000]+", "", (name or ""))
+    t = re.sub(r"[\s\u3000]+", "", (team or ""))
+    return f"{n}|{t}" if t else n
+
+
+def name_keys_for_matching(name: str) -> List[str]:
+    """
+    名簿側の外国人略称（例: Ｓ．ファビアン）と、マスタ側の単独表記（例: ファビアン）を突合するためのキー集合。
+    - 空白除去
+    - 先頭の英字略称「X．」を除いたキー
+    - 「・」区切りの末尾（例: ブライアン・マタ → マタ）
+    """
+    raw = (name or "").strip()
+    if not raw:
+        return []
+    base = re.sub(r"[\s\u3000]+", "", raw)
+    keys: List[str] = []
+    for k in (base,):
+        if k and k not in keys:
+            keys.append(k)
+    # Ｓ．ファビアン → ファビアン
+    m = re.match(r"^[Ａ-ＺA-Z][．.](.+)$", base)
+    if m:
+        k = m.group(1)
+        if k and k not in keys:
+            keys.append(k)
+    # ブライアン・マタ → マタ
+    if "・" in base:
+        k = base.split("・")[-1]
+        if k and k not in keys:
+            keys.append(k)
+    return keys
+
+
+def normalize_name_team_keys(name: str, team: str) -> List[str]:
+    t = re.sub(r"[\s\u3000]+", "", (team or ""))
+    out: List[str] = []
+    for nk in name_keys_for_matching(name):
+        key = f"{nk}|{t}" if t else nk
+        if key and key not in out:
+            out.append(key)
+    return out
+
+
+def safe_int(v: Any) -> Optional[int]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s or s.lower() in ("nan", "none", "-", ""):
+        return None
+    try:
+        return int(float(s))
+    except (ValueError, TypeError):
+        return None
+
+
+def safe_float(v: Any) -> Optional[float]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s or s.lower() in ("nan", "none", "-", ""):
+        return None
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_year_league_from_filename(path: Path) -> Tuple[Optional[int], Optional[str]]:
+    m = re.match(r"^(batting|pitching)_(\d{4})_(CL|PL|PRE)_from_master\.csv$", path.name, re.I)
+    if not m:
+        return None, None
+    return int(m.group(2)), m.group(3).upper()
+
+
+def discover_master_files(dirs: List[Path], glob_pat: str) -> List[Path]:
+    seen: Set[str] = set()
+    out: List[Path] = []
+    for d in dirs:
+        if not d.is_dir():
+            continue
+        for p in sorted(d.glob(glob_pat)):
+            key = p.name
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(p)
+    return sorted(out, key=lambda p: (parse_year_league_from_filename(p)[0] or 0, p.name))
+
+
+def load_csv_rows(path: Path) -> List[Dict[str, str]]:
+    for enc in ("utf-8-sig", "utf-8", "cp932"):
+        try:
+            with path.open(encoding=enc, newline="") as f:
+                return list(csv.DictReader(f))
+        except UnicodeDecodeError:
+            continue
+    with path.open(encoding="utf-8", errors="replace", newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def batting_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[str, Any]:
+    # master_csv_calculated の列名ゆれ（英語/日本語/別名）をできるだけ吸収する。
+    # 存在しない指標は None のままにする（年度・世代で列が異なるため）。
+    return {
+        "year": year,
+        "league": league,
+        "team": (row.get("team") or "").strip(),
+        "games": safe_int(row.get("G") or row.get("試合")),
+        "pa": safe_int(row.get("PA") or row.get("打席")),
+        "ab": safe_int(row.get("AB") or row.get("打数")),
+        "runs": safe_int(row.get("R") or row.get("得点")),
+        "hits": safe_int(row.get("H") or row.get("安打")),
+        "doubles": safe_int(row.get("2B") or row.get("二塁打")),
+        "triples": safe_int(row.get("3B") or row.get("三塁打")),
+        "hr": safe_int(row.get("HR") or row.get("本塁打")),
+        "tb": safe_int(row.get("TB") or row.get("塁打")),
+        "rbi": safe_int(row.get("RBI") or row.get("打点")),
+        "sb": safe_int(row.get("SB") or row.get("盗塁")),
+        "cs": safe_int(row.get("CS") or row.get("盗塁死")),
+        "sh": safe_int(row.get("SH") or row.get("犠打")),
+        "sf": safe_int(row.get("SF") or row.get("犠飛")),
+        "bb": safe_int(row.get("BB") or row.get("四球")),
+        "ibb": safe_int(row.get("IBB") or row.get("敬遠")),
+        "so": safe_int(row.get("SO") or row.get("三振")),
+        "hbp": safe_int(row.get("HBP") or row.get("死球")),
+        "gidp": safe_int(row.get("GDP") or row.get("併殺打")),
+        "avg": safe_float(row.get("AVG") or row.get("打率")),
+        "obp": safe_float(row.get("OBP") or row.get("出塁率")),
+        "slg": safe_float(row.get("SLG") or row.get("長打率")),
+        "ops": safe_float(row.get("OPS")),
+        # sabermetrics (存在する場合のみ)
+        "isop": safe_float(row.get("IsoP")),
+        "isod": safe_float(row.get("IsoD")),
+        "bb_pct": safe_float(row.get("BB%") or row.get("BB％")),
+        "k_pct": safe_float(row.get("K%") or row.get("K％")),
+        "bb_k": safe_float(row.get("BB/K")),
+        "rc": safe_float(row.get("RC")),
+        "xr": safe_float(row.get("XR")),
+        "babip": safe_float(row.get("BABIP")),
+        "seca": safe_float(row.get("SecA")),
+        "ta": safe_float(row.get("TA")),
+        "noi": safe_float(row.get("NOI")),
+        "gpa": safe_float(row.get("GPA")),
+    }
+
+
+def pitching_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[str, Any]:
+    return {
+        "year": year,
+        "league": league,
+        "team": (row.get("team") or "").strip(),
+        "games": safe_int(row.get("G") or row.get("登板")),
+        "wins": safe_int(row.get("W") or row.get("勝利")),
+        "losses": safe_int(row.get("L") or row.get("敗北")),
+        "saves": safe_int(row.get("SV") or row.get("セーブ")),
+        "ip": (row.get("IP") or row.get("投球回") or "").strip() or None,
+        "era": safe_float(row.get("ERA") or row.get("防御率")),
+        "bf": safe_int(row.get("BF") or row.get("打者")),
+        "hits_allowed": safe_int(row.get("H") or row.get("安打")),
+        "hr_allowed": safe_int(row.get("HR") or row.get("本塁打")),
+        "bb": safe_int(row.get("BB") or row.get("四球")),
+        "hbp": safe_int(row.get("HBP") or row.get("死球")),
+        "so": safe_int(row.get("SO") or row.get("三振")),
+        "er": safe_int(row.get("ER") or row.get("自責点")),
+        "holds": safe_int(row.get("HOLD") or row.get("HP")),
+    }
+
+
+def load_roster(path: Path) -> List[Dict[str, str]]:
+    rows: List[Dict[str, str]] = []
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            pid = (row.get("npb_player_id") or row.get("player_id") or "").strip()
+            name = (row.get("name_ja") or "").strip()
+            if not pid and not name:
+                continue
+            rows.append(row)
+    return rows
+
+
+def index_master_files(
+    files: List[Path],
+    kind: str,
+    batting_index: Dict[str, List[Dict[str, Any]]],
+    pitching_index: Dict[str, List[Dict[str, Any]]],
+    batting_name_index: Dict[str, List[Dict[str, Any]]],
+    pitching_name_index: Dict[str, List[Dict[str, Any]]],
+) -> Tuple[int, int]:
+    """Returns (rows_indexed, files_skipped)"""
+    rows_indexed = 0
+    skipped = 0
+    total = len(files)
+    for i, path in enumerate(files, 1):
+        year, league = parse_year_league_from_filename(path)
+        if year is None:
+            skipped += 1
+            log(f"  [{i}/{total}] skip (name): {path.name}")
+            continue
+        log(f"  [{i}/{total}] load {kind} {year} {league} <- {path.name}")
+        raw_rows = load_csv_rows(path)
+        n = 0
+        for row in raw_rows:
+            career = (
+                batting_row_to_career(row, year, league)
+                if kind == "batting"
+                else pitching_row_to_career(row, year, league)
+            )
+            pid = normalize_npb_id(row.get("player_id") or "")
+            if pid:
+                if kind == "batting":
+                    batting_index[pid].append(career)
+                else:
+                    pitching_index[pid].append(career)
+                n += 1
+                continue
+            name = (row.get("player_name_ja") or row.get("name") or "").strip()
+            team = (row.get("team") or "").strip()
+            if not name:
+                continue
+            # 投手 CSV は player_id 空欄が多い → 名前+球団で補助索引（既存）
+            if kind == "pitching":
+                pitching_name_index[normalize_name_key(name, team)].append(career)
+                n += 1
+                continue
+            # 打撃 CSV の player_id 空欄も存在（特に 2025）→ 名前+球団で補助索引
+            if kind == "batting":
+                for key in normalize_name_team_keys(name, team):
+                    batting_name_index[key].append(career)
+                n += 1
+        rows_indexed += n
+        log(f"       -> {n} rows indexed")
+    return rows_indexed, skipped
+
+
+def resolve_batting_rows(
+    norm_id: str,
+    name: str,
+    team: str,
+    batting_index: Dict[str, List[Dict[str, Any]]],
+    batting_name_index: Dict[str, List[Dict[str, Any]]],
+) -> List[Dict[str, Any]]:
+    rows = list(batting_index.get(norm_id, []))
+    if rows:
+        return rows
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+    for key in normalize_name_team_keys(name, team):
+        for r in batting_name_index.get(key, []):
+            rid = (r.get("year"), r.get("league"), r.get("team"))
+            if rid in seen:
+                continue
+            seen.add(rid)
+            merged.append(r)
+    return merged
+
+
+def resolve_pitching_rows(
+    norm_id: str,
+    name: str,
+    team: str,
+    pitching_index: Dict[str, List[Dict[str, Any]]],
+    pitching_name_index: Dict[str, List[Dict[str, Any]]],
+) -> List[Dict[str, Any]]:
+    rows = list(pitching_index.get(norm_id, []))
+    if rows:
+        return rows
+    return list(pitching_name_index.get(normalize_name_key(name, team), []))
+
+
+def sort_career_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(rows, key=lambda r: (r.get("year") or 0, r.get("league") or "", r.get("team") or ""))
+
+
+def write_targets(roster: List[Dict[str, str]], out_path: Path) -> None:
+    targets = []
+    for row in roster:
+        pid = (row.get("npb_player_id") or "").strip()
+        targets.append(
+            {
+                "npb_player_id": pid,
+                "npb_player_id_normalized": normalize_npb_id(pid),
+                "name_ja": (row.get("name_ja") or "").strip(),
+                "team": (row.get("team") or "").strip(),
+                "team_code": (row.get("team_code") or "").strip(),
+                "position": (row.get("position") or "").strip(),
+                "uniform_no": (row.get("uniform_no") or "").strip(),
+                "npb_url": f"https://npb.jp/bis/players/{pid}.html" if pid else "",
+            }
+        )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(targets, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Phase 1: 通算成績をマスタ CSV から一括組み立て")
+    parser.add_argument("--roster", type=Path, default=DEFAULT_ROSTER)
+    parser.add_argument(
+        "--master-dir",
+        type=Path,
+        action="append",
+        default=None,
+        help="マスタ CSV ディレクトリ（複数可）。未指定時は calculated + import",
+    )
+    parser.add_argument("--out-career-dir", type=Path, default=OUT_CAREER_DIR)
+    parser.add_argument("--out-targets", type=Path, default=OUT_TARGETS)
+    parser.add_argument("--out-missing", type=Path, default=OUT_MISSING)
+    parser.add_argument("--limit", type=int, default=0, help="デバッグ: 名簿の先頭 N 人だけ出力")
+    args = parser.parse_args()
+
+    master_dirs = args.master_dir if args.master_dir else DEFAULT_MASTER_DIRS
+    t0 = time.time()
+
+    log("=== Phase 1: 通算（マスタ結合）開始 ===")
+    log(f"roster: {args.roster}")
+
+    if not args.roster.is_file():
+        log(f"ERROR: 名簿がありません: {args.roster}")
+        return 1
+
+    roster = load_roster(args.roster)
+    if args.limit > 0:
+        roster = roster[: args.limit]
+    log(f"名簿: {len(roster)} 人")
+
+    log("")
+    log("[Step 1/4] _targets_2026.json を生成")
+    write_targets(roster, args.out_targets)
+    log(f"  -> {args.out_targets}")
+
+    batting_files = discover_master_files(master_dirs, BATTING_GLOB)
+    pitching_files = discover_master_files(master_dirs, PITCHING_GLOB)
+    log("")
+    log(f"[Step 2/4] マスタ CSV を読込（打撃 {len(batting_files)} / 投手 {len(pitching_files)} ファイル）")
+
+    batting_index: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    pitching_index: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    batting_name_index: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    pitching_name_index: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+
+    log("  -- 打撃 --")
+    b_rows, b_skip = index_master_files(
+        batting_files, "batting", batting_index, pitching_index, batting_name_index, pitching_name_index
+    )
+    log("  -- 投手 --")
+    p_rows, p_skip = index_master_files(
+        pitching_files, "pitching", batting_index, pitching_index, batting_name_index, pitching_name_index
+    )
+
+    unique_bat = len(batting_index)
+    unique_pit = len(pitching_index)
+    log("")
+    log(f"  打撃行: {b_rows} / 投手行: {p_rows}")
+    log(f"  ユニーク選手（打撃）: {unique_bat} / （投手）: {unique_pit}")
+
+    log("")
+    log("[Step 3/4] 名簿選手ごとに JSON 出力")
+    args.out_career_dir.mkdir(parents=True, exist_ok=True)
+    built_at = datetime.now(timezone.utc).isoformat()
+
+    missing: List[Dict[str, str]] = []
+    with_batting = 0
+    with_pitching = 0
+    with_either = 0
+    total = len(roster)
+
+    for i, row in enumerate(roster, 1):
+        pid_raw = (row.get("npb_player_id") or "").strip()
+        norm = normalize_npb_id(pid_raw)
+        name = (row.get("name_ja") or "").strip()
+
+        team = (row.get("team") or "").strip()
+        bat_rows = sort_career_rows(
+            resolve_batting_rows(norm, name, team, batting_index, batting_name_index)
+        )
+        pit_rows = sort_career_rows(
+            resolve_pitching_rows(norm, name, team, pitching_index, pitching_name_index)
+        )
+
+        if bat_rows:
+            with_batting += 1
+        if pit_rows:
+            with_pitching += 1
+        if bat_rows or pit_rows:
+            with_either += 1
+        else:
+            missing.append(
+                {
+                    "npb_player_id": pid_raw,
+                    "name_ja": name,
+                    "team": (row.get("team") or "").strip(),
+                    "position": (row.get("position") or "").strip(),
+                }
+            )
+
+        payload = {
+            "npb_player_id": pid_raw,
+            "npb_player_id_normalized": norm,
+            "name_ja": name,
+            "built_at": built_at,
+            "source": "master_csv",
+            "career_batting": {"rows": bat_rows, "total": {}},
+            "career_pitching": {"rows": pit_rows, "total": {}} if pit_rows else None,
+        }
+        out_file = args.out_career_dir / f"{pid_raw or norm or f'unknown_{i}'}.json"
+        out_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        if i == 1 or i == total or i % 50 == 0:
+            pct = 100.0 * i / total if total else 0
+            log(
+                f"  [{i}/{total}] ({pct:5.1f}%) {name} "
+                f"打撃{len(bat_rows)}年 投手{len(pit_rows)}年"
+            )
+
+    log("")
+    log("[Step 4/4] レポート")
+    args.out_missing.parent.mkdir(parents=True, exist_ok=True)
+    with args.out_missing.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(
+            f,
+            fieldnames=["npb_player_id", "name_ja", "team", "position"],
+        )
+        w.writeheader()
+        w.writerows(missing)
+    log(f"  マスタに年度行なし: {len(missing)} 人 -> {args.out_missing}")
+
+    elapsed = time.time() - t0
+    log("")
+    log("=== Phase 1 完了 ===")
+    log(f"  出力先: {args.out_career_dir}")
+    log(f"  成績あり: {with_either}/{total} ({100*with_either/total:.1f}%)" if total else "")
+    log(f"    打撃: {with_batting} / 投手: {with_pitching}")
+    log(f"  経過: {elapsed:.1f}s")
+    log("  NPB HTTP: 0")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

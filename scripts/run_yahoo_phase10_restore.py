@@ -4,7 +4,15 @@
 Phase 10: テキスト速報の打席一覧 + 各打席の score?index= から一球ログを取得し、
 derived JSON に保存する。続けて `merge_yahoo_phase10_canonical.ts` で canonical にマージ。
 
+paId / bat_order の意味（打順と混同しない）:
+  - canonical `paId` 末尾 = **半回内打席通し番号**（実況「N：」= score index の N）。
+  - Phase10 行の `bat_order` も同じ番号（Yahoo 由来のフィールド名で、打順1〜9ではない）。
+  - SSOT: lib/yahooGame/paIdFormat.ts / scripts/pa_id_format.py
+
 計画: docs/yahoo_npb_game_data_integration_plan.md Phase 10
+一球の取り込みルール: docs/yahoo_plate_appearance_batting_rules.md §6a・§6b（末尾がボール／ストライク進行のみなら
+「次へ」確認。不完全時は missingOrPartial に score:…:trailing_intermediate_* を付与）
+公式成績と一球が食い違うときは **再取得を優先**（§6c）。
 
 例:
   python scripts/run_yahoo_phase10_restore.py --game-id 2021038624
@@ -20,6 +28,14 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+from pitch_by_pitch_runner_out_no_ab import (  # noqa: E402
+    PHASE10_MISSING_RUNNER_OUT_NO_AB,
+    is_runner_out_ends_half_no_ab,
+)
 
 try:
     from bs4 import BeautifulSoup
@@ -57,10 +73,91 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from fetch_game_pitch_types import parse_plate_appearances_from_html  # noqa: E402
-from scrape_yahoo_pitch_details import build_index, fetch_html, parse_pitch_details  # noqa: E402
+from scrape_yahoo_pitch_details import (  # noqa: E402
+    build_index,
+    fetch_html,
+    fetch_pitch_detail_score_pages_for_pa,
+    parse_pitch_details_merged_score_pages,
+    _is_intermediate_trailing_result,
+)
 from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed  # noqa: E402
 
 BASE_URL = "https://baseball.yahoo.co.jp"
+
+PAID_PATTERN = re.compile(r"^\d+-(\d+)-(表|裏)-(\d+)$")
+
+
+def plate_appearances_from_canonical_fallback(root: Path, game_id: str) -> list[dict]:
+    """
+    テキスト速報 HTML が JS 依存で打席一覧を抽出できない場合のフォールバック。
+    canonical の plateAppearances から (inning, top_bottom, bat_order, batter_id, pitcher_id) を復元する。
+
+    目的:
+      - Phase10 の score?index= を叩くための index（inning/top_bottom/bat_order）を確保する
+      - 可能なら batter_id / pitcher_id も埋める（無ければ空）
+    """
+    canon_path = root / "_data" / "scraped_games" / "canonical" / f"{game_id}.json"
+    if not canon_path.is_file():
+        return []
+    try:
+        doc = json.loads(canon_path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    pas = doc.get("domain", {}).get("plateAppearances", []) or []
+    out: list[dict] = []
+    seen: set[tuple[int, str, int]] = set()
+    for pa in pas:
+        pa_id = str(pa.get("paId") or "").strip()
+        m = PAID_PATTERN.match(pa_id)
+        if not m:
+            continue
+        inning = int(m.group(1))
+        top_bottom = m.group(2)
+        bat_order = int(m.group(3))
+        key = (inning, top_bottom, bat_order)
+        if key in seen:
+            continue
+        seen.add(key)
+        pitcher_id = str(pa.get("yahooPitcherId") or "").strip()
+        if not pitcher_id:
+            pe = pa.get("pitchEvents") or []
+            if isinstance(pe, list) and len(pe) > 0:
+                pitcher_id = str((pe[0] or {}).get("yahooPitcherId") or "").strip()
+        batter_id = str(pa.get("yahooBatterId") or "").strip()
+        out.append({
+            "game_id": game_id,
+            "inning": inning,
+            "top_bottom": top_bottom,
+            "bat_order": bat_order,
+            "batter_id": batter_id,
+            "pitcher_id": pitcher_id,
+        })
+    out.sort(key=lambda r: (int(r["inning"]), 0 if r["top_bottom"] == "表" else 1, int(r["bat_order"])))
+    return out
+
+
+def merge_plate_appearance_lists(text_pas: list[dict], canon_pas: list[dict]) -> list[dict]:
+    """
+    テキスト速報の打席一覧と canonical の打席一覧を和集合にする。
+    テキストだけだと打席が欠けることがあり、canonical 側の paId に対応する score を取りこぼす。
+    """
+    merged: dict[tuple[int, str, int], dict] = {}
+    for pa in list(text_pas) + list(canon_pas):
+        inn = int(pa["inning"])
+        tb = pa["top_bottom"]
+        bo = int(pa["bat_order"])
+        key = (inn, tb, bo)
+        if key not in merged:
+            merged[key] = dict(pa)
+            continue
+        cur = merged[key]
+        for fld in ("batter_id", "pitcher_id"):
+            if not str(cur.get(fld) or "").strip() and str(pa.get(fld) or "").strip():
+                cur[fld] = pa[fld]
+    out = list(merged.values())
+    out.sort(key=lambda r: (int(r["inning"]), 0 if r["top_bottom"] == "表" else 1, int(r["bat_order"])))
+    return out
 
 
 def pa_summary_from_text_html(html_text: str, inning: int, top_bottom: str, bat_order: int) -> str | None:
@@ -145,12 +242,18 @@ def main() -> None:
         help="テキストHTMLは _data/scraped_games/raw/{game_id}/text.html を使う（無ければ取得）",
     )
     ap.add_argument("--limit", type=int, default=0, help="打席数上限（0=全件）")
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="一球 score ページをキャッシュせず再取得（raw_sportsnavi_score の既存 HTML を無視）",
+    )
     args = ap.parse_args()
 
     ensure_yahoo_network_fetch_allowed()
 
     game_id = args.game_id.strip()
     root = Path(__file__).resolve().parent.parent
+    score_cache_dir = root / "_data" / "scraped_games" / "raw_sportsnavi_score" / game_id
     raw_text = root / "_data" / "scraped_games" / "raw" / game_id / "text.html"
     text_url = f"{BASE_URL}/npb/game/{game_id}/text"
 
@@ -164,7 +267,24 @@ def main() -> None:
             safe_print("❌ テキストページの取得に失敗しました", file=sys.stderr)
             sys.exit(1)
 
-    pas = parse_plate_appearances_from_html(html_text, game_id)
+    text_pas = parse_plate_appearances_from_html(html_text, game_id)
+    canon_pas = plate_appearances_from_canonical_fallback(root, game_id)
+    if canon_pas:
+        pas = merge_plate_appearance_lists(text_pas, canon_pas)
+        if len(text_pas) == 0:
+            safe_print(
+                f"⚠️ テキストHTMLから打席一覧を抽出できないため、canonical のみで続行します（{len(pas)} 打席）"
+            )
+        elif len(pas) > len(text_pas):
+            safe_print(
+                f"打席一覧: テキスト {len(text_pas)} + canonical 和集合 → {len(pas)} 打席"
+            )
+        else:
+            pas = pas if pas else text_pas
+    else:
+        pas = text_pas
+        if len(pas) == 0:
+            safe_print("⚠️ 打席一覧 0 件（テキスト・canonical ともに取得不可）", file=sys.stderr)
     if args.limit > 0:
         pas = pas[: args.limit]
         safe_print(f"打席数（limit）: {len(pas)}")
@@ -181,22 +301,42 @@ def main() -> None:
         top_bottom = pa["top_bottom"]
         bat_order = int(pa["bat_order"])
         half_key = f"{inning}|{top_bottom}"
-        index = build_index(inning, top_bottom, bat_order)
-        url = f"{BASE_URL}/npb/game/{game_id}/score?index={index}"
-        safe_print(f"  [{i + 1}/{len(pas)}] {index} ... ", end="", flush=True)
-        html = fetch_html(url)
-        if not html:
-            missing.append(f"score:{index}:fetch_failed")
+        index0 = build_index(inning, top_bottom, bat_order)
+        safe_print(f"  [{i + 1}/{len(pas)}] {index0} ... ", end="", flush=True)
+        chain = fetch_pitch_detail_score_pages_for_pa(
+            game_id,
+            inning,
+            top_bottom,
+            bat_order,
+            sleep_sec=args.sleep,
+            cache_dir=score_cache_dir,
+            force=bool(args.force),
+        )
+        if not chain:
+            missing.append(f"score:{index0}:fetch_failed")
             safe_print("❌ fetch")
             time.sleep(args.sleep)
             continue
-        rows = parse_pitch_details(html, game_id, inning, top_bottom, bat_order)
+        pages_html = [h for _ix, h in chain]
+        rows = parse_pitch_details_merged_score_pages(
+            pages_html, game_id, inning, top_bottom, bat_order
+        )
         if rows:
             all_rows.extend(rows)
             pid0 = (rows[0].get("pitcher_id") or "").strip()
             if pid0:
                 last_pitcher_by_half[half_key] = pid0
-            safe_print(f"✅ {len(rows)}球")
+            extra = f" ({len(chain)}p)" if len(chain) > 1 else ""
+            last_res = (rows[-1].get("result") or "").strip()
+            # §6b 取得規定: 末尾がボール／ストライク進行のみ →「次へ」不足の疑い（1ページ）または欠行疑い（複数ページ）
+            if _is_intermediate_trailing_result(last_res):
+                if len(chain) < 2:
+                    missing.append(f"score:{index0}:trailing_intermediate_single_page_next_required")
+                else:
+                    missing.append(f"score:{index0}:trailing_intermediate_after_multi_page")
+                safe_print(f"✅ {len(rows)}球{extra} ⚠️末尾中間→再取得/確認")
+            else:
+                safe_print(f"✅ {len(rows)}球{extra}")
         else:
             summary = pa_summary_from_text_html(html_text, inning, top_bottom, bat_order)
             if summary and is_intentional_walk_like(summary):
@@ -211,8 +351,11 @@ def main() -> None:
                 if pcar:
                     last_pitcher_by_half[half_key] = pcar
                 safe_print(f"✅ 敬遠(テキスト) 「{summary[:28]}…」" if len(summary) > 28 else f"✅ 敬遠(テキスト) 「{summary}」")
+            elif summary and is_runner_out_ends_half_no_ab(summary):
+                missing.append(f"score:{index0}:{PHASE10_MISSING_RUNNER_OUT_NO_AB}")
+                safe_print("ℹ️ 走者アウト終了・打者結果なし（投球表なし）")
             else:
-                missing.append(f"score:{index}:no_pitch_rows")
+                missing.append(f"score:{index0}:no_pitch_rows")
                 safe_print("⚠️ 投球なし")
         time.sleep(args.sleep)
 
@@ -228,6 +371,14 @@ def main() -> None:
     out_path = derived / f"{game_id}_phase10_restored.json"
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     safe_print(f"\nWrote {out_path} (pitch rows={len(all_rows)}, missing={len(missing)})")
+
+    if len(pas) == 0:
+        safe_print(
+            "[phase10] ERROR: 打席一覧 0 件のまま空 pitchRows を書きました。"
+            " Phase2b canonical を先に用意するか --text-from-raw を確認してください。",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
 
 if __name__ == "__main__":

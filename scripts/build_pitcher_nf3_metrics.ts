@@ -117,9 +117,10 @@ function main(): void {
     }
     for (const r of rsRows) {
       if (!r.npbPlayerId || r.runSupportPoints == null) continue
+      const rsp = r.runSupportPoints
       bump(r.npbPlayerId, (a) => {
         a.starterGames += 1
-        a.runSupportPointsSum += r.runSupportPoints
+        a.runSupportPointsSum += rsp
         a.starterIpOutsSum += r.ipOuts
       })
     }

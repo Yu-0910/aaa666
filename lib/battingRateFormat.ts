@@ -76,3 +76,26 @@ export function battingSlashRatesFromCounts(input: {
 export function fmtSlash3(rate: number | null): string {
   return slashRate3FromRatio(rate)
 }
+
+/**
+ * 打率・OPS の UI 表示（0.346 → .346、1.052 はそのまま）。
+ * 派生 JSON が "0.xxx" のときも表示時に補正する。
+ */
+export function formatSlashStatDisplay(
+  value: string | number | null | undefined,
+): string {
+  if (value === null || value === undefined) return "—"
+  const t = String(value).trim()
+  if (!t || t === "—" || t === "-") return "—"
+  if (t.startsWith(".")) return t
+  if (/^0\.(\d+)$/.test(t)) return `.${t.slice(2)}`
+  if (/^-0\.(\d+)$/.test(t)) return `-.${t.slice(3)}`
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return slashRate3FromRatio(value)
+  }
+  const n = Number(t)
+  if (Number.isFinite(n) && /^-?\d*\.?\d+$/.test(t)) {
+    return slashRate3FromRatio(n)
+  }
+  return t
+}

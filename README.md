@@ -61,6 +61,40 @@ TopPage/
 
 規定打席到達者用CSVと全員用CSVの役割、実行順序、全年度展開の詳細は **`docs/ranking_qualifying_csv_all_years_plan.md`** および **`docs/DATA_PATHS.md`** を参照してください。
 
+### Yahoo canonical と投手コース別（シーズン表示）
+
+投手個人ページの「コース別」シーズン集計は、CSV ランキングとは別系統で **`_data/scraped_games/canonical/`** の試合 JSON と、**`npm run phase20:build:pitcher-zones`** で作る **`_data/derived/pitcher_zone_from_canonical/`** に依存します。コマンド・前提・手動チェックリストは **`scripts/RUN.md`** の「投手コース別（シーズン横断・Phase 20）」を参照してください。全体の設計と障害時の切り分けは **`docs/plan_pitcher_course_zone_stats.md`** です。
+
+### スポナビ raw テキスト（試合前スナップショットの再発防止）
+
+テキスト速報 HTML（`_data/scraped_games/raw_sportsnavi_text/`）を**試合終了前**に取得すると、`bb-liveText` が無い**未充足**になり得ます。**日次パイプライン**（`scripts/run_daily_npb_pipeline.mjs`）で Phase2a を回す場合は、その日のカードが**試合終了後**に相当するまで待つか、翌日に **`npm run phase2:sportsnavi:stats-text:refetch-incomplete`**（`--only-incomplete`）で不足分だけ取り直してください。
+
+`season_YYYY.json` に **merge で gameId を追加した直後**は、まず **`node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year YYYY --game-ids <カンマ区切り>`** で試し取得し、**`npm run diag:phase2-raw-completeness`** で未充足なら、計画書 **`docs/plan_phase2026_raw_text_completeness_and_refetch.md`** の **フェーズ 2**（再取得）に戻ってください。
+
+**スタメン打順（打順別・守備位置別の入力）**は、出場成績 HTML の括弧付き「位置」行から Phase2b が `game.teams` に載せる。再生成・日次の手順は **`docs/plan_sportsnavi_stats_starting_lineup.md`** と **`scripts/RUN.md`**（スタメン打順の節）を参照。
+
+### 併殺打（GIDP）の取得方針（2026）
+
+Yahoo 一球速報（`domain.plateAppearances`）の `resultSummaryJa` は、試合によって **空文字**になったり、実際はダブルプレーでも **「併殺/併打」表現が欠落**することがあります。
+そのため **GIDP は plateAppearances だけを正とせず**、まず canonical に入っている実況（`game.textPlayByPlay`）の
+`併殺/併打/ダブルプレー/ゲッツー` を **下限（minimum）**として補完します（実況に「○番 姓 名 … ダブルプレー」等が出ている場合に限り加算）。
+
+また、実況側も欠落する可能性があるため、必要に応じて **Yahoo 選手トップページのサマリ表（`/npb/player/{id}/top`）の GIDP** を参照し、
+集計値がそれより小さい場合は **サマリ表を下限として補完**します（限定的に利用）。
+
+運用上の方針:
+- **日次運用**: 追加取得を増やさず、まずは実況補完で指標（RC 等）の材料を安定させる
+- **品質監視**: `resultSummaryJa` 空欄が多い日や、補完量が急増した日は、必要に応じて Yahoo 一球取得（phase10）側の再実行を検討
+
+### 盗塁／盗塁死（SB/CS）の取得方針（2026）
+
+盗塁／盗塁死は **Yahoo `/text` 実況 DOM（`domain.runnerEvents`）** を一次ソースとして扱います。
+スポナビ実況（`game.textPlayByPlay`）からのパースは、`domain.runnerEvents` が欠ける可能性があるための **補完（best-effort）** です。
+
+二重計上（同一イベントが複数ソースに存在して合算される）を防ぐため、以下を徹底します:
+- **canonical更新時**: `kind + inningHalf + yahooRunnerId`（欠ける場合は `sourceLine` を含む）で重複排除してマージする
+- **集計時**: `domain.runnerEvents` と `game.textPlayByPlay` の補完結果を、同一 `(inningHalf, kind, runnerId)` で重複排除した上で合算する
+
 ### データ生成（最小テスト：2025年PL）
 
 ランキングデータを生成するには、以下のコマンドを実行してください：

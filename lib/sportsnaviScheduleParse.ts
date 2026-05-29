@@ -29,7 +29,12 @@ export function normalizeStadiumNameFromSchedule(raw: string): string {
   return normalizeStadiumSplitValue(s)
 }
 
-const SCHEDULE_DAY_HEAD_MARKER = 'bb-scheduleTable__head" scope="row"'
+/**
+ * `bb-scheduleTable__head` の `<th>` は属性順が変わり得るので、文字列完全一致ではなく regex で探す。
+ * 例: `<th class="bb-scheduleTable__head" scope="row" rowspan="2">5月27日</th>`
+ */
+const SCHEDULE_DAY_HEAD_TH_RE =
+  /<th\b[^>]*\bclass="[^"]*\bbb-scheduleTable__head\b[^"]*"[^>]*>([\s\S]*?)<\/th>/gi
 
 function jaNeedleFromYmd(ymd: string): string {
   const month = parseInt(ymd.slice(5, 7), 10)
@@ -38,21 +43,53 @@ function jaNeedleFromYmd(ymd: string): string {
 }
 
 /** 当日セルだけに切る（休養日のあと tbody 全体を取らない）。 */
-function sliceScheduleDayBlockAt(html: string, start: number, dayThNeedle: string): string {
+function sliceScheduleDayBlockAt(html: string, start: number, endExclusive: number): string {
   if (start < 0) return ""
-  const afterStart = start + dayThNeedle.length
-  const nextDayHead = html.indexOf(SCHEDULE_DAY_HEAD_MARKER, afterStart)
-  if (nextDayHead >= 0) return html.slice(start, nextDayHead)
-  const tbodyEnd = html.indexOf("</tbody>", afterStart)
-  return tbodyEnd >= 0 ? html.slice(start, tbodyEnd) : html.slice(start)
+  const end = endExclusive > start ? endExclusive : html.length
+  const block = html.slice(start, end)
+  return block
 }
 
 function dayThNeedleForRowspan(jaNeedle: string, rowspan: number): string {
-  return `${SCHEDULE_DAY_HEAD_MARKER} rowspan="${rowspan}">${jaNeedle}`
+  // 後方互換（旧ロジック）: まずは marker からの indexOf も試す
+  return `bb-scheduleTable__head" scope="row" rowspan="${rowspan}">${jaNeedle}`
 }
 
 function dayThNeedleWithoutRowspan(jaNeedle: string): string {
-  return `${SCHEDULE_DAY_HEAD_MARKER}>${jaNeedle}`
+  // 後方互換（旧ロジック）: まずは marker からの indexOf も試す
+  return `bb-scheduleTable__head" scope="row">${jaNeedle}`
+}
+
+function enumerateScopedBlocksByThRegex(html: string, ymd: string): string[] {
+  const jaNeedle = jaNeedleFromYmd(ymd)
+  const hits: { start: number; len: number }[] = []
+  const re = new RegExp(SCHEDULE_DAY_HEAD_TH_RE.source, "gi")
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html))) {
+    const inner = m[1] ?? ""
+    const text = stripHtmlToText(inner)
+    if (!text.includes(jaNeedle)) continue
+    if (typeof m.index !== "number") continue
+    hits.push({ start: m.index, len: m[0]?.length ?? 0 })
+  }
+  if (hits.length === 0) return []
+
+  const blocks: string[] = []
+  for (let i = 0; i < hits.length; i++) {
+    const cur = hits[i]!
+    const next = hits[i + 1]
+    const afterStart = cur.start + Math.max(1, cur.len)
+    const tbodyEnd = html.indexOf("</tbody>", afterStart)
+    const endExclusive =
+      typeof next?.start === "number" && next.start > cur.start
+        ? next.start
+        : tbodyEnd >= 0
+          ? tbodyEnd
+          : html.length
+    const scoped = sliceScheduleDayBlockAt(html, cur.start, endExclusive)
+    if (scoped) blocks.push(scoped)
+  }
+  return blocks
 }
 
 /**
@@ -61,8 +98,10 @@ function dayThNeedleWithoutRowspan(jaNeedle: string): string {
  */
 export function enumerateScopedBlocksForDate(html: string, ymd: string): string[] {
   const jaNeedle = jaNeedleFromYmd(ymd)
-  const blocks: string[] = []
-  const seenStarts = new Set<number>()
+  // まずは regex で `<th class="...bb-scheduleTable__head..." scope="row">` を探す（属性順変更に強い）
+  const byRegex = enumerateScopedBlocksByThRegex(html, ymd)
+  const blocks: string[] = [...byRegex]
+  const seenStarts = new Set<number>(byRegex.map((b) => html.indexOf(b)).filter((x) => x >= 0))
 
   const needles: string[] = [
     ...SCHEDULE_ROWSPAN_CANDIDATES.map((r) => dayThNeedleForRowspan(jaNeedle, r)),
@@ -76,7 +115,12 @@ export function enumerateScopedBlocksForDate(html: string, ymd: string): string[
       if (start < 0) break
       if (!seenStarts.has(start)) {
         seenStarts.add(start)
-        const scoped = sliceScheduleDayBlockAt(html, start, needle)
+        const afterStart = start + needle.length
+        const nextDayHead = html.indexOf("bb-scheduleTable__head", afterStart)
+        const tbodyEnd = html.indexOf("</tbody>", afterStart)
+        const endExclusive =
+          nextDayHead >= 0 ? nextDayHead : tbodyEnd >= 0 ? tbodyEnd : html.length
+        const scoped = sliceScheduleDayBlockAt(html, start, endExclusive)
         if (scoped) blocks.push(scoped)
       }
       from = start + needle.length
@@ -182,6 +226,25 @@ export function dedupeScheduleGamesById(games: ScheduleGameEntry[]): ScheduleGam
 }
 
 /**
+ * 交流戦ページ（`/npb/schedule/first/inter`）などでは、上部に「当日の6試合」カード一覧（bb-score）がある。
+ * 日程テーブルのスコープが崩れて 7件以上になる場合のセーフティとして、ここから gameId を抽出する。
+ */
+export function extractGamesFromScoreListHtml(html: string): ScheduleGameEntry[] {
+  const out: ScheduleGameEntry[] = []
+  const aRe = /<a\b[^>]*\bclass="[^"]*\bbb-score__content\b[^"]*"[^>]*\bhref="\/npb\/game\/(\d+)\/index"[^>]*>([\s\S]*?)<\/a>/gi
+  let m: RegExpExecArray | null
+  while ((m = aRe.exec(html))) {
+    const gameId = (m[1] ?? "").trim()
+    if (!gameId) continue
+    const inner = m[2] ?? ""
+    const venueM = inner.match(/<span\b[^>]*\bclass="[^"]*\bbb-score__venue\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i)
+    const stadiumName = normalizeStadiumNameFromSchedule(venueM ? venueM[1] ?? "" : "")
+    out.push({ gameId, stadiumName })
+  }
+  return dedupeScheduleGamesById(out)
+}
+
+/**
  * 修正A: 全 rowspan 候補・同一日の複数見出しから有効ブロックを集め、
  * 和集合が 1〜6 件なら採用。7件以上なら単一ブロックの最多を採用。
  */
@@ -208,13 +271,20 @@ export function pickBestScheduleGamesForDate(html: string, ymd: string): Schedul
     return union
   }
   if (union.length > SCHEDULE_MAX_GAMES_PER_DAY) {
+    // セーフティ: bb-score（当日カード一覧）から拾えるならそれを優先（通常6件）。
+    const fromScore = extractGamesFromScoreListHtml(html)
+    if (fromScore.length > 0 && fromScore.length <= SCHEDULE_MAX_GAMES_PER_DAY) return fromScore
     return dedupeScheduleGamesById(bestSingle)
   }
   return []
 }
 
 export function extractGamesFromScheduleHtml(html: string, ymd: string): ScheduleGameEntry[] {
-  return pickBestScheduleGamesForDate(html, ymd)
+  const picked = pickBestScheduleGamesForDate(html, ymd)
+  if (picked.length > 0) return picked
+  const fromScore = extractGamesFromScoreListHtml(html)
+  if (fromScore.length > 0 && fromScore.length <= SCHEDULE_MAX_GAMES_PER_DAY) return fromScore
+  return picked
 }
 
 export function extractGameIdsFromScheduleHtml(html: string, ymd: string): string[] {

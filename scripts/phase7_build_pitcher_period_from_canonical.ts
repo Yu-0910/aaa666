@@ -7,6 +7,8 @@
  *
  * 使い方:
  *   npx tsx scripts/phase7_build_pitcher_period_from_canonical.ts --year 2026
+ *
+ * canonical 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み）。
  */
 
 import {
@@ -20,7 +22,8 @@ import {
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PitchingLine } from "../lib/yahooGame/types"
-import { loadCanonicalGames } from "../lib/yahooGame/loadCanonicalGames"
+import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { parseGameDateYmdFromCanonical } from "../lib/yahooGame/gameDateFromCanonical"
 import {
   monthKeyFromYmd,
@@ -251,7 +254,7 @@ function main(): void {
     process.exit(1)
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
-  const docs = loadCanonicalGames(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase7] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -340,7 +343,7 @@ function main(): void {
 
     const pas = [...(doc.domain.plateAppearances ?? [])].sort(comparePlateAppearances)
     for (const pa of pas) {
-      const pid = (pa.yahooPitcherId ?? "").trim()
+      const pid = yahooPitcherIdForVsHandFromPa(pa)
       if (!pid) continue
       const npb = npbForYahooPitcher(doc, pid)
       if (!npb) continue

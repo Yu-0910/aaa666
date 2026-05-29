@@ -693,36 +693,88 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
             added_metrics.append('GPA')
     
     if 'RC' in calculated_metrics:
-        if not (has_column('H', '安打') and has_column('BB', '四球') and has_column('TB', '塁打') and has_column('AB', '打数')):
+        if not (has_column('H', '安打') and has_column('BB', '四球') and has_column('HBP', '死球') and
+                has_column('CS', '盗塁死') and (has_column('GDP', '併殺打') or has_column('GIDP', '併殺打')) and
+                has_column('TB', '塁打') and has_column('SF', '犠飛') and has_column('SH', '犠打') and
+                has_column('SB', '盗塁') and (has_column('SO', '三振') or has_column('K', '三振')) and
+                has_column('AB', '打数')):
             skipped_metrics.append(('RC', '必要な列が存在しない'))
         else:
-            h = get_value('H', '安打')
-            bb = get_value('BB', '四球')
-            tb = get_value('TB', '塁打')
-            ab = get_value('AB', '打数')
-            denominator = ab + bb
-            rc = ((h + bb) * tb) / denominator if denominator > 0 else float('nan')
+            h = get_value('H', '安打') or 0.0
+            bb = get_value('BB', '四球') or 0.0
+            hbp = get_value('HBP', '死球') or 0.0
+            cs = get_value('CS', '盗塁死') or 0.0
+            gidp = get_value('GDP', '併殺打')
+            if gidp is None or gidp == 0:
+                gidp = get_value('GIDP', '併殺打') or 0.0
+            tb = get_value('TB', '塁打') or 0.0
+            sf = get_value('SF', '犠飛') or 0.0
+            sh = get_value('SH', '犠打') or 0.0
+            sb = get_value('SB', '盗塁') or 0.0
+            so = get_value('SO', '三振')
+            if so is None or so == 0:
+                so = get_value('K', '三振') or 0.0
+            ab = get_value('AB', '打数') or 0.0
+
+            A = h + bb + hbp - cs - gidp
+            B = tb + 0.26 * (bb + hbp) + 0.53 * (sf + sh) + 0.64 * sb - 0.03 * so
+            C = ab + bb + hbp + sf + sh
+            # Technical RC (nf3互換)
+            rc = (((A + 2.4 * C) * (B + 3 * C)) / (9 * C)) - (0.9 * C) if C > 0 else float('nan')
             result['RC'] = rc
             added_metrics.append('RC')
     
     if 'XR' in calculated_metrics:
-        if not (has_column('1B', '単打') and has_column('2B', '二塁打') and has_column('3B', '三塁打') and 
-                has_column('HR', '本塁打') and has_column('BB', '四球') and has_column('HBP', '死球') and 
-                has_column('SB', '盗塁') and has_column('CS', '盗塁死') and has_column('AB', '打数') and has_column('H', '安打')):
+        if not (has_column('AB', '打数') and has_column('H', '安打') and has_column('2B', '二塁打') and 
+                has_column('3B', '三塁打') and has_column('HR', '本塁打') and has_column('BB', '四球') and 
+                has_column('IBB', '敬遠') and has_column('HBP', '死球') and has_column('SB', '盗塁') and 
+                has_column('CS', '盗塁死') and (has_column('SO', '三振') or has_column('K', '三振')) and
+                (has_column('GDP', '併殺打') or has_column('GIDP', '併殺打')) and has_column('SF', '犠飛') and has_column('SH', '犠打')):
             skipped_metrics.append(('XR', '必要な列が存在しない'))
         else:
-            singles = get_value('1B', '単打')
+            ab = get_value('AB', '打数') or 0.0
+            h = get_value('H', '安打') or 0.0
             doubles = get_value('2B', '二塁打')
             triples = get_value('3B', '三塁打')
             hr = get_value('HR', '本塁打')
             bb = get_value('BB', '四球')
+            ibb = get_value('IBB', '敬遠') or 0.0
             hbp = get_value('HBP', '死球')
             sb = get_value('SB', '盗塁')
             cs = get_value('CS', '盗塁死')
-            ab = get_value('AB', '打数')
-            h = get_value('H', '安打')
-            xr = (0.50 * singles + 0.72 * doubles + 1.04 * triples + 1.44 * hr +
-                  0.33 * (bb + hbp) + 0.18 * sb - 0.32 * cs - 0.098 * (ab - h))
+            so = get_value('SO', '三振')
+            if so is None or so == 0:
+                so = get_value('K', '三振') or 0.0
+            gidp = get_value('GDP', '併殺打')
+            if gidp is None or gidp == 0:
+                gidp = get_value('GIDP', '併殺打') or 0.0
+            sf = get_value('SF', '犠飛') or 0.0
+            sh = get_value('SH', '犠打') or 0.0
+
+            doubles = doubles or 0.0
+            triples = triples or 0.0
+            hr = hr or 0.0
+            bb = bb or 0.0
+            hbp = hbp or 0.0
+            sb = sb or 0.0
+            cs = cs or 0.0
+
+            singles = max(0.0, h - doubles - triples - hr)
+            xr = (
+                0.50 * singles
+                + 0.72 * doubles
+                + 1.04 * triples
+                + 1.44 * hr
+                + 0.34 * (bb + hbp - ibb)
+                + 0.25 * ibb
+                + 0.18 * sb
+                - 0.32 * cs
+                - 0.090 * (ab - h - so)
+                - 0.098 * so
+                - 0.37 * gidp
+                + 0.37 * sf
+                + 0.04 * sh
+            )
             result['XR'] = xr
             added_metrics.append('XR')
     

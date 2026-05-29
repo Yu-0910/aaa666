@@ -3,6 +3,7 @@
  */
 
 import type { GamePitchTypeRow, GamePitchTypesResponse } from "./gamePitcherPilotFiles"
+import { slashOps3FromCounts, slashRate3FromCounts } from "../battingRateFormat"
 import { bucketPitchResultForTypeRow } from "./pitchCountSim"
 import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import type { PlateAppearance, PitchEvent } from "./types"
@@ -70,16 +71,14 @@ function countsAtBat(s: string): boolean {
 
 function formatAvg(h: number, ab: number): string {
   if (!ab) return "—"
-  return (h / ab).toFixed(3)
+  return slashRate3FromCounts(h, ab)
 }
 
 function formatOps(acc: SettlementAcc): string {
   const { ab, h, tb, bb, hbp, sf } = acc
   const obpDenom = ab + bb + hbp + sf
   if (obpDenom <= 0 && ab <= 0) return "—"
-  const obp = obpDenom > 0 ? (h + bb + hbp) / obpDenom : 0
-  const slg = ab > 0 ? tb / ab : 0
-  return (obp + slg).toFixed(3)
+  return slashOps3FromCounts({ h, ab, tb, bb, hbp, sf })
 }
 
 function sortEvents(ev: PitchEvent[]): PitchEvent[] {

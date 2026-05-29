@@ -146,9 +146,26 @@ def parse_text_sections(soup: BeautifulSoup) -> list[dict[str, Any]]:
         head = sec.select_one(".bb-liveText__inning")
         title = head.get_text(strip=True) if head else ""
         lines: list[str] = []
-        for p in sec.select("p.bb-liveText__summary"):
-            lines.append(re.sub(r"\s+", " ", p.get_text(" ", strip=True)))
-        out.append({"sectionTitle": title, "lines": lines})
+        play_headline_ja: list[str | None] = []
+        for li in sec.select("li.bb-liveText__item"):
+            ht_el = li.select_one("p.bb-liveText__itemTitle")
+            headline = (
+                re.sub(r"\s+", " ", ht_el.get_text(" ", strip=True)) if ht_el else None
+            )
+            summaries = li.select("p.bb-liveText__summary")
+            for j, p in enumerate(summaries):
+                t = re.sub(r"\s+", " ", p.get_text(" ", strip=True))
+                if not t:
+                    continue
+                lines.append(t)
+                play_headline_ja.append(headline if j == 0 else None)
+        entry: dict[str, Any] = {"sectionTitle": title, "lines": lines}
+        # 全プレー行に対応する見出し配列（動画無しは None）。取得ルールは特定イベントではなく常時。
+        if len(lines) > 0:
+            if len(play_headline_ja) != len(lines):
+                play_headline_ja = [None] * len(lines)
+            entry["playHeadlineJa"] = play_headline_ja
+        out.append(entry)
     return out
 
 

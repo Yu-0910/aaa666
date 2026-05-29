@@ -4,16 +4,24 @@
  *
  * 実行:
  *   npx tsx scripts/phase19_build_pitching_rankings_from_canonical.ts --year 2026
+ *
+ * 入力 canonical は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み）。
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
+import { mkdirSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import type { CanonicalGameDocument, LineupPlayer, PitchingLine } from '../lib/yahooGame/types'
+import type { CanonicalGameDocument, LineupPlayer } from '../lib/yahooGame/types'
+import {
+  aggregatePitchingSeasonByYahooPlayer,
+  CSV_TEAM_TO_RANKING_SHORT,
+  rosterTeamToRankingShort,
+  type PitchingSeasonAggYahoo,
+} from '../lib/yahooGame/canonicalPitchingSeasonAgg'
+import { pitchingSeasonRowStatsFromAgg } from '../lib/yahooGame/pitchingRowMetricsFromAgg'
 import { loadMetricsFromRecordPitching } from '../lib/ranking/recordPitching'
 import { getPitchingJsonKey } from '../lib/ranking/metricMap'
 import { sanitizeMetricForPath } from '../lib/ranking/url'
-import { ipStringToOuts } from '../lib/ranking/ipBaseball'
 import {
   getRomanNameMap,
   normalizeRomanMapKey,
@@ -25,26 +33,15 @@ import {
   rosterEnglishShortForRanking,
 } from '../lib/npbRoster'
 import { assertPitchingRankingRosterComplete } from '../lib/ranking/verifyPitchingRankingRoster'
+import { loadCanonicalGamesMergedForDerivedPipeline } from '../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline'
+import { aggregateSeasonTeamGamesFromCanonical } from '../lib/yahooGame/aggregateTeamGamesFromCanonical'
+import {
+  assignRanks,
+  filterPitchingRowsForQualifyingAtBuild,
+} from '../lib/ranking/filterRankingsByQualifyingAtBuild'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, '..')
-
-const CSV_TEAM_TO_RANKING_SHORT: Record<string, string> = {
-  中日ドラゴンズ: '中日',
-  広島東洋カープ: '広島',
-  東京ヤクルトスワローズ: 'ヤクルト',
-  読売ジャイアンツ: '巨人',
-  阪神タイガース: '阪神',
-  横浜DeNAベイスターズ: 'DeNA',
-  オリックス・バファローズ: 'オリックス',
-  千葉ロッテマリーンズ: 'ロッテ',
-  北海道日本ハムファイターズ: '日本ハム',
-  東北楽天ゴールデンイーグルス: '楽天',
-  埼玉西武ライオンズ: '西武',
-  福岡ソフトバンクホークス: 'ソフトバンク',
-}
-
-const CL_TEAM_SHORT = new Set(['巨人', '阪神', '中日', '広島', 'DeNA', 'ヤクルト'])
 
 function parseArgs(): { year: string } {
   const args = process.argv.slice(2)
@@ -58,23 +55,6 @@ function parseArgs(): { year: string } {
   return { year }
 }
 
-function loadCanonicalDocs(): CanonicalGameDocument[] {
-  const dir = join(projectRoot, '_data', 'scraped_games', 'canonical')
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.endsWith('.json'))
-  const out: CanonicalGameDocument[] = []
-  for (const f of files) {
-    const p = join(dir, f)
-    try {
-      const doc = JSON.parse(readFileSync(p, 'utf8')) as CanonicalGameDocument
-      if (doc?.schemaVersion === 'yahoo-game-canonical-v1' && doc?.gameId) out.push(doc)
-    } catch {
-      // ignore
-    }
-  }
-  return out
-}
-
 function teamForYahooId(doc: CanonicalGameDocument, yahooId: string): string {
   for (const team of doc.game.teams ?? []) {
     const teamName = String(team.teamName ?? '').trim()
@@ -83,17 +63,6 @@ function teamForYahooId(doc: CanonicalGameDocument, yahooId: string): string {
     }
   }
   return ''
-}
-
-function rosterTeamToRankingShort(fullTeam: string): string {
-  const t = String(fullTeam ?? '').trim()
-  return CSV_TEAM_TO_RANKING_SHORT[t] ?? t
-}
-
-function leagueBucketForTeamShort(short: string): 'CL' | 'PL' {
-  const t = short.trim()
-  if (!t) return 'CL'
-  return CL_TEAM_SHORT.has(t) ? 'CL' : 'PL'
 }
 
 function yahooMetaFromCanonical(docs: CanonicalGameDocument[]): Map<string, { name: string; team: string }> {
@@ -173,156 +142,12 @@ function resolveRomanName(
   return undefined
 }
 
-type Agg = {
-  gameIds: Set<string>
-  ipOuts: number
-  bf: number
-  h: number
-  hr: number
-  so: number
-  bb: number
-  hbp: number
-  bk: number
-  r: number
-  er: number
-  np: number
-  w: number
-  l: number
-  hld: number
-}
-
-function emptyAgg(): Agg {
-  return {
-    gameIds: new Set(),
-    ipOuts: 0,
-    bf: 0,
-    h: 0,
-    hr: 0,
-    so: 0,
-    bb: 0,
-    hbp: 0,
-    bk: 0,
-    r: 0,
-    er: 0,
-    np: 0,
-    w: 0,
-    l: 0,
-    hld: 0,
-  }
-}
-
-function mergePitchingLinesInGame(lines: PitchingLine[]): PitchingLine | null {
-  if (lines.length === 0) return null
-  const withData = lines.filter((l) => (l.bf ?? 0) > 0 || ipStringToOuts(l.ip) > 0)
-  const src = withData.length > 0 ? withData : lines
-  const base: PitchingLine = { ...src[0] }
-  for (let i = 1; i < src.length; i++) {
-    const x = src[i]
-    base.bf = (base.bf ?? 0) + (x.bf ?? 0)
-    base.h = (base.h ?? 0) + (x.h ?? 0)
-    base.hr = (base.hr ?? 0) + (x.hr ?? 0)
-    base.so = (base.so ?? 0) + (x.so ?? 0)
-    base.bb = (base.bb ?? 0) + (x.bb ?? 0)
-    base.hbp = (base.hbp ?? 0) + (x.hbp ?? 0)
-    base.bk = (base.bk ?? 0) + (x.bk ?? 0)
-    base.r = (base.r ?? 0) + (x.r ?? 0)
-    base.er = (base.er ?? 0) + (x.er ?? 0)
-    base.pitches = (base.pitches ?? 0) + (x.pitches ?? 0)
-    base.ip = mergeIpStrings(base.ip, x.ip)
-    if ((x.playerName?.length ?? 0) > (base.playerName?.length ?? 0)) base.playerName = x.playerName
-    if (!base.decision && x.decision) base.decision = x.decision
-  }
-  return base
-}
-
-function mergeIpStrings(a?: string, b?: string): string | undefined {
-  const oa = ipStringToOuts(a)
-  const ob = ipStringToOuts(b)
-  const total = oa + ob
-  if (total <= 0) return a || b
-  const whole = Math.floor(total / 3)
-  const rem = total % 3
-  if (rem === 0) return String(whole)
-  return `${whole}.${rem}`
-}
-
-function aggregatePitching(
-  docs: CanonicalGameDocument[]
-): Map<string, { agg: Agg; league: 'CL' | 'PL' }> {
-  const byPlayer = new Map<string, Agg>()
-  const leagueByPlayer = new Map<string, 'CL' | 'PL'>()
-
-  for (const doc of docs) {
-    const byId = new Map<string, PitchingLine[]>()
-    for (const pl of doc.domain.pitchingLines ?? []) {
-      const id = String(pl.yahooPlayerId ?? '').trim()
-      if (!id) continue
-      const arr = byId.get(id) ?? []
-      arr.push(pl)
-      byId.set(id, arr)
-    }
-
-    for (const [id, lines] of byId.entries()) {
-      const merged = mergePitchingLinesInGame(lines)
-      if (!merged) continue
-      const outs = ipStringToOuts(merged.ip)
-      if (outs === 0 && (merged.bf ?? 0) === 0) continue
-
-      const agg = byPlayer.get(id) ?? emptyAgg()
-      agg.gameIds.add(doc.gameId)
-      agg.ipOuts += outs
-      agg.bf += merged.bf ?? 0
-      agg.h += merged.h ?? 0
-      agg.hr += merged.hr ?? 0
-      agg.so += merged.so ?? 0
-      agg.bb += merged.bb ?? 0
-      agg.hbp += merged.hbp ?? 0
-      agg.bk += merged.bk ?? 0
-      agg.r += merged.r ?? 0
-      agg.er += merged.er ?? 0
-      agg.np += merged.pitches ?? 0
-      if (merged.decision === 'win') agg.w += 1
-      else if (merged.decision === 'loss') agg.l += 1
-      else if (merged.decision === 'hold') agg.hld += 1
-      byPlayer.set(id, agg)
-
-      const lineupTeam = teamForYahooId(doc, id)
-      const short = rosterTeamToRankingShort(lineupTeam)
-      leagueByPlayer.set(id, leagueBucketForTeamShort(short))
-    }
-  }
-
-  const out = new Map<string, { agg: Agg; league: 'CL' | 'PL' }>()
-  for (const [id, agg] of byPlayer.entries()) {
-    out.set(id, { agg, league: leagueByPlayer.get(id) ?? 'CL' })
-  }
-  return out
-}
-
 function buildPitchingRow(
   yahooId: string,
-  agg: Agg,
+  agg: PitchingSeasonAggYahoo,
   meta: { name: string; team: string },
   romanName?: string
 ): Record<string, unknown> {
-  const outs = agg.ipOuts
-  const ipDec = outs / 3
-  const bf = agg.bf
-  const era = outs > 0 ? (agg.er * 27) / outs : 0
-  const whip = ipDec > 0 ? (agg.bb + agg.h) / ipDec : 0
-  const kPct = bf > 0 ? (agg.so / bf) * 100 : 0
-  const bbPct = bf > 0 ? (agg.bb / bf) * 100 : 0
-  const kBbPct = bf > 0 ? ((agg.so - agg.bb) / bf) * 100 : 0
-  const wpct = agg.w + agg.l > 0 ? agg.w / (agg.w + agg.l) : 0
-  const pIp = ipDec > 0 ? agg.np / ipDec : 0
-  const abEst = Math.max(0, bf - agg.bb - agg.hbp)
-  const avgAgainst = abEst > 0 ? agg.h / abEst : 0
-  const obpAgainst = bf > 0 ? (agg.h + agg.bb + agg.hbp) / bf : 0
-  const tbEst = agg.h + agg.hr * 3
-  const slgAgainst = abEst > 0 ? tbEst / abEst : 0
-  const babipDenom = bf - agg.bb - agg.hbp - agg.so - agg.hr
-  const babipAgainst = babipDenom > 0 ? (agg.h - agg.hr) / babipDenom : 0
-
   const name = meta.name.trim() || yahooId
   const team = meta.team.trim()
 
@@ -332,36 +157,7 @@ function buildPitchingRow(
     name,
     team,
     metric: '防御率',
-    era,
-    k_bb_pct: kBbPct,
-    w: agg.w,
-    l: agg.l,
-    hld: agg.hld,
-    sv: 0,
-    hp: 0,
-    g: agg.gameIds.size,
-    gs: 0,
-    cg: 0,
-    sho: 0,
-    wpct,
-    ip: ipDec,
-    bf,
-    np: agg.np,
-    p_ip: pIp,
-    ha: agg.h,
-    hra: agg.hr,
-    so: agg.so,
-    bb: agg.bb,
-    whip,
-    k_pct: kPct,
-    bb_pct: bbPct,
-    qs_rate: 0,
-    hqs_rate: 0,
-    sqs_rate: 0,
-    avg_against: avgAgainst,
-    babip_against: babipAgainst,
-    obp_against: obpAgainst,
-    slg_against: slgAgainst,
+    ...pitchingSeasonRowStatsFromAgg(agg),
   }
   if (romanName) base.romanName = romanName
   return base
@@ -402,14 +198,15 @@ function main(): void {
     process.exit(1)
   }
 
-  const docs = loadCanonicalDocs()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error('[phase19] canonical が _data/scraped_games/canonical/ にありません')
     process.exit(1)
   }
 
   const metaMap = yahooMetaFromCanonical(docs)
-  const aggregated = aggregatePitching(docs)
+  const teamGamesByLeague = aggregateSeasonTeamGamesFromCanonical(docs, year)
+  const aggregated = aggregatePitchingSeasonByYahooPlayer(docs)
   if (aggregated.size === 0) {
     console.error('[phase19] pitchingLines から集計できる行がありません')
     process.exit(1)
@@ -450,14 +247,14 @@ function main(): void {
         const bv = sortValue(metricKey, b)
         return asc ? av - bv : bv - av
       })
-      const ranked = sorted.map((raw, idx) => ({
-        rank: idx + 1,
-        ...raw,
-      }))
+      const rankedAll = assignRanks(sorted)
+      const teamGames = teamGamesByLeague[lg]
+      const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
+      const rankedPublic = assignRanks(filtered)
 
       const fileBase = sanitizeMetricForPath(m.label)
-      writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), 'utf8')
-      writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(ranked, null, 2), 'utf8')
+      writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(rankedPublic, null, 2), 'utf8')
+      writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(rankedAll, null, 2), 'utf8')
     }
 
     console.log(`[phase19] wrote ${lg} (${metrics.length} metrics, ${list.length} pitchers) → ${outDir}`)

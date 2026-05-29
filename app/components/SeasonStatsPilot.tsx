@@ -13,12 +13,13 @@ import {
 } from "@/lib/seasonStatsPilotShared"
 import { unwrapSeasonStatsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
 import type { PitchTypeStats, SpeedBandStatsMap } from "@/lib/pitchDetailsPilot"
-import { STRAIGHT_SPEED_BANDS } from "@/lib/straightSpeedBands"
+import { STRAIGHT_SPEED_BANDS, STRAIGHT_SPEED_BAND_KEYS } from "@/lib/straightSpeedBands"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import { createFielderPlaceholderTotalRow } from "@/lib/fielderSeasonPlaceholderRow"
 import { rosterPositionToFieldStubRowKey } from "@/lib/rosterFieldPositionStub"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import { STADIUM_VENUE_UI_ROWS_BATTING } from "@/lib/stadiumVenueNormalize"
+import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
@@ -104,8 +105,8 @@ function PilotTotalRecordBlock({
               <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">打数</th>
             </tr>
             <tr style={PILOT_TABLE_DATA_ROW_TOP_LINE}>
-              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{totalRow.ops}</td>
-              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.avg}</td>
+              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{formatSlashStatDisplay(totalRow.ops)}</td>
+              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{formatSlashStatDisplay(totalRow.avg)}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.h}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.hr}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.rbi}</td>
@@ -464,8 +465,8 @@ export default function SeasonStatsPilot({
                             </td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.slg : na}</td>
@@ -571,8 +572,8 @@ export default function SeasonStatsPilot({
                                 <span>{team.label}</span>
                               </div>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
@@ -672,8 +673,8 @@ export default function SeasonStatsPilot({
                           )}
                         </td>
                         <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whiff_pct}</td>
-                        <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ops}</td>
-                        <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg}</td>
+                        <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.ops)}</td>
+                        <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.avg)}</td>
                         <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
                       </tr>
                     ))}
@@ -687,6 +688,7 @@ export default function SeasonStatsPilot({
           {showPilotTab("pitch") && (() => {
             const getSpeedRow = (key: string) => speedBandStats[key] ?? null
             const na = "—"
+            const hasAnySpeedBand = STRAIGHT_SPEED_BAND_KEYS.some((k) => getSpeedRow(k) != null)
 
             return (
               <>
@@ -699,6 +701,12 @@ export default function SeasonStatsPilot({
                 >
                   球速別の打撃成績（ストレート限定）
                 </h2>
+                {pitchTypeStats.length > 0 && !hasAnySpeedBand && (
+                  <p className={`text-sm text-gray-400 ${loose ? "mb-4" : "mb-2"}`}>
+                    ストレート球の球速データが無いか、Phase14 派生が未生成です。{" "}
+                    <code className="text-xs">npm run phase14:build:pitch</code> 後に再読み込みしてください。
+                  </p>
+                )}
                 <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table
                     className="text-xs"
@@ -736,7 +744,12 @@ export default function SeasonStatsPilot({
                     <tbody>
                       {STRAIGHT_SPEED_BANDS.map((item) => {
                         const row = getSpeedRow(item.key)
-                        const hasData = row != null
+                        const hasData =
+                          row != null &&
+                          (row.pitch_share_pct !== "—" ||
+                            row.avg !== "—" ||
+                            row.h2 > 0 ||
+                            row.hr > 0)
                         return (
                           <tr
                             key={item.key}
@@ -748,10 +761,10 @@ export default function SeasonStatsPilot({
                             >
                               <span>{item.labelJa}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h2 ?? 0) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[13px] border-l border-b border-gray-500">{hasData ? row!.isop : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[13px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.isop) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.pitch_share_pct : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.whiff_pct : na}</td>
                           </tr>
@@ -840,8 +853,8 @@ export default function SeasonStatsPilot({
                                 <span>{item.display}</span>
                               </div>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
@@ -946,8 +959,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{item.label}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1024,8 +1037,8 @@ export default function SeasonStatsPilot({
                             <td className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{item.label}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
@@ -1118,8 +1131,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{item.label}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1194,8 +1207,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{n}番</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1304,7 +1317,7 @@ export default function SeasonStatsPilot({
                               <span>{item.label}</span>
                             </td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h2) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1512,8 +1525,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{item.label}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1599,8 +1612,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               {item.label}
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.ops : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.avg : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
@@ -1677,8 +1690,8 @@ export default function SeasonStatsPilot({
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               {row.split_label}
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ops}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.avg}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.ops)}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.avg)}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.rbi}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.obp}</td>

@@ -8,25 +8,22 @@
  *   イニング（表裏）ごとに打席を順に処理し、打席結果テキストで走者を簡易シミュレーション
  *   （lib/yahooGame/paSituationSim）。先頭球時点のメタが無い場合の近似。
  *
- * 打順別（スタメン1〜9）:
- *   canonical の startingLineup（battingOrder + yahooPlayerId）でスタメン打順を取得し、
- *   同一試合の plateAppearances を集計。名簿に無い打席（代打のみ等）は対象外。
+ * 打順別（スタメン1〜9）・スタメン守備位置別:
+ *   canonical の startingLineup（battingOrder / fieldingPosition + yahooPlayerId）で
+ *   その試合の plateAppearances を集計。代打のみでスタメン名簿に無い打席は対象外。
+ *   startingLineup の正: Phase2b が出場成績 HTML の括弧付き「位置」行から載せる（`sportsnaviStatsStartingLineup.mjs`）。
+ *   古い canonical は `loadCanonicalGamesMergedForDerivedPipeline` が raw stats から注入。
  *
  * 出力:
  *   _data/derived/player_season_batting_splits/{year}/yahoo_{yahooBatterId}.json
  *
  * 使い方:
  *   npx tsx scripts/phase15_build_pa_round_and_situation_from_canonical.ts --year 2026
+ *
+ * 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）。
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "fs"
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
@@ -42,10 +39,14 @@ import {
   type BattingSeasonAggYahoo,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { loadVsHandRowsFromCanonicalWithDebug } from "../lib/seasonStatsPilot"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import {
-  loadVsHandRowsFromCanonicalWithDebug,
-  mergePhase10RestoredIntoDocIfPresent,
-} from "../lib/seasonStatsPilot"
+  STARTER_FIELD_TABLE_KEYS,
+  labelForStarterFieldSplit,
+  starterFieldSplitKeyFromLineupPosition,
+} from "../lib/yahooGame/starterFieldPositionFromStats"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -62,26 +63,15 @@ function parseArgs(): { year: string } {
   return { year }
 }
 
-function fmtSlash3(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return ".000"
-  const s = n.toFixed(3)
-  return s.startsWith("0") ? s.slice(1) : s
-}
-
 function aggToSeasonStatsRow(
-  splitType: "pa_round" | "base_sit" | "bat_order" | "vs_hand",
+  splitType: "pa_round" | "base_sit" | "bat_order" | "starter_field" | "vs_hand",
   splitValue: string,
   splitLabel: string,
   agg: BattingSeasonAggYahoo
 ): SeasonStatsRow {
   const h1 = Math.max(0, agg.h - agg.h2 - agg.h3 - agg.hr)
-  const avg = agg.ab > 0 ? agg.h / agg.ab : null
-  const obpDen = agg.ab + agg.bb + agg.hbp + agg.sf
-  const obp = obpDen > 0 ? (agg.h + agg.bb + agg.hbp) / obpDen : null
-  const slg = agg.ab > 0 ? agg.tb / agg.ab : null
-  // AB=0（四死球のみ等）では SLG は定義されないが、OPS は OBP+0 とみなす
-  const ops = obp != null ? obp + (agg.ab > 0 ? agg.tb / agg.ab : 0) : null
-  const rispAvg = agg.risp_ab > 0 ? agg.risp_h / agg.risp_ab : null
+  const slash = battingSlashRatesFromCounts(agg)
+  const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
   return {
@@ -109,11 +99,11 @@ function aggToSeasonStatsRow(
     cs: agg.cs,
     e: agg.e,
     gidp: agg.gidp,
-    avg: fmtSlash3(avg),
-    obp: fmtSlash3(obp),
-    slg: fmtSlash3(slg),
-    ops: fmtSlash3(ops),
-    risp_avg: fmtSlash3(rispAvg),
+    avg: slash.avg,
+    obp: slash.obp,
+    slg: slash.slg,
+    ops: slash.ops,
+    risp_avg,
     risp_ab: agg.risp_ab,
     risp_h: agg.risp_h,
     sb_pct: sbPct == null ? "" : (sbPct * 100).toFixed(1),
@@ -169,6 +159,20 @@ function starterSlotByYahooId(doc: CanonicalGameDocument): Map<string, string> {
   return m
 }
 
+/** その試合のスタメン守備位置（表キー）→ yahooPlayerId */
+function starterFieldKeyByYahooId(doc: CanonicalGameDocument): Map<string, string> {
+  const m = new Map<string, string>()
+  for (const team of doc.game?.teams ?? []) {
+    for (const p of team.startingLineup ?? []) {
+      const id = (p.yahooPlayerId ?? "").trim()
+      if (!id) continue
+      const key = starterFieldSplitKeyFromLineupPosition(p.fieldingPosition)
+      if (key) m.set(id, key)
+    }
+  }
+  return m
+}
+
 function labelForBatOrderSlot(slot: string): string {
   return `${slot}番`
 }
@@ -216,30 +220,14 @@ function compareHalfKeys(a: string, b: string): number {
   return ta === "表" ? -1 : 1
 }
 
-function loadCanonicalFiles(): CanonicalGameDocument[] {
-  const dir = join(projectRoot, "_data", "scraped_games", "canonical")
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json"))
-  const out: CanonicalGameDocument[] = []
-  for (const f of files) {
-    const p = join(dir, f)
-    try {
-      const doc = JSON.parse(readFileSync(p, "utf8")) as CanonicalGameDocument
-      if (doc?.schemaVersion === "yahoo-game-canonical-v1" && doc?.gameId) out.push(doc)
-    } catch {
-      // ignore
-    }
-  }
-  return out
-}
-
 function main(): void {
   const { year } = parseArgs()
-  const docs = loadCanonicalFiles()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase15] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
+  // mergedDocsByGameId はマージ済み doc の参照（loadVsHand が gameId で取り出す）。
 
   /** batterId -> roundKey "1"|"2"|"3"|"4"|"5" -> Agg */
   const byBatterRound = new Map<string, Map<string, BattingSeasonAggYahoo>>()
@@ -254,6 +242,7 @@ function main(): void {
   }
 
   const byBatterBatOrder = new Map<string, Map<string, BattingSeasonAggYahoo>>()
+  const byBatterStarterField = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
   function ensureBatOrderMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterBatOrder.get(bid)
@@ -270,6 +259,27 @@ function main(): void {
     const agg = bm.get(key) ?? emptyBattingSeasonAggYahoo()
     updateBattingAggFromPa(agg, gameId, pa)
     bm.set(key, agg)
+  }
+
+  function ensureStarterFieldMap(bid: string): Map<string, BattingSeasonAggYahoo> {
+    let m = byBatterStarterField.get(bid)
+    if (!m) {
+      m = new Map()
+      byBatterStarterField.set(bid, m)
+    }
+    return m
+  }
+
+  function addStarterFieldAgg(
+    bid: string,
+    fieldKey: string,
+    gameId: string,
+    pa: PlateAppearance,
+  ): void {
+    const fm = ensureStarterFieldMap(bid)
+    const agg = fm.get(fieldKey) ?? emptyBattingSeasonAggYahoo()
+    updateBattingAggFromPa(agg, gameId, pa)
+    fm.set(fieldKey, agg)
   }
 
   const byBatterSit = new Map<string, Map<string, BattingSeasonAggYahoo>>()
@@ -293,7 +303,7 @@ function main(): void {
   const mergedDocsByGameId = new Map<string, CanonicalGameDocument>()
   for (const d of docs) {
     const gid = String(d.gameId ?? "").trim()
-    if (gid) mergedDocsByGameId.set(gid, mergePhase10RestoredIntoDocIfPresent(d))
+    if (gid) mergedDocsByGameId.set(gid, d)
   }
 
   const allBattersWithPas = new Set<string>()
@@ -317,12 +327,14 @@ function main(): void {
     }
 
     const starterSlot = starterSlotByYahooId(doc)
+    const starterField = starterFieldKeyByYahooId(doc)
     for (const pa of pas) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
       const slot = starterSlot.get(bid)
-      if (!slot) continue
-      addBatOrderAgg(bid, slot, gameId, pa)
+      if (slot) addBatOrderAgg(bid, slot, gameId, pa)
+      const fieldKey = starterField.get(bid)
+      if (fieldKey) addStarterFieldAgg(bid, fieldKey, gameId, pa)
     }
 
     const halfGroups = new Map<string, PlateAppearance[]>()
@@ -380,6 +392,7 @@ function main(): void {
     ...byBatterRound.keys(),
     ...byBatterSit.keys(),
     ...byBatterBatOrder.keys(),
+    ...byBatterStarterField.keys(),
     ...allBattersWithBattingLines,
   ])
   const batterIds = [...allBatterIds].sort()
@@ -387,6 +400,7 @@ function main(): void {
     const roundMap = byBatterRound.get(bid)
     const sitMap = byBatterSit.get(bid)
     const batOrderMap = byBatterBatOrder.get(bid)
+    const starterFieldMap = byBatterStarterField.get(bid)
     const rows: SeasonStatsRow[] = []
     const vsHand = loadVsHandRowsFromCanonicalWithDebug(bid, {
       preloadedCanonicalDocs: docs,
@@ -417,6 +431,15 @@ function main(): void {
           rows.push(aggToSeasonStatsRow("bat_order", boKey, labelForBatOrderSlot(slot), agg))
       }
     }
+    if (starterFieldMap) {
+      for (const fk of STARTER_FIELD_TABLE_KEYS) {
+        const agg = starterFieldMap.get(fk)
+        if (agg && agg.pa > 0)
+          rows.push(
+            aggToSeasonStatsRow("starter_field", fk, labelForStarterFieldSplit(fk), agg),
+          )
+      }
+    }
     const payload = {
       schemaVersion: "phase15-player-season-batting-splits-v1",
       seasonYear: year,
@@ -430,6 +453,8 @@ function main(): void {
           "打席結果テキストから走者を簡易シミュレーション（paSituationSim）。公式記録の代替ではない。",
         batOrderNote:
           "スタメン登録の打順（1〜9）。代打・途中出場のみでスタメン名簿に無い打席は集計対象外。",
+        starterFieldNote:
+          "スタメン登録の守備位置（出場成績 HTML の括弧付き「位置」）。同一選手が試合ごとに別守備でスタメンなら行が分かれる。",
         vsHandNote:
           "v1 から、対左右の R/L/unknown 合計は通算（Phase 11）と一致するよう、試合単位の Δ を不明バケツへ寄せて補完する。",
       },

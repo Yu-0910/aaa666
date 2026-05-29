@@ -1,8 +1,21 @@
 # 規定打席（PA）到達に関する指標分類
 
-## 概要
+## 概要（2026・チーム別区別）
 
-ランキング生成時、指標ごとに「規定打席到達が必要 / 不要」を分類し、適切なフィルタリングを適用します。
+**2026 年シーズン**の率系ランキングでは、**所属球団ごと**に次を区別する（本サイトの主運用）。
+
+| 値 | 算出（2026） |
+|----|--------------|
+| チーム試合数 | **一括取得の canonical** から数えた球団別消化試合数（`public/data/rankings/2026/{CL\|PL}/team-games.json`）。**選手行の max(`games`) は使わない** |
+| 規定打席 | `round(teamGames × 3.1)` — **球団ごとに異なる** |
+
+計画の全体像: [`plan_ranking_qualifying_weekly_and_season_phases.md`](plan_ranking_qualifying_weekly_and_season_phases.md)、確定仕様: [`plan_ranking_qualifying_phase0_spec.md`](plan_ranking_qualifying_phase0_spec.md)。
+
+> **Phase 0 改定（2026-05-21）**: 初版は「ランキング JSON の選手 max(`games`)」を `teamGames` としていたが **撤回**。**正**は一括取得済み **canonical の球団別取得試合数**（§0.2 参照）。
+
+---
+
+ランキング表示時、指標ごとに「規定打席到達が必要 / 不要」を分類し、適切なフィルタリングを適用します。
 
 - **規定打席が必要な指標（率・割合・指標系）**: 少サンプルの上振れを除外するため、`PA >= minPA` でフィルタリング
 - **規定打席が不要な指標（カウント系）**: 通算量のランキングのため、フィルタリングしない（30位まで表示）
@@ -10,17 +23,29 @@
 ## 規定打席の計算
 
 ### 計算式
+
 ```
-minPA = floor(teamGames * 3.1)
+minPA(team) = roundOrFloor(teamGames(team) × 3.1, year)
 ```
 
-### 現在の設定（2025年）
-- **パ・リーグ（PL）**: 143試合 × 3.1 = 443.3 → **443打席**
-- **セ・リーグ（CL）**: 143試合 × 3.1 = 443.3 → **443打席**
+| 年度 | 端数処理 |
+|------|----------|
+| **2009年以降**（2026 含む） | **四捨五入**（`Math.round`） |
+| **2008年以前** | **切り捨て**（`Math.floor`） |
+
+**チーム試合数** `teamGames(team)`: Phase 12/28 が **既に読む canonical** から球団別にカウントし、`team-games.json` に書き出す値。ランキング表示時にその JSON を読む（追加 HTTP なし）。  
+詳細: [`plan_ranking_qualifying_phase0_spec.md`](plan_ranking_qualifying_phase0_spec.md) §2。
+
+### 現在の設定（2026・全チーム 143 試合消化時）
+
+- **143 × 3.1 = 443.3** → **443 打席**（四捨五入）
 
 ### 実装場所
-- `lib/ranking/qualifyingPA.ts` の `calculateMinPA()` 関数
-- 将来的には年度・リーグごとの試合数を設定ファイルから読み込む予定
+
+- 静的フォールバック: `lib/ranking/qualifyingPA.ts` の `calculateMinPA()`
+- 2026（正・Phase 1）: `team-games.json` → `minPAFromTeamGames(teamGames, year)`
+- 暫定（フォールバックのみ）: `computeDynamicMinPAByTeam(rows)` — 選手行 max。**本番 2026 では `team-games.json` 優先**
+- ビルド時（Phase 4）: Phase 12/28 が率系 `{metric}.json` を規定到達者のみで出力（`filterRankingsByQualifyingAtBuild.ts`）
 
 ## 指標分類
 
@@ -78,6 +103,17 @@ minPA = floor(teamGames * 3.1)
 
 **実装定数**: `METRICS_NO_QUALIFYING_PA` (Set型)
 
+## 2026 週間（Phase 3）
+
+| 項目 | 内容 |
+|------|------|
+| 試合数 | `public/data/rankings/weekly/2026/{weekKey}/{CL\|PL}/team-games.json`（当週 canonical のみ） |
+| 規定打席 | `minPA(team) = round(teamGames × 3.1)`（通算と同式・期間のみ週） |
+| UI | `WeeklyRankingPageClient` / 投手週間クライアント + トップ今週（`weekKey` 付きリーダー） |
+| ビルド | Phase 28 が率系 JSON を絞り込み（Phase 4） |
+
+週間でも **カウント系（安打・勝利等）は規定なし**。
+
 ## 実装詳細
 
 ### ファイル構成
@@ -87,10 +123,10 @@ minPA = floor(teamGames * 3.1)
    - `shouldRequireQualifyingPA()`: 指標キーから規定打席の要否を判定
    - `calculateMinPA()`: 年度・リーグに基づいて規定打席を計算
 
-2. **`app/ranking/[category]/RankingPageClient.tsx`**
-   - ランキングページのクライアントコンポーネント
-   - ソート処理時に規定打席フィルタを適用
-   - カウント系指標は30位まで表示
+2. **`lib/ranking/qualifyingThresholds.ts`** — `team-games.json` 読込・`minPA` Map
+3. **`lib/ranking/filterRankingsByQualifyingAtBuild.ts`** — Phase 12/19/28 ビルド時絞り込み
+4. **`app/ranking/[year]/[league]/RankingPageClient.tsx`** — 2026 通算・率系フィルタ + `titleSubNote`
+5. **`app/ranking/weekly/.../WeeklyRankingPageClient.tsx`** — 2026 週間・同上（`weekKey` 付き fetch）
 
 ### 処理フロー
 

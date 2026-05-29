@@ -1,5 +1,5 @@
 /**
- * Phase 7: public/data/rankings/2026/{CL,PL} を 2025 からコピー（暫定ブートストラップ）
+ * plan_full_pipeline Phase 8 用: public/data/rankings/2026/{CL,PL} を 2025 からコピー（暫定ブートストラップ）
  * 本番の計算済み JSON が揃ったら差し替え・再実行で上書きする。
  */
 import { cpSync, existsSync, mkdirSync } from "fs"

@@ -240,33 +240,62 @@ def calculate_missing_values(row: Dict[str, Any]) -> Dict[str, Any]:
         if pa > 0:
             result['K%'] = (so / pa) * 100
     
-    # RC = ((H + BB) * TB) / (AB + BB)
+    # RC (nf3互換)
     if 'RC' not in result or not result.get('RC') or safe_float(result.get('RC')) == 0:
-        h = safe_float(result.get('H') or result.get('hits') or result.get('Hits'))
-        bb = safe_float(result.get('BB') or result.get('bb') or result.get('BB'))
-        tb = safe_float(result.get('TB') or result.get('tb') or result.get('TB'))
-        ab = safe_float(result.get('AB') or result.get('ab') or result.get('AB'))
-        denominator = ab + bb
-        if denominator > 0:
-            result['RC'] = ((h + bb) * tb) / denominator
+        h = safe_float(result.get('H') or result.get('hits') or result.get('Hits') or result.get('安打'))
+        bb = safe_float(result.get('BB') or result.get('bb') or result.get('四球'))
+        hbp = safe_float(result.get('HBP') or result.get('hbp') or result.get('死球'))
+        cs = safe_float(result.get('CS') or result.get('cs') or result.get('盗塁死') or result.get('盗塁刺'))
+        gidp = safe_float(result.get('GDP') or result.get('gdp') or result.get('GIDP') or result.get('gidp') or result.get('併殺打'))
+        tb = safe_float(result.get('TB') or result.get('tb') or result.get('塁打'))
+        sf = safe_float(result.get('SF') or result.get('sf') or result.get('犠飛'))
+        sh = safe_float(result.get('SH') or result.get('sh') or result.get('犠打'))
+        sb = safe_float(result.get('SB') or result.get('sb') or result.get('盗塁'))
+        so = safe_float(result.get('SO') or result.get('so') or result.get('K') or result.get('k') or result.get('三振'))
+        ab = safe_float(result.get('AB') or result.get('ab') or result.get('打数'))
+
+        A = h + bb + hbp - cs - gidp
+        B = tb + 0.26 * (bb + hbp) + 0.53 * (sf + sh) + 0.64 * sb - 0.03 * so
+        C = ab + bb + hbp + sf + sh
+        if C > 0:
+            # Technical RC (nf3互換)
+            result['RC'] = (((A + 2.4 * C) * (B + 3 * C)) / (9 * C)) - (0.9 * C)
     
-    # XR = 0.50*1B + 0.72*2B + 1.04*3B + 1.44*HR + 0.33*(BB+HBP) + 0.18*SB - 0.32*CS - 0.098*(AB-H)
+    # XR (nf3互換)
     if 'XR' not in result or not result.get('XR') or safe_float(result.get('XR')) == 0:
         singles = safe_float(result.get('1B') or result.get('singles') or result.get('単打'))
         doubles = safe_float(result.get('2B') or result.get('doubles') or result.get('二塁打'))
         triples = safe_float(result.get('3B') or result.get('triples') or result.get('三塁打'))
         hr = safe_float(result.get('HR') or result.get('hr') or result.get('HR') or result.get('本塁打'))
         bb = safe_float(result.get('BB') or result.get('bb') or result.get('BB') or result.get('四球'))
+        ibb = safe_float(result.get('IBB') or result.get('ibb') or result.get('敬遠'))
         hbp = safe_float(result.get('HBP') or result.get('hbp') or result.get('HBP') or result.get('死球'))
         sb = safe_float(result.get('SB') or result.get('sb') or result.get('SB') or result.get('盗塁'))
         cs = safe_float(result.get('CS') or result.get('cs') or result.get('CS') or result.get('盗塁死') or result.get('盗塁刺'))
         ab = safe_float(result.get('AB') or result.get('ab') or result.get('AB') or result.get('打数'))
         h = safe_float(result.get('H') or result.get('hits') or result.get('Hits') or result.get('安打'))
+        so = safe_float(result.get('SO') or result.get('so') or result.get('K') or result.get('k') or result.get('三振'))
+        gidp = safe_float(result.get('GDP') or result.get('gdp') or result.get('GIDP') or result.get('gidp') or result.get('併殺打'))
+        sf = safe_float(result.get('SF') or result.get('sf') or result.get('犠飛'))
+        sh = safe_float(result.get('SH') or result.get('sh') or result.get('犠打'))
         # 1Bが計算されていない場合は計算
         if singles == 0 and h > 0:
-            singles = h - doubles - triples - hr
-        result['XR'] = (0.50 * singles + 0.72 * doubles + 1.04 * triples + 1.44 * hr +
-                       0.33 * (bb + hbp) + 0.18 * sb - 0.32 * cs - 0.098 * (ab - h))
+            singles = max(0.0, h - doubles - triples - hr)
+        result['XR'] = (
+            0.50 * singles
+            + 0.72 * doubles
+            + 1.04 * triples
+            + 1.44 * hr
+            + 0.34 * (bb + hbp - ibb)
+            + 0.25 * ibb
+            + 0.18 * sb
+            - 0.32 * cs
+            - 0.090 * (ab - h - so)
+            - 0.098 * so
+            - 0.37 * gidp
+            + 0.37 * sf
+            + 0.04 * sh
+        )
     
     return result
 
@@ -815,7 +844,8 @@ def generate_ranking_for_metric(
             0
         )
         player_data['rc'] = safe_int(row.get('RC') or row.get('rc') or row.get('RC'), 0)
-        player_data['xr'] = safe_int(row.get('XR') or row.get('xr') or row.get('XR'), 0)
+        # XRは小数指標（nf3互換）なのでfloatで保持
+        player_data['xr'] = safe_float(row.get('XR') or row.get('xr') or row.get('XR'), 0.0)
         player_data['babip'] = format_value(safe_float(row.get('BABIP') or row.get('babip')), 'BABIP')
         player_data['seca'] = format_value(safe_float(row.get('SecA') or row.get('seca')), 'SecA')
         player_data['ta'] = format_value(safe_float(row.get('TA') or row.get('ta')), 'TA')

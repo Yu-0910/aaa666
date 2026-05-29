@@ -5,13 +5,16 @@
  * 捕手交替は canonical に無い限り反映されない（先発捕手固定）。
  *
  * npx tsx scripts/phase6_build_pitcher_catcher_splits.ts --year 2026
+ *
+ * canonical 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み）。
  */
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { PlateAppearance } from "../lib/yahooGame/types"
-import { loadCanonicalGames } from "../lib/yahooGame/loadCanonicalGames"
+import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
 import { comparePlateAppearances, teamForYahooPlayerId } from "../lib/yahooGame/pitcherPocHelpers"
 import {
@@ -103,7 +106,7 @@ function loadYahooPitcherIdToNpbMap(
 
 function main(): void {
   const { year } = parseArgs()
-  const docs = loadCanonicalGames(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase6] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -145,7 +148,7 @@ function main(): void {
   for (const doc of docs) {
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
     for (const pa of pas) {
-      const pid = (pa.yahooPitcherId ?? "").trim()
+      const pid = yahooPitcherIdForVsHandFromPa(pa)
       if (!pid) continue
       const npb = yahooPitcherToNpb.get(pid)
       if (!npb) continue

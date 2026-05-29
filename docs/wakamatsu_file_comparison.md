@@ -22,7 +22,7 @@
 
 **列の例**:
 ```
-year,league,team,player_id,player_name_ja,player_name_en,G,PA,AB,R,H,2B,3B,HR,TB,RBI,SB,CS,SH,SF,BB,IBB,HBP,SO,GDP,AVG,OBP,SLG,OPS,1B,IsoP,IsoD,IOPS,BB%,K%,BB/K,BABIP,GPA,NOI,SecA,TA,打率,安打,本塁打,打点,試合,打席,打数,単打,二塁打,三塁打,得点,出塁率,長打率,四球,敬遠,死球,三振,塁打,盗塁,盗塁死,犠打,犠飛,併殺打,RC,XR
+year,league,team,player_id,player_name_ja,player_name_en,G,PA,AB,R,H,2B,3B,HR,TB,RBI,SB,CS,SH,SF,BB,IBB,HBP,SO,GDP,AVG,OBP,SLG,OPS,1B,IsoP,IsoD,IOPS,BB%,K%,BB/K,BABIP,GPA,NOI,SecA,TA,打率,安打,本塁打,打点,試合,打席,打数,単打,二塁打,三塁打,得点,出塁率,長打率,四球,敬遠,死球,三振,塁打,盗塁,盗塁死,犠打,犠飛,併殺打,RC(nf3),XR
 ```
 
 ### 2. 1971年から1989年までの記録があったファイル

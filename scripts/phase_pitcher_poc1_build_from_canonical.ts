@@ -1,14 +1,15 @@
 /**
  * 投手個人ページ計画 Phase 1（PoC）: canonical から投手別の派生 JSON を一括生成する。
  *
- * 入力: `_data/scraped_games/canonical/*.json`（Phase 10 復元済み plateAppearances 推奨。計画 Phase 11 相当: `battedBallOuts` 等）
+ * 入力: `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）
  * 名簿: `_data/npb_roster_2026.csv`
  *
  * 出力:
  *   _data/derived/player_season_pitching_poc/{year}/npb_{npbPlayerId}.json
  *
  * 内容:
- *   - basic: pitchingLines を Yahoo 投手 ID 単位で合算し、名簿で npb_player_id に紐付けた行
+ *   - basic: コア実績は aggregatePitchingSeasonByYahooPlayer（mergePitchingLinesInGame 起点／phase19 と同一）を
+ *     NPB 単位に合算。名簿で npb_player_id に紐付けた行
  *     加えて試合単位集計: 先発/救援回数、ホールド数、完投・完封（単独登板かつ 27 outs 以上の参考値）、
  *     故意四（一球ログの敬遠/故意四球）、先発ベースの QS 回数・QS 率、登板数
  *   - splits.vsHand / bySituation / byInning: plateAppearances から対象投手（yahooPitcherId）で集計
@@ -33,8 +34,16 @@ import {
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance, PitchingLine } from "../lib/yahooGame/types"
-import { loadCanonicalGames } from "../lib/yahooGame/loadCanonicalGames"
-import { collectStartersYahooIdsFromStatLines } from "../lib/yahooGame/nf3PitcherMetricsFromCanonical"
+import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
+import { isStrikeoutResultJa } from "../lib/yahooGame/paOutcomeResultJa"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import {
+  aggregatePitchingSeasonByYahooPlayer,
+  foldYahooPitchingAggIntoNpb,
+  sumPitchingSeasonAggYahoo,
+  type PitchingSeasonAggYahoo,
+} from "../lib/yahooGame/canonicalPitchingSeasonAgg"
+import { pitchingSeasonRowStatsFromAgg } from "../lib/yahooGame/pitchingRowMetricsFromAgg"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
 import { classifyBattedBallOutForGoAo } from "../lib/yahooGame/pitcherGoAoFromResult"
 import {
@@ -154,7 +163,7 @@ function outsAddedFromPaResult(rawResult: string): 0 | 1 | 2 {
   if (!r) return 0
   if (/併殺/.test(r)) return 2
   if (/犠打|送りバント|投犠打|犠飛/.test(r)) return 1
-  if (/三振|空三振|見三振/.test(r) || /^見逃し/.test(r) || /^空振り$/.test(r)) return 1
+  if (isStrikeoutResultJa(r)) return 1
   // 凡退扱い（エラー等を含む。公式のアウト数と一致しない場合あり）
   if (
     /飛|ゴロ|直|封殺|失策|エラー|野選|犠|振り逃げ/.test(r) &&
@@ -289,23 +298,6 @@ function opponentTeamName(canonical: CanonicalGameDocument, pitcherTeam: string)
   return names[0] === h ? names[1]! : names[0]!
 }
 
-function loadCanonicalFiles(): CanonicalGameDocument[] {
-  const dir = join(projectRoot, "_data", "scraped_games", "canonical")
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json"))
-  const out: CanonicalGameDocument[] = []
-  for (const f of files) {
-    const p = join(dir, f)
-    try {
-      const doc = JSON.parse(readFileSync(p, "utf8")) as CanonicalGameDocument
-      if (doc?.schemaVersion === "yahoo-game-canonical-v1" && doc?.gameId) out.push(doc)
-    } catch {
-      // ignore
-    }
-  }
-  return out
-}
-
 function main(): void {
   const { year } = parseArgs()
   const rosterPath = join(projectRoot, "_data", "npb_roster_2026.csv")
@@ -315,7 +307,7 @@ function main(): void {
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
   const rosterForBatHand = getNpbRoster2026()
-  const docs = loadCanonicalGames(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase_pitcher_poc1] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -601,12 +593,117 @@ function main(): void {
     bb: number
     hbp: number
     outs: number
+    /** 自責点（近似）: textPlayByPlay のスコア差分から推定。エラー絡みは未補正。 */
+    er: number
   }
-  const emptyPaAgg = (): PaAgg => ({ bf: 0, ab: 0, h: 0, hr: 0, so: 0, bb: 0, hbp: 0, outs: 0 })
+  const emptyPaAgg = (): PaAgg => ({ bf: 0, ab: 0, h: 0, hr: 0, so: 0, bb: 0, hbp: 0, outs: 0, er: 0 })
+
+  function isPaLikePlayByPlayLine(line: string): boolean {
+    const s = (line ?? "").trim()
+    if (!s) return false
+    // 明示的に「打席の結果」ではないメモ類
+    if (s.startsWith("－")) return false
+    if (/けん制|コーチマウンド|タイム|守備交代|投手交代|代打|代走|盗塁|暴投|ボーク/.test(s)) return false
+    // 典型的な打席結果
+    return /アウト|ヒット|安打|二塁打|三塁打|本塁打|ホームラン|四球|敬遠|死球|三振|併殺|犠打|犠飛/.test(s)
+  }
+
+  function parseInningHalfFromSectionTitle(t: string): { inning: number; half: "表" | "裏" } | null {
+    const s = (t ?? "").trim()
+    const m = s.match(/^(\d+)回(表|裏)$/)
+    if (!m) return null
+    const inning = parseInt(m[1] ?? "", 10)
+    const half = (m[2] ?? "") as "表" | "裏"
+    if (!Number.isFinite(inning) || inning <= 0) return null
+    return { inning, half }
+  }
+
+  function scoreBeforeHalf(
+    scoreboard: Array<{ innings?: string[]; teamName?: string }>,
+    battingIndex: 0 | 1,
+    inning: number
+  ): number {
+    const inn = scoreboard?.[battingIndex]?.innings ?? []
+    const end = Math.max(0, Math.min(inn.length, inning - 1))
+    let sum = 0
+    for (let i = 0; i < end; i++) {
+      const n = parseInt(String(inn[i] ?? "0").replace(/[^\d]/g, ""), 10)
+      if (Number.isFinite(n)) sum += n
+    }
+    return sum
+  }
+
+  function buildEstimatedErByPaId(doc: CanonicalGameDocument): Map<string, number> {
+    const out = new Map<string, number>()
+    const scoreboard = doc.game?.scoreboard ?? []
+    if (scoreboard.length < 2) return out
+
+    const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
+    const pasByHalf = new Map<string, PlateAppearance[]>()
+    for (const pa of pas) {
+      const hk = halfKeyFromPaId(pa.paId)
+      if (!hk) continue
+      const list = pasByHalf.get(hk) ?? []
+      list.push(pa)
+      pasByHalf.set(hk, list)
+    }
+
+    const mark0 = ((scoreboard[0]?.teamName ?? "").trim()[0] ?? "").trim()
+    const mark1 = ((scoreboard[1]?.teamName ?? "").trim()[0] ?? "").trim()
+    const markToIdx = new Map<string, 0 | 1>()
+    if (mark0) markToIdx.set(mark0, 0)
+    if (mark1) markToIdx.set(mark1, 1)
+
+    const sections = doc.game?.textPlayByPlay ?? []
+    for (const sec of sections) {
+      const parsed = parseInningHalfFromSectionTitle(sec.sectionTitle)
+      if (!parsed) continue
+      const hk = `${parsed.inning}-${parsed.half}`
+      const paList = pasByHalf.get(hk) ?? []
+      if (paList.length === 0) continue
+
+      const battingIndex: 0 | 1 = parsed.half === "表" ? 0 : 1
+      let prevBattingScore = scoreBeforeHalf(scoreboard, battingIndex, parsed.inning)
+
+      let paIdx = 0
+      for (const rawLine of sec.lines ?? []) {
+        const line = (rawLine ?? "").trim()
+        if (!line) continue
+
+        // スコア表記（例: "広 0-1 中"）から打撃側の得点増分を推定
+        let delta = 0
+        const m = line.match(/([^\s])\s*(\d+)-(\d+)\s*([^\s])/)
+        if (m) {
+          const aMark = (m[1] ?? "").trim()
+          const bMark = (m[4] ?? "").trim()
+          const aScore = parseInt(m[2] ?? "0", 10) || 0
+          const bScore = parseInt(m[3] ?? "0", 10) || 0
+          const aIdx = markToIdx.get(aMark) ?? null
+          const bIdx = markToIdx.get(bMark) ?? null
+          const battingScore =
+            battingIndex === aIdx ? aScore : battingIndex === bIdx ? bScore : null
+          if (battingScore != null) {
+            delta = Math.max(0, battingScore - prevBattingScore)
+            prevBattingScore = battingScore
+          }
+        }
+
+        if (!isPaLikePlayByPlayLine(line)) continue
+        const pa = paList[paIdx]
+        if (!pa) break
+        if (delta > 0) out.set(pa.paId, (out.get(pa.paId) ?? 0) + delta)
+        paIdx += 1
+      }
+    }
+
+    return out
+  }
 
   const vsHand = new Map<string, { vsR: PaAgg; vsL: PaAgg; vsB: PaAgg; vsUnknown: PaAgg }>()
   const bySit = new Map<string, Map<string, PaAgg>>()
   const byInn = new Map<string, Map<number, PaAgg>>()
+  const byPaRound = new Map<string, Map<string, PaAgg>>()
+  const byPaRoundPitchTypes = new Map<string, Map<string, Map<string, number>>>()
   const goAoByNpb = new Map<string, { go: number; ao: number }>()
 
   function addGoAo(npb: string, kind: ReturnType<typeof classifyBattedBallOutForGoAo>) {
@@ -641,24 +738,80 @@ function main(): void {
     }
     return m
   }
+  function ensurePaRound(npb: string) {
+    let m = byPaRound.get(npb)
+    if (!m) {
+      m = new Map()
+      byPaRound.set(npb, m)
+    }
+    return m
+  }
+  function ensurePaRoundPitchTypes(npb: string) {
+    let m = byPaRoundPitchTypes.get(npb)
+    if (!m) {
+      m = new Map()
+      byPaRoundPitchTypes.set(npb, m)
+    }
+    return m
+  }
 
   const ibbByNpb = new Map<string, number>()
 
   for (const doc of docs) {
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
+    const erByPaId = buildEstimatedErByPaId(doc)
+    const bfInGameByNpb = new Map<string, number>()
 
     for (const pa of pas) {
-      const pid = (pa.yahooPitcherId ?? "").trim()
+      const pid = yahooPitcherIdForVsHandFromPa(pa)
       if (!pid) continue
       const npb = npbByYahooPitcherId.get(pid) ?? null
       if (!npb || !byNpb.has(npb)) continue
 
       const res = lastPitchResult(pa)
+      const erDelta = erByPaId.get(pa.paId) ?? 0
       if (isIntentionalWalkResultText(res)) {
         ibbByNpb.set(npb, (ibbByNpb.get(npb) ?? 0) + 1)
       }
       const outsAdded = outsAddedFromPaResult(res)
       addGoAo(npb, classifyBattedBallOutForGoAo(res))
+
+      // 巡目別の球種投球数: 各球はその球の投手 ID に帰す（打席途中交代で先発の球が後任に丸ごと載らないようにする）。
+      // 巡目キーは「その投手にとこの打席が始まる前の BF 順」から決める（下の BF 加算より前）。
+      {
+        const ev = pa.pitchEvents ?? []
+        if (ev.length > 0) {
+          for (const e of ev) {
+            const ePid = String(e.yahooPitcherId ?? "").trim() || pid
+            const eNpb = npbByYahooPitcherId.get(ePid) ?? null
+            if (!eNpb || !byNpb.has(eNpb)) continue
+            const idx0 = bfInGameByNpb.get(eNpb) ?? 0
+            const round0 = Math.min(5, Math.floor(idx0 / 9) + 1)
+            const key0 = String(round0)
+            const rm = ensurePaRoundPitchTypes(eNpb)
+            const tm = rm.get(key0) ?? new Map<string, number>()
+            const pt = (e.pitchTypeJa ?? "").trim() || "不明"
+            tm.set(pt, (tm.get(pt) ?? 0) + 1)
+            rm.set(key0, tm)
+          }
+        }
+      }
+
+      // 巡目別（1〜5巡目以上）: 1試合内の BF 順（概算）で 9 人ごとに巡目を進める。
+      // （打者側の打順循環を厳密に追わず、投手側の被打撃を「何巡目か」の目安として扱う）
+      {
+        const idx = bfInGameByNpb.get(npb) ?? 0
+        bfInGameByNpb.set(npb, idx + 1)
+        const round = Math.min(5, Math.floor(idx / 9) + 1)
+        const key = String(round)
+        const pm = ensurePaRound(npb)
+        const agg = pm.get(key) ?? emptyPaAgg()
+        addPitcherPaCount(agg, res)
+        agg.outs += outsAdded
+        agg.er += erDelta
+        pm.set(key, agg)
+      }
+
       const bid = (pa.yahooBatterId ?? "").trim()
       const batJa = bid ? resolveBatHandJaForBatter(doc, bid, rosterForBatHand) : ""
       const pitcherThrowRaw = (
@@ -671,12 +824,15 @@ function main(): void {
       if (bats === "L") {
         addPitcherPaCount(hand.vsL, res)
         hand.vsL.outs += outsAdded
+        hand.vsL.er += erDelta
       } else if (bats === "R") {
         addPitcherPaCount(hand.vsR, res)
         hand.vsR.outs += outsAdded
+        hand.vsR.er += erDelta
       } else {
         addPitcherPaCount(hand.vsUnknown, res)
         hand.vsUnknown.outs += outsAdded
+        hand.vsUnknown.er += erDelta
       }
 
       const parsed = parsePaId(pa.paId)
@@ -685,6 +841,7 @@ function main(): void {
         const innAgg = im.get(parsed.inning) ?? emptyPaAgg()
         addPitcherPaCount(innAgg, res)
         innAgg.outs += outsAdded
+        innAgg.er += erDelta
         im.set(parsed.inning, innAgg)
       }
     }
@@ -702,7 +859,7 @@ function main(): void {
       let state = emptyGameState()
       const groupPas = halfGroups.get(hk) ?? []
       for (const pa of groupPas) {
-        const pid = (pa.yahooPitcherId ?? "").trim()
+        const pid = yahooPitcherIdForVsHandFromPa(pa)
         if (!pid) continue
         const npb = npbByYahooPitcherId.get(pid) ?? null
         if (!npb || !byNpb.has(npb)) continue
@@ -713,6 +870,7 @@ function main(): void {
           const agg = sm.get(key) ?? emptyPaAgg()
           addPitcherPaCount(agg, res)
           agg.outs += outsAddedFromPaResult(res)
+          agg.er += erByPaId.get(pa.paId) ?? 0
           sm.set(key, agg)
         }
         add(detail)
@@ -724,49 +882,32 @@ function main(): void {
     }
   }
 
+  /** 先発/QS/セーブ等: canonicalPitchingSeasonAgg（phase19 と同一） */
+  const yahooSeasonFull = aggregatePitchingSeasonByYahooPlayer(docs)
+  const yahooOnlyAgg = new Map(
+    [...yahooSeasonFull.entries()].map(([yid, { agg }]) => [yid, agg] as const),
+  )
+  const folded = foldYahooPitchingAggIntoNpb(
+    yahooOnlyAgg,
+    npbByYahooPitcherId,
+    new Set(byNpb.keys()),
+  )
   const seasonAggByNpb = new Map<string, SeasonAgg>()
-  function ensureSeasonAgg(npb: string): SeasonAgg {
-    let e = seasonAggByNpb.get(npb)
-    if (!e) {
-      e = emptySeasonAgg()
-      seasonAggByNpb.set(npb, e)
+  for (const npb of byNpb.keys()) {
+    const f = folded.get(npb)
+    const e = emptySeasonAgg()
+    if (f) {
+      e.gamesStarted = f.gamesStarted
+      e.gamesInRelief = f.gamesInRelief
+      e.qsCount = f.qsCount
+      e.holds = f.holds
+      e.winCount = f.winCount
+      e.lossCount = f.lossCount
+      e.saveCount = f.saveCount
+      e.completeGames = f.completeGames
+      e.shutouts = f.shutouts
     }
-    return e
-  }
-
-  for (const doc of docs) {
-    const starters = collectStartersYahooIdsFromStatLines(doc)
-    const mergedOneGame = mergePitchingLines(doc.domain?.pitchingLines ?? [])
-    const pitchersPerTeam = new Map<string, number>()
-    for (const m of mergedOneGame.values()) {
-      const tn = teamForYahooPlayerId(doc, m.yahooPlayerId)
-      if (!tn) continue
-      pitchersPerTeam.set(tn, (pitchersPerTeam.get(tn) ?? 0) + 1)
-    }
-    for (const m of mergedOneGame.values()) {
-      const npb = npbByYahooPitcherId.get(m.yahooPlayerId)
-      if (!npb || !byNpb.has(npb)) continue
-      const e = ensureSeasonAgg(npb)
-      const isStarter = starters.has(m.yahooPlayerId)
-      if (isStarter) {
-        e.gamesStarted += 1
-        if (m.outs >= 18 && m.er <= 3) e.qsCount += 1
-      } else {
-        e.gamesInRelief += 1
-      }
-      if (m.decision === "hold") e.holds += 1
-      if (m.decision === "win") e.winCount += 1
-      else if (m.decision === "loss") e.lossCount += 1
-      else if (m.decision === "save") e.saveCount += 1
-      const tn = teamForYahooPlayerId(doc, m.yahooPlayerId)
-      if (tn) {
-        const pc = pitchersPerTeam.get(tn) ?? 0
-        if (pc === 1 && m.outs >= 27) {
-          e.completeGames += 1
-          if ((m.r ?? 0) === 0 && (m.er ?? 0) === 0) e.shutouts += 1
-        }
-      }
-    }
+    seasonAggByNpb.set(npb, e)
   }
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_pitching_poc", year)
@@ -785,10 +926,14 @@ function main(): void {
   }
 
   for (const [npb, row] of byNpb) {
+    /** pitchingLines 合算は aggregatePitchingSeasonByYahooPlayer（phase19 と同一）を正とする */
+    const aggsForNpb: PitchingSeasonAggYahoo[] = [...row.yahooPitcherIds]
+      .map((yid) => yahooOnlyAgg.get(yid))
+      .filter((a): a is PitchingSeasonAggYahoo => a != null)
+    const coreAgg = sumPitchingSeasonAggYahoo(aggsForNpb)
+    const rankingStats = pitchingSeasonRowStatsFromAgg(coreAgg)
     const m = row.merged
-    const ipStr = outsToIpDisplay(m.outs)
-    const era = eraFrom(m.er, m.outs)
-    const whip = whipFrom(m.h, m.bb, m.outs)
+    const ipStr = outsToIpDisplay(coreAgg.ipOuts)
     const primaryGameId = [...row.gameIds].sort()[0]
     const primaryDoc = docs.find((d) => d.gameId === primaryGameId) ?? docs[0]!
     const opp = opponentTeamName(primaryDoc, row.team)
@@ -883,13 +1028,15 @@ function main(): void {
     })
 
     const existing = loadExistingPitcherPocPayload(outDir, npb)
-    const totalOuts = m.outs
-    const totalEr = m.er
-
-    const enrichSplit = (a: { outs: number; h: number; bb: number }): { ipOuts: number; ip: string; er: number; era: number | null; whip: number | null } => {
+    const enrichSplit = (a: {
+      outs: number
+      h: number
+      bb: number
+      er: number
+    }): { ipOuts: number; ip: string; er: number; era: number | null; whip: number | null } => {
       const ipOuts = a.outs
       const ip = outsToIpDisplay(ipOuts)
-      const er = totalOuts > 0 ? (totalEr * ipOuts) / totalOuts : 0
+      const er = a.er
       const era = ipOuts > 0 ? (er * 27) / ipOuts : null
       const whip = (() => {
         if (ipOuts <= 0) return null
@@ -899,7 +1046,7 @@ function main(): void {
       return {
         ipOuts,
         ip,
-        er: Number(er.toFixed(3)),
+        er,
         era: era != null ? Number(era.toFixed(2)) : null,
         whip: whip != null ? Number(whip.toFixed(3)) : null,
       }
@@ -920,28 +1067,35 @@ function main(): void {
       },
       basic: {
         ip: ipStr,
-        ipOuts: m.outs,
-        era: era != null ? Number(era.toFixed(2)) : null,
-        bf: m.bf,
-        h: m.h,
-        hr: m.hr,
-        so: m.so,
-        bb: m.bb,
-        hbp: m.hbp,
-        bk: m.bk,
-        r: m.r,
-        er: m.er,
-        pitches: m.pitches,
-        decision: m.decision,
-        whip: whip != null ? Number(whip.toFixed(3)) : null,
+        ipOuts: coreAgg.ipOuts,
+        /** phase19 の pitchingSeasonRowStatsFromAgg と同一の未丸め値に toFixed したもの */
+        era:
+          coreAgg.ipOuts > 0
+            ? Number((rankingStats.era as number).toFixed(2))
+            : null,
+        bf: coreAgg.bf,
+        h: coreAgg.h,
+        hr: coreAgg.hr,
+        so: coreAgg.so,
+        bb: coreAgg.bb,
+        hbp: coreAgg.hbp,
+        bk: coreAgg.bk,
+        r: coreAgg.r,
+        er: coreAgg.er,
+        pitches: coreAgg.np,
+        decision: m.decision ?? null,
+        whip:
+          coreAgg.ipOuts > 0
+            ? Number((rankingStats.whip as number).toFixed(3))
+            : null,
         /** BF−BB−HBP 近似（犠打・犠飛を除かないため公式被打率と一致しない場合あり） */
-        avgAgainstApprox: fmtAvg(Math.max(0, m.bf - m.bb - m.hbp), m.h),
+        avgAgainstApprox: fmtAvg(Math.max(0, coreAgg.bf - coreAgg.bb - coreAgg.hbp), coreAgg.h),
         battedBallOuts: (() => {
           const o = goAoByNpb.get(npb)
           if (!o || (o.go === 0 && o.ao === 0)) return undefined
           return { ground: o.go, air: o.ao }
         })(),
-        gamesAppeared: row.gameIds.size,
+        gamesAppeared: coreAgg.gameIds.size,
         gamesStarted: seasonAggByNpb.get(npb)?.gamesStarted ?? 0,
         gamesInRelief: seasonAggByNpb.get(npb)?.gamesInRelief ?? 0,
         holds: seasonAggByNpb.get(npb)?.holds ?? 0,
@@ -996,6 +1150,56 @@ function main(): void {
             }
           })
           .filter(Boolean),
+        byPaRound: (["1", "2", "3", "4", "5"] as const)
+          .map((k) => {
+            const pm = byPaRound.get(npb)
+            const a = pm?.get(k)
+            if (!a || a.bf === 0) return null
+            const label =
+              k === "1"
+                ? "1巡目"
+                : k === "2"
+                  ? "2巡目"
+                  : k === "3"
+                    ? "3巡目"
+                    : k === "4"
+                      ? "4巡目"
+                      : "5巡目以上"
+            return {
+              key: k,
+              label,
+              ...a,
+              avg: fmtAvg(a.ab, a.h),
+              ...enrichSplit(a),
+            }
+          })
+          .filter((row): row is NonNullable<typeof row> => row != null),
+        byPaRoundPitchTypes: (["1", "2", "3", "4", "5"] as const)
+          .map((k) => {
+            const rm = byPaRoundPitchTypes.get(npb)
+            const tm = rm?.get(k)
+            const pitchesTotal = [...(tm?.values() ?? [])].reduce((s, n) => s + n, 0)
+            if (!tm || pitchesTotal <= 0) return null
+            const label =
+              k === "1"
+                ? "1巡目"
+                : k === "2"
+                  ? "2巡目"
+                  : k === "3"
+                    ? "3巡目"
+                    : k === "4"
+                      ? "4巡目"
+                      : "5巡目以上"
+            const rows = [...tm.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([pitchType, pitches]) => ({
+                pitch_type: pitchType,
+                pitches,
+                pct: Math.round((pitches / pitchesTotal) * 1000) / 10,
+              }))
+            return { key: k, label, pitches_total: pitchesTotal, rows }
+          })
+          .filter((row): row is NonNullable<typeof row> => row != null),
         byInning: [...innMap.entries()]
           .sort((a, b) => a[0] - b[0])
           .map(([inn, a]) => ({

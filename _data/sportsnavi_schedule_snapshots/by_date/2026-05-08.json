@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-05-08",
+  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-08",
+  "gameIds": [
+    "2021038829",
+    "2021038830",
+    "2021038831",
+    "2021038832",
+    "2021038833"
+  ],
+  "games": [
+    {
+      "gameId": "2021038829",
+      "stadiumName": "甲子園球場"
+    },
+    {
+      "gameId": "2021038830",
+      "stadiumName": "マツダ"
+    },
+    {
+      "gameId": "2021038831",
+      "stadiumName": "ベルーナD"
+    },
+    {
+      "gameId": "2021038832",
+      "stadiumName": "京セラD大阪"
+    },
+    {
+      "gameId": "2021038833",
+      "stadiumName": "みずほPayPay"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038829": "甲子園球場",
+    "2021038830": "マツダ",
+    "2021038831": "ベルーナD",
+    "2021038832": "京セラD大阪",
+    "2021038833": "みずほPayPay"
+  }
+}
