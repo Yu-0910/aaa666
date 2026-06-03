@@ -7,6 +7,7 @@ import {
   careerYearLabel,
   formatCareerCell,
   formatSalaryManFromRow,
+  type CareerColumnDef,
   type CareerDisplayRow,
 } from "@/lib/playerCareerMergedDisplay"
 
@@ -37,6 +38,9 @@ const METRIC_VALUE_NUDGE_Y = 2
 type Props = {
   rows: CareerDisplayRow[]
   birthRaw: string
+  /** 省略時は打撃36指標（通算の打撃成績と同一） */
+  columns?: CareerColumnDef[]
+  rowKeyPrefix?: string
 }
 
 function rowBg(idx: number, isTotal: boolean): string {
@@ -77,9 +81,14 @@ const bodyTdStyle: CSSProperties = {
 
 const TOTAL_ROW_BORDER_TOP = "2px solid #ffff44"
 
-export default function CareerBattingTableRankingStyle({ rows, birthRaw }: Props) {
+export default function CareerBattingTableRankingStyle({
+  rows,
+  birthRaw,
+  columns = BATTING_STAT_COLUMNS,
+  rowKeyPrefix = "career-bat",
+}: Props) {
   const tableMinWidthPx =
-    LEFT_BLOCK_WIDTH + BATTING_STAT_COLUMNS.length * METRIC_COL_WIDTH + SALARY_COL_WIDTH
+    LEFT_BLOCK_WIDTH + columns.length * METRIC_COL_WIDTH + SALARY_COL_WIDTH
 
   return (
     <div className="mb-4 bg-[#1a1a1a] border border-[#333]">
@@ -97,7 +106,7 @@ export default function CareerBattingTableRankingStyle({ rows, birthRaw }: Props
         >
           <colgroup>
             <col style={{ width: `${LEFT_BLOCK_WIDTH}px` }} />
-            {BATTING_STAT_COLUMNS.map((col) => (
+            {columns.map((col) => (
               <col key={col.key} style={{ width: `${METRIC_COL_WIDTH}px` }} />
             ))}
             <col style={{ width: `${SALARY_COL_WIDTH}px` }} />
@@ -130,7 +139,7 @@ export default function CareerBattingTableRankingStyle({ rows, birthRaw }: Props
                   </div>
                 </div>
               </th>
-              {BATTING_STAT_COLUMNS.map((col, metricIdx) => (
+              {columns.map((col, metricIdx) => (
                 <th
                   key={col.key}
                   className={`font-bold border-r border-[#333] bg-[#ffff44] text-black text-center ${metricIdx === 0 ? "pl-0 -ml-[2px]" : ""}`}
@@ -163,7 +172,7 @@ export default function CareerBattingTableRankingStyle({ rows, birthRaw }: Props
               const totalRowTop = isTotal ? { borderTop: TOTAL_ROW_BORDER_TOP } : undefined
               return (
                 <tr
-                  key={`career-bat-${idx}`}
+                  key={`${rowKeyPrefix}-${idx}`}
                   className="border-b border-[#333] hover:bg-[#2a2a2a] transition-colors"
                   style={{ backgroundColor: bg, height: ROW_MIN_H }}
                 >
@@ -257,7 +266,7 @@ export default function CareerBattingTableRankingStyle({ rows, birthRaw }: Props
                       </div>
                     )}
                   </td>
-                  {BATTING_STAT_COLUMNS.map((col) => (
+                  {columns.map((col) => (
                     <td
                       key={col.key}
                       className="text-center border-r border-[#444] text-white"

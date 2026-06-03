@@ -53,6 +53,18 @@ export function pickOpsBestCareerHighRow(rows: CareerDisplayRow[]): CareerDispla
   return best
 }
 
+export function careerHighBattingSeasonYear(rows: CareerDisplayRow[]): number | null {
+  const bestRow = pickOpsBestCareerHighRow(rows)
+  if (!bestRow) return null
+  const y = rowYearNumber(bestRow)
+  return y > 0 ? y : null
+}
+
+export function formatCareerHighBattingHeading(seasonYear: number | null): string {
+  if (seasonYear == null) return "キャリアハイの打撃成績"
+  return `キャリアハイの打撃成績（${seasonYear}年）`
+}
+
 export function buildCareerHighBattingCards(rows: CareerDisplayRow[]): CareerHighBattingCard[] {
   const bestRow = pickOpsBestCareerHighRow(rows)
 

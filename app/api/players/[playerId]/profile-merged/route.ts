@@ -1,11 +1,25 @@
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
-import { decodePlayerPathSegment, jsonDerivedResponse } from "@/lib/api/derivedPlayerApiShared"
+import {
+  decodePlayerPathSegment,
+  jsonDerivedResponse,
+  yearFromRequest,
+} from "@/lib/api/derivedPlayerApiShared"
 import { fetchDerivedJsonServer } from "@/lib/derived/fetchDerivedJsonServer"
+import type { FaEstimateDomestic } from "@/lib/faEstimate"
+import { loadDomesticFaEstimateForPlayer } from "@/lib/loadPlayerFaEstimate"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
 
-export type PlayerProfileMergedApiPayload = Record<string, unknown>
+export type PlayerProfileMergedFaEstimate = {
+  seasonYear: string
+  domesticFa: FaEstimateDomestic | null
+}
+
+export type PlayerProfileMergedApiPayload = Record<string, unknown> & {
+  faEstimate?: PlayerProfileMergedFaEstimate
+}
+
 export type PlayerProfileMergedApiResponse = {
   hasData: boolean
   year: "all"
@@ -37,6 +51,7 @@ export async function GET(
     const npbId =
       rosterPlayer?.npb_player_id ??
       (/^\d+$/.test(decoded) ? resolveNpbPlayerIdFromPublicId(decoded) : decoded)
+    const faSeasonYear = yearFromRequest(request)
     const payload = await readMergedByNpbId(npbId)
     if (!payload) {
       return jsonDerivedResponse<PlayerProfileMergedApiPayload>({
@@ -47,10 +62,15 @@ export async function GET(
         message: "merged player profile not found",
       } satisfies PlayerProfileMergedApiResponse)
     }
+    const domesticFa = await loadDomesticFaEstimateForPlayer(npbId, faSeasonYear)
+    const enriched: PlayerProfileMergedApiPayload = {
+      ...payload,
+      faEstimate: { seasonYear: faSeasonYear, domesticFa },
+    }
     return jsonDerivedResponse<PlayerProfileMergedApiPayload>({
       hasData: true,
       year: "all",
-      payload,
+      payload: enriched,
     } satisfies PlayerProfileMergedApiResponse)
   } catch {
     return jsonDerivedResponse<PlayerProfileMergedApiPayload>(

@@ -19,7 +19,7 @@ import {
   pathMatchesKikuchiPilot,
   resolveSeasonStatsPilotQueryId,
 } from "@/lib/resolveSeasonPilotQueryId"
-import { compactPlayerName } from "@/lib/playerNameNormalize"
+import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import {
   isFielderRegistrationPosition,
   isPitcherRegistrationPosition,
@@ -35,9 +35,14 @@ import {
   formatCareerCell,
   formatSalaryManFromRow,
   splitBattingColumns,
+  PITCHING_STAT_COLUMNS,
   splitPitchingColumns,
   type CareerDisplayRow,
 } from "@/lib/playerCareerMergedDisplay"
+import {
+  enrichCareerPitchingRow,
+  enrichCareerPitchingRows,
+} from "@/lib/careerPitchingEnrich"
 import type {
   PitcherSeasonPocPayload,
   PitcherSeasonPitchingApiResponse,
@@ -51,6 +56,9 @@ import type {
 import type { CatcherDefenseBasicApiResponse } from "@/app/api/players/[playerId]/catcher-defense-basic/route"
 import type { CatcherStartingSummaryApiResponse } from "@/app/api/players/[playerId]/catcher-starting-summary/route"
 import type { CatcherPaRoundPitchTypesApiResponse } from "@/app/api/players/[playerId]/catcher-pa-round-pitch-types/route"
+import type { PitcherSeasonPitchTypesApiResponse } from "@/app/api/players/[playerId]/season-pitch-types/route"
+import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
+import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 import {
   EMPTY_TEAM_VS_ROWS,
   pitcherPocBasicRow1,
@@ -70,8 +78,17 @@ import {
   EMPTY_STADIUM_VS_ROWS,
 } from "@/lib/pitcherSeasonPocUi"
 import { formatEra } from "@/lib/formatStat"
-import { buildCareerHighBattingCards } from "@/lib/playerCareerHighBatting"
-import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327 } from "@/lib/yahooGame/pitcherPocDefaults"
+import { CareerHighStatGrid } from "@/app/components/player/CareerHighStatGrid"
+import {
+  buildCareerHighBattingCards,
+  careerHighBattingSeasonYear,
+  formatCareerHighBattingHeading,
+} from "@/lib/playerCareerHighBatting"
+import {
+  buildCareerHighPitchingFromRows,
+  formatCareerHighPitchingHeading,
+} from "@/lib/playerCareerHighPitching"
+import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327, resolvePitcherPocYahooGameId } from "@/lib/yahooGame/pitcherPocDefaults"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 import { unwrapPitcherZoneStatsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
@@ -79,6 +96,7 @@ import DerivedPipelineEmptyNotice, {
   DerivedPipelineFielderHint,
 } from "@/app/components/DerivedPipelineEmptyNotice"
 import CareerBattingTableRankingStyle from "@/app/components/player/CareerBattingTableRankingStyle"
+import { usesPitcherCareerPitchingTableFromRosterMatch } from "@/lib/playerCareerPitchingTablePilot"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
@@ -90,6 +108,10 @@ type ProfileMergedPayload = {
   career_total_salary_display?: string | null
   career_batting?: { rows?: Array<Record<string, any>>; total?: Record<string, any> }
   career_pitching?: { rows?: Array<Record<string, any>>; total?: Record<string, any> } | null
+  faEstimate?: {
+    seasonYear?: string
+    domesticFa?: { displayValue?: string; source?: string; note?: string } | null
+  }
 } | null
 
 /** Phase 7 期間タブ: BF ベースの率表示 */
@@ -150,6 +172,9 @@ const playerRomanNames: Record<string, string> = {
   嶋村麟士朗: "Shimamura Rinshiro",
   長野久義: "Nagano Hisayoshi",
   川端慎吾: "Kawabata Shingo",
+  モンテル: "Higuma Montiel",
+  "Ｊ．ティマ": "Julian Tima",
+  金子京介: "Kyosuke Kaneko",
 }
 
 function parseBirthDateJa(raw: string): { y: number; m: number; d: number } | null {
@@ -202,36 +227,6 @@ const AOYAGI_NPB_ID = "71175132"
 /** Phase 7 通算打撃表 UI（ランキング風・1表横スクロール） */
 
 /**
- * キャリアハイ打撃カード：枠幅（cqw）に連動して一括スケール。
- * 指標名・黄色帯・数値の相互比率は em で固定。
- */
-const CAREER_HIGH_CARD_SCALE_CQW = 8.5
-/** 数値エリアを含む枠線の太さ（基準 0.107em の 6 割） */
-const CAREER_HIGH_CARD_BORDER_EM = 0.107 * 0.6
-const CAREER_HIGH_LABEL_EM = 0.684
-const CAREER_HIGH_LABEL_PAD_EM = 1.364
-/** 指標名テキスト・黄色背景のスケール */
-const CAREER_HIGH_LABEL_TEXT_SCALE = 0.6 * 0.8
-const CAREER_HIGH_LABEL_BG_HEIGHT_SCALE = 0.9 * 0.7
-const CAREER_HIGH_LABEL_BG_TOP_EM = 0.17
-/** 黄色内で指標名を少し下げる（視覚的な中央合わせ） */
-const CAREER_HIGH_LABEL_TEXT_OFFSET_EM = 0.06
-const CAREER_HIGH_LABEL_TEXT_LETTER_SPACING_EM = 0.05
-const CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE = 1.1
-const CAREER_HIGH_VALUE_TOP_PERCENT = 50
-const CAREER_HIGH_LABEL_BG_WIDTH_SCALE = 1.3
-const CAREER_HIGH_LABEL_BG_WIDTH_FINAL_SCALE = 0.8
-/** 黄色背景の幅（指標名テキスト幅とは独立・枠より狭く黒を見せる） */
-const CAREER_HIGH_LABEL_BG_WIDTH_EM =
-  (CAREER_HIGH_LABEL_PAD_EM * CAREER_HIGH_LABEL_BG_WIDTH_SCALE * 2 +
-    CAREER_HIGH_LABEL_EM * 2.5) *
-  CAREER_HIGH_LABEL_BG_WIDTH_FINAL_SCALE *
-  CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE
-/** 枠幅に対する黄色の上限（左右に黒背景が見える割合） */
-const CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT = 76 * CAREER_HIGH_LABEL_BG_WIDTH_EXTRA_SCALE
-const CAREER_HIGH_VALUE_EM = 2.3 * 0.4 * 1.1
-
-/**
  * 今季ブロック scale(0.7) 内の見出しと同じ見え方（対左右別の対戦成績と揃える）
  * titleBase 1.125/1.625rem × 0.7、左帯 6px × 0.7
  */
@@ -266,6 +261,10 @@ function PlayerPageClient({
   const [pitcherSeasonSubTab, setPitcherSeasonSubTab] = useState<
     "basic" | "pitch" | "situation" | "period"
   >("basic")
+  /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  /** 野手通算タブ: 通算成績 / キャリアハイ */
+  const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] = useState<
@@ -343,6 +342,9 @@ function PlayerPageClient({
     rows: GamePitchTypeRow[]
     total_row?: GamePitchTypeRow
   }
+  const [pitcherSeasonPitchTypesPayload, setPitcherSeasonPitchTypesPayload] =
+    useState<PitcherSeasonPitchTypesPayload | null>(null)
+  const [pitcherSeasonPitchTypesLoading, setPitcherSeasonPitchTypesLoading] = useState(false)
   const [gamePitchTypes, setGamePitchTypes] = useState<GamePitchTypesData | null>(null)
   type ZoneStat = {
     zoneId: number
@@ -433,12 +435,12 @@ function PlayerPageClient({
             id && /^\d+$/.test(id)
               ? players.find((p) => String(p.npb_player_id) === id)
               : undefined
-          const pathNameKey = id && !/^\d+$/.test(id) ? compactPlayerName(playerIdNormalized) : ""
+          const pathNameKey = id && !/^\d+$/.test(id) ? rosterNameMatchKey(playerIdNormalized) : ""
           const byPathSegment =
             pathNameKey.length > 0
-              ? players.find((p) => compactPlayerName(p.name_ja) === pathNameKey)
+              ? players.find((p) => rosterNameMatchKey(p.name_ja) === pathNameKey)
               : undefined
-          const c = compactPlayerName(displayName)
+          const c = rosterNameMatchKey(displayName)
           /** 初回 fetch が state 初期値（近本プレースホルダ）のまま走るのを防ぐ。ランキング等の ?name= 付き URL 向け */
           let nameKeyFromUrl = ""
           if (typeof window !== "undefined") {
@@ -446,19 +448,20 @@ function PlayerPageClient({
               const qn = new URLSearchParams(window.location.search).get("name")?.trim() ?? ""
               if (qn) {
                 try {
-                  nameKeyFromUrl = compactPlayerName(decodeURIComponent(qn).normalize("NFC"))
+                  nameKeyFromUrl = rosterNameMatchKey(decodeURIComponent(qn).normalize("NFC"))
                 } catch {
-                  nameKeyFromUrl = compactPlayerName(qn)
+                  nameKeyFromUrl = rosterNameMatchKey(qn)
                 }
               }
             } catch {
               nameKeyFromUrl = ""
             }
           }
+          const nameKeyFromUrlNorm = nameKeyFromUrl ? rosterNameMatchKey(nameKeyFromUrl) : ""
           const byName = players.find(
             (p) =>
-              compactPlayerName(p.name_ja) === c ||
-              (nameKeyFromUrl.length > 0 && compactPlayerName(p.name_ja) === nameKeyFromUrl),
+              rosterNameMatchKey(p.name_ja) === c ||
+              (nameKeyFromUrlNorm.length > 0 && rosterNameMatchKey(p.name_ja) === nameKeyFromUrlNorm),
           )
           /** URL が Yahoo 打者 ID のとき、クライアントでも NPB に落として名簿行を探す（byId は raw===npb のみのため 1600124 等で失敗し得る） */
           const npbFromYahooManual =
@@ -533,9 +536,10 @@ function PlayerPageClient({
     const loadMerged = (attempt: number) => {
       const controller = new AbortController()
       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
-      return fetch(`/api/players/${encodeURIComponent(fetchId)}/profile-merged`, {
-        signal: controller.signal,
-      })
+      return fetch(
+        `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+        { signal: controller.signal },
+      )
         .then((r) => r.json())
         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
           if (cancelled) return
@@ -619,32 +623,84 @@ function PlayerPageClient({
     displayName,
     displayRomanName,
   })
+  const rosterKnownPitcher =
+    isRosterPlayer &&
+    isPitcherRegistrationPosition(rosterMatchedPosition, {
+      rosterNpbPlayerId: rosterMatchedNpbId,
+    })
+  const rosterKnownFielder =
+    isRosterPlayer &&
+    isFielderRegistrationPosition(rosterMatchedPosition, {
+      rosterNpbPlayerId: rosterMatchedNpbId,
+    })
+  const hasMergedPitchingFromProfile =
+    ((profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[]).length > 0
+  const rosterNpbForCareer =
+    rosterMatchedNpbId.trim() || playerIdNormalized.trim()
+  const pitcherCareerPitchingTablePilot = useMemo(() => {
+    const sources: Array<{
+      npb_player_id: string
+      name_ja: string
+      position: string
+    }> = []
+    if (isRosterPlayer && rosterMatchedNpbId) {
+      sources.push({
+        npb_player_id: rosterMatchedNpbId,
+        name_ja: displayName,
+        position: rosterMatchedPosition,
+      })
+    }
+    const mergedNpbId = String(profileMerged?.npb_player_id ?? "").trim()
+    if (mergedNpbId && !sources.some((s) => s.npb_player_id === mergedNpbId)) {
+      sources.push({
+        npb_player_id: mergedNpbId,
+        name_ja: String(profileMerged?.name_ja ?? displayName),
+        position: rosterMatchedPosition,
+      })
+    }
+    return sources.some((m) => usesPitcherCareerPitchingTableFromRosterMatch(m))
+  }, [
+    isRosterPlayer,
+    rosterMatchedNpbId,
+    displayName,
+    rosterMatchedPosition,
+    profileMerged,
+  ])
   /**
    * 投手の「今季の成績」PoC シェル（未連携は「—」「ー」）。
    * 菊池（打者パイロット）は除外。名簿のポジションが空欄の場合は投手扱い（rosterPitcher.ts 参照）。
+   * 名簿未照合の数値 ID は season-pitching 派生データまたは通算投手成績で判定する。
    */
   const showPitcherSeasonSuganoUi =
     !isKikuchiPage &&
     !pathMatchesKikuchiPilot(pathname) &&
     (isAoyagiPage ||
-      (isRosterPlayer &&
-        isPitcherRegistrationPosition(rosterMatchedPosition, {
-          rosterNpbPlayerId: rosterMatchedNpbId,
-        })))
+      rosterKnownPitcher ||
+      hasMergedPitchingFromProfile ||
+      Boolean(pitcherSeasonPocPayload))
   /** クエリに明示された Yahoo 試合 ID（無ければ空文字） */
   const pitcherPocYahooGameIdExplicit = useMemo(() => {
     const q = clientSearch.replace(/^\?/, "")
     return (new URLSearchParams(q).get("yahooGameId") ?? "").trim()
   }, [clientSearch])
-  /** 球種別・コース別 API 用の実効試合 ID（未指定時は PoC 既定） */
-  const pitcherPocYahooGameId = useMemo(() => {
-    if (pitcherPocYahooGameIdExplicit) return pitcherPocYahooGameIdExplicit
-    return isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
-  }, [pitcherPocYahooGameIdExplicit, isAoyagiPage])
+  /** 球種別・コース別 API 用の実効試合 ID（未指定時は season-pitching の最新登板試合） */
+  const pitcherPocYahooGameId = useMemo(
+    () =>
+      resolvePitcherPocYahooGameId({
+        explicitFromUrl: pitcherPocYahooGameIdExplicit,
+        isAoyagiPage,
+        canonicalGames: pitcherSeasonPocPayload?.source?.canonicalGames,
+      }),
+    [
+      pitcherPocYahooGameIdExplicit,
+      isAoyagiPage,
+      pitcherSeasonPocPayload?.source?.canonicalGames,
+    ]
+  )
   /**
    * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
    * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
-   * 数値 ID（NPB/Yahoo）URL も名簿待ちせず今季 UI を出す（41045153 等）。
+   * 数値 ID（NPB/Yahoo）は名簿・投手派生の判定後に野手 UI を出す（投手を打撃 UI にしない）。
    */
   const numericPilotIdFromPath = /^\d+$/.test(
     String(playerIdNormalized || playerSegmentCore || "").trim()
@@ -657,20 +713,24 @@ function PlayerPageClient({
     displayName,
     displayRomanName,
   })
-  const rosterKnownPitcher =
-    isRosterPlayer &&
-    isPitcherRegistrationPosition(rosterMatchedPosition, {
-      rosterNpbPlayerId: rosterMatchedNpbId,
-    })
+  /** 名簿未確定の数値 ID 向けに season-pitching を先読みして投手か判定する */
+  const shouldProbePitcherSeasonData =
+    !isKikuchiPage &&
+    !pathMatchesKikuchiPilot(pathname) &&
+    !isFabianPage &&
+    (isAoyagiPage ||
+      rosterKnownPitcher ||
+      (numericPilotIdFromPath && rosterMainReady && !rosterKnownFielder))
   const showFielderSeasonPilotUi =
     !showPitcherSeasonSuganoUi &&
     (isFabianPage ||
       isKikuchiPage ||
-      (isRosterPlayer &&
-        isFielderRegistrationPosition(rosterMatchedPosition, {
-          rosterNpbPlayerId: rosterMatchedNpbId,
-        })) ||
-      (numericPilotIdFromPath && !rosterKnownPitcher))
+      rosterKnownFielder ||
+      (numericPilotIdFromPath &&
+        rosterMainReady &&
+        pitcherSeasonPocApiSettled &&
+        !pitcherSeasonPocPayload &&
+        !hasMergedPitchingFromProfile))
   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
   const showSeasonCareerTabs =
     isRosterPlayer ||
@@ -697,6 +757,8 @@ function PlayerPageClient({
       return
     }
     setStatsTab("season")
+    setPitcherCareerSubTab("total")
+    setFielderCareerSubTab("total")
   }, [playerIdNormalized])
 
   /** 捕手出場（途中出場含む）: 捕手を守ったことがある選手だけ「捕手成績」タブを出す */
@@ -851,20 +913,41 @@ function PlayerPageClient({
   }, [showSeasonCareerTabs, statsTab, showFielderSeasonPilotUi, seasonPilotPlayerId])
 
   /**
-   * 解決策(1): 既定の試合 ID を URL に書き込む。?yahooGameId= が無いとき実効 ID と表示がずれないよう、
-   * 共有・手動変更しやすいクエリに同期する（値は pitcherPocYahooGameId と一致）。
+   * 既定の試合 ID を URL に書き込む。?yahooGameId= が無いとき（または旧 PoC 既定のみのとき）
+   * 実効 ID と表示がずれないよう共有・手動変更しやすいクエリに同期する。
    */
   useEffect(() => {
     if (!showPitcherSeasonSuganoUi) return
     if (typeof window === "undefined") return
+    if (!isAoyagiPage && !pitcherSeasonPocApiSettled) return
+
+    const gid = pitcherPocYahooGameId.trim()
+    if (!gid) return
+
     const qs = clientSearch.startsWith("?") ? clientSearch.slice(1) : clientSearch
     const params = new URLSearchParams(qs)
-    if (params.has("yahooGameId")) return
-    const gid = isAoyagiPage ? "2021040084" : DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
+    const current = (params.get("yahooGameId") ?? "").trim()
+
+    if (current === gid) return
+    if (
+      current &&
+      current !== DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
+    ) {
+      return
+    }
+
     params.set("yahooGameId", gid)
     const next = params.toString()
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [showPitcherSeasonSuganoUi, clientSearch, pathname, router, isAoyagiPage])
+  }, [
+    showPitcherSeasonSuganoUi,
+    clientSearch,
+    pathname,
+    router,
+    isAoyagiPage,
+    pitcherSeasonPocApiSettled,
+    pitcherPocYahooGameId,
+  ])
 
   /**
    * Phase 3: コース別は `pitcher-zone-stats`（canonical 横断・phase20）を主系。200 かつ hasData:false や形式不正時は
@@ -1019,7 +1102,7 @@ function PlayerPageClient({
 
   /** Phase 2/6: `_data/derived/player_season_pitching_poc` を API 経由で取得（捕手別含む） */
   useEffect(() => {
-    if (!showPitcherSeasonSuganoUi) {
+    if (!shouldProbePitcherSeasonData) {
       setPitcherSeasonPocPayload(null)
       setPitcherSeasonPocApiSettled(false)
       return
@@ -1047,6 +1130,42 @@ function PlayerPageClient({
       })
       .finally(() => {
         if (!cancelled) setPitcherSeasonPocApiSettled(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [shouldProbePitcherSeasonData, playerIdNormalized])
+
+  /** シーズン通算・球種別（投球データ表） */
+  useEffect(() => {
+    if (!showPitcherSeasonSuganoUi) {
+      setPitcherSeasonPitchTypesPayload(null)
+      setPitcherSeasonPitchTypesLoading(false)
+      return
+    }
+    const id = playerIdNormalized.trim()
+    if (!id) {
+      setPitcherSeasonPitchTypesPayload(null)
+      setPitcherSeasonPitchTypesLoading(false)
+      return
+    }
+    let cancelled = false
+    setPitcherSeasonPitchTypesLoading(true)
+    const y = DERIVED_SEASON_YEAR_DEFAULT
+    fetch(
+      `/api/players/${encodeURIComponent(id)}/season-pitch-types?year=${encodeURIComponent(y)}`,
+      { cache: "no-store" },
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: PitcherSeasonPitchTypesApiResponse | null) => {
+        if (cancelled || !data) return
+        setPitcherSeasonPitchTypesPayload(data.hasData && data.payload ? data.payload : null)
+      })
+      .catch(() => {
+        if (!cancelled) setPitcherSeasonPitchTypesPayload(null)
+      })
+      .finally(() => {
+        if (!cancelled) setPitcherSeasonPitchTypesLoading(false)
       })
     return () => {
       cancelled = true
@@ -1118,11 +1237,15 @@ function PlayerPageClient({
     [isRosterPlayer, rosterStripeKey]
   )
   /** 対左右別と同じ見出し文字・左帯（scale 0.7 後）。通算タブ先頭は上余白なし */
-  const careerHighSectionH2Class = showFielderSeasonPilotUi ? "mb-5 mt-0" : `${tb} mb-6 pl-4`
-  const careerBattingTotalSectionH2Class = showFielderSeasonPilotUi
+  const careerUsesRankingCareerHeading =
+    showFielderSeasonPilotUi || pitcherCareerPitchingTablePilot
+  const careerHighSectionH2Class = careerUsesRankingCareerHeading
     ? "mb-5 mt-0"
     : `${tb} mb-6 pl-4`
-  const careerBattingSectionH2Style = showFielderSeasonPilotUi
+  const careerBattingTotalSectionH2Class = careerUsesRankingCareerHeading
+    ? "mb-5 mt-0"
+    : `${tb} mb-6 pl-4`
+  const careerBattingSectionH2Style = careerUsesRankingCareerHeading
     ? {
         borderLeft: `${FIELDER_PILOT_SECTION_STRIPE_PX}px solid ${sectionStripeColor}`,
         fontWeight: 900 as const,
@@ -1214,6 +1337,7 @@ function PlayerPageClient({
   const mergedSalaryTotalPlain = mergedSalaryTotal
     ? mergedSalaryTotal.split("（")[0]?.trim() || mergedSalaryTotal
     : ""
+  const mergedFaDisplay = String(profileMerged?.faEstimate?.domesticFa?.displayValue ?? "").trim()
 
   const mergedBattingRowsForDisplay = useMemo(() => {
     const rows = (profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]
@@ -1222,8 +1346,12 @@ function PlayerPageClient({
   }, [profileMerged])
 
   const mergedPitchingRowsForDisplay = useMemo(() => {
-    const rows = (profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[]
-    const total = (profileMerged?.career_pitching?.total ?? null) as CareerDisplayRow | null
+    const rows = enrichCareerPitchingRows(
+      (profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[],
+    )
+    const totalRaw = (profileMerged?.career_pitching?.total ?? null) as CareerDisplayRow | null
+    const total =
+      totalRaw && Object.keys(totalRaw).length > 0 ? enrichCareerPitchingRow(totalRaw) : null
     return appendCareerTotalRow(rows, total)
   }, [profileMerged])
 
@@ -1237,1106 +1365,201 @@ function PlayerPageClient({
       ),
     [profileMerged],
   )
+  const careerHighBattingYear = useMemo(
+    () =>
+      careerHighBattingSeasonYear(
+        (profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[],
+      ),
+    [profileMerged],
+  )
+  const careerHighPitching = useMemo(() => {
+    if (!pitcherCareerPitchingTablePilot) {
+      return { cards: [], seasonYear: null as number | null }
+    }
+    return buildCareerHighPitchingFromRows(
+      (profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[],
+    )
+  }, [profileMerged, pitcherCareerPitchingTablePilot])
 
-  const useRankingStyleCareerBattingTable = hasMergedBatting
+  const showCareerBattingSection = hasMergedBatting && !pitcherCareerPitchingTablePilot
+  const showCareerPitchingRankingTable =
+    pitcherCareerPitchingTablePilot && hasMergedPitching
+  const showLegacyPitchingCareerSection = hasMergedPitching && !pitcherCareerPitchingTablePilot
 
-  return (
+  const useRankingStyleCareerBattingTable = showCareerBattingSection
+
+  /** 通算タブの投手成績表は scale 外のまま。プロフィール表だけ scale して余白を詰める */
+  const pitcherCareerPitchingTightLayout =
+    showPitcherSeasonSuganoUi &&
+    showSeasonCareerTabs &&
+    statsTab === "career" &&
+    showCareerPitchingRankingTable
+
+  const pitcherProfileScaleStyle =
+    showPitcherSeasonSuganoUi || showFielderSeasonPilotUi
+      ? {
+          transform: "scale(0.7)",
+          transformOrigin: "top left",
+          width: "142.857%",
+        }
+      : undefined
+
+  const pitcherInlineSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-3"
+  const pitcherCareerSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-1"
+  const pitcherSubTabButtonClass =
+    "relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+
+  const fielderCareerH2Class = careerUsesRankingCareerHeading ? "mb-3 mt-0" : `${tb} mb-4 pl-4`
+  const pitcherCareerH2Class = fielderCareerH2Class
+
+  const renderCareerSubTabBar = (
+    active: "total" | "high",
+    setActive: (tab: "total" | "high") => void,
+    inlineInProfileShell: boolean,
+    shellClass?: string,
+  ) => (
     <div
-      className="player-page-fonts min-h-screen text-white"
+      className={
+        shellClass ??
+        (inlineInProfileShell
+          ? pitcherInlineSubTabBarShellClass
+          : isMobile
+            ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
+            : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
+      }
       style={{
-        background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+        border: "1px solid #555",
+        backgroundColor: "#1a1a1a",
       }}
     >
-      <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
-      {/* Header */}
-      {isMobile ? (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
-          <div className="flex items-center justify-between relative">
-            <button
-              type="button"
-              onClick={() => setIsMenuOpen(true)}
-              className="p-1 hover:bg-[#2a2a2a] rounded transition-colors"
-              aria-label="メニューを開く"
-            >
-              <div className="w-5 h-4 flex flex-col justify-between">
-                <span className="block w-full h-0.5 bg-[#ffff44]" />
-                <span className="block w-full h-0.5 bg-[#ffff44]" />
-                <span className="block w-full h-0.5 bg-[#ffff44]" />
-              </div>
-            </button>
-            <Link href={SITE_TOP_HREF} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
-              <Image src="/logo.png" alt="Short-Stop" width={28} height={28} className="object-contain" />
-            </Link>
-            <select
-              value={selectedYear}
-              onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </header>
-      ) : (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-            <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
-              <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />
-              <span className="text-[#ffff44] text-base font-bold tracking-tight">Short-Stop</span>
-            </Link>
-            <nav className="flex flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm">
-              <Link href="/" className="hover:text-[#ffff44] transition-colors">
-                トップ
-              </Link>
-              <Link href={rankingHref} className="hover:text-[#ffff44] transition-colors">
-                成績一覧
-              </Link>
-              <span className="text-gray-500 cursor-not-allowed">ドラフト情報</span>
-            </nav>
-            <select
-              value={selectedYear}
-              onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-3 py-1 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors shrink-0"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </header>
-      )}
-
-      {isMobile && <TopPageMobileDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} selectedYear={selectedYear} />}
-
-      {/* Main Content */}
-      <main
-        className={
-          isMobile
-            ? `container mx-auto px-5 py-8 ${forceMobile ? "max-w-[420px]" : "max-w-[800px]"}`
-            : "max-w-6xl mx-auto px-8 py-10"
-        }
-        style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
+      <div
+        className="absolute inset-y-0 left-0 w-1/2 transition-transform duration-200 ease-out"
+        style={{
+          backgroundColor: "#FFFF44",
+          transform: active === "total" ? "translateX(0)" : "translateX(100%)",
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => setActive("total")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: active === "total" ? "#000000" : "#9ca3af",
+        }}
       >
-        {!pageShellReady ? (
-          <div className="flex min-h-[50vh] flex-col items-center justify-center py-20">
-            <SectionLoadingSpinner className="py-8" />
-          </div>
-        ) : (
-          <>
-            {/* Player Name & Stats Tabs */}
-            <div
-              className={
-                isMobile
-                  ? "flex flex-row items-center justify-between gap-3 mb-8"
-                  : "flex flex-row items-center justify-between gap-4 mb-8"
-              }
-            >
-              <div
-                className="flex items-center gap-2"
-                style={
-                  showPitcherSeasonSuganoUi
-                    ? { transform: "scale(0.9)", transformOrigin: "left center" }
-                    : undefined
-                }
-              >
-            {/* Team Color Bar */}
-            <div
-              className="w-1.5 h-12 flex-shrink-0"
-              style={{ backgroundColor: sectionStripeColor }}
-            />
-            {/* Player Info */}
-            <div className="flex flex-col">
-              <h1
-                className={`${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
-                style={{
-                  textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                  fontWeight: 900,
-                }}
-              >
-                {displayName}
-              </h1>
-              {(() => {
-                const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }
-                const romanFull =
-                  mergedRoman[displayName] ?? mergedRoman[compactPlayerName(displayName)] ?? ""
-                const fromRoster = romanFull.trim()
-                /** ランキング等の ?roman= は略式のため、名簿にフル英字があるときはそちらを優先 */
-                const romanToShow =
-                  fromRoster ||
-                  (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
-                return romanToShow ? (
-                  <span className="latin text-sm text-gray-400 leading-tight mt-0.5">
-                    {romanToShow}
-                  </span>
-                ) : null
-              })()}
-            </div>
-          </div>
-          {/* Stats Tab Buttons（名簿・パイロット対象のみ） */}
-          {showSeasonCareerTabs && (
-            <div
-              className="relative isolate box-border flex min-h-9 shrink-0 items-stretch overflow-hidden"
-              style={{
-                border: "1px solid #555",
-                backgroundColor: "#1a1a1a",
-              }}
-            >
-              <div
-                className="absolute inset-y-0 left-0 w-1/2 transition-transform duration-200 ease-out"
-                style={{
-                  backgroundColor: "#FFFF44",
-                  transform: statsTab === "career" ? "translateX(100%)" : "translateX(0)",
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setStatsTab("season")}
-                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                style={{
-                  color: statsTab === "season" ? "#000000" : "#9ca3af",
-                }}
-              >
-                今季の成績
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatsTab("career")}
-                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                style={{
-                  color: statsTab === "career" ? "#000000" : "#9ca3af",
-                }}
-              >
-                通算成績
-              </button>
-            </div>
-          )}
-        </div>
+        通算成績
+      </button>
+      <button
+        type="button"
+        onClick={() => setActive("high")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: active === "high" ? "#000000" : "#9ca3af",
+        }}
+      >
+        キャリアハイ
+      </button>
+    </div>
+  )
 
-        {/* Profile Table */}
-        <div
-          className={
-            showPitcherSeasonSuganoUi
-              ? "mb-6"
-              : showFielderSeasonPilotUi
-                ? statsTab === "career"
-                  ? "mb-2"
-                  : "mb-6"
-                : "mb-12"
-          }
-          style={
-            showPitcherSeasonSuganoUi || showFielderSeasonPilotUi
-              ? {
-                  transform: "scale(0.7)",
-                  transformOrigin: "top left",
-                  width: "142.857%",
-                  marginBottom: showPitcherSeasonSuganoUi ? "-2.5rem" : undefined,
-                }
-              : undefined
-          }
-        >
-          <table className="w-full border-collapse" style={{ border: "1px solid #333333" }}>
-            <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    width: "120px",
-                    fontWeight: 900,
-                  }}
-                >
-                  生年月日
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {mergedBirthRaw || "—"}
-                  {mergedAge !== null ? `（${mergedAge}歳）` : ""}
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  プロ入り
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {mergedProDebut || "—"}
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  経歴
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {mergedCareer || "—"}
-                </td>
-              </tr>
-              <tr>
-                <td
-                  className="px-2 py-1.5"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    color: "#000000",
-                    border: "1px solid #333333",
-                    fontWeight: 900,
-                  }}
-                >
-                  生涯年俸
-                </td>
-                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                  {mergedSalaryTotalPlain || "—"}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          {/* 名簿野手: 今季サブタブ（プロフィール表・今季ブロックと同じ幅に収める） */}
-          {showSeasonCareerTabs &&
-            statsTab === "season" &&
-            !showPitcherSeasonSuganoUi &&
-            showFielderSeasonPilotUi && (
-              <div
-                className="relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-5"
-                style={{
-                  border: "1px solid #555",
-                  backgroundColor: "#1a1a1a",
-                }}
-              >
-                <div
-                  className="absolute inset-y-0 left-0 transition-transform duration-200 ease-out"
-                  style={{
-                    backgroundColor: "#FFFF44",
-                    width:
-                      catcherAppearances && catcherAppearances.gamesAsCatcher > 0 ? "20%" : "25%",
-                    transform: (() => {
-                      const tabs =
-                        catcherAppearances && catcherAppearances.gamesAsCatcher > 0
-                          ? (["basic", "pitch", "situation", "period", "catcher"] as const)
-                          : (["basic", "pitch", "situation", "period"] as const)
-                      const idx = Math.max(0, tabs.indexOf(kikuchiSeasonDetailTab as any))
-                      return `translateX(${idx * 100}%)`
-                    })(),
-                  }}
-                />
-                {(() => {
-                  const tabs =
-                    catcherAppearances && catcherAppearances.gamesAsCatcher > 0
-                      ? ([
-                          { key: "basic", label: "基本成績" },
-                          { key: "pitch", label: "球種情報" },
-                          { key: "situation", label: "状況別" },
-                          { key: "period", label: "期間別" },
-                          { key: "catcher", label: "捕手成績" },
-                        ] as const)
-                      : ([
-                          { key: "basic", label: "基本成績" },
-                          { key: "pitch", label: "球種情報" },
-                          { key: "situation", label: "状況別" },
-                          { key: "period", label: "期間別" },
-                        ] as const)
-                  return tabs.map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => setKikuchiSeasonDetailTab(t.key as any)}
-                      title={
-                        t.key === "catcher"
-                          ? "捕手として出場した試合が派生データに含まれる場合のみタブが表示されます（計画書 Phase 3）"
-                          : undefined
-                      }
-                      className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                      style={{
-                        color: kikuchiSeasonDetailTab === t.key ? "#000000" : "#9ca3af",
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  ))
-                })()}
-              </div>
-            )}
-          {/* 名簿野手・今季: 通算などは同一 scale コンテナ内に置く（別ラッパーだと transform のレイアウト高さで大きな空きが出る） */}
-          {showSeasonCareerTabs &&
-            statsTab === "season" &&
-            !showPitcherSeasonSuganoUi &&
-            showFielderSeasonPilotUi && (
-              <>
-                {kikuchiSeasonDetailTab === "catcher" ? (
-                  <div className="w-full mb-7">
-                    <h2
-                      className={`${tb} mb-4 pl-4 mt-8`}
-                      style={{
-                        borderLeft: `6px solid ${sectionStripeColor}`,
-                        fontWeight: 900,
-                      }}
-                    >
-                      基本成績
-                    </h2>
+  const renderPitcherCareerSubTabBar = (
+    inlineInProfileShell: boolean,
+    shellClass?: string,
+  ) => renderCareerSubTabBar(pitcherCareerSubTab, setPitcherCareerSubTab, inlineInProfileShell, shellClass)
 
-                    {(() => {
-                      const na = "—"
-                      const games = catcherAppearances?.gamesAsCatcher ?? 0
+  const renderFielderCareerSubTabBar = (
+    inlineInProfileShell: boolean,
+    shellClass?: string,
+  ) => renderCareerSubTabBar(fielderCareerSubTab, setFielderCareerSubTab, inlineInProfileShell, shellClass)
 
-                      const ipToOuts = (ip: string | null | undefined): number => {
-                        const t = String(ip ?? "").trim()
-                        if (!t) return 0
-                        if (t.includes(".")) {
-                          const [w, frac] = t.split(".")
-                          const whole = parseInt(w, 10) || 0
-                          const f = parseInt(frac ?? "0", 10) || 0
-                          return whole * 3 + Math.min(2, f)
-                        }
-                        const n = parseInt(t, 10)
-                        return Number.isFinite(n) ? n * 3 : 0
-                      }
-                      const outsToIp = (outs: number): string => {
-                        if (outs <= 0) return "0"
-                        const w = Math.floor(outs / 3)
-                        const f = outs % 3
-                        return f === 0 ? String(w) : `${w}.${f}`
-                      }
-                      const pct = (num: number, den: number, digits = 1): string =>
-                        den > 0 ? `${((num / den) * 100).toFixed(digits)}%` : na
-                      const avg = (h: number, ab: number): string =>
-                        ab > 0 ? slashRate3FromCounts(h, ab) : na
+  const renderPitcherSeasonSubTabBar = (inlineInProfileShell: boolean) => (
+    <div
+      className={
+        inlineInProfileShell
+          ? pitcherInlineSubTabBarShellClass
+          : isMobile
+            ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
+            : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden"
+      }
+      style={{
+        border: "1px solid #555",
+        backgroundColor: "#1a1a1a",
+      }}
+    >
+      <div
+        className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
+        style={{
+          backgroundColor: "#FFFF44",
+          transform:
+            pitcherSeasonSubTab === "basic"
+              ? "translateX(0)"
+              : pitcherSeasonSubTab === "pitch"
+                ? "translateX(100%)"
+                : pitcherSeasonSubTab === "situation"
+                  ? "translateX(200%)"
+                  : "translateX(300%)",
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => setPitcherSeasonSubTab("basic")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: pitcherSeasonSubTab === "basic" ? "#000000" : "#9ca3af",
+        }}
+      >
+        基本成績
+      </button>
+      <button
+        type="button"
+        onClick={() => setPitcherSeasonSubTab("pitch")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: pitcherSeasonSubTab === "pitch" ? "#000000" : "#9ca3af",
+        }}
+      >
+        球種情報
+      </button>
+      <button
+        type="button"
+        onClick={() => setPitcherSeasonSubTab("situation")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: pitcherSeasonSubTab === "situation" ? "#000000" : "#9ca3af",
+        }}
+      >
+        状況別
+      </button>
+      <button
+        type="button"
+        onClick={() => setPitcherSeasonSubTab("period")}
+        className={pitcherSubTabButtonClass}
+        style={{
+          color: pitcherSeasonSubTab === "period" ? "#000000" : "#9ca3af",
+        }}
+      >
+        期間別
+      </button>
+    </div>
+  )
 
-                      const rows = catcherPitchers ?? []
-                      const sum = rows.reduce(
-                        (a, r) => {
-                          a.bf += r.bf ?? 0
-                          a.ab += r.ab ?? 0
-                          a.h += r.h ?? 0
-                          a.hr += r.hr ?? 0
-                          a.so += r.so ?? 0
-                          a.bb += r.bb ?? 0
-                          a.hbp += r.hbp ?? 0
-                          a.outs += r.ipOuts ?? ipToOuts(r.ip)
-                          a.wins += r.wins ?? 0
-                          a.losses += r.losses ?? 0
-                          a.qsCount += r.qsCount ?? 0
-                          return a
-                        },
-                        {
-                          bf: 0,
-                          ab: 0,
-                          h: 0,
-                          hr: 0,
-                          so: 0,
-                          bb: 0,
-                          hbp: 0,
-                          outs: 0,
-                          wins: 0,
-                          losses: 0,
-                          qsCount: 0,
-                        }
-                      )
+  const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
 
-                      // Phase6 は catcher split の ER を直接持たないため、ERA と outs から推定して合算する（近似）
-                      const estErSum = rows.reduce((acc, r) => {
-                        const outs = (r.ipOuts ?? ipToOuts(r.ip)) || 0
-                        const era = r.era
-                        if (era == null || outs <= 0) return acc
-                        return acc + (era * outs) / 27
-                      }, 0)
-                      const eraAgg = sum.outs > 0 ? (estErSum * 27) / sum.outs : null
-                      const whipAgg = sum.outs > 0 ? (sum.h + sum.bb) / (sum.outs / 3) : null
-                      const csPctVal =
-                        catcherDefenseBasic?.csPct != null ? `${catcherDefenseBasic.csPct.toFixed(1)}%` : na
-
-                      const starterStarts = catcherStartingSummary?.starts ?? 0
-                      const starterWins = catcherStartingSummary?.teamWins ?? 0
-                      const starterLosses = catcherStartingSummary?.teamLosses ?? 0
-                      const starterWinPct =
-                        catcherStartingSummary?.teamWinPct != null
-                          ? catcherStartingSummary.teamWinPct.toFixed(3)
-                          : na
-                      const qsCount = catcherStartingSummary?.qsCount ?? 0
-                      const qsPct =
-                        catcherStartingSummary?.qsPct != null
-                          ? `${catcherStartingSummary.qsPct.toFixed(1)}%`
-                          : na
-                      const hqsPct =
-                        catcherStartingSummary?.hqsPct != null
-                          ? `${catcherStartingSummary.hqsPct.toFixed(1)}%`
-                          : na
-                      const sqsPct =
-                        catcherStartingSummary?.sqsPct != null
-                          ? `${catcherStartingSummary.sqsPct.toFixed(1)}%`
-                          : na
-
-                      // 1段あたり7指標（指定ラベルは維持）
-                      const row1 = [
-                        eraAgg == null ? na : formatEra(eraAgg),
-                        String(games),
-                        starterStarts > 0 ? String(starterStarts) : na, // 先発＝スタメン捕手回数
-                        starterWins > 0 ? String(starterWins) : na, // 勝利＝スタメン試合のチーム勝利
-                        starterLosses > 0 ? String(starterLosses) : na, // 敗戦＝スタメン試合のチーム敗戦
-                        avg(sum.h, sum.ab),
-                        qsCount > 0 ? String(qsCount) : na, // QS（回数）
-                      ]
-                      const row2 = [
-                        starterWinPct, // 勝率＝スタメン試合のチーム勝率
-                        outsToIp(sum.outs),
-                        sum.bf ? String(sum.bf) : na,
-                        na, // 投球数（捕手側は未連携）
-                        sum.h ? String(sum.h) : na,
-                        pct(sum.so, sum.bf),
-                        whipAgg != null ? whipAgg.toFixed(2) : na,
-                      ]
-                      const row3 = [
-                        sum.hr ? String(sum.hr) : na,
-                        sum.so ? String(sum.so) : na,
-                        sum.bb ? String(sum.bb) : na,
-                        na, // 故意四（未連携）
-                        sum.hbp ? String(sum.hbp) : na,
-                        na, // 失点（未連携）
-                        starterStarts > 0 ? qsPct : na, // QS率（母数＝スタメン捕手回数）
-                      ]
-                      const catcherBasicExtra = [
-                        hqsPct, // HQS率（母数＝スタメン捕手回数）
-                        sqsPct, // SQS率（母数＝スタメン捕手回数）
-                        na, // 被BABIP（未連携）
-                        na, // 被出塁率（未連携）
-                        na, // 被長打率（未連携）
-                        na, // GO/AO（未連携）
-                        csPctVal, // 盗塁阻止率
-                      ]
-                      return (
-                        <>
-                          <div className="overflow-hidden overflow-x-auto mb-4">
-                            <table
-                              className="text-xs"
-                              style={{
-                                fontVariantNumeric: "tabular-nums",
-                                borderCollapse: "collapse",
-                                border: "1px solid #555",
-                                width: "100%",
-                                tableLayout: "fixed",
-                              }}
-                            >
-                              <tbody>
-                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
-                                    防御率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    試合
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    先発
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    勝利
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    敗戦
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被打率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    QS
-                                  </th>
-                                </tr>
-                                <tr
-                                  style={{
-                                    backgroundColor: "rgba(255,255,255,0.03)",
-                                    borderTop: "1px solid #333",
-                                  }}
-                                >
-                                  {row1.map((cell, i) => (
-                                    <td
-                                      key={i}
-                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          <div className="overflow-hidden overflow-x-auto mb-4">
-                            <table
-                              className="text-xs"
-                              style={{
-                                fontVariantNumeric: "tabular-nums",
-                                borderCollapse: "collapse",
-                                border: "1px solid #555",
-                                width: "100%",
-                                tableLayout: "fixed",
-                              }}
-                            >
-                              <tbody>
-                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    勝率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    回数
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被打者
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    投球数
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被安
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    K%
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    WHIP
-                                  </th>
-                                </tr>
-                                <tr
-                                  style={{
-                                    backgroundColor: "rgba(255,255,255,0.03)",
-                                    borderTop: "1px solid #333",
-                                  }}
-                                >
-                                  {row2.map((cell, i) => (
-                                    <td
-                                      key={i}
-                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          <div className="overflow-hidden overflow-x-auto mb-4">
-                            <table
-                              className="text-xs"
-                              style={{
-                                fontVariantNumeric: "tabular-nums",
-                                borderCollapse: "collapse",
-                                border: "1px solid #555",
-                                width: "100%",
-                                tableLayout: "fixed",
-                              }}
-                            >
-                              <tbody>
-                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
-                                    被本
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    三振
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    四球
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    故意四
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    死球
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    失点
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    QS率
-                                  </th>
-                                </tr>
-                                <tr
-                                  style={{
-                                    backgroundColor: "rgba(255,255,255,0.03)",
-                                    borderTop: "1px solid #333",
-                                  }}
-                                >
-                                  {row3.map((cell, i) => (
-                                    <td
-                                      key={i}
-                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          <div className="overflow-hidden overflow-x-auto mb-4">
-                            <table
-                              className="text-xs"
-                              style={{
-                                fontVariantNumeric: "tabular-nums",
-                                borderCollapse: "collapse",
-                                border: "1px solid #555",
-                                width: "100%",
-                                tableLayout: "fixed",
-                              }}
-                            >
-                              <tbody>
-                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    HQS率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    SQS率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被BABIP
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被出塁率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    被長打率
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
-                                    GO/AO
-                                  </th>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
-                                    盗塁阻止率
-                                  </th>
-                                </tr>
-                                <tr
-                                  style={{
-                                    backgroundColor: "rgba(255,255,255,0.03)",
-                                    borderTop: "1px solid #333",
-                                  }}
-                                >
-                                  {catcherBasicExtra.map((cell, i) => (
-                                    <td
-                                      key={i}
-                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* 巡目別の球種一覧（投手ページの積み上げ横棒グラフをトレース） */}
-                          <h2
-                            className={`${tb} mb-4 pl-4 mt-8`}
-                            style={{
-                              borderLeft: `6px solid ${sectionStripeColor}`,
-                              fontWeight: 900,
-                            }}
-                          >
-                            巡目別の球種一覧（スタメン時）
-                          </h2>
-
-                          <div className="mb-12">
-                            {(() => {
-                              const rounds = [
-                                { key: "1", label: "1巡目" },
-                                { key: "2", label: "2巡目" },
-                                { key: "3", label: "3巡目" },
-                                { key: "4", label: "4巡目" },
-                                { key: "5", label: "5巡目以上" },
-                              ] as const
-
-                              const palette = [
-                                "#3b82f6",
-                                "#22c55e",
-                                "#f59e0b",
-                                "#a855f7",
-                                "#ef4444",
-                                "#06b6d4",
-                                "#eab308",
-                              ] as const
-
-                              // 捕手タブ（スタメン時）: Phase26 の派生を優先（無ければ暫定で全体割合）
-                              const roundRows =
-                                catcherPaRoundPitchTypes && catcherPaRoundPitchTypes.length > 0
-                                  ? catcherPaRoundPitchTypes
-                                  : null
-                              const byRound = new Map(
-                                (roundRows ?? []).map((r) => [String(r.key), r] as const)
-                              )
-
-                              const allTypes = new Map<string, number>()
-                              if (roundRows && roundRows.length > 0) {
-                                for (const rr of roundRows) {
-                                  for (const row of rr.rows) {
-                                    allTypes.set(
-                                      row.pitch_type,
-                                      (allTypes.get(row.pitch_type) ?? 0) + row.pitches
-                                    )
-                                  }
-                                }
-                              } else if (gamePitchTypes?.rows?.length) {
-                                for (const r of gamePitchTypes.rows) {
-                                  allTypes.set(r.pitch_type, Math.round(r.pct * 10))
-                                }
-                              }
-
-                              const typeOrder = [...allTypes.entries()]
-                                .sort((a, b) => b[1] - a[1])
-                                .map(([t]) => t)
-                              const colorByType = new Map(
-                                typeOrder.map((t, i) => [t, palette[i % palette.length]!] as const)
-                              )
-
-                              const partsForRound = (roundKey: string) => {
-                                const rr = byRound.get(roundKey) ?? null
-                                if (rr && rr.pitches_total > 0) {
-                                  return rr.rows
-                                    .slice()
-                                    .sort((a, b) => b.pct - a.pct)
-                                    .map((r) => ({
-                                      key: `${roundKey}-${r.pitch_type}`,
-                                      label: r.pitch_type,
-                                      pct: Math.max(0, Math.min(100, r.pct)),
-                                      color: colorByType.get(r.pitch_type) ?? palette[0],
-                                    }))
-                                }
-                                return gamePitchTypes?.rows?.length
-                                  ? gamePitchTypes.rows
-                                      .slice()
-                                      .sort((a, b) => b.pct - a.pct)
-                                      .map((r, i) => ({
-                                        key: `${roundKey}-fallback-${r.pitch_type}-${i}`,
-                                        label: r.pitch_type,
-                                        pct: Math.max(0, Math.min(100, r.pct)),
-                                        color: colorByType.get(r.pitch_type) ?? palette[i % palette.length]!,
-                                      }))
-                                  : []
-                              }
-
-                              const na = "—"
-                              return (
-                                <>
-                                  {rounds.map((rd) => (
-                                    <div key={rd.key} className="mb-3">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-[64px] text-[12px] text-gray-200 font-black tabular-nums whitespace-nowrap">
-                                          {rd.label}
-                                        </div>
-                                        <div className="flex-1">
-                                          <div className="h-7 border border-[#555] overflow-hidden bg-[#111] border-l border-r border-l-white border-r-white">
-                                            <div className="flex h-full w-full">
-                                              {(() => {
-                                                const parts = partsForRound(rd.key)
-                                                return parts.length > 0 ? (
-                                                  parts.map((p) => (
-                                                    <div
-                                                      key={p.key}
-                                                      title={`${p.label}: ${p.pct.toFixed(1)}%`}
-                                                      className="h-full flex items-center justify-center"
-                                                      style={{
-                                                        width: `${p.pct.toFixed(1)}%`,
-                                                        backgroundColor: p.color,
-                                                        color: "#000000",
-                                                        fontWeight: 900,
-                                                        fontSize: "15px",
-                                                        lineHeight: "1",
-                                                        letterSpacing: "0.02em",
-                                                      }}
-                                                    >
-                                                      {p.pct.toFixed(0)}%
-                                                    </div>
-                                                  ))
-                                                ) : (
-                                                  <div className="h-full w-full bg-[#1a1a1a]" />
-                                                )
-                                              })()}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-
-                                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
-                                    {typeOrder.length > 0 ? (
-                                      typeOrder.map((label) => (
-                                        <div key={label} className="flex items-center gap-1 whitespace-nowrap">
-                                          <span
-                                            className="inline-block w-2 h-2"
-                                            style={{
-                                              backgroundColor: colorByType.get(label) ?? palette[0],
-                                            }}
-                                          />
-                                          <span className="text-gray-300">{label}</span>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <span>{na}</span>
-                                    )}
-                                  </div>
-                                </>
-                              )
-                            })()}
-                          </div>
-
-                          <div className="text-[11px] text-gray-400">
-                            {catcherAppearances?.gameIds?.length
-                              ? `試合ID: ${catcherAppearances.gameIds.join(", ")}`
-                              : "試合ID: —"}
-                          </div>
-
-                          {/* 投手別成績（最大15人。投手ページの「捕手別の投球成績」をトレース） */}
-                          <h2
-                            className={`${tb} mb-4 pl-4 mt-8`}
-                            style={{
-                              borderLeft: `6px solid ${sectionStripeColor}`,
-                              fontWeight: 900,
-                            }}
-                          >
-                            投手別成績
-                          </h2>
-                          <div className="overflow-x-auto overflow-y-hidden mb-0">
-                            <table
-                              className="text-xs"
-                              style={{
-                                fontVariantNumeric: "tabular-nums",
-                                borderCollapse: "separate",
-                                borderSpacing: 0,
-                                border: "1px solid #555",
-                                width: "100%",
-                                tableLayout: "fixed",
-                              }}
-                            >
-                              <colgroup>
-                                <col style={{ width: "65px" }} />
-                                <col style={{ width: "50px" }} />
-                                <col style={{ width: "45px" }} />
-                                <col style={{ width: "45px" }} />
-                                <col style={{ width: "51px" }} />
-                                <col style={{ width: "51px" }} />
-                                <col style={{ width: "51px" }} />
-                                <col style={{ width: "45px" }} />
-                              </colgroup>
-                              <thead>
-                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                                    投手
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    防御率
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    勝‐敗
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    回数
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    K-BB％
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    K％
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    WHIP
-                                  </th>
-                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                    QS％
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(catcherPitchers?.length ? catcherPitchers.slice(0, 15) : []).length ? (
-                                  catcherPitchers.slice(0, 15).map((row, ri) => (
-                                    <tr
-                                      key={`${row.pitcherNpbId}-${ri}`}
-                                      style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-                                    >
-                                      <td
-                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                        style={{ backgroundColor: "#1a1a1a" }}
-                                      >
-                                        {row.pitcherName}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.era == null ? "—" : formatEra(row.era)}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.wl || "—"}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.ip || "—"}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.kBbPct != null ? `${row.kBbPct.toFixed(1)}%` : "—"}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.kPct != null ? `${row.kPct.toFixed(1)}%` : "—"}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.whip != null ? row.whip.toFixed(2) : "—"}
-                                      </td>
-                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                        {row.qsPct != null ? `${row.qsPct.toFixed(1)}%` : "—"}
-                                      </td>
-                                    </tr>
-                                  ))
-                                ) : (
-                                  Array.from({ length: 15 }, (_, i) => (
-                                    <tr key={`na-${i}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                      <td
-                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                        style={{ backgroundColor: "#1a1a1a" }}
-                                      >
-                                        —
-                                      </td>
-                                      {Array.from({ length: 7 }, () => "—").map((v, j) => (
-                                        <td
-                                          key={j}
-                                          className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                                        >
-                                          {v}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </>
-                      )
-                    })()}
-                  </div>
-                ) : (
-                  <>
-                    {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
-                    <SeasonStatsPilot
-                      playerId={seasonPilotPlayerId}
-                      seasonDetailTab={kikuchiSeasonDetailTab as any}
-                      layout={layout}
-                      looseSpacing
-                      rosterFielderShell={showFielderSeasonPilotUi}
-                      rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
-                      headingStripeColor={sectionStripeColor}
-                    />
-                    {kikuchiSeasonDetailTab === "pitch" && (
-                      <PitchDetailsPilot
-                        playerId={seasonPilotPlayerId}
-                        layout={layout}
-                        headingStripeColor={sectionStripeColor}
-                      />
-                    )}
-                  </>
-                )}
-              </>
-            )}
-        </div>
-
-        {/* 今季の成績（投手 PoC シェル） */}
-        {showSeasonCareerTabs && statsTab === "season" && (
-          <div>
-            {/* 投手: 青柳ページと同じ「今季の成績」見出し・表構成（未連携は「—」「ー」） */}
-            {showPitcherSeasonSuganoUi && (
-              <div
-                style={{
-                  transform: "scale(0.7)",
-                  transformOrigin: "top left",
-                  width: "142.857%",
-                }}
-              >
+  const renderPitcherSeasonBody = () => (
+    <>
                 <DerivedPipelineEmptyNotice
                   variant="pitcher"
                   show={Boolean(
                     pitcherSeasonPocApiSettled && !pitcherSeasonPocPayload && rosterMainReady
                   )}
                 />
-                {/* Detail Tab Buttons（main の横パディングまで #1a1a1a で埋める） */}
-                <div
-                  className={
-                    isMobile
-                      ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
-                      : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden"
-                  }
-                  style={{
-                    border: "1px solid #555",
-                    backgroundColor: "#1a1a1a",
-                  }}
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 w-1/4 transition-transform duration-200 ease-out"
-                    style={{
-                      backgroundColor: "#FFFF44",
-                      transform:
-                        pitcherSeasonSubTab === "basic"
-                          ? "translateX(0)"
-                          : pitcherSeasonSubTab === "pitch"
-                            ? "translateX(100%)"
-                            : pitcherSeasonSubTab === "situation"
-                              ? "translateX(200%)"
-                              : "translateX(300%)",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPitcherSeasonSubTab("basic")}
-                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: pitcherSeasonSubTab === "basic" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    基本成績
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPitcherSeasonSubTab("pitch")}
-                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: pitcherSeasonSubTab === "pitch" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    球種情報
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPitcherSeasonSubTab("situation")}
-                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: pitcherSeasonSubTab === "situation" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    状況別
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPitcherSeasonSubTab("period")}
-                    className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
-                    style={{
-                      color: pitcherSeasonSubTab === "period" ? "#000000" : "#9ca3af",
-                    }}
-                  >
-                    期間別
-                  </button>
-                </div>
 
                 {pitcherSeasonSubTab === "basic" && (
                   <>
                     <h2
-                      className={`${tb} mb-4 pl-4 mt-8`}
+                      className={pitcherSeasonFirstH2Class}
                       style={{
                         borderLeft: `6px solid ${sectionStripeColor}`,
                         fontWeight: 900,
@@ -2954,24 +2177,55 @@ function PlayerPageClient({
                         fontWeight: 900,
                       }}
                     >
-                      球種一覧
+                      投球データ
                     </h2>
-                    {gamePitchTypes?.rows?.length ? (
-                      <>
-                        <p className="text-sm text-gray-400 mb-4">
-                          試合 <span className="text-gray-200 font-mono tabular-nums">{gamePitchTypes.game_id}</span>
-                          の球種別（URL に{" "}
-                          <code className="text-gray-300">?yahooGameId=</code> で試合を切り替え可能）
-                        </p>
-                        <div className="mb-6">
-                          <PitchTypePieChart
-                            rows={gamePitchTypes.rows.map((r) => ({
+                    <PitcherSeasonPitchTypesTable
+                      rows={pitcherSeasonPitchTypesPayload?.rows ?? []}
+                      pitchesTotal={pitcherSeasonPitchTypesPayload?.pitches_total ?? 0}
+                      gamesCount={pitcherSeasonPitchTypesPayload?.source?.canonicalGames?.length ?? 0}
+                      loading={pitcherSeasonPitchTypesLoading}
+                    />
+                    {(() => {
+                      const chartRows =
+                        pitcherSeasonPitchTypesPayload?.rows?.length
+                          ? pitcherSeasonPitchTypesPayload.rows.map((r) => ({
                               pitch_type: r.pitch_type,
                               pitches: r.pitches,
                               pct: r.pct,
-                            }))}
-                          />
+                            }))
+                          : gamePitchTypes?.rows?.length
+                            ? gamePitchTypes.rows.map((r) => ({
+                                pitch_type: r.pitch_type,
+                                pitches: r.pitches,
+                                pct: r.pct,
+                              }))
+                            : []
+                      if (!chartRows.length) return null
+                      return (
+                        <div className="mb-6">
+                          <PitchTypePieChart rows={chartRows} />
                         </div>
+                      )
+                    })()}
+
+                    {gamePitchTypes?.rows?.length ? (
+                      <>
+                        <h2
+                          className={`${tb} mb-4 pl-4 mt-8`}
+                          style={{
+                            borderLeft: `6px solid ${sectionStripeColor}`,
+                            fontWeight: 900,
+                          }}
+                        >
+                          試合別球種一覧
+                        </h2>
+                        <p className="text-sm text-gray-400 mb-4">
+                          試合{" "}
+                          <span className="text-gray-200 font-mono tabular-nums">
+                            {gamePitchTypes.game_id}
+                          </span>
+                          （URL に <code className="text-gray-300">?yahooGameId=</code> で切替）
+                        </p>
                         <div className="overflow-x-auto overflow-y-hidden mb-12">
                           <table
                             className="text-xs"
@@ -3058,8 +2312,10 @@ function PlayerPageClient({
                             </tbody>
                           </table>
                         </div>
+                      </>
+                    ) : null}
 
-                        {/* 巡目別の球種一覧（積み上げ横棒グラフ） */}
+                    {/* 巡目別の球種一覧（積み上げ横棒グラフ） */}
                         <h2
                           className={`${tb} mb-4 pl-4 mt-8`}
                           style={{
@@ -3093,6 +2349,10 @@ function PlayerPageClient({
                                   allTypes.set(row.pitch_type, (allTypes.get(row.pitch_type) ?? 0) + row.pitches)
                                 }
                               }
+                            } else if (pitcherSeasonPitchTypesPayload?.rows?.length) {
+                              for (const r of pitcherSeasonPitchTypesPayload.rows) {
+                                allTypes.set(r.pitch_type, r.pitches)
+                              }
                             } else if (gamePitchTypes?.rows?.length) {
                               for (const r of gamePitchTypes.rows) {
                                 allTypes.set(r.pitch_type, Math.round(r.pct * 10))
@@ -3115,9 +2375,13 @@ function PlayerPageClient({
                                     color: colorByType.get(r.pitch_type) ?? palette[0],
                                   }))
                               }
-                              // fallback（暫定）: 全体の球種割合（pct）をそのまま使う
-                              return gamePitchTypes?.rows?.length
-                                ? gamePitchTypes.rows
+                              // fallback: シーズン通算 or 試合別の球種割合
+                              const fallbackRows =
+                                pitcherSeasonPitchTypesPayload?.rows?.length
+                                  ? pitcherSeasonPitchTypesPayload.rows
+                                  : gamePitchTypes?.rows ?? []
+                              return fallbackRows.length
+                                ? fallbackRows
                                     .slice()
                                     .sort((a, b) => b.pct - a.pct)
                                     .map((r, i) => ({
@@ -3193,83 +2457,6 @@ function PlayerPageClient({
                             )
                           })()}
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-400 mb-4">
-                          （球種データなし。広島・中日 PoC 試合に登板した投手は既定の{" "}
-                          <code className="text-gray-300">yahooGameId</code> で自動取得。他は{" "}
-                          <code className="text-gray-300">?yahooGameId=</code> を指定。青柳は別既定試合）
-                        </p>
-                        <div className="overflow-x-auto overflow-y-hidden mb-12">
-                          <table
-                            className="text-xs"
-                            style={{
-                              fontVariantNumeric: "tabular-nums",
-                              borderCollapse: "separate",
-                              borderSpacing: 0,
-                              border: "1px solid #555",
-                              width: "100%",
-                              minWidth: "473px",
-                              tableLayout: "fixed",
-                            }}
-                          >
-                            <colgroup>
-                              <col style={{ width: "102px" }} />
-                              <col style={{ width: "95px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "48px" }} />
-                              <col style={{ width: "57px" }} />
-                            </colgroup>
-                            <thead>
-                              <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                                  球種
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  平均球速
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  割合
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  Strike％
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  空振り％
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  被打率
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  被OPS
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                <td
-                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                  style={{ backgroundColor: "#1a1a1a" }}
-                                >
-                                  —
-                                </td>
-                                {Array.from({ length: 6 }, (_, i) => (
-                                  <td
-                                    key={i}
-                                    className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                                  >
-                                    —
-                                  </td>
-                                ))}
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    )}
                   </>
                 )}
 
@@ -4130,13 +3317,1078 @@ function PlayerPageClient({
                     </div>
                   </>
                 )}
+    </>
+  )
+
+  return (
+    <div
+      className="player-page-fonts min-h-screen text-white"
+      style={{
+        background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+      }}
+    >
+      <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
+      {/* Header */}
+      {isMobile ? (
+        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
+          <div className="flex items-center justify-between relative">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(true)}
+              className="p-1 hover:bg-[#2a2a2a] rounded transition-colors"
+              aria-label="メニューを開く"
+            >
+              <div className="w-5 h-4 flex flex-col justify-between">
+                <span className="block w-full h-0.5 bg-[#ffff44]" />
+                <span className="block w-full h-0.5 bg-[#ffff44]" />
+                <span className="block w-full h-0.5 bg-[#ffff44]" />
+              </div>
+            </button>
+            <Link href={SITE_TOP_HREF} className="absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity">
+              <Image src="/logo.png" alt="Short-Stop" width={28} height={28} className="object-contain" />
+            </Link>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+      ) : (
+        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
+              <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />
+              <span className="text-[#ffff44] text-base font-bold tracking-tight">Short-Stop</span>
+            </Link>
+            <nav className="flex flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm">
+              <Link href="/" className="hover:text-[#ffff44] transition-colors">
+                トップ
+              </Link>
+              <Link href={rankingHref} className="hover:text-[#ffff44] transition-colors">
+                成績一覧
+              </Link>
+              <span className="text-gray-500 cursor-not-allowed">ドラフト情報</span>
+            </nav>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-3 py-1 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors shrink-0"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+      )}
+
+      {isMobile && <TopPageMobileDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} selectedYear={selectedYear} />}
+
+      {/* Main Content */}
+      <main
+        className={
+          isMobile
+            ? `container mx-auto px-5 py-8 ${forceMobile ? "max-w-[420px]" : "max-w-[800px]"}`
+            : "max-w-6xl mx-auto px-8 py-10"
+        }
+        style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
+      >
+        {!pageShellReady ? (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center py-20">
+            <SectionLoadingSpinner className="py-8" />
+          </div>
+        ) : (
+          <>
+            {/* Player Name & Stats Tabs */}
+            <div
+              className={
+                isMobile
+                  ? "flex flex-row items-center justify-between gap-3 mb-8"
+                  : "flex flex-row items-center justify-between gap-4 mb-8"
+              }
+            >
+              <div
+                className="flex items-center gap-2"
+                style={
+                  showPitcherSeasonSuganoUi
+                    ? { transform: "scale(0.9)", transformOrigin: "left center" }
+                    : undefined
+                }
+              >
+            {/* Team Color Bar */}
+            <div
+              className="w-1.5 h-12 flex-shrink-0"
+              style={{ backgroundColor: sectionStripeColor }}
+            />
+            {/* Player Info */}
+            <div className="flex flex-col">
+              <h1
+                className={`${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
+                style={{
+                  textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+                  fontWeight: 900,
+                }}
+              >
+                {displayName}
+              </h1>
+              {(() => {
+                const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }
+                const romanFull =
+                  mergedRoman[displayName] ?? mergedRoman[compactPlayerName(displayName)] ?? ""
+                const fromRoster = romanFull.trim()
+                /** ランキング等の ?roman= は略式のため、名簿にフル英字があるときはそちらを優先 */
+                const romanToShow =
+                  fromRoster ||
+                  (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
+                return romanToShow ? (
+                  <span className="latin text-sm text-gray-400 leading-tight mt-0.5">
+                    {romanToShow}
+                  </span>
+                ) : null
+              })()}
+            </div>
+          </div>
+          {/* Stats Tab Buttons（名簿・パイロット対象のみ） */}
+          {showSeasonCareerTabs && (
+            <div
+              className="relative isolate box-border flex min-h-9 shrink-0 items-stretch overflow-hidden"
+              style={{
+                border: "1px solid #555",
+                backgroundColor: "#1a1a1a",
+              }}
+            >
+              <div
+                className="absolute inset-y-0 left-0 w-1/2 transition-transform duration-200 ease-out"
+                style={{
+                  backgroundColor: "#FFFF44",
+                  transform: statsTab === "career" ? "translateX(100%)" : "translateX(0)",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setStatsTab("season")}
+                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                style={{
+                  color: statsTab === "season" ? "#000000" : "#9ca3af",
+                }}
+              >
+                今季の成績
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatsTab("career")}
+                className="relative z-10 m-0 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-1.5 text-[11px] font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                style={{
+                  color: statsTab === "career" ? "#000000" : "#9ca3af",
+                }}
+              >
+                通算成績
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Profile Table */}
+        <div
+          className={
+            pitcherCareerPitchingTightLayout
+              ? undefined
+              : showPitcherSeasonSuganoUi
+                ? statsTab === "season" ||
+                    (statsTab === "career" &&
+                      showCareerPitchingRankingTable &&
+                      showSeasonCareerTabs)
+                  ? undefined
+                  : "mb-6"
+                : showFielderSeasonPilotUi
+                  ? statsTab === "career"
+                    ? "mb-2"
+                    : "mb-6"
+                  : "mb-12"
+          }
+          style={pitcherCareerPitchingTightLayout ? undefined : pitcherProfileScaleStyle}
+        >
+          <div
+            style={
+              pitcherCareerPitchingTightLayout
+                ? { ...pitcherProfileScaleStyle, marginBottom: "-2.5rem" }
+                : undefined
+            }
+          >
+          <table className="w-full border-collapse" style={{ border: "1px solid #333333" }}>
+            <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
+              <tr>
+                <td
+                  className="px-2 py-1.5"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    color: "#000000",
+                    border: "1px solid #333333",
+                    width: "120px",
+                    fontWeight: 900,
+                  }}
+                >
+                  生年月日
+                </td>
+                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
+                  {mergedBirthRaw || "—"}
+                  {mergedAge !== null ? `（${mergedAge}歳）` : ""}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  className="px-2 py-1.5"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    color: "#000000",
+                    border: "1px solid #333333",
+                    fontWeight: 900,
+                  }}
+                >
+                  プロ入り
+                </td>
+                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
+                  {mergedProDebut || "—"}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  className="px-2 py-1.5"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    color: "#000000",
+                    border: "1px solid #333333",
+                    fontWeight: 900,
+                  }}
+                >
+                  経歴
+                </td>
+                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
+                  {mergedCareer || "—"}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  className="px-2 py-1.5"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    color: "#000000",
+                    border: "1px solid #333333",
+                    fontWeight: 900,
+                  }}
+                >
+                  生涯年俸
+                </td>
+                <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
+                  {mergedSalaryTotalPlain || "—"}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  className="px-2 py-1.5"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    color: "#000000",
+                    border: "1px solid #333333",
+                    fontWeight: 900,
+                  }}
+                  title="国内FA取得見込み。facounter.net または通算出場成績からの概算（参考値）"
+                >
+                  FA取得（推定）
+                </td>
+                <td
+                  className="px-2 py-1.5"
+                  style={{ border: "1px solid #333333" }}
+                  title={
+                    profileMerged?.faEstimate?.domesticFa?.note
+                      ? String(profileMerged.faEstimate.domesticFa.note)
+                      : undefined
+                  }
+                >
+                  {mergedFaDisplay || "—"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          {/* 投手: 今季サブタブ（プロフィール表と同じ scale コンテナ・野手 UI と同型） */}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            showPitcherSeasonSuganoUi &&
+            renderPitcherSeasonSubTabBar(true)}
+          {showSeasonCareerTabs &&
+            statsTab === "career" &&
+            showPitcherSeasonSuganoUi &&
+            showCareerPitchingRankingTable &&
+            !pitcherCareerPitchingTightLayout &&
+            renderPitcherCareerSubTabBar(true)}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            showPitcherSeasonSuganoUi &&
+            renderPitcherSeasonBody()}
+          {/* 名簿野手: 今季サブタブ（プロフィール表・今季ブロックと同じ幅に収める） */}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            !showPitcherSeasonSuganoUi &&
+            showFielderSeasonPilotUi && (
+              <div
+                className="relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-5"
+                style={{
+                  border: "1px solid #555",
+                  backgroundColor: "#1a1a1a",
+                }}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 transition-transform duration-200 ease-out"
+                  style={{
+                    backgroundColor: "#FFFF44",
+                    width:
+                      catcherAppearances && catcherAppearances.gamesAsCatcher > 0 ? "20%" : "25%",
+                    transform: (() => {
+                      const tabs =
+                        catcherAppearances && catcherAppearances.gamesAsCatcher > 0
+                          ? (["basic", "pitch", "situation", "period", "catcher"] as const)
+                          : (["basic", "pitch", "situation", "period"] as const)
+                      const idx = Math.max(0, tabs.indexOf(kikuchiSeasonDetailTab as any))
+                      return `translateX(${idx * 100}%)`
+                    })(),
+                  }}
+                />
+                {(() => {
+                  const tabs =
+                    catcherAppearances && catcherAppearances.gamesAsCatcher > 0
+                      ? ([
+                          { key: "basic", label: "基本成績" },
+                          { key: "pitch", label: "球種情報" },
+                          { key: "situation", label: "状況別" },
+                          { key: "period", label: "期間別" },
+                          { key: "catcher", label: "捕手成績" },
+                        ] as const)
+                      : ([
+                          { key: "basic", label: "基本成績" },
+                          { key: "pitch", label: "球種情報" },
+                          { key: "situation", label: "状況別" },
+                          { key: "period", label: "期間別" },
+                        ] as const)
+                  return tabs.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setKikuchiSeasonDetailTab(t.key as any)}
+                      title={
+                        t.key === "catcher"
+                          ? "捕手として出場した試合が派生データに含まれる場合のみタブが表示されます（計画書 Phase 3）"
+                          : undefined
+                      }
+                      className="relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
+                      style={{
+                        color: kikuchiSeasonDetailTab === t.key ? "#000000" : "#9ca3af",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))
+                })()}
               </div>
             )}
+          {showSeasonCareerTabs &&
+            statsTab === "career" &&
+            !showPitcherSeasonSuganoUi &&
+            showFielderSeasonPilotUi &&
+            showCareerBattingSection &&
+            renderFielderCareerSubTabBar(true)}
+          {/* 名簿野手・今季: 通算などは同一 scale コンテナ内に置く（別ラッパーだと transform のレイアウト高さで大きな空きが出る） */}
+          {showSeasonCareerTabs &&
+            statsTab === "season" &&
+            !showPitcherSeasonSuganoUi &&
+            showFielderSeasonPilotUi && (
+              <>
+                {kikuchiSeasonDetailTab === "catcher" ? (
+                  <div className="w-full mb-7">
+                    <h2
+                      className={`${tb} mb-4 pl-4 mt-8`}
+                      style={{
+                        borderLeft: `6px solid ${sectionStripeColor}`,
+                        fontWeight: 900,
+                      }}
+                    >
+                      基本成績
+                    </h2>
+
+                    {(() => {
+                      const na = "—"
+                      const games = catcherAppearances?.gamesAsCatcher ?? 0
+
+                      const ipToOuts = (ip: string | null | undefined): number => {
+                        const t = String(ip ?? "").trim()
+                        if (!t) return 0
+                        if (t.includes(".")) {
+                          const [w, frac] = t.split(".")
+                          const whole = parseInt(w, 10) || 0
+                          const f = parseInt(frac ?? "0", 10) || 0
+                          return whole * 3 + Math.min(2, f)
+                        }
+                        const n = parseInt(t, 10)
+                        return Number.isFinite(n) ? n * 3 : 0
+                      }
+                      const outsToIp = (outs: number): string => {
+                        if (outs <= 0) return "0"
+                        const w = Math.floor(outs / 3)
+                        const f = outs % 3
+                        return f === 0 ? String(w) : `${w}.${f}`
+                      }
+                      const pct = (num: number, den: number, digits = 1): string =>
+                        den > 0 ? `${((num / den) * 100).toFixed(digits)}%` : na
+                      const avg = (h: number, ab: number): string =>
+                        ab > 0 ? slashRate3FromCounts(h, ab) : na
+
+                      const rows = catcherPitchers ?? []
+                      const sum = rows.reduce(
+                        (a, r) => {
+                          a.bf += r.bf ?? 0
+                          a.ab += r.ab ?? 0
+                          a.h += r.h ?? 0
+                          a.hr += r.hr ?? 0
+                          a.so += r.so ?? 0
+                          a.bb += r.bb ?? 0
+                          a.hbp += r.hbp ?? 0
+                          a.outs += r.ipOuts ?? ipToOuts(r.ip)
+                          a.wins += r.wins ?? 0
+                          a.losses += r.losses ?? 0
+                          a.qsCount += r.qsCount ?? 0
+                          return a
+                        },
+                        {
+                          bf: 0,
+                          ab: 0,
+                          h: 0,
+                          hr: 0,
+                          so: 0,
+                          bb: 0,
+                          hbp: 0,
+                          outs: 0,
+                          wins: 0,
+                          losses: 0,
+                          qsCount: 0,
+                        }
+                      )
+
+                      // Phase6 は catcher split の ER を直接持たないため、ERA と outs から推定して合算する（近似）
+                      const estErSum = rows.reduce((acc, r) => {
+                        const outs = (r.ipOuts ?? ipToOuts(r.ip)) || 0
+                        const era = r.era
+                        if (era == null || outs <= 0) return acc
+                        return acc + (era * outs) / 27
+                      }, 0)
+                      const eraAgg = sum.outs > 0 ? (estErSum * 27) / sum.outs : null
+                      const whipAgg = sum.outs > 0 ? (sum.h + sum.bb) / (sum.outs / 3) : null
+                      const csPctVal =
+                        catcherDefenseBasic?.csPct != null ? `${catcherDefenseBasic.csPct.toFixed(1)}%` : na
+
+                      const starterStarts = catcherStartingSummary?.starts ?? 0
+                      const starterWins = catcherStartingSummary?.teamWins ?? 0
+                      const starterLosses = catcherStartingSummary?.teamLosses ?? 0
+                      const starterWinPct =
+                        catcherStartingSummary?.teamWinPct != null
+                          ? catcherStartingSummary.teamWinPct.toFixed(3)
+                          : na
+                      const qsCount = catcherStartingSummary?.qsCount ?? 0
+                      const qsPct =
+                        catcherStartingSummary?.qsPct != null
+                          ? `${catcherStartingSummary.qsPct.toFixed(1)}%`
+                          : na
+                      const hqsPct =
+                        catcherStartingSummary?.hqsPct != null
+                          ? `${catcherStartingSummary.hqsPct.toFixed(1)}%`
+                          : na
+                      const sqsPct =
+                        catcherStartingSummary?.sqsPct != null
+                          ? `${catcherStartingSummary.sqsPct.toFixed(1)}%`
+                          : na
+
+                      // 1段あたり7指標（指定ラベルは維持）
+                      const row1 = [
+                        eraAgg == null ? na : formatEra(eraAgg),
+                        String(games),
+                        starterStarts > 0 ? String(starterStarts) : na, // 先発＝スタメン捕手回数
+                        starterWins > 0 ? String(starterWins) : na, // 勝利＝スタメン試合のチーム勝利
+                        starterLosses > 0 ? String(starterLosses) : na, // 敗戦＝スタメン試合のチーム敗戦
+                        avg(sum.h, sum.ab),
+                        qsCount > 0 ? String(qsCount) : na, // QS（回数）
+                      ]
+                      const row2 = [
+                        starterWinPct, // 勝率＝スタメン試合のチーム勝率
+                        outsToIp(sum.outs),
+                        sum.bf ? String(sum.bf) : na,
+                        na, // 投球数（捕手側は未連携）
+                        sum.h ? String(sum.h) : na,
+                        pct(sum.so, sum.bf),
+                        whipAgg != null ? whipAgg.toFixed(2) : na,
+                      ]
+                      const row3 = [
+                        sum.hr ? String(sum.hr) : na,
+                        sum.so ? String(sum.so) : na,
+                        sum.bb ? String(sum.bb) : na,
+                        na, // 故意四（未連携）
+                        sum.hbp ? String(sum.hbp) : na,
+                        na, // 失点（未連携）
+                        starterStarts > 0 ? qsPct : na, // QS率（母数＝スタメン捕手回数）
+                      ]
+                      const catcherBasicExtra = [
+                        hqsPct, // HQS率（母数＝スタメン捕手回数）
+                        sqsPct, // SQS率（母数＝スタメン捕手回数）
+                        na, // 被BABIP（未連携）
+                        na, // 被出塁率（未連携）
+                        na, // 被長打率（未連携）
+                        na, // GO/AO（未連携）
+                        csPctVal, // 盗塁阻止率
+                      ]
+                      return (
+                        <>
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    防御率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    試合
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    先発
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    勝利
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    敗戦
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被打率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    QS
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row1.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    勝率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    回数
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被打者
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    投球数
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被安
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    K%
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    WHIP
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row2.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    被本
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    三振
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    四球
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    故意四
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    死球
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    失点
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    QS率
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {row3.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="overflow-hidden overflow-x-auto mb-4">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "collapse",
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <tbody>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    HQS率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    SQS率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被BABIP
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被出塁率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    被長打率
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    GO/AO
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                                    盗塁阻止率
+                                  </th>
+                                </tr>
+                                <tr
+                                  style={{
+                                    backgroundColor: "rgba(255,255,255,0.03)",
+                                    borderTop: "1px solid #333",
+                                  }}
+                                >
+                                  {catcherBasicExtra.map((cell, i) => (
+                                    <td
+                                      key={i}
+                                      className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* 巡目別の球種一覧（投手ページの積み上げ横棒グラフをトレース） */}
+                          <h2
+                            className={`${tb} mb-4 pl-4 mt-8`}
+                            style={{
+                              borderLeft: `6px solid ${sectionStripeColor}`,
+                              fontWeight: 900,
+                            }}
+                          >
+                            巡目別の球種一覧（スタメン時）
+                          </h2>
+
+                          <div className="mb-12">
+                            {(() => {
+                              const rounds = [
+                                { key: "1", label: "1巡目" },
+                                { key: "2", label: "2巡目" },
+                                { key: "3", label: "3巡目" },
+                                { key: "4", label: "4巡目" },
+                                { key: "5", label: "5巡目以上" },
+                              ] as const
+
+                              const palette = [
+                                "#3b82f6",
+                                "#22c55e",
+                                "#f59e0b",
+                                "#a855f7",
+                                "#ef4444",
+                                "#06b6d4",
+                                "#eab308",
+                              ] as const
+
+                              // 捕手タブ（スタメン時）: Phase26 の派生を優先（無ければ暫定で全体割合）
+                              const roundRows =
+                                catcherPaRoundPitchTypes && catcherPaRoundPitchTypes.length > 0
+                                  ? catcherPaRoundPitchTypes
+                                  : null
+                              const byRound = new Map(
+                                (roundRows ?? []).map((r) => [String(r.key), r] as const)
+                              )
+
+                              const allTypes = new Map<string, number>()
+                              if (roundRows && roundRows.length > 0) {
+                                for (const rr of roundRows) {
+                                  for (const row of rr.rows) {
+                                    allTypes.set(
+                                      row.pitch_type,
+                                      (allTypes.get(row.pitch_type) ?? 0) + row.pitches
+                                    )
+                                  }
+                                }
+                              } else if (gamePitchTypes?.rows?.length) {
+                                for (const r of gamePitchTypes.rows) {
+                                  allTypes.set(r.pitch_type, Math.round(r.pct * 10))
+                                }
+                              }
+
+                              const typeOrder = [...allTypes.entries()]
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([t]) => t)
+                              const colorByType = new Map(
+                                typeOrder.map((t, i) => [t, palette[i % palette.length]!] as const)
+                              )
+
+                              const partsForRound = (roundKey: string) => {
+                                const rr = byRound.get(roundKey) ?? null
+                                if (rr && rr.pitches_total > 0) {
+                                  return rr.rows
+                                    .slice()
+                                    .sort((a, b) => b.pct - a.pct)
+                                    .map((r) => ({
+                                      key: `${roundKey}-${r.pitch_type}`,
+                                      label: r.pitch_type,
+                                      pct: Math.max(0, Math.min(100, r.pct)),
+                                      color: colorByType.get(r.pitch_type) ?? palette[0],
+                                    }))
+                                }
+                                return gamePitchTypes?.rows?.length
+                                  ? gamePitchTypes.rows
+                                      .slice()
+                                      .sort((a, b) => b.pct - a.pct)
+                                      .map((r, i) => ({
+                                        key: `${roundKey}-fallback-${r.pitch_type}-${i}`,
+                                        label: r.pitch_type,
+                                        pct: Math.max(0, Math.min(100, r.pct)),
+                                        color: colorByType.get(r.pitch_type) ?? palette[i % palette.length]!,
+                                      }))
+                                  : []
+                              }
+
+                              const na = "—"
+                              return (
+                                <>
+                                  {rounds.map((rd) => (
+                                    <div key={rd.key} className="mb-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-[64px] text-[12px] text-gray-200 font-black tabular-nums whitespace-nowrap">
+                                          {rd.label}
+                                        </div>
+                                        <div className="flex-1">
+                                          <div className="h-7 border border-[#555] overflow-hidden bg-[#111] border-l border-r border-l-white border-r-white">
+                                            <div className="flex h-full w-full">
+                                              {(() => {
+                                                const parts = partsForRound(rd.key)
+                                                return parts.length > 0 ? (
+                                                  parts.map((p) => (
+                                                    <div
+                                                      key={p.key}
+                                                      title={`${p.label}: ${p.pct.toFixed(1)}%`}
+                                                      className="h-full flex items-center justify-center"
+                                                      style={{
+                                                        width: `${p.pct.toFixed(1)}%`,
+                                                        backgroundColor: p.color,
+                                                        color: "#000000",
+                                                        fontWeight: 900,
+                                                        fontSize: "15px",
+                                                        lineHeight: "1",
+                                                        letterSpacing: "0.02em",
+                                                      }}
+                                                    >
+                                                      {p.pct.toFixed(0)}%
+                                                    </div>
+                                                  ))
+                                                ) : (
+                                                  <div className="h-full w-full bg-[#1a1a1a]" />
+                                                )
+                                              })()}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                                    {typeOrder.length > 0 ? (
+                                      typeOrder.map((label) => (
+                                        <div key={label} className="flex items-center gap-1 whitespace-nowrap">
+                                          <span
+                                            className="inline-block w-2 h-2"
+                                            style={{
+                                              backgroundColor: colorByType.get(label) ?? palette[0],
+                                            }}
+                                          />
+                                          <span className="text-gray-300">{label}</span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span>{na}</span>
+                                    )}
+                                  </div>
+                                </>
+                              )
+                            })()}
+                          </div>
+
+                          <div className="text-[11px] text-gray-400">
+                            {catcherAppearances?.gameIds?.length
+                              ? `試合ID: ${catcherAppearances.gameIds.join(", ")}`
+                              : "試合ID: —"}
+                          </div>
+
+                          {/* 投手別成績（最大15人。投手ページの「捕手別の投球成績」をトレース） */}
+                          <h2
+                            className={`${tb} mb-4 pl-4 mt-8`}
+                            style={{
+                              borderLeft: `6px solid ${sectionStripeColor}`,
+                              fontWeight: 900,
+                            }}
+                          >
+                            投手別成績
+                          </h2>
+                          <div className="overflow-x-auto overflow-y-hidden mb-0">
+                            <table
+                              className="text-xs"
+                              style={{
+                                fontVariantNumeric: "tabular-nums",
+                                borderCollapse: "separate",
+                                borderSpacing: 0,
+                                border: "1px solid #555",
+                                width: "100%",
+                                tableLayout: "fixed",
+                              }}
+                            >
+                              <colgroup>
+                                <col style={{ width: "65px" }} />
+                                <col style={{ width: "50px" }} />
+                                <col style={{ width: "45px" }} />
+                                <col style={{ width: "45px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "51px" }} />
+                                <col style={{ width: "45px" }} />
+                              </colgroup>
+                              <thead>
+                                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                                    投手
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    防御率
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    勝‐敗
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    回数
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    K-BB％
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    K％
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    WHIP
+                                  </th>
+                                  <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
+                                    QS％
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(catcherPitchers?.length ? catcherPitchers.slice(0, 15) : []).length ? (
+                                  catcherPitchers.slice(0, 15).map((row, ri) => (
+                                    <tr
+                                      key={`${row.pitcherNpbId}-${ri}`}
+                                      style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                                    >
+                                      <td
+                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                        style={{ backgroundColor: "#1a1a1a" }}
+                                      >
+                                        {row.pitcherName}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.era == null ? "—" : formatEra(row.era)}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.wl || "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.ip || "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.kBbPct != null ? `${row.kBbPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.kPct != null ? `${row.kPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.whip != null ? row.whip.toFixed(2) : "—"}
+                                      </td>
+                                      <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
+                                        {row.qsPct != null ? `${row.qsPct.toFixed(1)}%` : "—"}
+                                      </td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  Array.from({ length: 15 }, (_, i) => (
+                                    <tr key={`na-${i}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                      <td
+                                        className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                        style={{ backgroundColor: "#1a1a1a" }}
+                                      >
+                                        —
+                                      </td>
+                                      {Array.from({ length: 7 }, () => "—").map((v, j) => (
+                                        <td
+                                          key={j}
+                                          className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                                        >
+                                          {v}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <>
+                    {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
+                    <SeasonStatsPilot
+                      playerId={seasonPilotPlayerId}
+                      seasonDetailTab={kikuchiSeasonDetailTab as any}
+                      layout={layout}
+                      looseSpacing
+                      rosterFielderShell={showFielderSeasonPilotUi}
+                      rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+                      headingStripeColor={sectionStripeColor}
+                    />
+                    {kikuchiSeasonDetailTab === "pitch" && (
+                      <PitchDetailsPilot
+                        playerId={seasonPilotPlayerId}
+                        layout={layout}
+                        headingStripeColor={sectionStripeColor}
+                      />
+                    )}
+                  </>
+                )}
+              </>
+            )}
+        </div>
+
+        {pitcherCareerPitchingTightLayout && (
+          <div style={{ ...pitcherProfileScaleStyle, marginBottom: "-0.75rem" }}>
+            {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
           </div>
         )}
 
         {/* 通算成績 */}
         {(!showSeasonCareerTabs || statsTab === "career") && (
+          <>
+        {!pitcherCareerPitchingTablePilot && !showCareerBattingSection && (
           <>
         {/* Section Title */}
         <h2
@@ -4146,109 +4398,9 @@ function PlayerPageClient({
           キャリアハイの打撃成績
         </h2>
 
-        {/* Career High Grid */}
-        <div className={isMobile ? "grid grid-cols-3 gap-2 mb-12" : "grid grid-cols-3 gap-4 mb-12"}>
-          {careerHighBattingCards.map((stat) => (
-            <div
-              key={stat.title}
-              className="overflow-hidden"
-              style={{
-                containerType: "inline-size",
-                fontSize: `${CAREER_HIGH_CARD_SCALE_CQW}cqw`,
-                backgroundColor: "#000000",
-                border: `${CAREER_HIGH_CARD_BORDER_EM}em solid #555555`,
-                borderRadius: "0",
-                boxShadow: "0 0.25em 0.625em rgba(0,0,0,0.5)",
-                aspectRatio: "3 / 2",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <div
-                className="latin tabular-nums tracking-tight"
-                style={{
-                  position: "relative",
-                  flexShrink: 0,
-                  width: "100%",
-                  backgroundColor: "#000000",
-                  paddingTop: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
-                  height: `calc(${CAREER_HIGH_LABEL_BG_TOP_EM}em + ${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em)`,
-                }}
-              >
-                <div
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
-                    transform: "translateX(-50%)",
-                    width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
-                    height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
-                    backgroundColor: "#FFFF44",
-                  }}
-                />
-                <div
-                  className="absolute z-[1] flex items-center justify-center"
-                  style={{
-                    left: "50%",
-                    top: `${CAREER_HIGH_LABEL_BG_TOP_EM}em`,
-                    transform: "translateX(-50%)",
-                    width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
-                    height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
-                  }}
-                >
-                  <span
-                    className="font-light leading-none whitespace-nowrap"
-                    style={{
-                      color: "#000000",
-                      fontWeight: 900,
-                      fontSize: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_TEXT_SCALE}em`,
-                      letterSpacing: `${CAREER_HIGH_LABEL_TEXT_LETTER_SPACING_EM}em`,
-                      transform: `translateY(${CAREER_HIGH_LABEL_TEXT_OFFSET_EM}em)`,
-                      whiteSpace: "nowrap",
-                      wordBreak: "keep-all",
-                    }}
-                  >
-                    {stat.title}
-                  </span>
-                </div>
-              </div>
-              <div
-                className="flex-1 relative min-h-0"
-                style={{ backgroundColor: "#000000", paddingLeft: "0.5em", paddingRight: "0.5em" }}
-              >
-                <div
-                  className="absolute inset-x-0 flex justify-center"
-                  style={{
-                    top: `${CAREER_HIGH_VALUE_TOP_PERCENT}%`,
-                    transform: "translateY(-50%)",
-                    paddingLeft: "0.5em",
-                    paddingRight: "0.5em",
-                  }}
-                >
-                  <div
-                    className="font-black leading-none"
-                    style={{
-                      flexShrink: 0,
-                      fontSize: `${CAREER_HIGH_VALUE_EM}em`,
-                      lineHeight: 1,
-                      fontFamily: 'var(--font-bebas-neue), "Bebas Neue", sans-serif',
-                      letterSpacing: "0.032em",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {stat.value}
-                  </div>
-                </div>
-              </div>
-              {stat.year && (
-                <div className="px-2 py-1 text-center text-sm" style={{ backgroundColor: "#1f1f1f" }}>
-                  {stat.year}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <CareerHighStatGrid cards={careerHighBattingCards} isMobile={isMobile} />
+          </>
+        )}
 
         {!profileMergedSettled && (
           <div className="mb-8">
@@ -4271,7 +4423,11 @@ function PlayerPageClient({
           </div>
         )}
 
-        {profileMergedSettled && profileMerged && !hasMergedBatting && !hasMergedPitching && (
+        {profileMergedSettled &&
+          profileMerged &&
+          !showCareerBattingSection &&
+          !showCareerPitchingRankingTable &&
+          !showLegacyPitchingCareerSection && (
           <div
             className="mb-8 max-w-3xl rounded border border-amber-600/50 bg-amber-950/35 px-3 py-2.5 text-[11px] leading-relaxed text-amber-100/95"
             role="status"
@@ -4283,10 +4439,55 @@ function PlayerPageClient({
           </div>
         )}
 
-        {hasMergedBatting && (
-          <>
+        {showCareerPitchingRankingTable && (
+          <div className={pitcherCareerPitchingTightLayout ? "-mt-2" : undefined}>
+            {!showSeasonCareerTabs && renderPitcherCareerSubTabBar(false)}
+            {(!showSeasonCareerTabs || pitcherCareerSubTab === "total") && (
+              <>
+                <h2
+                  className={
+                    showSeasonCareerTabs ? pitcherCareerH2Class : careerBattingTotalSectionH2Class
+                  }
+                  style={careerBattingSectionH2Style}
+                >
+                  通算の投手成績
+                </h2>
+                <CareerBattingTableRankingStyle
+                  rows={mergedPitchingRowsForDisplay}
+                  birthRaw={mergedBirthRaw}
+                  columns={PITCHING_STAT_COLUMNS}
+                  rowKeyPrefix="career-pit"
+                />
+              </>
+            )}
+            {showSeasonCareerTabs && pitcherCareerSubTab === "high" && (
+              <>
+                <h2
+                  className={
+                    showSeasonCareerTabs ? pitcherCareerH2Class : careerHighSectionH2Class
+                  }
+                  style={careerBattingSectionH2Style}
+                >
+                  {formatCareerHighPitchingHeading(careerHighPitching.seasonYear)}
+                </h2>
+                <CareerHighStatGrid
+                  cards={careerHighPitching.cards}
+                  isMobile={isMobile}
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {showCareerBattingSection && (
+          <div>
+            {!showSeasonCareerTabs && renderFielderCareerSubTabBar(false)}
+            {(!showSeasonCareerTabs || fielderCareerSubTab === "total") && (
+              <>
         <h2
-          className={careerBattingTotalSectionH2Class}
+          className={
+            showSeasonCareerTabs ? fielderCareerH2Class : careerBattingTotalSectionH2Class
+          }
           style={careerBattingSectionH2Style}
         >
           通算の打撃成績
@@ -4381,10 +4582,23 @@ function PlayerPageClient({
           </div>
         </div>
         )}
-          </>
+              </>
+            )}
+            {showSeasonCareerTabs && fielderCareerSubTab === "high" && (
+              <>
+                <h2
+                  className={fielderCareerH2Class}
+                  style={careerBattingSectionH2Style}
+                >
+                  {formatCareerHighBattingHeading(careerHighBattingYear)}
+                </h2>
+                <CareerHighStatGrid cards={careerHighBattingCards} isMobile={isMobile} />
+              </>
+            )}
+          </div>
         )}
 
-        {hasMergedPitching && (
+        {showLegacyPitchingCareerSection && (
           <>
         <h2
           className={`${tb} mb-6 pl-4`}

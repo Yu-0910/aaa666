@@ -52,33 +52,33 @@ export const BATTING_STAT_COLUMNS: CareerColumnDef[] = [
   { key: "gpa", label: "GPA", kind: "dec3" },
 ]
 
-/** Phase 7 §9.1: 投手25指標（順番固定） */
+/** Phase 7 §9.1: 投手25指標（順番固定・表示名は投手ランキング Record_pitching と同一） */
 export const PITCHING_STAT_COLUMNS: CareerColumnDef[] = [
-  { key: "era", label: "ERA", kind: "era" },
-  { key: "k_bb_pct", label: "K-BB%", kind: "pctSigned" },
-  { key: "whip", label: "WHIP", kind: "dec3" },
-  { key: "wins", label: "W", kind: "int" },
-  { key: "losses", label: "L", kind: "int" },
-  { key: "games", label: "G", kind: "int" },
-  { key: "ip", label: "IP", kind: "ip" },
-  { key: "saves", label: "SV", kind: "int" },
-  { key: "bf", label: "BF", kind: "int" },
-  { key: "hits_allowed", label: "H", kind: "int" },
-  { key: "hr_allowed", label: "HR", kind: "int" },
-  { key: "bb", label: "BB", kind: "int" },
-  { key: "ibb", label: "IBB", kind: "int" },
-  { key: "hbp", label: "HBP", kind: "int" },
-  { key: "so", label: "SO", kind: "int" },
-  { key: "er", label: "ER", kind: "int" },
-  { key: "r", label: "R", kind: "int" },
-  { key: "holds", label: "HOLD", kind: "int" },
-  { key: "hp", label: "HP", kind: "int" },
-  { key: "cg", label: "CG", kind: "int" },
-  { key: "sho", label: "SHO", kind: "int" },
-  { key: "wpct", label: "WPCT", kind: "wpct" },
-  { key: "k_pct", label: "K%", kind: "pct1" },
-  { key: "bb_pct", label: "BB%", kind: "pct1" },
-  { key: "wp", label: "WP", kind: "int" },
+  { key: "era", label: "防御率", kind: "era" },
+  { key: "k_bb_pct", label: "K-BB％", kind: "pctSigned" },
+  { key: "whip", label: "WHIP", kind: "dec2" },
+  { key: "wins", label: "勝利", kind: "int" },
+  { key: "losses", label: "敗戦", kind: "int" },
+  { key: "games", label: "試合", kind: "int" },
+  { key: "ip", label: "回数", kind: "ip" },
+  { key: "saves", label: "Ｓ", kind: "int" },
+  { key: "bf", label: "被打者", kind: "int" },
+  { key: "hits_allowed", label: "被安", kind: "int" },
+  { key: "hr_allowed", label: "被本", kind: "int" },
+  { key: "bb", label: "四球", kind: "int" },
+  { key: "ibb", label: "敬遠", kind: "int" },
+  { key: "hbp", label: "死球", kind: "int" },
+  { key: "so", label: "三振", kind: "int" },
+  { key: "er", label: "自責", kind: "int" },
+  { key: "r", label: "失点", kind: "int" },
+  { key: "holds", label: "HLD", kind: "int" },
+  { key: "hp", label: "ＨＰ", kind: "int" },
+  { key: "cg", label: "完投", kind: "int" },
+  { key: "sho", label: "完封", kind: "int" },
+  { key: "wpct", label: "勝率", kind: "wpct" },
+  { key: "k_pct", label: "K％", kind: "pct1" },
+  { key: "bb_pct", label: "BB％", kind: "pct1" },
+  { key: "wp", label: "暴投", kind: "int" },
 ]
 
 const BATTING_SPLIT_AT = 17
@@ -145,17 +145,10 @@ function battingSingles(row: CareerDisplayRow): number | null {
   return Math.max(0, hits - d - t - hr)
 }
 
-/** 通算表の列ラベル → ランキング `formatStat` 用ラベル */
+/** 通算表の列ラベル → ランキング `formatStat` 用ラベル（省略時は label をそのまま使用） */
 const CAREER_FORMAT_LABEL: Record<string, string> = {
   本塁: "本塁打",
-  WPCT: "勝率",
-  W: "勝利",
-  L: "敗戦",
-  SV: "セーブ",
-  HOLD: "HLD",
-  HP: "ＨＰ",
-  CG: "完投",
-  SHO: "完封",
+  自責: "自責点",
 }
 
 function careerMetricFormatLabel(col: CareerColumnDef): string {
@@ -181,7 +174,11 @@ export function formatCareerCell(col: CareerColumnDef, row: CareerDisplayRow): s
     return s || "—"
   }
 
-  if (col.key === "era" || col.label === "ERA") {
+  if (col.key === "era" || col.label === "防御率") {
+    return formatEra(row[col.key])
+  }
+
+  if (col.key === "whip" || col.label === "WHIP") {
     return formatEra(row[col.key])
   }
 

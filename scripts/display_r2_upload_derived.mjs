@@ -14,6 +14,7 @@
  *   npm run display:r2:upload:derived:2026
  *   npm run display:r2:upload:derived
  *   npm run display:r2:upload:derived:dry
+ *   node scripts/display_r2_upload_derived.mjs --year 2026 --player-ids 03105157,1750223,11515133,1000138
  */
 
 import fs from 'node:fs'
@@ -27,6 +28,14 @@ const DRY_RUN = process.argv.includes('--dry-run')
 const yearArg = process.argv.find((a) => a.startsWith('--year='))?.split('=')[1]
   ?? (process.argv.includes('--year') ? process.argv[process.argv.indexOf('--year') + 1] : null)
 const YEAR_FILTER = yearArg?.trim() || null
+const playerIdsArg =
+  process.argv.find((a) => a.startsWith('--player-ids='))?.split('=')[1]
+  ?? (process.argv.includes('--player-ids')
+    ? process.argv[process.argv.indexOf('--player-ids') + 1]
+    : null)
+const PLAYER_IDS = playerIdsArg
+  ? playerIdsArg.split(',').map((s) => s.trim()).filter(Boolean)
+  : null
 
 function loadDotEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return false
@@ -72,6 +81,8 @@ const DERIVED_CATEGORIES = [
   'player_catcher_pitcher_splits',
   'player_catcher_starting_summary',
   'player_catcher_pa_round_pitch_types',
+  'pitcher_season_pitch_types',
+  'player_fa_estimates',
   /** 通算タブ: profile-merged API（fetchDerivedJsonServer） */
   'player_profile',
 ]
@@ -100,6 +111,15 @@ function walkJsonFiles(dir, acc = []) {
 
 function matchesYearFilter(rel, year) {
   return rel === year || rel.startsWith(`${year}/`) || rel.includes(`/${year}/`)
+}
+
+function matchesPlayerFilter(rel, ids) {
+  if (!ids?.length) return true
+  const base = path.basename(rel, '.json')
+  return ids.some((id) => {
+    if (base === id || base === `yahoo_${id}` || base === `npb_${id}`) return true
+    return base.endsWith(`_${id}`)
+  })
 }
 
 function loadEnv() {
@@ -133,9 +153,11 @@ async function main() {
       console.warn(`Skip missing: ${u.local}`)
       continue
     }
+    const skipYearFilter = PLAYER_IDS?.length && u.keyPrefix.endsWith('/player_profile')
     for (const f of walkJsonFiles(abs)) {
       const rel = path.relative(abs, f).replace(/\\/g, '/')
-      if (YEAR_FILTER && !matchesYearFilter(rel, YEAR_FILTER)) continue
+      if (YEAR_FILTER && !skipYearFilter && !matchesYearFilter(rel, YEAR_FILTER)) continue
+      if (PLAYER_IDS && !matchesPlayerFilter(rel, PLAYER_IDS)) continue
       files.push({ local: f, key: `${u.keyPrefix}/${rel}` })
     }
   }
@@ -147,8 +169,19 @@ async function main() {
     }
     files.push({ local: abs, key: m.key })
   }
+  if (PLAYER_IDS?.length) {
+    const faYear = YEAR_FILTER || '2026'
+    const faLocal = path.join(ROOT, `_data/derived/player_fa_estimates/${faYear}/npb_fa_estimates.json`)
+    if (fs.existsSync(faLocal)) {
+      files.push({
+        local: faLocal,
+        key: `data/derived/player_fa_estimates/${faYear}/npb_fa_estimates.json`,
+      })
+    }
+  }
 
   if (YEAR_FILTER) console.log(`Filter: year=${YEAR_FILTER}`)
+  if (PLAYER_IDS?.length) console.log(`Filter: player-ids=${PLAYER_IDS.join(',')}`)
   console.log(`JSON files: ${files.length}`)
   if (files.length === 0) {
     console.error('Nothing to upload. Check _data/derived/ and --year filter.')
