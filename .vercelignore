@@ -13,3 +13,12 @@ public/data/rankings/
 # 1950〜の巨大CSV（本番ビルド・APIでは不要。英字名は master_csv_calculated の 2025 のみ＋名簿）
 _data/master_csv__import_1950_2024/
 _data/master_csv/
+
+# 工場・スクレイプ・PoC（本番表示は R2。Vercel ビルドから除外）
+_data/scraped_games/
+_data/cache/
+_data/sportsnavi_schedule_snapshots/
+_data/sportsnavi_schedule_diff/
+_data/yahoo_games_pilot/
+output/html_cache_probe/
+output/temp/

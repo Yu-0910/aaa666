@@ -153,7 +153,7 @@ async function main() {
       console.warn(`Skip missing: ${u.local}`)
       continue
     }
-    const skipYearFilter = PLAYER_IDS?.length && u.keyPrefix.endsWith('/player_profile')
+    const skipYearFilter = u.keyPrefix.endsWith('/player_profile')
     for (const f of walkJsonFiles(abs)) {
       const rel = path.relative(abs, f).replace(/\\/g, '/')
       if (YEAR_FILTER && !skipYearFilter && !matchesYearFilter(rel, YEAR_FILTER)) continue
@@ -168,6 +168,15 @@ async function main() {
       continue
     }
     files.push({ local: abs, key: m.key })
+  }
+  if (YEAR_FILTER && !PLAYER_IDS?.length) {
+    const faLocal = path.join(ROOT, `_data/derived/player_fa_estimates/${YEAR_FILTER}/npb_fa_estimates.json`)
+    if (fs.existsSync(faLocal)) {
+      files.push({
+        local: faLocal,
+        key: `data/derived/player_fa_estimates/${YEAR_FILTER}/npb_fa_estimates.json`,
+      })
+    }
   }
   if (PLAYER_IDS?.length) {
     const faYear = YEAR_FILTER || '2026'
