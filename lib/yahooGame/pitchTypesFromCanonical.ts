@@ -1,11 +1,23 @@
 /**
- * canonical の plateAppearances.pitchEvents から球種別集計（fetch_game_pitch_types.py と同趣旨）
+ * canonical の plateAppearances.pitchEvents から球種別集計
+ * Strike% は 1 球単位。Whiff% = 空振り ÷ スイング数（スイング企図）。
+ * 被打率 / 被OPS は決着球 split（SSOT: resultJaHitBases / paSettlementStatsFromResultJa）。
  */
 
 import type { GamePitchTypeRow, GamePitchTypesResponse } from "./gamePitcherPilotFiles"
 import { slashOps3FromCounts, slashRate3FromCounts } from "../battingRateFormat"
-import { bucketPitchResultForTypeRow } from "./pitchCountSim"
+import { isWalkLikeResultText } from "../baseballWalkResult"
+import { pickResultSummaryJaFromPitchEvents } from "./mergePhase10FromPitchRows"
 import { isStrikeoutResultJa } from "./paOutcomeResultJa"
+import { isHbpResultJa, isSfResultJa } from "./paSettlementStatsFromResultJa"
+import {
+  aggregatePitchTypeRateCounts,
+  formatStrikePct,
+  formatWhiffPct,
+  strikeCountFromRateCounts,
+  swingCountFromRateCounts,
+} from "./pitchTypeRateStats"
+import { hitBases, isAtBat } from "./resultJaHitBases"
 import type { PlateAppearance, PitchEvent } from "./types"
 
 type SettlementAcc = {
@@ -23,52 +35,6 @@ function emptyAcc(): SettlementAcc {
   return { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 }
 }
 
-function isWalkSummary(s: string): boolean {
-  return /四球|敬遠|故意四球/.test(s)
-}
-
-function isHbpSummary(s: string): boolean {
-  return /死球/.test(s)
-}
-
-function isSfSummary(s: string): boolean {
-  return /犠飛|犠牲フライ|犠牲飛/.test(s)
-}
-
-function isSacHitSummary(s: string): boolean {
-  return /犠打|投犠打|捕犠打|犠犠/.test(s)
-}
-
-function isHitSummary(s: string): boolean {
-  return (
-    /^[左右中]安/.test(s) ||
-    /安打|ヒット/.test(s) ||
-    /二塁打|三塁打|本塁打|ホームラン/.test(s) ||
-    /^\s*ソロ/.test(s)
-  )
-}
-
-function getTotalBasesSummary(s: string): number {
-  if (/本塁打|ホームラン|^\s*ソロ|満塁(ホーム)?ラン/.test(s)) return 4
-  if (/三塁打/.test(s)) return 3
-  if (/二塁打/.test(s)) return 2
-  if (isHitSummary(s)) return 1
-  return 0
-}
-
-/** AB に数える終了打席（四死球・犠打・犠飛は除く） */
-function countsAtBat(s: string): boolean {
-  const t = s.trim()
-  if (!t) return false
-  if (isWalkSummary(t) || isHbpSummary(t)) return false
-  if (isSfSummary(t) || isSacHitSummary(t)) return false
-  if (isStrikeoutResultJa(t)) return true
-  if (/ゴロ|ライナー|併殺/.test(t)) return true
-  if (/飛|フライ/.test(t)) return true
-  if (isHitSummary(t)) return true
-  return false
-}
-
 function formatAvg(h: number, ab: number): string {
   if (!ab) return "—"
   return slashRate3FromCounts(h, ab)
@@ -83,6 +49,15 @@ function formatOps(acc: SettlementAcc): string {
 
 function sortEvents(ev: PitchEvent[]): PitchEvent[] {
   return [...ev].sort((a, b) => (a.pitchIndex ?? 0) - (b.pitchIndex ?? 0))
+}
+
+function settlementSummaryForPa(pa: PlateAppearance, events: PitchEvent[]): string {
+  const explicit = (pa.resultSummaryJa ?? "").trim()
+  if (explicit) return explicit
+  const picked = pickResultSummaryJaFromPitchEvents(events)
+  if (picked) return picked.trim()
+  const last = events[events.length - 1]
+  return (last?.resultJa ?? "").trim()
 }
 
 /**
@@ -122,23 +97,23 @@ export function buildPitchTypesResponseFromCanonical(
     if (lastPid !== pid) continue
 
     const pt = (last.pitchTypeJa ?? "").trim() || "不明"
-    const summary = (pa.resultSummaryJa ?? last.resultJa ?? "").trim()
+    const summary = settlementSummaryForPa(pa, events)
     if (!settlementByType[pt]) settlementByType[pt] = emptyAcc()
     const rec = settlementByType[pt]!
 
-    if (countsAtBat(summary)) {
+    if (isAtBat(summary)) {
       rec.ab += 1
-      if (isHitSummary(summary)) {
+      const tb = hitBases(summary)
+      if (tb > 0) {
         rec.h += 1
-        const tb = getTotalBasesSummary(summary)
         rec.tb += tb
         if (tb === 4) rec.hr += 1
       }
     }
     if (isStrikeoutResultJa(summary)) rec.so += 1
-    if (isWalkSummary(summary)) rec.bb += 1
-    if (isHbpSummary(summary)) rec.hbp += 1
-    if (isSfSummary(summary)) rec.sf += 1
+    if (isWalkLikeResultText(summary)) rec.bb += 1
+    if (isHbpResultJa(summary)) rec.hbp += 1
+    if (isSfResultJa(summary)) rec.sf += 1
   }
 
   const allPitches = Object.values(pitchesByType).flat()
@@ -153,34 +128,8 @@ export function buildPitchTypesResponseFromCanonical(
     const pitches = pitchesByType[pitchType]!
     const n = pitches.length
     const setRec = settlementByType[pitchType] ?? emptyAcc()
-
-    let balls = 0
-    let swingMiss = 0
-    let taken = 0
-    let foul = 0
-    for (const p of pitches) {
-      const r = (p.resultJa ?? "").trim()
-      switch (bucketPitchResultForTypeRow(r)) {
-        case "balls":
-          balls += 1
-          break
-        case "swing_miss":
-          swingMiss += 1
-          break
-        case "taken":
-          taken += 1
-          break
-        case "foul":
-          foul += 1
-          break
-      }
-    }
-
-    const inPlay = setRec.ab - setRec.so
-    const strikes = swingMiss + taken + foul + Math.max(0, inPlay)
-    const strikePct = n ? `${((strikes / n) * 100).toFixed(1)}%` : "—"
-    const swingTotal = swingMiss + foul + setRec.ab
-    const whiffPct = swingTotal ? `${((swingMiss / swingTotal) * 100).toFixed(1)}%` : "—"
+    const rateCounts = aggregatePitchTypeRateCounts(pitches.map((p) => p.resultJa))
+    const strikes = strikeCountFromRateCounts(rateCounts)
 
     const speeds = pitches
       .map((p) => p.speedKmh)
@@ -192,12 +141,12 @@ export function buildPitchTypesResponseFromCanonical(
       pitches: n,
       pct: Math.round((n / totalPitches) * 1000) / 10,
       avg_speed_kmh: avgSpeed,
-      swing_miss: swingMiss,
-      taken,
-      foul,
-      balls,
-      strike_pct: strikePct,
-      whiff_pct: whiffPct,
+      swing_miss: rateCounts.swingMiss,
+      taken: rateCounts.taken,
+      foul: rateCounts.foul,
+      balls: rateCounts.balls,
+      strike_pct: formatStrikePct(strikes, n),
+      whiff_pct: formatWhiffPct(rateCounts.swingMiss, swingCountFromRateCounts(rateCounts)),
       avg: formatAvg(setRec.h, setRec.ab),
       ops: formatOps(setRec),
       ab: setRec.ab,
@@ -222,27 +171,23 @@ export function buildPitchTypesResponseFromCanonical(
     totalAcc.sf += s.sf
   }
 
-  const totalSwingMiss = rows.reduce((s, r) => s + r.swing_miss, 0)
-  const totalTaken = rows.reduce((s, r) => s + r.taken, 0)
-  const totalFoul = rows.reduce((s, r) => s + r.foul, 0)
-  const totalBalls = rows.reduce((s, r) => s + r.balls, 0)
-  const totalStrikes =
-    totalSwingMiss + totalTaken + totalFoul + Math.max(0, totalAcc.ab - totalAcc.so)
+  const totalRateCounts = aggregatePitchTypeRateCounts(allPitches.map((p) => p.resultJa))
+  const totalStrikes = strikeCountFromRateCounts(totalRateCounts)
 
   const totalRow: GamePitchTypeRow = {
     pitch_type: "合計",
     pitches: totalPitches,
     pct: 100.0,
     avg_speed_kmh: null,
-    swing_miss: totalSwingMiss,
-    taken: totalTaken,
-    foul: totalFoul,
-    balls: totalBalls,
-    strike_pct: totalPitches ? `${((totalStrikes / totalPitches) * 100).toFixed(1)}%` : "—",
-    whiff_pct: (() => {
-      const denom = totalSwingMiss + totalFoul + totalAcc.ab
-      return denom ? `${((totalSwingMiss / denom) * 100).toFixed(1)}%` : "—"
-    })(),
+    swing_miss: totalRateCounts.swingMiss,
+    taken: totalRateCounts.taken,
+    foul: totalRateCounts.foul,
+    balls: totalRateCounts.balls,
+    strike_pct: formatStrikePct(totalStrikes, totalPitches),
+    whiff_pct: formatWhiffPct(
+      totalRateCounts.swingMiss,
+      swingCountFromRateCounts(totalRateCounts),
+    ),
     avg: formatAvg(totalAcc.h, totalAcc.ab),
     ops: formatOps(totalAcc),
     ab: totalAcc.ab,

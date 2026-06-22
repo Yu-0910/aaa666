@@ -33,6 +33,18 @@ async function readMergedByNpbId(
 ): Promise<PlayerProfileMergedApiPayload | null> {
   const id = (npbPlayerId || "").trim()
   if (!/^\d+$/.test(id)) return null
+
+  // Phase4-B:
+  // merged の正本は npb_{npb_player_id}.json。
+  // 2026名簿外の過去選手も NPB ID 直指定で読めるようにする。
+  const byNpbFileName = await fetchDerivedJsonServer<PlayerProfileMergedApiPayload>(
+    "player_profile",
+    "merged",
+    `npb_${id}.json`,
+  )
+  if (byNpbFileName) return byNpbFileName
+
+  // 既存互換: もし {id}.json 形式が残っている場合も読む。
   return fetchDerivedJsonServer<PlayerProfileMergedApiPayload>(
     "player_profile",
     "merged",
@@ -48,9 +60,10 @@ export async function GET(
     const { playerId } = context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const rosterPlayer = findRosterPlayerByPublicId(decoded)
-    const npbId =
-      rosterPlayer?.npb_player_id ??
-      (/^\d+$/.test(decoded) ? resolveNpbPlayerIdFromPublicId(decoded) : decoded)
+    const resolvedNpbId = /^\d+$/.test(decoded)
+      ? resolveNpbPlayerIdFromPublicId(decoded)
+      : null
+    const npbId = rosterPlayer?.npb_player_id ?? resolvedNpbId ?? decoded
     const faSeasonYear = yearFromRequest(request)
     const payload = await readMergedByNpbId(npbId)
     if (!payload) {

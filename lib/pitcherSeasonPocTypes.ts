@@ -45,6 +45,18 @@ export type PitcherSeasonPocCatcherRow = {
   losses?: number
   qsCount?: number
   qsPct: number | null
+  /** pitchingLines 帰属の自責点合算 */
+  er?: number
+  /** 敬遠・故意四球（打席結果テキスト） */
+  ibb?: number
+}
+
+/** 巡目別・カウント別球種 split 行（Phase 32 / byPaRoundPitchTypes 共通） */
+export type PitcherSeasonPocPitchTypesSplitRow = {
+  key: string
+  label: string
+  pitches_total: number
+  rows: Array<{ pitch_type: string; pitches: number; pct: number }>
 }
 
 export type PitcherSeasonPocPayload = {
@@ -83,7 +95,7 @@ export type PitcherSeasonPocPayload = {
     /**
      * phase_pitcher_poc1: canonical 試合単位で集計（無い場合は旧 JSON）。
      * 先発判定は pitchingLines のチーム内先頭行。QS は先発のみ 6回以上・自責3以下。
-     * 完投は当該試合でチームに当該投手のみかつ 9 回相当（27 outs）以上の参考値。
+     * 完投は当該試合でチームに当該投手のみかつ7回以上（21 outs）の参考値。
      */
     gamesAppeared?: number
     gamesStarted?: number
@@ -95,6 +107,14 @@ export type PitcherSeasonPocPayload = {
     qsCount?: number
     /** 先発試合ベースの QS 率（0〜1）。先発なしは null */
     qsRate?: number | null
+    /** 先発試合ベースの HQS 回数（7回以上・自責2以下） */
+    hqsCount?: number
+    /** 先発試合ベースの SQS 回数（8回以上・自責1以下） */
+    sqsCount?: number
+    /** 先発試合ベースの HQS 率（0〜1）。先発なしは null */
+    hqsRate?: number | null
+    /** 先発試合ベースの SQS 率（0〜1）。先発なしは null */
+    sqsRate?: number | null
     /**
      * phase_pitcher_poc1: 試合ごとの pitchingLines（マージ後）の勝敗記録の合計。
      * 無い場合は UI が `decision` のみで従来表示する。
@@ -148,6 +168,11 @@ export type PitcherSeasonPocPayload = {
       PitcherSeasonPocPaAgg & { key: string; label: string }
     >
     /**
+     * カウント別（0-0〜3-2）: 最終球直前 B-S（phase16 と同じ pitchCountKeyForPlateAppearance）。
+     * 未生成シーズンでは省略可。
+     */
+    byCount?: Array<PitcherSeasonPocPaAgg & { key: string; label: string }>
+    /**
      * 巡目別（1〜5巡目以上）: 打者側「pa_round」に相当する区分で、投手の被打撃成績を合算。
      * 未実装/未生成のシーズンでは省略される（UI は「—」で表示）。
      */
@@ -156,12 +181,20 @@ export type PitcherSeasonPocPayload = {
      * 巡目別の球種一覧: 巡目（1〜5巡目以上）ごとの投球数（pitchEvents）を球種で集計。
      * pct は当該巡目の総投球数に対する割合（0〜100）。
      */
-    byPaRoundPitchTypes?: Array<{
-      key: string
-      label: string
-      pitches_total: number
-      rows: Array<{ pitch_type: string; pitches: number; pct: number }>
-    }>
+    byPaRoundPitchTypes?: Array<PitcherSeasonPocPitchTypesSplitRow>
+    /** 巡目別球種（対左打者）。打者・投手腕は splits.vsHand と同じ換算。 */
+    byPaRoundPitchTypesVsL?: Array<PitcherSeasonPocPitchTypesSplitRow>
+    /** 巡目別球種（対右打者）。 */
+    byPaRoundPitchTypesVsR?: Array<PitcherSeasonPocPitchTypesSplitRow>
+    /**
+     * カウント別（0-0〜3-2）の球種一覧: 各球を投球直前 B-S に帰した pitchEvents の球種集計。
+     * pct は当該カウントの総投球数に対する割合（0〜100）。Phase 32。
+     */
+    byCountPitchTypes?: Array<PitcherSeasonPocPitchTypesSplitRow>
+    /** カウント別球種（対左打者）。 */
+    byCountPitchTypesVsL?: Array<PitcherSeasonPocPitchTypesSplitRow>
+    /** カウント別球種（対右打者）。 */
+    byCountPitchTypesVsR?: Array<PitcherSeasonPocPitchTypesSplitRow>
     byInning: Array<PitcherSeasonPocPaAgg & { inning: number }>
     /**
      * 球場別: 試合ごとの pitchingLines を球場（yahoo_game_meta.stadiumName）で合算。
@@ -174,10 +207,15 @@ export type PitcherSeasonPocPayload = {
      */
     byOpponentTeam?: PitcherSeasonPocStadiumRow[]
     /**
-     * デー/ナイター別: 試合ごとの pitchingLines を yahoo_game_meta.dayNight で合算。
+     * デー/ナイター別: 試合ごとの pitchingLines を開始時刻（yahoo_game_meta または raw_sportsnavi）で合算。
      * key は `day` | `night`（メタ欠落は集計から除外されないよう別バケット「未設定」に入るが、UI は day/night のみ表示）。
      */
     byDayNight?: PitcherSeasonPocStadiumRow[]
+    /**
+     * ホーム/ビジター別: 試合ごとの pitchingLines を canonical scoreboard（空なら試合前情報補完）の先攻/後攻で合算。
+     * key は `home` | `away`。
+     */
+    byHomeAway?: PitcherSeasonPocStadiumRow[]
     /** Phase 6: 捕手別（先発捕手固定）。未実行時は省略可 */
     byCatcher?: PitcherSeasonPocCatcherRow[]
   }

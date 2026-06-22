@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { formatStat } from "@/lib/formatStat"
+import { formatRankingStatDisplay } from "@/lib/formatStat"
 import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
 import type { TopLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
 import { playerPageHref } from "@/lib/playerPageHref"
+import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 import { teamColors } from "@/app/components/top/topPageConstants"
 
 type TopPageModernLeaderRowProps = {
@@ -25,7 +26,7 @@ export function TopPageModernLeaderRow({
   typography,
   miniTeamBar,
 }: TopPageModernLeaderRowProps) {
-  const formattedValue = formatStat(String(stat ?? ""), leader.value)
+  const formattedValue = formatRankingStatDisplay(String(stat ?? ""), leader.value)
   const l = leader as {
     romanName?: string
     name?: string
@@ -34,7 +35,8 @@ export function TopPageModernLeaderRow({
     npbPlayerId?: string
   }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
-  const playerName = typeof leader.name === "string" ? leader.name : ""
+  const playerNameRaw = typeof leader.name === "string" ? leader.name : ""
+  const playerName = matchupOpponentDisplayNameJa(playerNameRaw).replace(/[\s\u3000]+/g, "")
   const teamKey = typeof leader.team === "string" ? leader.team : ""
   const teamBarHeight = miniTeamBar ?? (modernLeaderRow ? typography.teamBar : "h-6")
   const rankLabel = String(index + 1)

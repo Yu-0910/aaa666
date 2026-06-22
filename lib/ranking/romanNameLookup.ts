@@ -3,6 +3,94 @@
  * Client Component から import 可。
  */
 
+import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
+
+/** roman-names API と同一の球団フル名 → 短縮名（クライアント照合用） */
+const CSV_TEAM_TO_RANKING_SHORT: Record<string, string> = {
+  中日ドラゴンズ: "中日",
+  広島東洋カープ: "広島",
+  東京ヤクルトスワローズ: "ヤクルト",
+  読売ジャイアンツ: "巨人",
+  阪神タイガース: "阪神",
+  横浜DeNAベイスターズ: "DeNA",
+  "オリックス・バファローズ": "オリックス",
+  千葉ロッテマリーンズ: "ロッテ",
+  北海道日本ハムファイターズ: "日本ハム",
+  東北楽天ゴールデンイーグルス: "楽天",
+  埼玉西武ライオンズ: "西武",
+  福岡ソフトバンクホークス: "ソフトバンク",
+}
+
+function romanNameJaVariants(nameJa: string): string[] {
+  const variants = new Set<string>()
+  const trimmed = (nameJa ?? "").trim()
+  if (!trimmed) return []
+  variants.add(trimmed)
+  variants.add(trimmed.replace(/\u3000/g, " "))
+  variants.add(compactPlayerName(trimmed))
+  variants.add(rosterNameMatchKey(trimmed))
+  const noInitial = rosterNameMatchKey(trimmed)
+    .replace(/^[\uFF21-\uFF3A\uFF41-\uFF5A][．.]/u, "")
+    .replace(/^[A-Za-z][.]/iu, "")
+  if (noInitial) variants.add(noInitial)
+  return [...variants].filter(Boolean)
+}
+
+function teamLookupVariants(teamShort: string): string[] {
+  const variants = new Set<string>()
+  const t = (teamShort ?? "").trim()
+  if (!t) return []
+  variants.add(t)
+  const full = Object.keys(CSV_TEAM_TO_RANKING_SHORT).find((k) => CSV_TEAM_TO_RANKING_SHORT[k] === t)
+  if (full) variants.add(full)
+  return [...variants]
+}
+
+function teamPartsMatch(teamPart: string, candidates: readonly string[]): boolean {
+  const key = rosterNameMatchKey(teamPart)
+  return candidates.some((t) => t === teamPart || rosterNameMatchKey(t) === key)
+}
+
+/**
+ * roman-names API マップから英字名を解決（ランキングと同ソース、クライアント安全）。
+ * 外国人の「ウィットリー」↔「Ｆ．ウィットリー」表記差は suffix 照合で吸収。
+ */
+export function resolveRomanNameFromMap(
+  nameJa: string,
+  teamShort: string,
+  romanMap: Record<string, string>,
+): string | undefined {
+  const names = romanNameJaVariants(nameJa)
+  const teams = teamLookupVariants(teamShort)
+
+  for (const n of names) {
+    for (const t of teams) {
+      const v = lookupRomanInMap(romanMap, n, t)
+      if (v) return v
+    }
+  }
+
+  if (teams.length > 0) {
+    const suffixes = names.map((n) => rosterNameMatchKey(n)).filter((n) => n.length >= 2)
+    for (const key of Object.keys(romanMap)) {
+      const pipe = key.indexOf("|")
+      if (pipe < 0) continue
+      const namePart = key.slice(0, pipe)
+      const teamPart = key.slice(pipe + 1)
+      if (!teamPartsMatch(teamPart, teams)) continue
+      const nameKey = rosterNameMatchKey(namePart)
+      for (const s of suffixes) {
+        if (nameKey === s || nameKey.endsWith(s) || s.endsWith(nameKey)) {
+          const en = romanMap[key]?.trim()
+          if (en) return en
+        }
+      }
+    }
+  }
+
+  return lookupRomanInMap(romanMap, nameJa, "")
+}
+
 /** マップキー用: 名前とチームを正規化（全角スペース→半角スペース、trim） */
 export function normalizeRomanMapKey(name: string, team: string): string {
   const n = (name ?? '').toString().replace(/\u3000/g, ' ').trim()

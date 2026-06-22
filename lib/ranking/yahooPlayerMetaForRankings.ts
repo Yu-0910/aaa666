@@ -16,7 +16,7 @@ import {
 import {
   normalizeRomanMapKey,
   normalizeRomanMapKeyNoSpace,
-} from "@/lib/ranking/romanNameFromCsv"
+} from "@/lib/ranking/romanNameLookup"
 
 function teamForYahooId(doc: CanonicalGameDocument, yahooId: string): string {
   for (const team of doc.game.teams ?? []) {

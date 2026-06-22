@@ -10,6 +10,7 @@ import { getRankingsBaseUrl } from "@/lib/displayData/rankingsBaseUrl"
 import { getProjectRoot } from "@/lib/projectRoot"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
+import { getPitchingLeadersAsync } from "@/lib/ranking/leadersFromPitchingRankingsJson"
 import { TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshotShared"
 import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
@@ -102,6 +103,10 @@ export async function loadSeasonTabPayloadServer(
       league: string,
       category: TopLeadersCategory
     ): Promise<LeadersConfig | null> => {
+      if (category === "pitching") {
+        const config = await getPitchingLeadersAsync(yearStr, league)
+        return Object.keys(config.leaders).length > 0 ? config : null
+      }
       const local = readTopLeadersSnapshot(yearStr, league, category)
       if (local && Object.keys(local.leaders).length > 0) return local
       return fetchTopLeadersSnapshotRemote(yearStr, league, category)

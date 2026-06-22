@@ -8,10 +8,12 @@ import { loadBattingCsv } from './loaders'
 import { shouldRequireQualifyingPA, calculateMinPA } from './qualifyingPA'
 import { calculateXRNf3 } from '@/lib/xr'
 import { calculateRCNf3 } from '@/lib/rc'
-import { BATTING_TOP_2025_RBI_TOP_N, battingTop2025SeasonTopN } from '@/lib/topPageBatting2025Grid'
+import { BATTING_TOP_2026_SEASON_ALL_METRICS, battingTop2025SeasonTopN } from '@/lib/topPageBatting2025Grid'
+import { usesTopPageModernLayout } from '@/lib/topPageModernLayout'
 import {
   buildBattingLeadersConfigFromRankings,
-  buildBattingLeadersConfigFromRankingsAsync,
+  finalizeBattingLeadersConfigForTopPage,
+  finalizeBattingLeadersConfigForTopPageAsync,
   hasBattingRankingsJsonForLeague,
 } from '@/lib/ranking/leadersFromRankingsJson'
 import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from '@/lib/topPage/leadersSnapshot2026'
@@ -643,41 +645,45 @@ function findMetricByName(
  */
 export function getBattingLeaders(year: string, league: string): LeadersConfig {
   const upperLeague = league.toUpperCase()
+  const modern = usesTopPageModernLayout(Number(year))
 
-  const top3Metrics = ['OPS', '打率', '本塁打']
-  const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
-
-  if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
-    const fromSnapshot = readTopLeadersSnapshot(year, upperLeague, 'batting')
-    if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[getBattingLeaders] ${year} ${upperLeague}: top-leaders snapshot`)
-      }
-      return fromSnapshot
-    }
+  const legacyTop3 = ['OPS', '打率', '本塁打'] as const
+  const legacyMini = ['出塁率', '長打率', '打点', '安打', '盗塁'] as const
+  const emptyModern: LeadersConfig = {
+    top3Metrics: [...BATTING_TOP_2026_SEASON_ALL_METRICS],
+    miniMetrics: [],
+    leaders: {},
+  }
+  const emptyLegacy: LeadersConfig = {
+    top3Metrics: [...legacyTop3],
+    miniMetrics: [...legacyMini],
+    leaders: {},
   }
 
-  if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
+  const fromSnapshot =
+    year === TOP_LEADERS_SNAPSHOT_YEAR
+      ? readTopLeadersSnapshot(year, upperLeague, 'batting')
+      : null
+
+  if (modern) {
+    const finalized = finalizeBattingLeadersConfigForTopPage(year, upperLeague, fromSnapshot)
+    if (finalized) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[getBattingLeaders] ${year} ${upperLeague}: rankings JSON (modern)`)
+      }
+      return finalized
+    }
+  } else if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
     const fromRankings = buildBattingLeadersConfigFromRankings(year, upperLeague)
     if (fromRankings) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[getBattingLeaders] ${year} ${upperLeague}: extracted from rankings JSON`)
-      }
       return fromRankings
     }
-    if (year === '2026') {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          `[getBattingLeaders] ${year} ${upperLeague}: rankings JSON missing or empty; run npm run rankings:rebuild after pipeline`
-        )
-      }
-      return { top3Metrics, miniMetrics, leaders: {} }
-    }
+  } else if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
+    return fromSnapshot
   }
 
-  if (year === '2026') {
-    return { top3Metrics, miniMetrics, leaders: {} }
-  }
+  const top3Metrics = modern ? [...BATTING_TOP_2026_SEASON_ALL_METRICS] : [...legacyTop3]
+  const miniMetrics = modern ? ([] as const) : [...legacyMini]
 
   const { rows, availableMetrics } = loadBattingCsv(year, league)
   
@@ -688,7 +694,7 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
   
   const leaders: Record<string, LeaderRow[]> = {}
   
-  // トップ3指標を処理
+  // トップ3指標を処理（モダン年度は9指標すべて）
   for (const metricName of top3Metrics) {
     const metric = findMetricByName(availableMetrics, metricName)
     
@@ -717,8 +723,8 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
     if (metric) {
       const sortOrder = (metric.key === 'kpct' || metric.csvKey === 'K%') ? 'asc' : 'desc'
       const topN =
-        metricName === '打点' && (year === '2025' || year === '2026')
-          ? BATTING_TOP_2025_RBI_TOP_N
+        metricName === '打点' && battingTop2025SeasonTopN(metricName, year) != null
+          ? (battingTop2025SeasonTopN(metricName, year) ?? 1)
           : 1
       const topLeaders = getTopNForMetric(rows, metric, topN, sortOrder, year, league)
       if (process.env.NODE_ENV === 'development') {
@@ -733,12 +739,19 @@ export function getBattingLeaders(year: string, league: string): LeadersConfig {
   if (process.env.NODE_ENV === 'development') {
     console.log(`[getBattingLeaders] Final leaders keys:`, Object.keys(leaders))
   }
-  
-  return {
-    top3Metrics,
-    miniMetrics,
+
+  const fromCsv: LeadersConfig = {
+    top3Metrics: [...top3Metrics],
+    miniMetrics: [...miniMetrics],
     leaders,
   }
+
+  if (modern) {
+    const finalized = finalizeBattingLeadersConfigForTopPage(year, upperLeague, fromCsv)
+    return finalized ?? emptyModern
+  }
+
+  return Object.keys(leaders).length > 0 ? fromCsv : emptyLegacy
 }
 
 /**
@@ -749,32 +762,36 @@ export async function getBattingLeadersAsync(
   league: string
 ): Promise<LeadersConfig> {
   const upperLeague = league.toUpperCase()
-  const top3Metrics = ['OPS', '打率', '本塁打']
-  const miniMetrics = ['出塁率', '長打率', '打点', '安打', '盗塁']
+  const modern = usesTopPageModernLayout(Number(year))
+  const legacyTop3 = ['OPS', '打率', '本塁打']
+  const legacyMini = ['出塁率', '長打率', '打点', '安打', '盗塁']
 
-  if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
-    const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
-    if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
-      return fromSnapshot
-    }
+  const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
+
+  if (modern) {
+    const finalized = await finalizeBattingLeadersConfigForTopPageAsync(
+      year,
+      upperLeague,
+      fromSnapshot
+    )
+    if (finalized) return finalized
     if (process.env.RANKINGS_BASE_URL?.trim() || process.env.NODE_ENV === 'production') {
-      return { top3Metrics, miniMetrics, leaders: {} }
+      return { top3Metrics: [...BATTING_TOP_2026_SEASON_ALL_METRICS], miniMetrics: [], leaders: {} }
     }
+    return getBattingLeaders(year, league)
   }
 
-  const { buildBattingLeadersConfigFromRankingsAsync } = await import(
-    '@/lib/ranking/leadersFromRankingsJson'
-  )
-  const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
+  if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
+    return fromSnapshot
+  }
+
+  const fromRankings = await (
+    await import('@/lib/ranking/leadersFromRankingsJson')
+  ).buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
   if (fromRankings) return fromRankings
 
-  if (hasBattingRankingsJsonForLeague(year, upperLeague)) {
-    const sync = buildBattingLeadersConfigFromRankings(year, upperLeague)
-    if (sync) return sync
-  }
-
   if (process.env.RANKINGS_BASE_URL?.trim() || process.env.NODE_ENV === 'production') {
-    return { top3Metrics, miniMetrics, leaders: {} }
+    return { top3Metrics: legacyTop3, miniMetrics: legacyMini, leaders: {} }
   }
 
   return getBattingLeaders(year, league)

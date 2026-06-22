@@ -1,13 +1,55 @@
 import { normalizeStadiumSplitValue } from "@/lib/stadiumVenueNormalize"
+import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 
 /**
- * スポナビ 1軍リーグ戦日程 HTML（Phase 0）から gameId・球場名を抽出する。
+ * スポナビ 1軍リーグ戦日程 HTML（Phase 0）から gameId・球場名・対戦球団を抽出する。
  * 球場名は試合枠左上の `bb-scheduleTable__stadium` 列（同一 `<tr>` 内の game リンク）。
  */
 
 export type ScheduleGameEntry = {
   gameId: string
   stadiumName: string
+  homeTeamShort?: string
+  awayTeamShort?: string
+  homeTeamCode?: string
+  awayTeamCode?: string
+}
+
+function attachTeamCodes(entry: ScheduleGameEntry): ScheduleGameEntry {
+  const homeTeamShort = entry.homeTeamShort?.trim() || undefined
+  const awayTeamShort = entry.awayTeamShort?.trim() || undefined
+  return {
+    ...entry,
+    homeTeamShort,
+    awayTeamShort,
+    homeTeamCode: homeTeamShort ? teamCodeFromShort(homeTeamShort) : undefined,
+    awayTeamCode: awayTeamShort ? teamCodeFromShort(awayTeamShort) : undefined,
+  }
+}
+
+function extractTeamShortFromHtmlFragment(fragment: string, side: "home" | "away"): string {
+  const scheduleCls =
+    side === "home" ? "bb-scheduleTable__homeName" : "bb-scheduleTable__awayName"
+  const scoreCls = side === "home" ? "bb-score__homeLogo" : "bb-score__awayLogo"
+  const scheduleRe = new RegExp(
+    `class="[^"]*\\b${scheduleCls}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/div>`,
+    "i",
+  )
+  const scoreRe = new RegExp(
+    `class="[^"]*\\b${scoreCls}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/p>`,
+    "i",
+  )
+  const scheduleM = fragment.match(scheduleRe)
+  if (scheduleM) {
+    const text = stripHtmlToText(scheduleM[1] ?? "")
+    if (text) return text
+  }
+  const scoreM = fragment.match(scoreRe)
+  if (scoreM) {
+    const text = stripHtmlToText(scoreM[1] ?? "")
+    if (text) return text
+  }
+  return ""
 }
 
 /** 1日あたりの通常セ・パ公式戦は最大6（休養日は0）。Phase0 と共有。 */
@@ -202,10 +244,17 @@ export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] 
       }
     }
 
-    games.push({
-      gameId,
-      stadiumName: normalizeStadiumNameFromSchedule(stadiumRaw),
-    })
+    const homeTeamShort = extractTeamShortFromHtmlFragment(row, "home")
+    const awayTeamShort = extractTeamShortFromHtmlFragment(row, "away")
+
+    games.push(
+      attachTeamCodes({
+        gameId,
+        stadiumName: normalizeStadiumNameFromSchedule(stadiumRaw),
+        homeTeamShort: homeTeamShort || undefined,
+        awayTeamShort: awayTeamShort || undefined,
+      }),
+    )
   }
   return games
 }
@@ -220,7 +269,19 @@ export function dedupeScheduleGamesById(games: ScheduleGameEntry[]): ScheduleGam
     }
     const prevStadium = prev.stadiumName && prev.stadiumName !== "未設定"
     const nextStadium = g.stadiumName && g.stadiumName !== "未設定"
-    if (!prevStadium && nextStadium) byId.set(g.gameId, g)
+    const prevTeams = prev.homeTeamCode && prev.awayTeamCode
+    const nextTeams = g.homeTeamCode && g.awayTeamCode
+    if ((!prevStadium && nextStadium) || (!prevTeams && nextTeams)) {
+      byId.set(g.gameId, {
+        ...prev,
+        ...g,
+        stadiumName: nextStadium ? g.stadiumName : prev.stadiumName,
+        homeTeamShort: g.homeTeamShort ?? prev.homeTeamShort,
+        awayTeamShort: g.awayTeamShort ?? prev.awayTeamShort,
+        homeTeamCode: g.homeTeamCode ?? prev.homeTeamCode,
+        awayTeamCode: g.awayTeamCode ?? prev.awayTeamCode,
+      })
+    }
   }
   return [...byId.values()].sort((a, b) => a.gameId.localeCompare(b.gameId))
 }
@@ -239,7 +300,16 @@ export function extractGamesFromScoreListHtml(html: string): ScheduleGameEntry[]
     const inner = m[2] ?? ""
     const venueM = inner.match(/<span\b[^>]*\bclass="[^"]*\bbb-score__venue\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i)
     const stadiumName = normalizeStadiumNameFromSchedule(venueM ? venueM[1] ?? "" : "")
-    out.push({ gameId, stadiumName })
+    const homeTeamShort = extractTeamShortFromHtmlFragment(inner, "home")
+    const awayTeamShort = extractTeamShortFromHtmlFragment(inner, "away")
+    out.push(
+      attachTeamCodes({
+        gameId,
+        stadiumName,
+        homeTeamShort: homeTeamShort || undefined,
+        awayTeamShort: awayTeamShort || undefined,
+      }),
+    )
   }
   return dedupeScheduleGamesById(out)
 }

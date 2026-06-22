@@ -10,6 +10,7 @@ const TEAM_STRIPE_HEX: Record<string, string> = {
   "読売ジャイアンツ": "#ff6600",
   G: "#ff6600",
   DeNA: "#0067c0",
+  横浜: "#0067c0",
   "横浜DeNAベイスターズ": "#0067c0",
   DB: "#0067c0",
   広島: "#d60718",

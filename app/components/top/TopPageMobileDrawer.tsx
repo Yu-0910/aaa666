@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
+import { TEAM_PAGE_DRAWER_NAV, teamPageNavHref } from "@/lib/teamPage/teamPageNavLinks"
 
 type Props = {
   open: boolean
@@ -55,59 +56,34 @@ export function TopPageMobileDrawer({ open, onClose, selectedYear }: Props) {
             </Link>
 
             <div>
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = "#"
-                }}
-                className="w-full text-left py-2 px-3 hover:bg-[#2a2a2a] rounded transition-colors text-sm flex items-center justify-between"
-              >
-                記事
-                <span className="text-xs">▼</span>
-              </button>
+              <div className="py-2 px-3 text-sm font-bold text-[#ffff44]">球団ページ</div>
 
               <div className="border-l-2 border-[#039850] pl-2">
                 <div className="text-xs font-bold text-[#039850] mb-1">セ・リーグ</div>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  読売ジャイアンツ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  阪神タイガース
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  横浜DeNAベイスターズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  中日ドラゴンズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  広島東洋カープ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  東京ヤクルトスワローズ
-                </Link>
+                {TEAM_PAGE_DRAWER_NAV.CL.map((item) => (
+                  <Link
+                    key={item.teamCode}
+                    href={teamPageNavHref(item.teamCode, selectedYear)}
+                    className="block py-1 text-xs hover:text-[#ffff44] transition-colors"
+                    onClick={onClose}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
 
               <div className="border-l-2 border-[#10b8ce] pl-2 mt-2">
                 <div className="text-xs font-bold text-[#10b8ce] mb-1">パ・リーグ</div>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  福岡ソフトバンクホークス
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  オリックス・バファローズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  埼玉西武ライオンズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  千葉ロッテマリーンズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  北海道日本ハムファイターズ
-                </Link>
-                <Link href="#" className="block py-1 text-xs hover:text-[#ffff44] transition-colors" onClick={onClose}>
-                  東北楽天ゴールデンイーグルス
-                </Link>
+                {TEAM_PAGE_DRAWER_NAV.PL.map((item) => (
+                  <Link
+                    key={item.teamCode}
+                    href={teamPageNavHref(item.teamCode, selectedYear)}
+                    className="block py-1 text-xs hover:text-[#ffff44] transition-colors"
+                    onClick={onClose}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             </div>
           </nav>

@@ -25,7 +25,8 @@ import {
   computeBattingTargetForGameAndBatter,
   emptyBattingSeasonAggYahoo,
   plateAppearanceResolvedResultText,
-  updateBattingAggFromPa,
+  plateAppearanceResultTextForVsHand,
+  updateBattingAggFromResultJa,
   type BattingSeasonAggYahoo,
   type BattingTargetForGameAndBatter,
 } from '@/lib/yahooGame/canonicalBattingSeasonAgg'
@@ -50,6 +51,7 @@ import {
   resolvePitcherIdForPlateAppearance,
 } from '@/lib/yahooGame/resolvePitcherIdByPaId'
 import { mergePhase10IntoCanonical, type Phase10PitchRow } from '@/lib/yahooGame/mergePhase10FromPitchRows'
+import { inferStrictResultJaFromSportsnaviPlayLineForVsHand } from '@/lib/yahooGame/supplementPlateAppearancesFromTextPlayByPlay'
 import { dedupePlateAppearancesByInningHalfOrder } from '@/lib/yahooGame/dedupePlateAppearances'
 export { dedupePlateAppearancesByInningHalfOrder }
 import { getProjectRoot } from '@/lib/projectRoot'
@@ -59,7 +61,7 @@ import {
   DERIVED_SEASON_YEAR_DEFAULT,
   enrichSeasonStatsRowSabermetrics,
 } from '@/lib/seasonStatsPilotShared'
-import { battingSlashRatesFromCounts } from '@/lib/battingRateFormat'
+import { battingSlashRatesFromCounts, slashRate3FromCounts } from '@/lib/battingRateFormat'
 
 /** クライアントは `@/lib/seasonStatsPilotShared` を参照（fs を引き込まない） */
 export type { BattingVsHandTotalReconciliation, PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
@@ -186,7 +188,7 @@ function normalizeDerivedRowLabels(row: SeasonStatsRow): SeasonStatsRow {
     try {
       return {
         ...row,
-        split_label: formatSplitLabel('calendar_month', row.split_value),
+        split_label: formatSplitLabel(row.split_type, row.split_value),
       }
     } catch {
       return row
@@ -204,15 +206,18 @@ function normalizeDerivedRowLabels(row: SeasonStatsRow): SeasonStatsRow {
   }
 }
 
-/** 対左右: canonical と同一の `updateBattingAggFromPa`。結果が空の打席は数えない（Phase 2: 出場成績 zip 優先）。 */
+/** 対左右: 出場成績 zip を正としつつ、欠損打席は実況／要約へ限定フォールバック（Phase 11 通算は変更しない）。 */
 function updateVsHandFromPa(
   agg: BattingSeasonAggYahoo,
   gameId: string,
   pa: PlateAppearance,
   doc: CanonicalGameDocument,
 ): void {
-  if (!plateAppearanceResolvedResultText(doc, pa).trim()) return
-  updateBattingAggFromPa(agg, gameId, pa, doc)
+  const result = plateAppearanceResultTextForVsHand(doc, pa)
+  if (!result) return
+  agg.gameIds.add(gameId)
+  agg.pa += 1
+  updateBattingAggFromResultJa(agg, result)
 }
 
 function aggToVsHandRow(splitValue: 'R' | 'L' | 'unknown', agg: BattingSeasonAggYahoo): SeasonStatsRow {
@@ -738,6 +743,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
   const aggL = emptyBattingSeasonAggYahoo()
   const aggU = emptyBattingSeasonAggYahoo()
   const reconciliation: VsHandReconciliationDebug = emptyReconciliation()
+  let seasonTargetP0 = emptyP0()
   const vsUnknownAbSamples: VsUnknownAbSample[] | undefined = options?.collectVsUnknownAbSamples
     ? []
     : undefined
@@ -814,39 +820,8 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     return lines.find((l) => new RegExp(`^\\s*${order}\\s*[：:]`).test(String(l))) ?? ''
   }
 
-  const resultFromPaTextLine = (line: string): string => {
-    const s = String(line ?? '')
-    if (!s) return ''
-    // 牽制・盗塁など「打席が完了していない」イベント行が混ざることがある。
-    // 例: "... 一塁けん制:ランナー ... 盗塁失敗 3アウト"（打者結果が無い）
-    // これらは PA として数えない（通算/公式打席のズレ原因になる）。
-    if (/(けん制|牽制)/.test(s) && /(盗塁成功|盗塁失敗)/.test(s)) {
-      // 打者結果が同一行に併記されているケースを除外する（例: "…の間に盗塁成功、打者は四球" 等）
-      if (
-        !/(四球|申告敬遠|敬遠|死球|犠打|送りバント|犠飛|犠牲フライ|犠牲飛|三振|本塁打|二塁打|三塁打|安打|ヒット|ゴロ|フライ|ライナー)/.test(
-          s,
-        )
-      ) {
-        return ''
-      }
-    }
-    if (/四球/.test(s)) return '四球'
-    // 申告敬遠/敬遠（walk-like）
-    if (/申告敬遠|敬遠/.test(s)) return '四球'
-    if (/死球/.test(s)) return '死球'
-    // `isSacBunt` は「送りバント」も犠打扱い。実況だけが「送りバント」で `犠打` 語が無い行の補完で落ちないよう揃える。
-    if (/犠打|捕犠打|送りバント/.test(s)) return '犠打'
-    if (/犠飛|犠牲フライ|犠牲飛/.test(s)) return '犠飛'
-    if (/見逃し三振|空振り三振|三振/.test(s)) return '三振'
-    if (/本塁打|ホームラン|HR|[左右中]本/.test(s)) return '本塁打'
-    if (/三塁打|３塁打|スリーベース|[左右中]３/.test(s)) return '三塁打'
-    if (/二塁打|ツーベース|エンタイトルツーベース|２塁打|[左右中]２/.test(s)) return '二塁打'
-    if (/安打|ヒット|内野安打|内安|左安|中安|右安/.test(s)) return '安打'
-    if (/[一二三遊左中右投捕]安/.test(s)) return '安打'
-    if (/(左|中|右)(前|線)打|前打|単打/.test(s)) return '安打'
-    if (/(タイムリー|適時打)/.test(s) && !/失策|エラー|野選/.test(s)) return '安打'
-    return 'アウト'
-  }
+  const resultFromPaTextLine = (line: string): string =>
+    inferStrictResultJaFromSportsnaviPlayLineForVsHand(line)
 
   for (const doc of docs) {
     const gid = String(doc.gameId ?? '').trim()
@@ -964,7 +939,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         yahooPitcherIdForSample: string,
       ) => {
         if (!vsUnknownAbSamples || vsUnknownAbSamples.length >= 40) return
-        const rtAgg = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
+        const rtAgg = plateAppearanceResultTextForVsHand(mergedDoc, paForAgg)
         if (!isAtBat(rtAgg)) return
         vsUnknownAbSamples.push({
           gameId,
@@ -1018,7 +993,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
       }
       const vsHand: 'R' | 'L' | 'unknown' = th === 'R' ? 'R' : th === 'L' ? 'L' : 'unknown'
       if (paDump && gameId === dumpGameId) {
-        const rtAgg = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
+        const rtAgg = plateAppearanceResultTextForVsHand(mergedDoc, paForAgg)
         paDump.push({
           gameId,
           paId: String(pa.paId ?? ''),
@@ -1041,7 +1016,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
         })
       }
       // ヒット種別の判定が追いつかないケースをサンプル収集（H が少なくなる原因）
-      const rt = plateAppearanceResolvedResultText(mergedDoc, paForAgg)
+      const rt = plateAppearanceResultTextForVsHand(mergedDoc, paForAgg)
       if (
         unparsedAtBatSamples.length < 30 &&
         rt &&
@@ -1087,7 +1062,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
       const suspectPa: Array<{ paId: string; vsHand: 'R' | 'L' | 'unknown'; resultText: string }> = []
       for (const pa of pas) {
         // ここでは投手の左右ではなく、打席の結果分類が合っているかを見たい
-        const rt = plateAppearanceResolvedResultText(mergedDoc, pa)
+        const rt = plateAppearanceResultTextForVsHand(mergedDoc, pa)
         if (!rt) continue
         if (isWalkLikeResultText(rt)) parsed.bb += 1
         if (isStrikeoutResultJa(rt)) parsed.so += 1
@@ -1143,6 +1118,7 @@ export function loadVsHandRowsFromCanonicalWithDebug(
     //   battingLines が知らない 1 PA が vs_hand に積まれるパターンに効く（佐藤 都志也の試合 2021038786 等）。
     const target = computeBattingTargetForGameAndBatter(mergedDoc, bid)
     if (target) {
+      seasonTargetP0 = p0Add(seasonTargetP0, p0FromTarget(target))
       let snapAfterR = p0FromAgg(aggR)
       let snapAfterL = p0FromAgg(aggL)
       let snapAfterU = p0FromAgg(aggU)
@@ -1546,6 +1522,47 @@ export function loadVsHandRowsFromCanonicalWithDebug(
       }
     }
   }
+
+  // Phase 31: target が null の試合で PA が積まれた等により R+L+U が「全試合 target 合計」を上回るとき、
+  // シーズン単位で Phase 26 と同様に過剰分を吸収する（通算 Phase 11 との P0 一致を優先）。
+  const seasonActualP0 = p0Add(p0Add(p0FromAgg(aggR), p0FromAgg(aggL)), p0FromAgg(aggU))
+  const seasonDelta = p0Delta(seasonTargetP0, seasonActualP0)
+  if (p0HasNegative(seasonDelta)) {
+    reconciliation.negativeDeltaGames += 1
+    const neg = p0NegativeOnly(seasonDelta)
+    reconciliation.negativeDelta = p0Add(reconciliation.negativeDelta, neg)
+    const seasonR = p0FromAgg(aggR)
+    const seasonL = p0FromAgg(aggL)
+    const seasonU = p0FromAgg(aggU)
+    const subtracted = applyNegativeP0DeltaFromGameBuckets(
+      aggR,
+      aggL,
+      aggU,
+      seasonR,
+      seasonL,
+      seasonU,
+      seasonDelta,
+    )
+    reconciliation.negativeAppliedDelta = p0Add(reconciliation.negativeAppliedDelta, subtracted)
+    const unabsorbed: P0Counts = {
+      pa: -neg.pa - subtracted.pa,
+      ab: -neg.ab - subtracted.ab,
+      bb: -neg.bb - subtracted.bb,
+      hbp: -neg.hbp - subtracted.hbp,
+      sh: -neg.sh - subtracted.sh,
+      sf: -neg.sf - subtracted.sf,
+    }
+    reconciliation.negativeUnabsorbedDelta = p0Add(reconciliation.negativeUnabsorbedDelta, unabsorbed)
+    if (reconciliation.negativeDeltaSamples.length < 20) {
+      reconciliation.negativeDeltaSamples.push({ gameId: '__season__', delta: { ...seasonDelta } })
+    }
+  }
+  if (p0HasPositive(seasonDelta)) {
+    const applied = applyPositiveP0DeltaToAggUnknown(aggU, seasonDelta, '__season__')
+    if (p0HasPositive(applied)) reconciliation.backfilledGames += 1
+    reconciliation.appliedDelta = p0Add(reconciliation.appliedDelta, applied)
+  }
+
   const rows: SeasonStatsRow[] = []
   // Phase 27: PA=0 でも H/HR が補完されるケース（target.pa は揃っているが HR/H だけ phase11 が上回る）
   // を行として出力するため、`pa > 0` だけでなく H/HR が積まれている場合も rows に含める。
@@ -1581,6 +1598,27 @@ export function loadVsHandRowsFromCanonicalWithDebug(
  * 個人 API の通算として使う。実行時に canonical を再走査しないため、Phase 11 が書いた JSON の total 行をそのまま採用する。
  */
 export type BattingTotalRowSource = 'phase11' | 'csv' | 'batting_lines_fallback' | null
+
+/** Phase11 通算の risp_ab が 0 のとき、Phase15 base_sit「得点圏」行から補完（appearance_slots 既存 JSON 向け） */
+function backfillTotalRispFromBaseSitSplit(
+  totalRow: SeasonStatsRow,
+  phase15: SeasonStatsRow[]
+): SeasonStatsRow {
+  if (totalRow.risp_ab > 0) return totalRow
+  const rispSit = phase15.find(
+    (r) => r.split_type === 'base_sit' && r.split_value === 'risp' && r.ab > 0
+  )
+  if (!rispSit) return totalRow
+  return {
+    ...totalRow,
+    risp_ab: rispSit.ab,
+    risp_h: rispSit.h,
+    risp_avg:
+      rispSit.avg && rispSit.avg !== '—'
+        ? rispSit.avg
+        : slashRate3FromCounts(rispSit.h, rispSit.ab),
+  }
+}
 
 export function resolveBattingTotalRowForProfileApi(
   phase11Rows: SeasonStatsRow[],
@@ -1803,6 +1841,9 @@ function mergePilotSeasonStatsCore(
       totalRow = fb
       totalSource = 'batting_lines_fallback'
     }
+  }
+  if (totalRow) {
+    totalRow = backfillTotalRispFromBaseSitSplit(totalRow, phase15)
   }
 
   const total = totalRow ? [totalRow] : []

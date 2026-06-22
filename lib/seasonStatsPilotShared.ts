@@ -116,8 +116,20 @@ import { calculateRCNf3 } from "@/lib/rc"
 import {
   battingSlashRatesFromCounts,
   fmtSlash3,
+  formatSlashStatDisplay,
   slashRate3FromCounts,
 } from "@/lib/battingRateFormat"
+
+/** 通算・スプリット共通: 得点圏打率（打数0は —、.000 のみで打数0と誤表示しない） */
+export function formatSeasonRispAvgDisplay(
+  row: Pick<SeasonStatsRow, "risp_ab" | "risp_h" | "risp_avg">
+): string {
+  if (row.risp_ab <= 0) return "—"
+  if (row.risp_avg && row.risp_avg !== "—") {
+    return formatSlashStatDisplay(row.risp_avg)
+  }
+  return `${row.risp_h}/${row.risp_ab}`
+}
 
 function parseSlashRate(s: string): number | null {
   const t = (s || '').trim()

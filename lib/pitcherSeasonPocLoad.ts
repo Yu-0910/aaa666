@@ -15,6 +15,12 @@ import {
 } from "./pitcherSeasonPocPilotFallback"
 import { nf3IprFromReliefIpRuns } from "./nf3LeaguePitchingFallback"
 import { getProjectRoot } from "./projectRoot"
+import {
+  aggregatePitchingSeasonByYahooPlayer,
+  sumPitchingSeasonAggYahoo,
+  type PitchingSeasonAggYahoo,
+} from "./yahooGame/canonicalPitchingSeasonAgg"
+import { loadCanonicalGameDocument } from "./yahooGame/loadCanonicalGame"
 
 /** 援護率（nf3 近似）: (援護点合計×9)÷先発投球回 */
 function nf3EnGoRateDisplay(
@@ -105,6 +111,110 @@ function mergeNf3MetricsFromAggregate(
   }
 }
 
+function qualityStartRatesFromCounts(
+  b: PitcherSeasonPocPayload["basic"]
+): PitcherSeasonPocPayload["basic"] {
+  const gs = b.gamesStarted ?? 0
+  if (gs <= 0) return b
+  const qsCount = b.qsCount ?? 0
+  const hqsCount = b.hqsCount ?? 0
+  const sqsCount = b.sqsCount ?? 0
+  return {
+    ...b,
+    qsCount,
+    hqsCount,
+    sqsCount,
+    qsRate: b.qsRate ?? qsCount / gs,
+    hqsRate: b.hqsRate ?? hqsCount / gs,
+    sqsRate: b.sqsRate ?? sqsCount / gs,
+  }
+}
+
+function needsQualityStartMergeFromCanonical(b: PitcherSeasonPocPayload["basic"]): boolean {
+  return (
+    b.qsRate == null ||
+    b.hqsRate == null ||
+    b.sqsRate == null ||
+    b.qsCount == null ||
+    b.hqsCount == null ||
+    b.sqsCount == null
+  )
+}
+
+/**
+ * 旧派生 JSON（QS/HQS/SQS 率・回数未収録）向けに canonical から先発ベースの QS 系を補完する。
+ * canonical が読めない本番 API では、JSON に載っている回数から率だけ算出する。
+ */
+function mergeQualityStartFromCanonical(
+  payload: PitcherSeasonPocPayload,
+  projectRoot: string
+): PitcherSeasonPocPayload {
+  const b = payload.basic
+  if (!needsQualityStartMergeFromCanonical(b)) {
+    return { ...payload, basic: qualityStartRatesFromCounts(b) }
+  }
+
+  const gameIds = payload.source?.canonicalGames ?? []
+  if (gameIds.length === 0 || payload.yahooPitcherIds.length === 0) {
+    return { ...payload, basic: qualityStartRatesFromCounts(b) }
+  }
+
+  const docs = []
+  for (const gid of gameIds) {
+    const doc = loadCanonicalGameDocument(projectRoot, gid)
+    if (doc) docs.push(doc)
+  }
+  if (docs.length === 0) {
+    return { ...payload, basic: qualityStartRatesFromCounts(b) }
+  }
+
+  const seasonMap = aggregatePitchingSeasonByYahooPlayer(docs)
+  const aggs: PitchingSeasonAggYahoo[] = []
+  for (const yid of payload.yahooPitcherIds) {
+    const agg = seasonMap.get(yid)?.agg
+    if (agg) aggs.push(agg)
+  }
+  if (aggs.length === 0) {
+    return { ...payload, basic: qualityStartRatesFromCounts(b) }
+  }
+
+  const core = sumPitchingSeasonAggYahoo(aggs)
+  const gs = core.gamesStarted
+  if (gs <= 0) {
+    return { ...payload, basic: qualityStartRatesFromCounts(b) }
+  }
+
+  const gamesStarted = b.gamesStarted ?? gs
+  const qsCount = b.qsCount ?? core.qsStarts
+  const hqsCount = b.hqsCount ?? core.hqsStarts
+  const sqsCount = b.sqsCount ?? core.sqsStarts
+  const denom = gamesStarted > 0 ? gamesStarted : gs
+
+  const mergedBasic: PitcherSeasonPocPayload["basic"] = {
+    ...b,
+    gamesStarted: b.gamesStarted ?? gs,
+    gamesInRelief: b.gamesInRelief ?? core.gamesInRelief,
+    qsCount,
+    hqsCount,
+    sqsCount,
+    qsRate: b.qsRate ?? qsCount / denom,
+    hqsRate: b.hqsRate ?? hqsCount / denom,
+    sqsRate: b.sqsRate ?? sqsCount / denom,
+  }
+
+  return { ...payload, basic: qualityStartRatesFromCounts(mergedBasic) }
+}
+
+function enrichPitcherSeasonPocPayload(
+  payload: PitcherSeasonPocPayload,
+  projectRoot: string,
+  year: string,
+  npbPlayerId: string
+): PitcherSeasonPocPayload {
+  const withQualityStart = mergeQualityStartFromCanonical(payload, projectRoot)
+  return mergeNf3MetricsFromAggregate(withQualityStart, projectRoot, year, npbPlayerId)
+}
+
 export function pitcherSeasonPocFilePath(
   projectRoot: string,
   year: string,
@@ -160,13 +270,13 @@ export function loadPitcherSeasonPocPayloadFromRepo(
 ): PitcherSeasonPocPayload | null {
   const root = getProjectRoot()
   const direct = loadPitcherSeasonPocPayload(root, year, npbPlayerId)
-  if (direct) return mergeNf3MetricsFromAggregate(direct, root, year, npbPlayerId)
+  if (direct) return enrichPitcherSeasonPocPayload(direct, root, year, npbPlayerId)
   const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
   if (!altNpb) return null
   const base = loadPitcherSeasonPocPayload(root, year, altNpb)
   if (!base) return null
   const shelled = withPilotPitcherPocFallbackShell(base, npbPlayerId)
-  return mergeNf3MetricsFromAggregate(shelled, root, year, npbPlayerId)
+  return enrichPitcherSeasonPocPayload(shelled, root, year, npbPlayerId)
 }
 
 export async function loadPitcherSeasonPocPayloadFromRepoAsync(
@@ -175,11 +285,11 @@ export async function loadPitcherSeasonPocPayloadFromRepoAsync(
 ): Promise<PitcherSeasonPocPayload | null> {
   const root = getProjectRoot()
   const direct = await loadPitcherSeasonPocPayloadAsync(year, npbPlayerId)
-  if (direct) return mergeNf3MetricsFromAggregate(direct, root, year, npbPlayerId)
+  if (direct) return enrichPitcherSeasonPocPayload(direct, root, year, npbPlayerId)
   const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
   if (!altNpb) return null
   const base = await loadPitcherSeasonPocPayloadAsync(year, altNpb)
   if (!base) return null
   const shelled = withPilotPitcherPocFallbackShell(base, npbPlayerId)
-  return mergeNf3MetricsFromAggregate(shelled, root, year, npbPlayerId)
+  return enrichPitcherSeasonPocPayload(shelled, root, year, npbPlayerId)
 }

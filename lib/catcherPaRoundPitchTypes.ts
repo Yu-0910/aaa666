@@ -3,6 +3,10 @@ export type CatcherPaRoundPitchTypesDerived = {
   seasonYear: string
   npbCatcherId: string
   byPaRoundPitchTypes: CatcherPaRoundPitchTypesRoundRow[]
+  /** 対左打者（投手 splits.vsHand と同じ打者・投手腕換算） */
+  byPaRoundPitchTypesVsL?: CatcherPaRoundPitchTypesRoundRow[]
+  /** 対右打者 */
+  byPaRoundPitchTypesVsR?: CatcherPaRoundPitchTypesRoundRow[]
 }
 
 export type CatcherPaRoundPitchTypesRoundRow = {

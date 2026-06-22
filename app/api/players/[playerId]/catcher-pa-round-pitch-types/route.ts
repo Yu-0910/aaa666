@@ -18,6 +18,16 @@ export type CatcherPaRoundPitchTypesApiResponse = {
       pitches_total: number
       rows: { pitch_type: string; pitches: number; pct: number }[]
     }[]
+    byPaRoundPitchTypesVsL?: {
+      key: "1" | "2" | "3" | "4" | "5"
+      pitches_total: number
+      rows: { pitch_type: string; pitches: number; pct: number }[]
+    }[]
+    byPaRoundPitchTypesVsR?: {
+      key: "1" | "2" | "3" | "4" | "5"
+      pitches_total: number
+      rows: { pitch_type: string; pitches: number; pct: number }[]
+    }[]
   } | null
 }
 
@@ -47,7 +57,11 @@ export async function GET(
         ? {
             hasData: true,
             year,
-            payload: { byPaRoundPitchTypes: d.byPaRoundPitchTypes },
+            payload: {
+              byPaRoundPitchTypes: d.byPaRoundPitchTypes,
+              byPaRoundPitchTypesVsL: d.byPaRoundPitchTypesVsL,
+              byPaRoundPitchTypesVsR: d.byPaRoundPitchTypesVsR,
+            },
           }
         : { hasData: false, year, payload: null } satisfies CatcherPaRoundPitchTypesApiResponse
     )

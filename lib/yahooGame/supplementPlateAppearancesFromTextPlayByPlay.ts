@@ -7,6 +7,9 @@
  */
 import type { CanonicalGameDocument, PlateAppearance } from "./types"
 
+/** @see basesFromSportsnaviPlayLine SPORTSNAVI_PLAY_LINE_HEAD_RE */
+const PLAY_LINE_HEAD_RE = /^\d+[：:]\s*(?:(?:\d+)番|代打)\s+(.+)$/
+
 function isIntermediateTrailingResultJa(r: string | null | undefined): boolean {
   const s = (r ?? "").trim()
   if (!s) return false
@@ -85,13 +88,48 @@ export function inferResultSummaryJaFromSportsnaviPlayLineText(line: string): st
   return null
 }
 
+/**
+ * vs_hand 用の厳格な実況行パース（牽制・盗塁のみ行は空文字。それ以外は walk/三振/安打/アウト等に正規化）。
+ * `loadVsHandRowsFromCanonicalWithDebug` の実況補完と `plateAppearanceResultTextForVsHand` で共有する。
+ */
+export function inferStrictResultJaFromSportsnaviPlayLineForVsHand(line: string): string {
+  const s = String(line ?? "")
+  if (!s) return ""
+  if (/(けん制|牽制)/.test(s) && /(盗塁成功|盗塁失敗)/.test(s)) {
+    if (
+      !/(四球|申告敬遠|敬遠|死球|犠打|送りバント|犠飛|犠牲フライ|犠牲飛|三振|本塁打|二塁打|三塁打|安打|ヒット|ゴロ|フライ|ライナー)/.test(
+        s,
+      )
+    ) {
+      return ""
+    }
+  }
+  if (/四球/.test(s)) return "四球"
+  if (/申告敬遠|敬遠/.test(s)) return "四球"
+  if (/死球/.test(s)) return "死球"
+  if (/犠打|捕犠打|送りバント/.test(s)) return "犠打"
+  if (/犠飛|犠牲フライ|犠牲飛/.test(s)) return "犠飛"
+  if (/見逃し三振|空振り三振|三振/.test(s)) return "三振"
+  if (/本塁打|ホームラン|HR|[左右中]本/.test(s)) return "本塁打"
+  if (/三塁打|３塁打|スリーベース|[左右中]３/.test(s)) return "三塁打"
+  if (/二塁打|ツーベース|エンタイトルツーベース|２塁打|[左右中]２/.test(s)) return "二塁打"
+  if (/安打|ヒット|内野安打|内安|左安|中安|右安/.test(s)) return "安打"
+  if (/[一二三遊左中右投捕]安/.test(s)) return "安打"
+  if (/(左|中|右)(前|線)打|前打|単打/.test(s)) return "安打"
+  if (/(タイムリー|適時打)/.test(s) && !/失策|エラー|野選/.test(s)) return "安打"
+  const loose = inferResultSummaryJaFromSportsnaviPlayLineText(s)
+  if (loose) return loose
+  return "アウト"
+}
+
 function parsePlayLine(line: string): { seqInInning: string; batterName: string; rawOutcome: string } | null {
-  // 例: "4： 2番 近藤 健介 二死二塁 ... レフトフライ 3アウト"
+  // 例: "4： 2番 近藤 健介 二死二塁 ..." / "5： 代打 平川 蓮 二死一二塁 ..."
   const s = (line ?? "").trim()
-  const m = s.match(/^(\d+)[：:]\s*(\d+)番\s+(.+)$/)
-  if (!m) return null
-  const seqInInning = m[1]!
-  const rest = m[3]!.trim()
+  const seqM = s.match(/^(\d+)[：:]\s*/)
+  const bodyM = s.match(PLAY_LINE_HEAD_RE)
+  if (!seqM || !bodyM) return null
+  const seqInInning = seqM[1]!
+  const rest = bodyM[1]!.trim()
 
   // 打者名は通常「姓 名」なので2トークンを優先して取る（「無死」「一死」などが来たら1トークン）
   const tokens = rest.split(/\s+/).filter(Boolean)

@@ -9,23 +9,28 @@
 import type { CanonicalGameDocument, LineupPlayer, PitchingLine } from "./types"
 import { findRosterPlayerByPublicId, findRosterPlayerByPublicIdOrJaName } from "@/lib/npbRoster"
 import { collectStartersYahooIdsFromStatLines } from "./nf3PitcherMetricsFromCanonical"
-import { inferPitcherTeamForNf3Line, teamForYahooPlayerId } from "./pitcherPocHelpers"
+import {
+  inferPitcherTeamForNf3Line,
+  resolveNpbForPitcherLine,
+  teamForYahooPlayerId,
+} from "./pitcherPocHelpers"
+import type { RosterRow } from "./rosterCsv"
 import { ipStringToOuts } from "../ranking/ipBaseball"
 
 /** ランキング用チーム略称（CSV / 表示の共通マップ） */
 export const CSV_TEAM_TO_RANKING_SHORT: Record<string, string> = {
-  中日ドラゴンズ: "中日",
-  広島東洋カープ: "広島",
-  東京ヤクルトスワローズ: "ヤクルト",
-  読売ジャイアンツ: "巨人",
-  阪神タイガース: "阪神",
-  横浜DeNAベイスターズ: "DeNA",
-  オリックス・バファローズ: "オリックス",
-  千葉ロッテマリーンズ: "ロッテ",
-  北海道日本ハムファイターズ: "日本ハム",
-  東北楽天ゴールデンイーグルス: "楽天",
-  埼玉西武ライオンズ: "西武",
-  福岡ソフトバンクホークス: "ソフトバンク",
+  "中日ドラゴンズ": "中日",
+  "広島東洋カープ": "広島",
+  "東京ヤクルトスワローズ": "ヤクルト",
+  "読売ジャイアンツ": "巨人",
+  "阪神タイガース": "阪神",
+  "横浜DeNAベイスターズ": "DeNA",
+  "オリックス・バファローズ": "オリックス",
+  "千葉ロッテマリーンズ": "ロッテ",
+  "北海道日本ハムファイターズ": "日本ハム",
+  "東北楽天ゴールデンイーグルス": "楽天",
+  "埼玉西武ライオンズ": "西武",
+  "福岡ソフトバンクホークス": "ソフトバンク",
 }
 
 const CL_TEAM_SHORT = new Set(["巨人", "阪神", "中日", "広島", "DeNA", "ヤクルト"])
@@ -41,7 +46,7 @@ export function leagueBucketForTeamShort(short: string): "CL" | "PL" {
   return CL_TEAM_SHORT.has(t) ? "CL" : "PL"
 }
 
-function teamNameForYahooInDoc(doc: CanonicalGameDocument, yahooId: string): string {
+export function teamNameForYahooInDoc(doc: CanonicalGameDocument, yahooId: string): string {
   const fromLineup = teamForYahooPlayerId(doc, yahooId)
   if (fromLineup) return fromLineup
   for (const team of doc.game.teams ?? []) {
@@ -185,7 +190,7 @@ export function emptyPitchingSeasonAggYahoo(): PitchingSeasonAggYahoo {
   }
 }
 
-function mergePitchingLinesInGame(lines: PitchingLine[]): PitchingLine | null {
+export function mergePitchingLinesInGame(lines: PitchingLine[]): PitchingLine | null {
   if (lines.length === 0) return null
   const withData = lines.filter((l) => (l.bf ?? 0) > 0 || ipStringToOuts(l.ip) > 0)
   const src = withData.length > 0 ? withData : lines
@@ -218,6 +223,35 @@ function mergeIpStrings(a?: string, b?: string): string | undefined {
   const rem = total % 3
   if (rem === 0) return String(whole)
   return `${whole}.${rem}`
+}
+
+/**
+ * 1 試合で pitchingLines に登板実績がある NPB 投手 ID（phase19/poc1 の gamesAppeared 母数と同一）。
+ */
+export function listNpbPlayerIdsWithPitchingAppearanceInGame(
+  doc: CanonicalGameDocument,
+  roster: RosterRow[],
+): Set<string> {
+  const byId = new Map<string, PitchingLine[]>()
+  for (const pl of doc.domain?.pitchingLines ?? []) {
+    const id = String(pl.yahooPlayerId ?? "").trim()
+    if (!id) continue
+    const arr = byId.get(id) ?? []
+    arr.push(pl)
+    byId.set(id, arr)
+  }
+
+  const out = new Set<string>()
+  for (const lines of byId.values()) {
+    const merged = mergePitchingLinesInGame(lines)
+    if (!merged) continue
+    const outs = ipStringToOuts(merged.ip)
+    if (outs === 0 && (merged.bf ?? 0) === 0) continue
+    const hit = resolveNpbForPitcherLine(roster, doc, merged)
+    const npb = hit?.npbPlayerId?.trim()
+    if (npb) out.add(npb)
+  }
+  return out
 }
 
 /**
@@ -288,7 +322,7 @@ export function aggregatePitchingSeasonByYahooPlayer(
       const tn = teamNameForYahooInDoc(doc, id)
       if (tn) {
         const pc = pitchersPerTeam.get(tn) ?? 0
-        if (pc === 1 && outs >= 27) {
+        if (pc === 1 && outs >= 21) {
           agg.completeGames += 1
           if ((merged.r ?? 0) === 0 && (merged.er ?? 0) === 0) agg.shutouts += 1
         }
@@ -319,6 +353,8 @@ export function foldYahooPitchingAggIntoNpb(
     gamesStarted: number
     gamesInRelief: number
     qsCount: number
+    hqsCount: number
+    sqsCount: number
     holds: number
     winCount: number
     lossCount: number
@@ -333,6 +369,8 @@ export function foldYahooPitchingAggIntoNpb(
       gamesStarted: number
       gamesInRelief: number
       qsCount: number
+      hqsCount: number
+      sqsCount: number
       holds: number
       winCount: number
       lossCount: number
@@ -349,6 +387,8 @@ export function foldYahooPitchingAggIntoNpb(
         gamesStarted: 0,
         gamesInRelief: 0,
         qsCount: 0,
+        hqsCount: 0,
+        sqsCount: 0,
         holds: 0,
         winCount: 0,
         lossCount: 0,
@@ -368,6 +408,8 @@ export function foldYahooPitchingAggIntoNpb(
     e.gamesStarted += agg.gamesStarted
     e.gamesInRelief += agg.gamesInRelief
     e.qsCount += agg.qsStarts
+    e.hqsCount += agg.hqsStarts
+    e.sqsCount += agg.sqsStarts
     e.holds += agg.hld
     e.winCount += agg.w
     e.lossCount += agg.l

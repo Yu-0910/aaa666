@@ -126,6 +126,40 @@ function isSacFly(r: string): boolean {
   return /犠飛|犠牲フライ|犠牲飛/.test(r)
 }
 
+function countRunnersOnBase(b: Bases): number {
+  return (b.r1 ? 1 : 0) + (b.r2 ? 1 : 0) + (b.r3 ? 1 : 0)
+}
+
+/**
+ * 打席結果と打席開始時の塁状況から、その打席で記録される打点（近似）を返す。
+ * Phase15 の巡目別・状況別など PA 集計用。出場成績行の通算打点とは別途ゲーム単位で補正する。
+ */
+export function rbiCreditFromPlayResult(before: Bases, rawResult: string): number {
+  const r = stripBracketNotes(String(rawResult ?? "").trim())
+  if (!r) return 0
+
+  const explicit = r.match(/(\d+)点/)
+  if (explicit) {
+    const n = parseInt(explicit[1]!, 10)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+
+  const runners = countRunnersOnBase(before)
+
+  if (isHomeRun(r)) return runners + 1
+  if (isSacFly(r)) return before.r3 ? 1 : 0
+  if (isTriple(r)) return runners
+  if (isDouble(r)) {
+    let credit = 0
+    if (before.r3) credit += 1
+    if (before.r2) credit += 1
+    return credit
+  }
+  if (isSingle(r)) return before.r3 ? 1 : 0
+
+  return 0
+}
+
 function isGidp(r: string): boolean {
   return /併殺/.test(r)
 }

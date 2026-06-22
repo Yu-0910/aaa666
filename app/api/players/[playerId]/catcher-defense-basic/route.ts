@@ -17,6 +17,9 @@ export type CatcherDefenseBasicApiResponse = {
     sb: number
     cs: number
     csPct: number | null
+    pb: number
+    pitches: number
+    battedBallOuts: { ground: number; air: number } | null
   } | null
 }
 
@@ -46,7 +49,15 @@ export async function GET(
         ? {
             hasData: true,
             year,
-            payload: { sbAttempts: d.sbAttempts, sb: d.sb, cs: d.cs, csPct: d.csPct },
+            payload: {
+              sbAttempts: d.sbAttempts,
+              sb: d.sb,
+              cs: d.cs,
+              csPct: d.csPct,
+              pb: d.pb ?? 0,
+              pitches: d.pitches ?? 0,
+              battedBallOuts: d.battedBallOuts ?? null,
+            },
           }
         : { hasData: false, year, payload: null } satisfies CatcherDefenseBasicApiResponse
     )

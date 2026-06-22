@@ -5,9 +5,11 @@
 import type {
   PitcherSeasonPocPaAgg,
   PitcherSeasonPocPayload,
+  PitcherSeasonPocPitchTypesSplitRow,
   PitcherSeasonPocStadiumRow,
 } from "./pitcherSeasonPocTypes"
-import { formatEra } from "./formatStat"
+import { formatEra, formatRankingStatDisplay } from "./formatStat"
+import { formatSlashStatDisplay } from "./battingRateFormat"
 import {
   nf3IprDisplay,
   nf3LeagueEraFallback,
@@ -15,11 +17,18 @@ import {
   nf3PrDisplay,
   nf3RsaaRswinDisplay,
 } from "./nf3LeaguePitchingFallback"
-import { STADIUM_VENUE_UI_ROWS_PITCHER } from "@/lib/stadiumVenueNormalize"
+import { STADIUM_VENUE_UI_ROWS_PITCHER, formatPlayerPageStadiumDisplay } from "@/lib/stadiumVenueNormalize"
+import { fmtAvg } from "./yahooGame/pitcherPaResultCommon"
+import { ORDERED_PITCH_COUNT_KEYS } from "./yahooGame/pitchCountSim"
 
 function pctStr(num: number, den: number): string {
   if (den <= 0) return "ー"
   return `${((num / den) * 100).toFixed(1)}%`
+}
+
+function pctRank(metricLabel: string, num: number, den: number): string {
+  if (den <= 0) return "—"
+  return formatRankingStatDisplay(metricLabel, (num / den) * 100)
 }
 
 /**
@@ -45,7 +54,8 @@ export function pitcherPocBasicRow1(pp: PitcherSeasonPocPayload): string[] {
   if (b.decision === "loss") l = "1"
   if (b.decision === "save") s = "1"
   const era = formatEra(b.era)
-  const avgVs = (b.avgAgainstApprox ?? "").trim() || "—"
+  const rawAvg = (b.avgAgainstApprox ?? "").trim()
+  const avgVs = rawAvg ? formatSlashStatDisplay(rawAvg) : "—"
   const startStr = b.gamesStarted != null ? String(b.gamesStarted) : "—"
   const reliefStr = b.gamesInRelief != null ? String(b.gamesInRelief) : "—"
   const qsCell =
@@ -61,7 +71,8 @@ export function pitcherPocBasicRow1(pp: PitcherSeasonPocPayload): string[] {
 export function pitcherPocBasicRow2(pp: PitcherSeasonPocPayload): string[] {
   const b = pp.basic
   const ipNum = b.ipOuts / 3
-  const pIp = ipNum > 0 ? (b.pitches / ipNum).toFixed(1) : "—"
+  const pIp =
+    ipNum > 0 ? formatRankingStatDisplay("P/IP", b.pitches / ipNum) : "—"
   let wins = 0
   let losses = 0
   if (typeof b.winCount === "number") {
@@ -72,9 +83,11 @@ export function pitcherPocBasicRow2(pp: PitcherSeasonPocPayload): string[] {
     if (b.decision === "loss") losses = 1
   }
   const winPct =
-    wins + losses > 0 ? (wins / (wins + losses)).toFixed(3) : "—"
+    wins + losses > 0
+      ? formatRankingStatDisplay("勝率", wins / (wins + losses))
+      : "—"
   const mu4 = b.bb === 0 && b.hbp === 0 ? "1" : "—"
-  const kPct = b.bf > 0 ? `${((b.so / b.bf) * 100).toFixed(1)}%` : "—"
+  const kPct = b.bf > 0 ? pctRank("K％", b.so, b.bf) : "—"
   const cg = b.completeGames != null ? String(b.completeGames) : "—"
   const sho = b.shutouts != null ? String(b.shutouts) : "—"
   return [cg, sho, mu4, winPct, b.ip, String(b.bf), String(b.pitches), pIp, String(b.h), kPct]
@@ -84,8 +97,7 @@ export function pitcherPocBasicRow2(pp: PitcherSeasonPocPayload): string[] {
 export function pitcherPocBasicRow3(pp: PitcherSeasonPocPayload): string[] {
   const b = pp.basic
   const ibb = b.intentionalWalks != null ? String(b.intentionalWalks) : "—"
-  const qsPct =
-    b.qsRate != null ? `${(b.qsRate * 100).toFixed(1)}%` : "—"
+  const qsPct = formatQualityStartRatePct("QS率", b.qsRate, b.qsCount, b.gamesStarted)
   return [
     String(b.hr),
     String(b.so),
@@ -95,7 +107,7 @@ export function pitcherPocBasicRow3(pp: PitcherSeasonPocPayload): string[] {
     String(b.bk),
     String(b.r),
     String(b.er),
-    b.whip != null ? b.whip.toFixed(2) : "—",
+    b.whip != null ? formatRankingStatDisplay("WHIP", b.whip) : "—",
     qsPct,
   ]
 }
@@ -122,32 +134,39 @@ export type HvRow = {
   avg: string
 }
 
+function fmtHomeAwayCells(r: PitcherSeasonPocStadiumRow): Omit<HvRow, "label"> {
+  const era = r.era != null ? formatEra(r.era) : "—"
+  const ip = r.ip || "—"
+  let wl = "—"
+  if ((r.games ?? 0) > 0) wl = `${r.wins}-${r.losses}`
+  const kPct = r.bf > 0 ? pctStr(r.so, r.bf) : "—"
+  const kBbPct = r.bf > 0 ? pctStr(r.so - r.bb, r.bf) : "—"
+  const whip = r.whip != null ? r.whip.toFixed(2) : "—"
+  const ab = Math.max(0, r.bf - r.bb - r.hbp)
+  const avg = ab > 0 ? fmtAvg(ab, r.h) : "—"
+  return { era, wl, ip, k_bb_pct: kBbPct, k_pct: kPct, whip, avg }
+}
+
 export function pitcherPocHomeAwayRows(pp: PitcherSeasonPocPayload): HvRow[] {
-  const b = pp.basic
-  const kind = pp.gameMeta?.homeAway ?? null
-  const era = formatEra(b.era)
-  const ip = b.ip || "—"
-  // 勝敗が付かない登板（decision=null）でも「0-0」で埋める（空欄にしない）
-  let wl = "0-0"
-  if (b.decision === "win") wl = "1-0"
-  if (b.decision === "loss") wl = "0-1"
-  const kPct = b.bf > 0 ? `${((b.so / b.bf) * 100).toFixed(1)}%` : "—"
-  const kBbPct = b.bf > 0 ? `${(((b.so - b.bb) / b.bf) * 100).toFixed(1)}%` : "—"
-  const whip = b.whip != null ? b.whip.toFixed(2) : "—"
-  const avg = b.avgAgainstApprox || "—"
+  const rows = pp.splits.byHomeAway ?? []
+  const homeRow = rows.find((r) => r.key === "home")
+  const awayRow = rows.find((r) => r.key === "away")
 
   return (["ホーム", "アウェー"] as const).map((label) => {
-    const fill = (label === "ホーム" && kind === "home") || (label === "アウェー" && kind === "away")
-    return {
-      label,
-      era: fill ? era : "—",
-      wl: fill ? wl : "—",
-      ip: fill ? ip : "—",
-      k_bb_pct: fill ? kBbPct : "—",
-      k_pct: fill ? kPct : "—",
-      whip: fill ? whip : "—",
-      avg: fill ? avg : "—",
+    const split = label === "ホーム" ? homeRow : awayRow
+    if (!split || (split.ipOuts <= 0 && split.bf <= 0)) {
+      return {
+        label,
+        era: "—",
+        wl: "—",
+        ip: "—",
+        k_bb_pct: "—",
+        k_pct: "—",
+        whip: "—",
+        avg: "—",
+      }
     }
+    return { label, ...fmtHomeAwayCells(split) }
   })
 }
 
@@ -162,45 +181,38 @@ export type DayNightRow = {
   qs_pct: string
 }
 
-function dayNightSplitRow(
-  rows: PitcherSeasonPocStadiumRow[],
-  key: "day" | "night"
-): PitcherSeasonPocStadiumRow | undefined {
-  return rows.find((r) => r.key === key)
+function fmtDayNightCells(r: PitcherSeasonPocStadiumRow): Omit<DayNightRow, "label"> {
+  const era = r.era != null ? formatEra(r.era) : "—"
+  const ip = r.ip || "—"
+  let wl = "—"
+  if ((r.games ?? 0) > 0) wl = `${r.wins}-${r.losses}`
+  const kPct = r.bf > 0 ? pctStr(r.so, r.bf) : "—"
+  const kBbPct = r.bf > 0 ? pctStr(r.so - r.bb, r.bf) : "—"
+  const whip = r.whip != null ? r.whip.toFixed(2) : "—"
+  const qs_pct = r.games > 0 ? `${((r.qsCount / r.games) * 100).toFixed(1)}%` : "ー"
+  return { era, wl, ip, k_bb_pct: kBbPct, k_pct: kPct, whip, qs_pct }
 }
 
 export function pitcherPocDayNightRows(pp: PitcherSeasonPocPayload): DayNightRow[] {
-  const b = pp.basic
-  const kind = pp.gameMeta?.dayNight ?? null
-  const era = formatEra(b.era)
-  const ip = b.ip || "—"
-  // 勝敗が付かない登板（decision=null）でも「0-0」で埋める（空欄にしない）
-  let wl = "0-0"
-  if (b.decision === "win") wl = "1-0"
-  if (b.decision === "loss") wl = "0-1"
-  const kPct = b.bf > 0 ? `${((b.so / b.bf) * 100).toFixed(1)}%` : "—"
-  const kBbPct = b.bf > 0 ? `${(((b.so - b.bb) / b.bf) * 100).toFixed(1)}%` : "—"
-  const whip = b.whip != null ? b.whip.toFixed(2) : "—"
-
-  const dnRows = pp.splits.byDayNight ?? []
-  const daySplit = dayNightSplitRow(dnRows, "day")
-  const nightSplit = dayNightSplitRow(dnRows, "night")
+  const rows = pp.splits.byDayNight ?? []
+  const dayRow = rows.find((r) => r.key === "day")
+  const nightRow = rows.find((r) => r.key === "night")
 
   return (["デー", "ナイター"] as const).map((label) => {
-    const fill = (label === "デー" && kind === "day") || (label === "ナイター" && kind === "night")
-    const split = label === "デー" ? daySplit : nightSplit
-    const qs_pct =
-      split && split.games > 0 ? `${((split.qsCount / split.games) * 100).toFixed(1)}%` : "ー"
-    return {
-      label,
-      era: fill ? era : "—",
-      wl: fill ? wl : "—",
-      ip: fill ? ip : "—",
-      k_bb_pct: fill ? kBbPct : "—",
-      k_pct: fill ? kPct : "—",
-      whip: fill ? whip : "—",
-      qs_pct,
+    const split = label === "デー" ? dayRow : nightRow
+    if (!split || (split.ipOuts <= 0 && split.bf <= 0)) {
+      return {
+        label,
+        era: "—",
+        wl: "—",
+        ip: "—",
+        k_bb_pct: "—",
+        k_pct: "—",
+        whip: "—",
+        qs_pct: "ー",
+      }
     }
+    return { label, ...fmtDayNightCells(split) }
   })
 }
 
@@ -297,7 +309,7 @@ function fmtStadiumVsCells(r: PitcherSeasonPocStadiumRow): Omit<StadiumVsRow, "v
 }
 
 export const EMPTY_STADIUM_VS_ROWS: StadiumVsRow[] = STADIUM_VENUE_ROWS.map(({ display, teamLabel }) => ({
-  venue: display,
+  venue: formatPlayerPageStadiumDisplay(display),
   teamLabel,
   era: "ー",
   ip: "ー",
@@ -314,7 +326,7 @@ export function pitcherPocStadiumRows(pp: PitcherSeasonPocPayload): StadiumVsRow
     const r = findStadiumRow(rows, item.dataKeys)
     if (!r) {
       return {
-        venue: item.display,
+        venue: formatPlayerPageStadiumDisplay(item.display),
         teamLabel: item.teamLabel,
         era: "ー",
         ip: "ー",
@@ -325,39 +337,27 @@ export function pitcherPocStadiumRows(pp: PitcherSeasonPocPayload): StadiumVsRow
         whip: "ー",
       }
     }
-    return { venue: item.display, teamLabel: item.teamLabel, ...fmtStadiumVsCells(r) }
+    return { venue: formatPlayerPageStadiumDisplay(item.display), teamLabel: item.teamLabel, ...fmtStadiumVsCells(r) }
   })
 }
 
 export function pitcherPocTeamVsRows(pp: PitcherSeasonPocPayload): TeamVsRow[] {
-  const b = pp.basic
-  const opp = pp.opponentTeamName || ""
-  const era = formatEra(b.era)
-  const ip = b.ip || "ー"
-  // 勝敗が付かない登板（decision=null）でも「0-0」（対戦相手行に当てはまるときだけ表示）
-  let wl = "0-0"
-  if (b.decision === "win") wl = "1-0"
-  if (b.decision === "loss") wl = "0-1"
-  if (b.decision === "hold" || b.decision === "save") wl = "0-0"
-  const kPct = pctStr(b.so, b.bf)
-  const kBbPct = pctStr(b.so - b.bb, b.bf)
-  const whip = b.whip != null ? b.whip.toFixed(2) : "ー"
   const oppRows = pp.splits.byOpponentTeam ?? []
   return TEAM_ROWS.map(({ team }) => {
-    const fill = teamRowMatchesOpponent(team, opp)
     const split = findOpponentTeamSplitRow(oppRows, team)
-    const qsPct =
-      split && split.games > 0 ? `${((split.qsCount / split.games) * 100).toFixed(1)}%` : "ー"
-    return {
-      team,
-      era: fill ? era : "ー",
-      ip: fill ? ip : "ー",
-      wl: fill ? wl : "ー",
-      qs_pct: qsPct,
-      k_pct: fill ? kPct : "ー",
-      k_bb_pct: fill ? kBbPct : "ー",
-      whip: fill ? whip : "ー",
+    if (!split || (split.ipOuts <= 0 && split.bf <= 0)) {
+      return {
+        team,
+        era: "ー",
+        ip: "ー",
+        wl: "ー",
+        qs_pct: "ー",
+        k_pct: "ー",
+        k_bb_pct: "ー",
+        whip: "ー",
+      }
     }
+    return { team, ...fmtStadiumVsCells(split) }
   })
 }
 
@@ -402,6 +402,97 @@ const SIT_LABELS: Record<string, string> = {
 }
 
 export type SitRowUi = { label: string; cells: string[] }
+
+/** 巡目別球種一覧の行 key 順 */
+export const PA_ROUND_ORDERED_KEYS = ["1", "2", "3", "4", "5"] as const
+
+export type PaRoundPitchTypeSplitField =
+  | "byPaRoundPitchTypes"
+  | "byPaRoundPitchTypesVsL"
+  | "byPaRoundPitchTypesVsR"
+
+function hasPitchTypesSplitRows(
+  rows: PitcherSeasonPocPitchTypesSplitRow[] | null | undefined,
+): boolean {
+  return (rows?.length ?? 0) > 0 && rows.some((r) => r.pitches_total > 0)
+}
+
+/** 巡目別・カウント別の対左右球種 UI（折りたたみ）を出せるか */
+export function hasPitchTypeVsHandSidePanelData(
+  payload: PitcherSeasonPocPayload | null | undefined,
+): boolean {
+  if (!payload?.splits) return false
+  const s = payload.splits
+  return (
+    hasPitchTypesSplitRows(s.byPaRoundPitchTypesVsL) ||
+    hasPitchTypesSplitRows(s.byPaRoundPitchTypesVsR) ||
+    hasPitchTypesSplitRows(s.byCountPitchTypesVsL) ||
+    hasPitchTypesSplitRows(s.byCountPitchTypesVsR)
+  )
+}
+
+/**
+ * 巡目別球種 split（実データ優先。未生成時はシーズン通算 or 試合別球種で全巡目に同割合を暫定表示）。
+ * 対左／対右は payload のみ（暫定フォールバックなし）。
+ */
+export function resolvePaRoundPitchTypeSplits(
+  payload: PitcherSeasonPocPayload | null | undefined,
+  seasonRows: { pitch_type: string; pitches: number; pct: number }[] | null | undefined,
+  gameRows: { pitch_type: string; pct: number }[] | null | undefined,
+  field: PaRoundPitchTypeSplitField = "byPaRoundPitchTypes",
+): PitcherSeasonPocPitchTypesSplitRow[] | null {
+  const roundRows = payload?.splits?.[field]
+  if (field !== "byPaRoundPitchTypes") {
+    return roundRows?.some((r) => r.pitches_total > 0) ? roundRows : null
+  }
+  if (roundRows?.some((r) => r.pitches_total > 0)) {
+    return roundRows
+  }
+  const fallbackSource = seasonRows?.length
+    ? seasonRows.map((r) => ({
+        pitch_type: r.pitch_type,
+        pitches: r.pitches,
+        pct: r.pct,
+      }))
+    : gameRows?.length
+      ? gameRows.map((r) => ({
+          pitch_type: r.pitch_type,
+          pitches: Math.round(r.pct * 10),
+          pct: r.pct,
+        }))
+      : []
+  if (fallbackSource.length === 0) return null
+  const pitches_total = fallbackSource.reduce((s, r) => s + r.pitches, 0)
+  return PA_ROUND_ORDERED_KEYS.map((key) => ({
+    key,
+    label: key === "5" ? "5巡目以上" : `${key}巡目`,
+    pitches_total,
+    rows: fallbackSource,
+  }))
+}
+
+/** カウント別（状況別と同列: 被安打, 打数, K-BB%, K%, BB%, 被打率, 被本） */
+export function pitcherPocCountRows(pp: PitcherSeasonPocPayload): SitRowUi[] {
+  const m = new Map((pp.splits.byCount ?? []).map((s) => [s.key, s]))
+  return ORDERED_PITCH_COUNT_KEYS.map((key) => {
+    const s = m.get(key)
+    if (!s || s.bf <= 0) {
+      return { label: key, cells: Array.from({ length: 7 }, () => "ー") }
+    }
+    return {
+      label: key,
+      cells: [
+        String(s.h),
+        String(s.ab),
+        pctStr(s.so - s.bb, s.bf),
+        pctStr(s.so, s.bf),
+        pctStr(s.bb, s.bf),
+        s.avg ?? "—",
+        String(s.hr),
+      ],
+    }
+  })
+}
 
 export function pitcherPocSituationRows(pp: PitcherSeasonPocPayload): SitRowUi[] {
   const m = new Map(pp.splits.bySituation.map((s) => [s.key, s]))
@@ -472,29 +563,29 @@ export function pitcherPocInningRow(pp: PitcherSeasonPocPayload, inning: number)
  */
 const FIP_CONSTANT_POC = 3.2
 
-/**
- * Phase 8: 集計行が HQS/SQS 条件を満たすか（満たせば 100%、さもなければ 0%）。
- * HQS: 7回以上かつ自責2以下 / SQS: 8回以上かつ自責1以下。複数試合を1行に足し込んだ場合は参考値。
- */
-function hqsSqsRates(pp: PitcherSeasonPocPayload): { hqs: string; sqs: string } {
-  const b = pp.basic
-  const outs = b.ipOuts
-  const er = b.er ?? 0
-  const hqsHit = outs >= 21 && er <= 2
-  const sqsHit = outs >= 24 && er <= 1
-  return {
-    hqs: hqsHit ? "100.0%" : "0.0%",
-    sqs: sqsHit ? "100.0%" : "0.0%",
+/** 先発試合ベースのクオリティスタート系率（QS/HQS/SQS）を表示用文字列にする */
+export function formatQualityStartRatePct(
+  metricLabel: "QS率" | "HQS率" | "SQS率",
+  rate: number | null | undefined,
+  count: number | undefined,
+  gamesStarted: number | undefined
+): string {
+  let pct: number | null = null
+  if (rate != null) pct = rate * 100
+  else {
+    const gs = gamesStarted ?? 0
+    if (gs > 0 && count != null) pct = (count / gs) * 100
   }
+  return pct == null ? "—" : formatRankingStatDisplay(metricLabel, pct)
 }
 
 /** 投球指標 1 行目（7 列） */
 export function pitcherPocMetricRow1(pp: PitcherSeasonPocPayload): string[] {
   const b = pp.basic
   const bf = b.bf
-  const qsPct =
-    b.qsRate != null ? `${(b.qsRate * 100).toFixed(1)}%` : "—"
-  const { hqs, sqs } = hqsSqsRates(pp)
+  const qsPct = formatQualityStartRatePct("QS率", b.qsRate, b.qsCount, b.gamesStarted)
+  const hqsPct = formatQualityStartRatePct("HQS率", b.hqsRate, b.hqsCount, b.gamesStarted)
+  const sqsPct = formatQualityStartRatePct("SQS率", b.sqsRate, b.sqsCount, b.gamesStarted)
   const obpAgainst = bf > 0 ? ((b.h + b.bb + b.hbp) / bf).toFixed(3) : "—"
 
   const abApprox = bf - b.bb - b.hbp
@@ -514,8 +605,8 @@ export function pitcherPocMetricRow1(pp: PitcherSeasonPocPayload): string[] {
 
   return [
     qsPct,
-    hqs,
-    sqs,
+    hqsPct,
+    sqsPct,
     b.avgAgainstApprox || "—",
     babip,
     obpAgainst,

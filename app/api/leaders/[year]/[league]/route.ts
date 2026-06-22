@@ -1,11 +1,12 @@
 /**
  * API Route: 指定年度・リーグの打撃成績リーダーを取得（動的ルート）
- * 2026 は fs 非依存の R2 直読みのみ（leaders.ts 経由だと本番バンドルで壊れることがある）
+ * モダン年度はランキング JSON から TOP5/TOP3 を切り出し、スナップショットは補完のみ。
  */
 
 import { hasRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
+import { finalizeBattingLeadersConfigForTopPageAsync } from '@/lib/ranking/leadersFromRankingsJson'
 import { fetchTopLeadersSnapshotRemote } from '@/lib/topPage/fetchTopLeadersSnapshotRemote'
-import { TOP_LEADERS_SNAPSHOT_YEAR } from '@/lib/topPage/leadersSnapshotShared'
+import { usesTopPageModernLayout } from '@/lib/topPageModernLayout'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -23,33 +24,32 @@ export async function GET(
       console.log(`[API] GET /api/leaders/${year}/${upperLeague}`)
     }
 
-    if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
-      const data = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
-      if (!data || Object.keys(data.leaders ?? {}).length === 0) {
-        const hasR2 = hasRankingsBaseUrl()
-        return NextResponse.json(
-          {
-            error: hasR2
-              ? '2026 batting leaders could not be loaded from R2'
-              : 'RANKINGS_BASE_URL is not set on Vercel (enable Production and Redeploy)',
-          },
-          { status: 503 }
-        )
-      }
-      return NextResponse.json(data)
-    }
-
-    const { buildBattingLeadersConfigFromRankingsAsync } = await import(
-      '@/lib/ranking/leadersFromRankingsJson'
+    const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
+    const finalized = await finalizeBattingLeadersConfigForTopPageAsync(
+      year,
+      upperLeague,
+      fromSnapshot
     )
-    const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
-    if (fromRankings && Object.keys(fromRankings.leaders ?? {}).length > 0) {
-      return NextResponse.json(fromRankings)
+
+    if (finalized && Object.keys(finalized.leaders ?? {}).length > 0) {
+      return NextResponse.json(finalized)
     }
 
     if (!hasRankingsBaseUrl() && process.env.NODE_ENV !== 'production') {
       const { getBattingLeaders } = await import('@/lib/ranking/leaders')
-      return NextResponse.json(getBattingLeaders(year, upperLeague))
+      const fromCsv = getBattingLeaders(year, upperLeague)
+      if (Object.keys(fromCsv.leaders ?? {}).length > 0) {
+        return NextResponse.json(fromCsv)
+      }
+    }
+
+    if (usesTopPageModernLayout(Number(year))) {
+      return NextResponse.json(
+        {
+          error: `Batting leaders for ${year} not found. Run: npm run display:r2:upload (rankings JSON).`,
+        },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json(

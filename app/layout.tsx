@@ -1,29 +1,31 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Noto_Sans_JP, Bebas_Neue } from "next/font/google"
+import { Bebas_Neue, Inter, Noto_Sans_JP } from "next/font/google"
 import AnalyticsWrapper from "@/components/AnalyticsWrapper"
 import "./globals.css"
 
-const _inter = Inter({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
 })
 
-const _notoSansJP = Noto_Sans_JP({
-  /* globals / player-page の既定 600・表の font-black(900) を実フォントで出す（未指定だと 600 が 500/700 に丸められてブレる） */
-  weight: ["400", "500", "600", "700", "900"],
+const notoSansJp = Noto_Sans_JP({
   subsets: ["latin"],
-  display: "swap",
+  weight: ["400", "500", "600", "700"],
   variable: "--font-noto-sans-jp",
+  display: "swap",
 })
 
-const _bebasNeue = Bebas_Neue({
-  weight: ["400"],
+const bebasNeue = Bebas_Neue({
+  weight: "400",
   subsets: ["latin"],
-  display: "swap",
   variable: "--font-bebas-neue",
+  display: "swap",
 })
+
+
+
 
 export const metadata: Metadata = {
   title: "NPB打撃成績ランキング - プロ野球選手の詳細データ",
@@ -54,13 +56,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ja" suppressHydrationWarning>
-      <head>
-        {/* Bebas Neueフォントはnext/fontで読み込まれているため、このリンクは不要ですが、互換性のために残しています */}
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Serif+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body 
-        className={`font-sans antialiased ${_inter.variable} ${_notoSansJP.variable} ${_bebasNeue.variable}`}
+    <html
+      lang="ja"
+      className={`${inter.variable} ${notoSansJp.variable} ${bebasNeue.variable}`}
+      suppressHydrationWarning
+    >
+      <body
+        className="font-sans antialiased"
         suppressHydrationWarning
       >
         {children}

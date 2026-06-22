@@ -53,8 +53,7 @@ type LeadersPanelProps = {
   weekKey?: string
 }
 
-/** 投手ランキング完成品は 2026 のみ（計画書 §3.1） */
-const PITCHING_RANKING_SEASON = 2026
+/** 投手ランキング URL は表示中の年度に連動（下記 `year` prop） */
 
 function miniTeamBarFor(typography: TopLeaderRowTypography): string | undefined {
   if (typography.teamBar === "h-[1.3rem]") return "h-6"
@@ -103,12 +102,12 @@ export function LeadersPanel({
 
   const getRankingUrl = (metric: string): string => {
     if (statsCategory === "pitching" && league && weekKey) {
-      return getWeeklyPitchingRankingUrl(PITCHING_RANKING_SEASON, weekKey, league, metric)
+      return getWeeklyPitchingRankingUrl(year, weekKey, league, metric)
     }
     if (statsCategory === "pitching" && league) {
       const metricKey = normalizePitchingMetricKey(metric)
       const order = getPitchingSortOrderForKey(metricKey)
-      return `/ranking/pitching/${PITCHING_RANKING_SEASON}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+      return `/ranking/pitching/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
     }
     if (year && league) {
       const metricKey = normalizeBattingMetricKey(metric)
@@ -120,10 +119,10 @@ export function LeadersPanel({
 
   const getStatsListUrl = (): string => {
     if (statsCategory === "pitching" && league && weekKey) {
-      return getWeeklyPitchingStatsListUrl(PITCHING_RANKING_SEASON, weekKey, league)
+      return getWeeklyPitchingStatsListUrl(year, weekKey, league)
     }
     if (statsCategory === "pitching" && league) {
-      return `/ranking/pitching/${PITCHING_RANKING_SEASON}/${league}`
+      return `/ranking/pitching/${year}/${league}`
     }
     if (year && league) {
       return `/ranking/${year}/${league}`

@@ -13,7 +13,7 @@ import { Fragment } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
-import type { RankingViewModel, RankingRow } from '@/lib/ranking/types'
+import type { MetricDefinition, RankingViewModel, RankingRow } from '@/lib/ranking/types'
 import { formatRomanNameForRanking } from '@/lib/ranking/formatRomanNameForRanking'
 import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
@@ -42,6 +42,14 @@ interface RankingUIProps {
   }
   /** タイトル行の週ラベル（例: 5/12〜5/17） */
   weekLabelInTitle?: string
+  /** チームページ等: 外側シェルに埋め込み（ヘッダー・年度セレクトを省略） */
+  embedInShell?: boolean
+  /** embedInShell 時のタイトル先頭（例: 球団表示名） */
+  titleScopeName?: string
+  /** embedInShell 時の年度変更（TeamPageShell のセレクトと連動する場合） */
+  onYearChange?: (year: number) => void
+  /** 規定到達ブロック末尾の順位（黄線をその行の直下に表示） */
+  qualifyingDividerAfterRank?: number | null
 }
 
 // 左ブロック（順＋フレーム＋選手）を1層にまとめ、隙間を防ぐ（問題29・二層構造の理想に合わせる）
@@ -55,9 +63,138 @@ const METRIC_COL_MIN_WIDTH_2025 = METRIC_COL_MIN_WIDTH * 0.85 // 8.5割
 /** 選手名ブロックの縦サイズ（px） */
 const PLAYER_NAME_BLOCK_HEIGHT = 32
 const PLAYER_NAME_BLOCK_HEIGHT_2025 = 32.3
+/** 指標ヘッダー1行固定（順・選手名の背景と高さを揃える） */
+const HEADER_ROW_HEIGHT = 38
 
 function rankingTableMinWidthPx(leftBlockWidth: number, metricColMinWidth: number, metricCount: number): number {
   return leftBlockWidth + metricCount * metricColMinWidth
+}
+
+type RankingTableHeaderRowProps = {
+  variant: 'primary' | 'repeat'
+  leftBlockWidth: number
+  playerWidth: number
+  metricColMinWidth: number
+  metrics: MetricDefinition[]
+  sortKey: string
+  onSortChange: (metricKey: string) => void
+}
+
+function RankingTableHeaderRow({
+  variant,
+  leftBlockWidth,
+  playerWidth,
+  metricColMinWidth,
+  metrics,
+  sortKey,
+  onSortChange,
+}: RankingTableHeaderRowProps) {
+  const isPrimary = variant === 'primary'
+  const labelBg = isPrimary ? '#ffff44' : '#4a4a4a'
+  const labelText = isPrimary ? '#000000' : '#ffffff'
+
+  return (
+    <tr
+      className={isPrimary ? 'bg-[#2a2a2a]' : 'bg-[#4a4a4a] text-white'}
+      style={{ height: HEADER_ROW_HEIGHT }}
+    >
+      <th
+        className="sticky border-r-2 border-[#555] p-0"
+        style={{
+          position: 'sticky',
+          top: isPrimary ? 0 : undefined,
+          left: 0,
+          zIndex: 100,
+          width: `${leftBlockWidth}px`,
+          maxWidth: `${leftBlockWidth}px`,
+          height: HEADER_ROW_HEIGHT,
+          boxSizing: 'border-box',
+          verticalAlign: 'middle',
+        }}
+      >
+        <div
+          className="flex flex-nowrap items-stretch w-full h-full"
+          style={{ width: leftBlockWidth, height: HEADER_ROW_HEIGHT }}
+        >
+          <div
+            className="flex flex-shrink-0 items-center justify-center text-[10px] font-bold leading-none"
+            style={{
+              width: RANK_WIDTH,
+              height: HEADER_ROW_HEIGHT,
+              boxSizing: 'border-box',
+              backgroundColor: labelBg,
+              color: labelText,
+            }}
+          >
+            順
+          </div>
+          <div
+            className="flex-shrink-0 bg-[#555] h-full"
+            style={{ width: FRAME_WIDTH }}
+            aria-hidden
+          />
+          <div
+            className="flex flex-shrink-0 items-center justify-center px-1 text-[10px] font-bold leading-none"
+            style={{
+              width: playerWidth,
+              height: HEADER_ROW_HEIGHT,
+              boxSizing: 'border-box',
+              backgroundColor: labelBg,
+              color: labelText,
+            }}
+          >
+            選手名
+          </div>
+        </div>
+      </th>
+      {metrics.map((metric, metricIdx) => {
+        const isActive = sortKey === metric.key
+        return (
+          <th
+            key={metric.key}
+            data-active={isActive}
+            className={`p-0 text-[10px] font-bold leading-none border-r border-[#333] ${
+              metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''
+            }`}
+            style={{
+              width: `${metricColMinWidth}px`,
+              minWidth: `${metricColMinWidth}px`,
+              height: HEADER_ROW_HEIGHT,
+              backgroundColor: labelBg,
+              color: labelText,
+              paddingLeft: metricIdx === 0 ? 0 : undefined,
+              marginLeft: metricIdx === 0 ? '-2px' : undefined,
+              position: isPrimary ? 'sticky' : undefined,
+              top: isPrimary ? 0 : undefined,
+              zIndex: isPrimary ? 50 : undefined,
+              boxSizing: 'border-box',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (sortKey === metric.key) return
+                onSortChange(metric.key)
+              }}
+              title={metric.label}
+              className="flex h-full w-full cursor-pointer items-center justify-center gap-0.5 whitespace-nowrap px-0.5 hover:underline"
+              style={{
+                height: HEADER_ROW_HEIGHT,
+                textAlign: 'center',
+                color: labelText,
+                backgroundColor: 'transparent',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+              }}
+            >
+              <span className="underline">{metric.label}</span>
+            </button>
+          </th>
+        )
+      })}
+    </tr>
+  )
 }
 
 export default function RankingUI({
@@ -72,6 +209,10 @@ export default function RankingUI({
   titleSubNote,
   weekSelector,
   weekLabelInTitle,
+  embedInShell = false,
+  titleScopeName,
+  onYearChange,
+  qualifyingDividerAfterRank = null,
 }: RankingUIProps) {
   const { season, league, metrics } = viewModel
   const router = useRouter()
@@ -100,79 +241,38 @@ export default function RankingUI({
             ? '秋季リーグ'
             : league
   const weekRangeInTitle = weekLabelInTitle?.trim() ? ` (${weekLabelInTitle.trim()})` : ''
+  const scopeName = titleScopeName?.trim() || leagueName
   const displayTitle = weekSelector
-    ? `${leagueName}　週間${metricLabel}ランキング${weekRangeInTitle}`
-    : `${leagueName}　${metricLabel}ランキング (${season}年)`
+    ? `${scopeName}　週間${metricLabel}ランキング${weekRangeInTitle}`
+    : `${scopeName}　${metricLabel}ランキング (${season}年)`
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
   const tableMinWidthPx = rankingTableMinWidthPx(leftBlockWidth, metricColMinWidth, metrics.length)
 
   const handleYearChange = (newYear: number) => {
+    if (onYearChange) {
+      onYearChange(newYear)
+      return
+    }
     router.push(
-      `${rankingPathBase}/${newYear}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`
+      `${rankingPathBase}/${newYear}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`,
     )
   }
 
-  return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]" style={{ zIndex: 300 }}>
-        {/* Header */}
-        <div className="container mx-auto px-4 py-1 border-b border-[#333] flex items-center justify-between">
-          {/* Left: Back Button */}
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center gap-1 p-1 hover:opacity-80 transition-opacity text-[#ffff44]"
-            aria-label="戻る"
-          >
-            <span className="text-sm">←</span>
-          </button>
-
-          {/* Center: Logo */}
-          <Link href={SITE_TOP_HREF} className="absolute left-1/2 transform -translate-x-1/2">
-            <img src="/logo.png" alt="Logo" className="w-7 h-7 cursor-pointer hover:opacity-80 transition-opacity" />
-          </Link>
-
-          {weekSelector ? (
-            <select
-              value={weekSelector.weekKey}
-              onChange={(e) => weekSelector.onWeekChange(e.target.value)}
-              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors max-w-[7.5rem]"
-              aria-label="週を選択"
-            >
-              {weekSelector.options.map((w) => (
-                <option key={w.weekKey} value={w.weekKey}>
-                  {w.weekLabel}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <select
-              value={season}
-              onChange={(e) => handleYearChange(Number(e.target.value))}
-              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
-            >
-              {yearSelectOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+  const titleBlock = (
+    <>
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className="w-0.5 h-5 bg-[#039850]" />
+        <h1 className="text-base font-bold text-white">{displayTitle}</h1>
       </div>
+      {titleSubNote ? (
+        <p className="text-[10px] text-gray-500 mb-2 leading-snug max-w-[920px]">{titleSubNote}</p>
+      ) : null}
+    </>
+  )
 
-      <main className="max-w-[1400px] mx-auto px-2 py-3">
-        {/* Title */}
-        <div className="flex items-center gap-1.5 mb-1">
-          <div className="w-0.5 h-5 bg-[#039850]" />
-          <h1 className="text-base font-bold text-white">
-            {displayTitle}
-          </h1>
-        </div>
-        {titleSubNote ? (
-          <p className="text-[10px] text-gray-500 mb-2 leading-snug max-w-[920px]">{titleSubNote}</p>
-        ) : null}
-
+  const tableBlock = (
+    <>
         {/* ランキングテーブル */}
         <div className="bg-[#1a1a1a] border border-[#333]">
           <div
@@ -194,70 +294,18 @@ export default function RankingUI({
                 ))}
               </colgroup>
               <thead>
-                {/* 層1: 順＋グレーフレーム＋選手名を1セルで一塊に（隙間防止） */}
-                <tr className="bg-[#2a2a2a]">
-                  <th
-                    className="sticky border-r-2 border-[#555]"
-                    style={{
-                      position: 'sticky',
-                      top: 0,
-                      left: 0,
-                      zIndex: 100,
-                      width: `${leftBlockWidth}px`,
-                      maxWidth: `${leftBlockWidth}px`,
-                      boxSizing: 'border-box',
-                      padding: 0,
-                      verticalAlign: 'middle',
-                    }}
-                  >
-                    <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
-                      <div className="px-2 py-3 text-[10px] font-bold bg-[#ffff44] text-black flex-shrink-0" style={{ width: RANK_WIDTH, boxSizing: 'border-box' }}>順</div>
-                      <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
-                      <div className="px-2 py-3 text-[10px] font-bold bg-[#ffff44] text-black flex-shrink-0" style={{ width: playerWidth, boxSizing: 'border-box' }}>選手名</div>
-                    </div>
-                  </th>
-                  {metrics.map((metric, metricIdx) => {
-                    const isActive = sortKey === metric.key
-                    return (
-                      <th
-                        key={metric.key}
-                        data-active={isActive}
-                        className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#ffff44] text-black ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
-                        style={{
-                          width: `${metricColMinWidth}px`,
-                          minWidth: `${metricColMinWidth}px`,
-                          backgroundColor: '#ffff44',
-                          color: '#000000',
-                          paddingLeft: metricIdx === 0 ? 0 : undefined,
-                          marginLeft: metricIdx === 0 ? '-2px' : undefined,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (sortKey === metric.key) return
-                            onSortChange(metric.key)
-                          }}
-                          className="w-full cursor-pointer hover:underline relative z-10 pointer-events-auto flex items-center justify-center gap-1"
-                          style={{
-                            textAlign: 'center',
-                            width: '100%',
-                            color: '#000000',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            margin: 0,
-                          }}
-                        >
-                          <span className="underline">{metric.label}</span>
-                        </button>
-                      </th>
-                    )
-                  })}
-                </tr>
+                <RankingTableHeaderRow
+                  variant="primary"
+                  leftBlockWidth={leftBlockWidth}
+                  playerWidth={playerWidth}
+                  metricColMinWidth={metricColMinWidth}
+                  metrics={metrics}
+                  sortKey={sortKey}
+                  onSortChange={onSortChange}
+                />
               </thead>
               <tbody>
-                {sortedRows.map((row, idx) => {
+                {(sortedRows ?? []).map((row, idx) => {
                   const hasRomanName = row.romanName && row.romanName.trim()
                   const shouldShowHeader = idx > 0 && idx % 15 === 0
                   
@@ -265,66 +313,16 @@ export default function RankingUI({
                     <Fragment key={`row-${row.playerId}-${idx}`}>
                       {/* 15行ごとにヘッダー行を表示 */}
                       {shouldShowHeader && (
-                        <tr key={`header-${idx}`} className="bg-[#4a4a4a] text-white">
-                          {/* 層1: 順＋グレーフレーム＋選手名を1セルで一塊に */}
-                          <th
-                            className="sticky border-r-2 border-[#555]"
-                            style={{
-                              position: 'sticky',
-                              left: 0,
-                              zIndex: 100,
-                              width: `${leftBlockWidth}px`,
-                              maxWidth: `${leftBlockWidth}px`,
-                              boxSizing: 'border-box',
-                              padding: 0,
-                              verticalAlign: 'middle',
-                            }}
-                          >
-                            <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
-                              <div className="px-2 py-3 text-[10px] font-bold bg-[#4a4a4a] text-white flex-shrink-0" style={{ width: RANK_WIDTH, boxSizing: 'border-box' }}>順</div>
-                              <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
-                              <div className="px-2 py-3 text-[10px] font-bold bg-[#4a4a4a] text-white flex-shrink-0" style={{ width: playerWidth, boxSizing: 'border-box' }}>選手名</div>
-                            </div>
-                          </th>
-                          {metrics.map((metric, metricIdx) => {
-                            const isActive = sortKey === metric.key
-                            return (
-                              <th
-                                key={metric.key}
-                                data-active={isActive}
-                                className={`px-2 py-3 text-[10px] font-bold border-r border-[#333] bg-[#4a4a4a] text-white ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
-                                style={{
-                                  width: `${metricColMinWidth}px`,
-                                  minWidth: `${metricColMinWidth}px`,
-                                  backgroundColor: '#4a4a4a',
-                                  color: '#ffffff',
-                                  paddingLeft: metricIdx === 0 ? 0 : undefined,
-                                  marginLeft: metricIdx === 0 ? '-2px' : undefined,
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (sortKey === metric.key) return
-                                    onSortChange(metric.key)
-                                  }}
-                                  className="w-full cursor-pointer hover:underline relative z-10 pointer-events-auto flex items-center justify-center gap-1"
-                                  style={{
-                                    textAlign: 'center',
-                                    width: '100%',
-                                    color: '#ffffff',
-                                    backgroundColor: 'transparent',
-                                    border: 'none',
-                                    padding: 0,
-                                    margin: 0,
-                                  }}
-                                >
-                                  <span className="underline">{metric.label}</span>
-                                </button>
-                              </th>
-                            )
-                          })}
-                        </tr>
+                        <RankingTableHeaderRow
+                          key={`header-${idx}`}
+                          variant="repeat"
+                          leftBlockWidth={leftBlockWidth}
+                          playerWidth={playerWidth}
+                          metricColMinWidth={metricColMinWidth}
+                          metrics={metrics}
+                          sortKey={sortKey}
+                          onSortChange={onSortChange}
+                        />
                       )}
                       <tr
                         key={`${row.playerId}-${idx}`}
@@ -356,7 +354,7 @@ export default function RankingUI({
                               boxSizing: 'border-box',
                             }}
                           >
-                            <span className="bebas tabular-nums text-lg font-thin tracking-[0.02em] text-white/85">{row.rank}</span>
+                            <span className="bebas tabular-nums text-lg font-normal tracking-[-0.01em] text-white">{row.rank}</span>
                           </div>
                           <div className="flex-shrink-0 bg-[#555]" style={{ width: FRAME_WIDTH }} aria-hidden />
                           <div
@@ -440,13 +438,28 @@ export default function RankingUI({
                               marginLeft: metricIdx === 0 ? '-2px' : undefined,
                             }}
                           >
-                            <span className={`bebas tabular-nums ${metricValueTextClass} font-thin tracking-[0.02em] text-white/85`}>
+                            <span className={`bebas tabular-nums ${metricValueTextClass} font-normal tracking-[-0.01em] text-white`}>
                               {formattedValue}
                             </span>
                           </td>
                         )
                       })}
                       </tr>
+                      {qualifyingDividerAfterRank != null &&
+                        row.rank === qualifyingDividerAfterRank && (
+                          <tr key={`qual-divider-${row.playerId}-${idx}`} aria-hidden>
+                            <td
+                              colSpan={metrics.length + 1}
+                              className="p-0 leading-none"
+                              style={{ height: 0, border: "none" }}
+                            >
+                              <div
+                                className="h-[3px] w-full"
+                                style={{ backgroundColor: "#ffff44" }}
+                              />
+                            </td>
+                          </tr>
+                        )}
                     </Fragment>
                   )
                 })}
@@ -454,15 +467,86 @@ export default function RankingUI({
             </table>
           </div>
         </div>
-      </main>
-      
-      {/* 開発時のみデバッグ情報を表示 */}
-      {process.env.NODE_ENV === 'development' && viewModel.debug && (
-        <div className="container mx-auto px-4 py-2 border-t border-[#333] text-xs text-gray-500">
-          <div>DataSource: {viewModel.debug.csvPath || 'N/A'}</div>
-          <div>Duplicates: {viewModel.debug.duplicatePlayerIdCount} ids / {viewModel.debug.duplicateRowCount} rows</div>
+    </>
+  )
+
+  const debugBlock =
+    process.env.NODE_ENV === "development" && viewModel.debug ? (
+      <div className="container mx-auto px-4 py-2 border-t border-[#333] text-xs text-gray-500">
+        <div>DataSource: {viewModel.debug.csvPath || "N/A"}</div>
+        <div>
+          Duplicates: {viewModel.debug.duplicatePlayerIdCount} ids / {viewModel.debug.duplicateRowCount} rows
         </div>
-      )}
+      </div>
+    ) : null
+
+  if (embedInShell) {
+    return (
+      <>
+        {tableBlock}
+        {debugBlock}
+      </>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <div
+        className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]"
+        style={{ zIndex: 300 }}
+      >
+        <div className="container mx-auto px-4 py-1 border-b border-[#333] flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-1 p-1 hover:opacity-80 transition-opacity text-[#ffff44]"
+            aria-label="戻る"
+          >
+            <span className="text-sm">←</span>
+          </button>
+
+          <Link href={SITE_TOP_HREF} className="absolute left-1/2 transform -translate-x-1/2">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-7 h-7 cursor-pointer hover:opacity-80 transition-opacity"
+            />
+          </Link>
+
+          {weekSelector ? (
+            <select
+              value={weekSelector.weekKey}
+              onChange={(e) => weekSelector.onWeekChange(e.target.value)}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors max-w-[7.5rem]"
+              aria-label="週を選択"
+            >
+              {weekSelector.options.map((w) => (
+                <option key={w.weekKey} value={w.weekKey}>
+                  {w.weekLabel}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value={season}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="bg-[#1a1a1a] text-[#ffff44] border border-[#555] rounded px-2 py-0.5 text-sm bebas cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+            >
+              {yearSelectOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      <main className="max-w-[1400px] mx-auto px-2 py-3">
+        {titleBlock}
+        {tableBlock}
+      </main>
+      {debugBlock}
     </div>
   )
 }

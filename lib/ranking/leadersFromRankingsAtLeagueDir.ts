@@ -27,9 +27,11 @@ import {
   BATTING_WEEKLY_TAB_TOP_N,
   battingTop2025SeasonTopN,
 } from "@/lib/topPageBatting2025Grid"
+import { usesTopPageModernLayout } from "@/lib/topPageModernLayout"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
   PITCHING_TOP_2026_MINI_METRICS,
+  pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
 
 const BATTING_TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
@@ -231,12 +233,12 @@ function extractPitchingTop(
 }
 
 function battingTopN(metricLabel: string, year: string, weekKey?: string): number {
-  if (weekKey && Number(year) === 2026) {
+  if (weekKey && usesTopPageModernLayout(Number(year))) {
     const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
     if (seasonTopN != null) return seasonTopN
   }
   if (weekKey) return BATTING_WEEKLY_TAB_TOP_N
-  if (metricLabel === "打点" && (year === "2025" || year === "2026")) {
+  if (metricLabel === "打点" && year === "2025") {
     return BATTING_TOP_2025_RBI_TOP_N
   }
   const seasonTopN = battingTop2025SeasonTopN(metricLabel, year)
@@ -245,10 +247,10 @@ function battingTopN(metricLabel: string, year: string, weekKey?: string): numbe
   return 1
 }
 
-function pitchingTopN(metricLabel: string, year: string): number {
-  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) {
-    return Number(year) === 2026 ? 5 : 3
-  }
+function pitchingTopN(metricLabel: string, _year: string): number {
+  const seasonTopN = pitchingTop2026SeasonTopN(metricLabel)
+  if (seasonTopN != null) return seasonTopN
+  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 3
   return 1
 }
 
@@ -271,7 +273,7 @@ export function buildBattingLeadersConfigAtLeagueDir(
   const leaders: Record<string, LeaderRow[]> = {}
 
   const battingMetrics = options.weekKey
-    ? Number(year) === 2026
+    ? usesTopPageModernLayout(Number(year))
       ? BATTING_TOP_2026_SEASON_ALL_METRICS
       : BATTING_TOP_2025_GRID_METRICS
     : BATTING_ALL_METRICS
@@ -287,10 +289,10 @@ export function buildBattingLeadersConfigAtLeagueDir(
   if (Object.keys(leaders).length === 0) return null
 
   return options.weekKey
-    ? Number(year) === 2026
+    ? usesTopPageModernLayout(Number(year))
       ? {
-          top3Metrics: [...BATTING_TOP3_METRICS],
-          miniMetrics: [...BATTING_MINI_METRICS],
+          top3Metrics: [...BATTING_TOP_2026_SEASON_ALL_METRICS],
+          miniMetrics: [],
           leaders,
         }
       : {
@@ -298,11 +300,17 @@ export function buildBattingLeadersConfigAtLeagueDir(
           miniMetrics: [],
           leaders,
         }
-    : {
-        top3Metrics: [...BATTING_TOP3_METRICS],
-        miniMetrics: [...BATTING_MINI_METRICS],
-        leaders,
-      }
+    : usesTopPageModernLayout(Number(year))
+      ? {
+          top3Metrics: [...BATTING_TOP_2026_SEASON_ALL_METRICS],
+          miniMetrics: [],
+          leaders,
+        }
+      : {
+          top3Metrics: [...BATTING_TOP3_METRICS],
+          miniMetrics: [...BATTING_MINI_METRICS],
+          leaders,
+        }
 }
 
 export function buildPitchingLeadersConfigAtLeagueDir(

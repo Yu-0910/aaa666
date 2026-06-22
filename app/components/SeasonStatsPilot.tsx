@@ -6,6 +6,7 @@ import dynamic from "next/dynamic"
 import type { BattingTotalRowSource } from "@/lib/seasonStatsPilot"
 import {
   DERIVED_SEASON_YEAR_DEFAULT,
+  formatSeasonRispAvgDisplay,
   mergeSeasonStatsRows,
   type BattingVsHandTotalReconciliation,
   type PilotBlocksData,
@@ -18,12 +19,14 @@ import type { ViewportLayout } from "@/lib/viewportLayout"
 import { createFielderPlaceholderTotalRow } from "@/lib/fielderSeasonPlaceholderRow"
 import { rosterPositionToFieldStubRowKey } from "@/lib/rosterFieldPositionStub"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
-import { STADIUM_VENUE_UI_ROWS_BATTING } from "@/lib/stadiumVenueNormalize"
+import { STADIUM_VENUE_UI_ROWS_BATTING, formatPlayerPageStadiumDisplay } from "@/lib/stadiumVenueNormalize"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
+import { formatRankingStatDisplay } from "@/lib/formatStat"
+import { STARTER_FIELD_TABLE_KEYS } from "@/lib/yahooGame/starterFieldPositionFromStats"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
-export type PilotSeasonDetailTab = "basic" | "pitch" | "situation" | "period"
+export type PilotSeasonDetailTab = "basic" | "pitch" | "situation"
 
 type Props = {
   playerId: string
@@ -38,6 +41,8 @@ type Props = {
   rosterPrimaryPositionLabel?: string
   /** 見出し左の縦帯色（未指定時は従来の赤） */
   headingStripeColor?: string
+  /** 今季サブタブ固定レイアウト: タブ下余白と重複する先頭 mt を抑える */
+  pinLayoutShell?: boolean
 }
 
 /** 球団別カラー（ランキングUIと同様） */
@@ -129,10 +134,10 @@ function PilotTotalRecordBlock({
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.h2}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.h3}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.r}</td>
-              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.obp}</td>
-              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.slg}</td>
+              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{formatSlashStatDisplay(totalRow.obp)}</td>
+              <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{formatSlashStatDisplay(totalRow.slg)}</td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">
-                {totalRow.risp_avg || (totalRow.risp_ab > 0 ? `${totalRow.risp_h}/${totalRow.risp_ab}` : "—")}
+                {formatSeasonRispAvgDisplay(totalRow)}
               </td>
               <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{totalRow.bb}</td>
             </tr>
@@ -172,6 +177,7 @@ export default function SeasonStatsPilot({
   rosterFielderShell,
   rosterPrimaryPositionLabel,
   headingStripeColor = "#FF4444",
+  pinLayoutShell = false,
 }: Props) {
   const isMobile = layout === "mobile"
   const titleBase = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
@@ -278,30 +284,30 @@ export default function SeasonStatsPilot({
   }
 
   const totalRow = effectiveStats.find((r) => r.split_type === "total" && r.split_value === "total")
-  const sbPct = totalRow?.sb_pct || (totalRow && totalRow.sb + totalRow.cs > 0
-    ? ((totalRow.sb / (totalRow.sb + totalRow.cs)) * 100).toFixed(1)
-    : "")
-  const fmt = (v: string | undefined) => (v != null && v !== "" ? v : "—")
-  /** BB% / K%：データは百分率の数値文字列。小数第1位まで＋全角％ */
-  const fmtPctPA = (v: string | undefined) => {
-    if (v == null || v === "") return "—"
-    const t = v.trim()
-    if (t === "—") return "—"
-    const n = parseFloat(t.replace(/[％%]/g, ""))
-    if (!Number.isFinite(n)) return "—"
-    return `${n.toFixed(1)}％`
-  }
+  const sbPctRaw =
+    totalRow?.sb_pct ||
+    (totalRow && totalRow.sb + totalRow.cs > 0
+      ? ((totalRow.sb / (totalRow.sb + totalRow.cs)) * 100).toFixed(1)
+      : "")
+  const sbPct = sbPctRaw ? (sbPctRaw.endsWith("%") ? sbPctRaw : `${sbPctRaw}%`) : ""
+  /** ランキングページと同じ formatStat ルール（欠損は —） */
+  const fmtRank = (metricLabel: string, v: string | undefined) =>
+    formatRankingStatDisplay(metricLabel, v)
   const showPilotTab = (t: PilotSeasonDetailTab) => seasonDetailTab == null || seasonDetailTab === t
   const loose = Boolean(looseSpacing)
-  const h2Section = `${titleBase} ${loose ? "mb-5 pl-4 mt-10" : "mb-3 pl-4 mt-3"}`
-  const h2BattingMetrics = `${titleBase} ${loose ? "mb-5 pl-4 mt-8" : "mb-3 pl-4 mt-3"}`
+  const h2Section = pinLayoutShell
+    ? `${titleBase} mb-5 pl-4 mt-3`
+    : `${titleBase} ${loose ? "mb-5 pl-4 mt-10" : "mb-3 pl-4 mt-3"}`
+  const h2BattingMetrics = pinLayoutShell
+    ? `${titleBase} mb-5 pl-4 mt-3`
+    : `${titleBase} ${loose ? "mb-5 pl-4 mt-8" : "mb-3 pl-4 mt-3"}`
   const mbBox = loose ? "mb-6" : "mb-3"
   const mbScroll = loose ? "mb-6" : "mb-3"
   const mbAfterChart = loose ? "mb-8 mt-6" : "mb-3 mt-3"
   const blockWrap = loose ? "mb-6" : "mb-4"
 
   return (
-    <div className={`mb-12${loose ? " mt-10" : ""}`}>
+    <div className={`mb-12${pinLayoutShell ? "" : loose ? " mt-10" : ""}`}>
       {battingTotalRowSource === "batting_lines_fallback" && (
         <div
           className={`rounded border border-amber-500/35 bg-amber-950/35 px-3 py-2 text-sm text-amber-100/95 ${loose ? "mb-8" : "mb-4"}`}
@@ -345,12 +351,12 @@ export default function SeasonStatsPilot({
                   <th className="px-1 py-1.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB/K</th>
                 </tr>
                 <tr style={PILOT_TABLE_DATA_ROW_TOP_LINE}>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{fmt(totalRow.noi)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.gpa)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.rc)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.xr)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.babip)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.bbk)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{fmtRank("NOI", totalRow.noi)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("GPA", totalRow.gpa)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("RC", totalRow.rc)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("XR", totalRow.xr)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("BABIP", totalRow.babip)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("BB/K", totalRow.bbk)}</td>
                 </tr>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
                   <th className="px-1 py-1.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">IsoD</th>
@@ -361,12 +367,12 @@ export default function SeasonStatsPilot({
                   <th className="px-1 py-1.5 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">TA</th>
                 </tr>
                 <tr style={PILOT_TABLE_DATA_ROW_TOP_LINE}>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{fmt(totalRow.isod)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.isop)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtPctPA(totalRow.bb_pct)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtPctPA(totalRow.k_pct)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.seca)}</td>
-                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmt(totalRow.ta)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0">{fmtRank("IsoD", totalRow.isod)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("IsoP", totalRow.isop)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("BB%", totalRow.bb_pct)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("K%", totalRow.k_pct)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("SecA", totalRow.seca)}</td>
+                  <td className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500">{fmtRank("TA", totalRow.ta)}</td>
                 </tr>
               </tbody>
             </table>
@@ -426,14 +432,14 @@ export default function SeasonStatsPilot({
                 <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "95px" }} />
+                      <col style={{ width: "48px" }} />
                       <col style={{ width: "50px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
                       <col style={{ width: "51px" }} />
                       <col style={{ width: "51px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                     </colgroup>
                     <thead>
@@ -441,14 +447,14 @@ export default function SeasonStatsPilot({
                         <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                           条件
                         </th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打数</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">安打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">OPS</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">出塁率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">K％</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打数</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">安打</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -463,14 +469,14 @@ export default function SeasonStatsPilot({
                             <td className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <span>{item.label}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.slg : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? fmtPctPA(row.k_pct) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? fmtRank("K%", row.k_pct) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
                           </tr>
                         )
                       })}
@@ -535,7 +541,6 @@ export default function SeasonStatsPilot({
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                     </colgroup>
@@ -549,7 +554,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -577,7 +581,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
                           </tr>
@@ -589,6 +592,166 @@ export default function SeasonStatsPilot({
                 <p className="text-xs text-gray-500 mt-1">
                   パ・リーグ: 日本ハム・楽天・西武・ロッテ・オリックス・ソフトバンク　／　セ・リーグ: 巨人・ヤクルト・横浜・中日・阪神・広島
                 </p>
+              </>
+            )
+          })()}
+
+          {/* 月間成績（Phase 17: calendar_month + 3・4月併合） */}
+          {showPilotTab("basic") && (() => {
+            const Y = DERIVED_SEASON_YEAR_DEFAULT
+            const mRow = (mm: string) =>
+              effectiveStats.find((r) => r.split_type === "calendar_month" && r.split_value === `${Y}-${mm}`)
+            const marApr = mergeSeasonStatsRows(
+              [mRow("03"), mRow("04")].filter((x): x is SeasonStatsRow => x != null),
+              "calendar_month_display",
+              "mar-apr",
+              "3・4月"
+            )
+            const MONTH_ITEMS: { key: string; label: string; row: SeasonStatsRow | null }[] = [
+              { key: "3・4月", label: "3・4月", row: marApr },
+              { key: "5月", label: "5月", row: mRow("05") ?? null },
+              { key: "6月", label: "6月", row: mRow("06") ?? null },
+              { key: "7月", label: "7月", row: mRow("07") ?? null },
+              { key: "8月", label: "8月", row: mRow("08") ?? null },
+              { key: "9月", label: "9月", row: mRow("09") ?? null },
+              { key: "10月", label: "10月", row: mRow("10") ?? null },
+              { key: "11月", label: "11月", row: mRow("11") ?? null },
+            ]
+            const na = "—"
+
+            return (
+              <>
+                <h2
+                  className={h2Section}
+                  style={{
+                    borderLeft: `6px solid ${headingStripeColor}`,
+                    fontWeight: 900,
+                  }}
+                >
+                  月間成績
+                </h2>
+                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                  <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
+                    <colgroup>
+                      <col style={{ width: "56px" }} />
+                      <col style={{ width: "50px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "51px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                    </colgroup>
+                    <thead>
+                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">月名</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">OPS</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打率</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {MONTH_ITEMS.map((item) => {
+                        const row = item.row
+                        const hasData = row != null && row.pa > 0
+                        return (
+                          <tr key={item.key} style={PILOT_TABLE_DATA_ROW}>
+                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
+                              {item.label}
+                            </td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )
+          })()}
+
+          {/* 週間成績（Phase 17: calendar_week） */}
+          {showPilotTab("basic") && (() => {
+            const na = "—"
+            const weekRows = effectiveStats
+              .filter((r) => r.split_type === "calendar_week" && r.pa > 0)
+              .sort((a, b) => b.split_value.localeCompare(a.split_value))
+            return (
+              <>
+                <h2
+                  className={h2Section}
+                  style={{
+                    borderLeft: `6px solid ${headingStripeColor}`,
+                    fontWeight: 900,
+                  }}
+                >
+                  週間成績
+                </h2>
+                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                  <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
+                    <colgroup>
+                      <col style={{ width: "72px" }} />
+                      <col style={{ width: "50px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "51px" }} />
+                      <col style={{ width: "45px" }} />
+                      <col style={{ width: "45px" }} />
+                    </colgroup>
+                    <thead>
+                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">週間</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">OPS</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打率</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {weekRows.length === 0 ? (
+                        <tr style={PILOT_TABLE_DATA_ROW}>
+                          <td
+                            className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                            style={{ backgroundColor: "#1a1a1a" }}
+                            colSpan={8}
+                          >
+                            {na}
+                          </td>
+                        </tr>
+                      ) : (
+                        weekRows.map((row) => (
+                          <tr key={row.split_value} style={PILOT_TABLE_DATA_ROW}>
+                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
+                              {row.split_label}
+                            </td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.ops)}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.avg)}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.rbi}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.obp}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ab}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.h}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">週は火曜始まり・日曜終わり。失策は取得対象外のため—</p>
               </>
             )
           })()}
@@ -720,9 +883,8 @@ export default function SeasonStatsPilot({
                     }}
                   >
                     <colgroup>
-                      <col style={{ width: "53px" }} />
+                      <col style={{ width: "69px" }} />
                       <col style={{ width: "40px" }} />
-                      <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "40px" }} />
                       <col style={{ width: "45px" }} />
@@ -734,7 +896,6 @@ export default function SeasonStatsPilot({
                           球速
                         </th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">二塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">ISOP</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">投球割合</th>
@@ -762,7 +923,6 @@ export default function SeasonStatsPilot({
                               <span>{item.labelJa}</span>
                             </td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h2 ?? 0) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[13px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.isop) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.pitch_share_pct : na}</td>
@@ -824,7 +984,6 @@ export default function SeasonStatsPilot({
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                     </colgroup>
@@ -836,7 +995,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -850,7 +1008,7 @@ export default function SeasonStatsPilot({
                             <td className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <div className="flex items-center gap-1 min-h-[1.25rem]">
                                 <div className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: TEAM_COLORS[item.teamLabel] || "#666" }} />
-                                <span>{item.display}</span>
+                                <span>{formatPlayerPageStadiumDisplay(item.display)}</span>
                               </div>
                             </td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? formatSlashStatDisplay(row.ops) : na}</td>
@@ -858,7 +1016,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
                           </tr>
@@ -878,9 +1035,9 @@ export default function SeasonStatsPilot({
               { key: "2", label: "2巡目" },
               { key: "3", label: "3巡目" },
               { key: "4", label: "4巡目" },
-              { key: "5", label: "5巡目以上" },
+              { key: "5", label: "5巡目～" },
             ] as const
-            const getPaOrderRow = (key: string): { pa: number; ab: number; h: number; hr: number; rbi: number; so: number; bb: number; ibb: number; hbp: number; sh: number; sf: number; avg: string; obp: string; slg: string; ops: string } | null => {
+            const getPaOrderRow = (key: string): { pa: number; ab: number; h: number; hr: number; rbi: number; so: number; bb: number; ibb: number; hbp: number; sh: number; sf: number; avg: string; obp: string; ops: string } | null => {
               const row = effectiveStats.find((r) => r.split_type === "pa_round" && r.split_value === key)
               if (!row || row.pa < 1) return null
               return {
@@ -897,7 +1054,6 @@ export default function SeasonStatsPilot({
                 sf: row.sf,
                 avg: row.avg,
                 obp: row.obp,
-                slg: row.slg,
                 ops: row.ops,
               }
             }
@@ -927,12 +1083,11 @@ export default function SeasonStatsPilot({
                     }}
                   >
                     <colgroup>
-                      <col style={{ width: "72px" }} />
+                      <col style={{ width: "61px" }} />
                       <col style={{ width: "50px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
@@ -945,7 +1100,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -964,7 +1118,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
                           </tr>
@@ -1005,12 +1158,11 @@ export default function SeasonStatsPilot({
                 <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "72px" }} />
+                      <col style={{ width: "61px" }} />
                       <col style={{ width: "50px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
@@ -1023,7 +1175,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -1042,7 +1193,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? row.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row ? String(row.h) : na}</td>
                           </tr>
@@ -1105,7 +1255,6 @@ export default function SeasonStatsPilot({
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                     </colgroup>
@@ -1117,7 +1266,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -1136,7 +1284,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
                           </tr>
@@ -1175,12 +1322,11 @@ export default function SeasonStatsPilot({
                 <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "52px" }} />
+                      <col style={{ width: "36px" }} />
                       <col style={{ width: "50px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
@@ -1193,7 +1339,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -1212,7 +1357,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
                           </tr>
@@ -1228,45 +1372,23 @@ export default function SeasonStatsPilot({
           {/* カウント別の打撃成績（打順別と同デザイン） */}
           {showPilotTab("situation") && (() => {
             const COUNT_ITEMS = [
-              { key: "0-0", label: "0-0" },
-              { key: "1-0", label: "1-0" },
-              { key: "2-0", label: "2-0" },
-              { key: "3-0", label: "3-0" },
-              { key: "0-1", label: "0-1" },
-              { key: "1-1", label: "1-1" },
-              { key: "2-1", label: "2-1" },
-              { key: "3-1", label: "3-1" },
-              { key: "0-2", label: "0-2" },
-              { key: "1-2", label: "1-2" },
-              { key: "2-2", label: "2-2" },
-              { key: "3-2", label: "3-2" },
+              "0-0",
+              "1-0",
+              "2-0",
+              "3-0",
+              "0-1",
+              "1-1",
+              "2-1",
+              "3-1",
+              "0-2",
+              "1-2",
+              "2-2",
+              "3-2",
             ] as const
             const getCountRow = (key: string) => {
               const row = effectiveStats.find((r) => r.split_type === "pitch_count" && r.split_value === key)
               if (!row || row.pa < 1) return null
-              return {
-                g: row.g,
-                pa: row.pa,
-                ab: row.ab,
-                r: row.r,
-                h: row.h,
-                h2: row.h2,
-                h3: row.h3,
-                hr: row.hr,
-                tb: row.tb,
-                rbi: row.rbi,
-                so: row.so,
-                bb: row.bb,
-                ibb: row.ibb,
-                hbp: row.hbp,
-                sh: row.sh,
-                sf: row.sf,
-                sb: row.sb,
-                cs: row.cs,
-                avg: row.avg,
-                obp: row.obp,
-                slg: row.slg,
-              }
+              return row
             }
             const na = "—"
 
@@ -1284,12 +1406,11 @@ export default function SeasonStatsPilot({
                 <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "52px" }} />
+                      <col style={{ width: "54px" }} />
                       <col style={{ width: "50px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
@@ -1297,31 +1418,29 @@ export default function SeasonStatsPilot({
                     <thead>
                       <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
                         <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">条件</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">二塁打</th>
+                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">OPS</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {COUNT_ITEMS.map((item) => {
-                        const row = getCountRow(item.key)
+                      {COUNT_ITEMS.map((key) => {
+                        const row = getCountRow(key)
                         const hasData = row != null && row.pa > 0
                         return (
-                          <tr key={item.key} style={PILOT_TABLE_DATA_ROW}>
+                          <tr key={key} style={PILOT_TABLE_DATA_ROW}>
                             <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
-                              <span>{item.label}</span>
+                              <span>{key}</span>
                             </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h2) : na}</td>
+                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
                           </tr>
@@ -1499,7 +1618,6 @@ export default function SeasonStatsPilot({
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
                       <col style={{ width: "45px" }} />
                       <col style={{ width: "45px" }} />
                     </colgroup>
@@ -1511,7 +1629,6 @@ export default function SeasonStatsPilot({
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                         <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
                       </tr>
@@ -1530,7 +1647,6 @@ export default function SeasonStatsPilot({
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
                             <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
                           </tr>
@@ -1539,172 +1655,6 @@ export default function SeasonStatsPilot({
                     </tbody>
                   </table>
                 </div>
-              </>
-            )
-          })()}
-
-          {/* 月間成績（Phase 17: calendar_month + 3・4月併合） */}
-          {showPilotTab("period") && (() => {
-            const Y = DERIVED_SEASON_YEAR_DEFAULT
-            const mRow = (mm: string) =>
-              effectiveStats.find((r) => r.split_type === "calendar_month" && r.split_value === `${Y}-${mm}`)
-            const marApr = mergeSeasonStatsRows(
-              [mRow("03"), mRow("04")].filter((x): x is SeasonStatsRow => x != null),
-              "calendar_month_display",
-              "mar-apr",
-              "3・4月"
-            )
-            const MONTH_ITEMS: { key: string; label: string; row: SeasonStatsRow | null }[] = [
-              { key: "3・4月", label: "3・4月", row: marApr },
-              { key: "5月", label: "5月", row: mRow("05") ?? null },
-              { key: "6月", label: "6月", row: mRow("06") ?? null },
-              { key: "7月", label: "7月", row: mRow("07") ?? null },
-              { key: "8月", label: "8月", row: mRow("08") ?? null },
-              { key: "9月", label: "9月", row: mRow("09") ?? null },
-              { key: "10月", label: "10月", row: mRow("10") ?? null },
-              { key: "11月", label: "11月", row: mRow("11") ?? null },
-            ]
-            const na = "—"
-
-            return (
-              <>
-                <h2
-                  className={h2Section}
-                  style={{
-                    borderLeft: `6px solid ${headingStripeColor}`,
-                    fontWeight: 900,
-                  }}
-                >
-                  月間成績
-                </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
-                  <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
-                    <colgroup>
-                      <col style={{ width: "56px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">月名</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">OPS</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {MONTH_ITEMS.map((item) => {
-                        const row = item.row
-                        const hasData = row != null && row.pa > 0
-                        return (
-                          <tr key={item.key} style={PILOT_TABLE_DATA_ROW}>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
-                              {item.label}
-                            </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.ops) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? formatSlashStatDisplay(row!.avg) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.hr) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.rbi) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.obp : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? row!.slg : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.ab) : na}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{hasData ? String(row!.h) : na}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )
-          })()}
-
-          {/* 週間成績（Phase 17: calendar_week） */}
-          {showPilotTab("period") && (() => {
-            const na = "—"
-            const weekRows = effectiveStats
-              .filter((r) => r.split_type === "calendar_week" && r.pa > 0)
-              .sort((a, b) => b.split_value.localeCompare(a.split_value))
-            return (
-              <>
-                <h2
-                  className={h2Section}
-                  style={{
-                    borderLeft: `6px solid ${headingStripeColor}`,
-                    fontWeight: 900,
-                  }}
-                >
-                  週間成績
-                </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
-                  <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
-                    <colgroup>
-                      <col style={{ width: "72px" }} />
-                      <col style={{ width: "50px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "51px" }} />
-                      <col style={{ width: "45px" }} />
-                      <col style={{ width: "45px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                        <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">週間</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">OPS</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打点</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">出塁率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">長打率</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                        <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {weekRows.length === 0 ? (
-                        <tr style={PILOT_TABLE_DATA_ROW}>
-                          <td
-                            className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                            style={{ backgroundColor: "#1a1a1a" }}
-                            colSpan={9}
-                          >
-                            {na}
-                          </td>
-                        </tr>
-                      ) : (
-                        weekRows.map((row) => (
-                          <tr key={row.split_value} style={PILOT_TABLE_DATA_ROW}>
-                            <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
-                              {row.split_label}
-                            </td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.ops)}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{formatSlashStatDisplay(row.avg)}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.hr}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.rbi}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.obp}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.slg}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ab}</td>
-                            <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.h}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">週は火曜始まり・日曜終わり。失策は取得対象外のため—</p>
               </>
             )
           })()}

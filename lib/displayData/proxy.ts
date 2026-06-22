@@ -3,7 +3,7 @@ import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
-export type DisplayDataKind = 'rankings' | 'top-leaders'
+export type DisplayDataKind = 'rankings' | 'top-leaders' | 'standings'
 
 const CACHE =
   'public, max-age=300, s-maxage=300, stale-while-revalidate=600'

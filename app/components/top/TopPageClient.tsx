@@ -12,6 +12,8 @@ import { mainTabs, dummyArticles } from "@/app/components/top/topPageConstants"
 import { usesTopBattingModernLayout } from "@/lib/topPageBatting2025Grid"
 import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabContent"
 import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabContent"
+import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
+import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
@@ -93,7 +95,7 @@ export function TopPageClient({
           />
         </div>
       )}
-      {activeMainTab === 2 && <div className="text-white text-center py-8">予想投手（準備中）</div>}
+      {activeMainTab === 2 && <TopPageProbablesTab year={selectedYear} layout={layout} />}
       {activeMainTab === 3 &&
         (articlesMode === "rss" ? (
           <ArticlesListClient />
@@ -118,7 +120,7 @@ export function TopPageClient({
             ))}
           </div>
         ))}
-      {activeMainTab === 4 && <div className="text-white text-center py-8">Quiz（準備中）</div>}
+      {activeMainTab === 4 && <TopPageStandingsTab year={selectedYear} layout={layout} />}
     </>
   )
 

@@ -13,6 +13,7 @@ import {
   teamForYahooPlayerId,
 } from "./pitcherPocHelpers"
 import type { RosterRow } from "./rosterCsv"
+import { teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
 
 function ipToOuts(ip: string | undefined): number {
   if (!ip || typeof ip !== "string") return 0
@@ -55,7 +56,8 @@ function collectStartersFromPitchingLineOrderByTeam(
   substantive.forEach((pl, i) => {
     const yid = (pl.yahooPlayerId ?? "").trim()
     if (!yid) return
-    const tn = teamForYahooPlayerId(doc, yid) || inferPitcherTeamForNf3Line(doc, yid) || ""
+    const raw = teamForYahooPlayerId(doc, yid) || inferPitcherTeamForNf3Line(doc, yid) || ""
+    const tn = teamRankingShortFromGameTeamName(raw)
     if (!tn) return
     const arr = byTeam.get(tn) ?? []
     arr.push({ yid, origIdx: i })
@@ -78,18 +80,29 @@ function collectStartersFromPlateAppearances(doc: CanonicalGameDocument): Map<st
     if (!yid) continue
     const team = inferPitcherTeamFromPlateAppearance(doc, yid, pa)
     if (!team) continue
-    if (!byTeam.has(team)) byTeam.set(team, yid)
+    const key = teamRankingShortFromGameTeamName(team)
+    if (!key) continue
+    if (!byTeam.has(key)) byTeam.set(key, yid)
   }
   return byTeam
 }
 
-export function collectStartersYahooIdsFromStatLines(doc: CanonicalGameDocument): Set<string> {
+export function collectStarterYahooIdByRankingShort(doc: CanonicalGameDocument): Map<string, string> {
   const fromPa = collectStartersFromPlateAppearances(doc)
   const fromLines = collectStartersFromPitchingLineOrderByTeam(doc)
   const merged = new Map<string, string>()
-  for (const [tn, yid] of fromLines) merged.set(tn, yid)
-  for (const [tn, yid] of fromPa) merged.set(tn, yid)
-  return new Set(merged.values())
+  // キーは順位表集計略称（巨人・DeNA 等）で統一済み
+  for (const [tn, yid] of fromLines) {
+    if (tn && yid) merged.set(tn, yid)
+  }
+  for (const [tn, yid] of fromPa) {
+    if (tn && yid && !merged.has(tn)) merged.set(tn, yid)
+  }
+  return merged
+}
+
+export function collectStartersYahooIdsFromStatLines(doc: CanonicalGameDocument): Set<string> {
+  return new Set(collectStarterYahooIdByRankingShort(doc).values())
 }
 
 /** 打席順序キー（大きいほど試合後半）。parsePaId と同じ inning*2+half（表=0,裏=1） */

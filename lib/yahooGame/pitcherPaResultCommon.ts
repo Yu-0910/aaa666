@@ -37,6 +37,12 @@ export function addPitcherPaCount(
   result: string
 ): void {
   agg.bf += 1
+  // 派生元（canonical）の欠損で結果が空の打席がありうる。
+  // BF は増えているため、投手側の AB/AVG を極端に歪めないよう最低限 AB 扱いとする。
+  if (!String(result ?? "").trim()) {
+    agg.ab += 1
+    return
+  }
   if (isWalkLikeResultText(result)) {
     agg.bb += 1
     return

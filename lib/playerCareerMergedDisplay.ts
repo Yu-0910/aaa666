@@ -1,4 +1,5 @@
-import { formatEra, formatStat } from "@/lib/formatStat"
+import { formatPitchingIpDisplay } from "@/lib/careerPitchingEnrich"
+import { formatEra, formatRankingStatDisplay } from "@/lib/formatStat"
 
 export type CareerDisplayRow = Record<string, unknown> & {
   year?: number | string
@@ -155,12 +156,7 @@ function careerMetricFormatLabel(col: CareerColumnDef): string {
   return CAREER_FORMAT_LABEL[col.label] ?? col.label
 }
 
-/** ランキングと同じルールで表示（欠損は em dash） */
-function formatRankingStat(metricLabel: string, value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—"
-  const s = formatStat(metricLabel, value)
-  return s === "-" ? "—" : s
-}
+const formatRankingStat = formatRankingStatDisplay
 
 export function formatCareerCell(col: CareerColumnDef, row: CareerDisplayRow): string {
   if (col.key === "singles") {
@@ -170,8 +166,7 @@ export function formatCareerCell(col: CareerColumnDef, row: CareerDisplayRow): s
   }
 
   if (col.kind === "ip") {
-    const s = String(row[col.key] ?? "").trim()
-    return s || "—"
+    return formatPitchingIpDisplay(row[col.key])
   }
 
   if (col.key === "era" || col.label === "防御率") {

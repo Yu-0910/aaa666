@@ -14,12 +14,34 @@ import type { BattingLine, CanonicalGameDocument, PlateAppearance, RunnerEvent }
 import { dedupePlateAppearancesByInningHalfOrder } from "./dedupePlateAppearances"
 import { isAppearancePrimaryZipEnabled } from "./appearancePrimaryFeatureFlag"
 import { isBattingSeasonAggFromAppearanceSlots } from "./battingSeasonAggSourceFeatureFlag"
-import { isPlateResultAppearanceOnly } from "./plateResultSourceFeatureFlag"
+import {
+  isPlateResultAppearanceOnly,
+  isPlateResultPitchPbp,
+  isPlateResultTextPbp,
+} from "./plateResultSourceFeatureFlag"
+import {
+  buildPaIdToSportsnaviPlayLineMap,
+  inferResultSummaryJaFromSportsnaviPlayLineText,
+  inferStrictResultJaFromSportsnaviPlayLineForVsHand,
+} from "./supplementPlateAppearancesFromTextPlayByPlay"
 import {
   buildAppearanceZipResultOverrides,
   extractAppearanceStatSlotsFromCells,
 } from "./appearanceStatsTrailingCells"
-import { applyPlayResult, classifySituationAtPaStart, emptyGameState } from "./paSituationSim"
+import {
+  applyPlayResult,
+  classifySituationAtPaStart,
+  emptyGameState,
+  rbiCreditFromPlayResult,
+  type Bases,
+} from "./paSituationSim"
+import {
+  buildScoreBasesContextByPaId,
+  rbiCreditForPlateAppearance,
+  type ScoreBasesContext,
+} from "./basesFromSportsnaviScoreSnapshot"
+import { basesBeforeForPlateAppearanceHybrid } from "./basesFromSportsnaviPlayLine"
+import { loadSportsnaviScoreSnapshots } from "./sportsnaviScoreSnapshotIO"
 import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import { hitBases, isAtBat } from "./resultJaHitBases"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../battingRateFormat"
@@ -32,7 +54,7 @@ function lastTerminalPitchResultJa(pitchEvents: PlateAppearance["pitchEvents"]):
   const pe = pitchEvents ?? []
   // ファール等で「フライ」部分が誤マッチしないよう除外
   const terminalRe =
-    /三振|四球|敬遠|故意四球|申告敬遠|死球|犠打|捕犠|送りバント|犠飛|犠牲フライ|犠牲飛|本塁打|ホームラン|HR|左中本|右中本|左本|右本|中本|二塁打|三塁打|左２|中２|右２|左３|中３|右３|安打|ヒット|内野安打|内安|[一二三遊左中右投捕]安|ポテンヒット|タイムリー|適時打|左飛|中飛|右飛|遊飛|投飛|捕飛|二飛|三飛|[一二三四五六七八九]飛|ライナー|ゴロ|併殺|併打|ダブルプレー|ゲッツー|失策|エラー|野選|打者妨|フォアボール|ボールフォー/
+    /三振|四球|敬遠|故意四球|申告敬遠|死球|犠打|捕犠|送りバント|犠飛|犠牲フライ|犠牲飛|本塁打|ホームラン|HR|左中本|右中本|左本|右本|中本|二塁打|三塁打|左２|中２|右２|左３|中３|右３|安打|ヒット|内野安打|内安|[一二三遊左中右投捕]安|ポテンヒット|タイムリー|適時打|左飛|中飛|右飛|遊飛|投飛|捕飛|二飛|三飛|邪飛|[一二三四五六七八九]飛|[一二三遊左中右投捕]直|[一二三遊左中右投捕]失|ライナー|ゴロ|併殺|併打|ダブルプレー|ゲッツー|失策|エラー|野選|打者妨|フォアボール|ボールフォー/
   for (let i = pe.length - 1; i >= 0; i--) {
     const r = String(pe[i]?.resultJa ?? "").trim()
     if (!r) continue
@@ -40,6 +62,11 @@ function lastTerminalPitchResultJa(pitchEvents: PlateAppearance["pitchEvents"]):
     if (terminalRe.test(r)) return r
   }
   return ""
+}
+
+/** 一球速報のみ: `pitchEvents` を末尾から走査し決着球の `resultJa` を返す（要約・出場成績は使わない） */
+export function plateAppearanceResultTextFromPitchOnly(pa: PlateAppearance): string {
+  return lastTerminalPitchResultJa(pa.pitchEvents ?? [])
 }
 
 /** Phase スクリプト・対左右集計と共有（resultSummaryJa 優先、次に一球確定 resultJa、最後に最終球 resultJa） */
@@ -54,6 +81,16 @@ export function plateAppearanceLastResultText(pa: PlateAppearance): string {
 }
 
 const appearanceZipOverridesByDoc = new WeakMap<CanonicalGameDocument, Map<string, string>>()
+const textPlayLineByPaIdByDoc = new WeakMap<CanonicalGameDocument, Map<string, string>>()
+
+function textPlayLineMapForDoc(doc: CanonicalGameDocument): Map<string, string> {
+  let m = textPlayLineByPaIdByDoc.get(doc)
+  if (!m) {
+    m = buildPaIdToSportsnaviPlayLineMap(doc)
+    textPlayLineByPaIdByDoc.set(doc, m)
+  }
+  return m
+}
 
 /**
  * 打席ごとの「集計用の確定結果テキスト」。
@@ -62,9 +99,20 @@ const appearanceZipOverridesByDoc = new WeakMap<CanonicalGameDocument, Map<strin
  *   `TOPPAGE_APPEARANCE_PRIMARY` が有効なときだけ、出場末尾列由来の zip に載った文言のみを返す。
  *   載らない打席は **空文字**（`resultSummaryJa`・一球 `resultJa` にはフォールバックしない）。
  * - **`TOPPAGE_PLATE_RESULT_SOURCE=hybrid`**: 従来どおり zip が取れなければ `plateAppearanceLastResultText`（要約→一球）。
+ * - **`TOPPAGE_PLATE_RESULT_SOURCE=text_pbp`**: テキスト速報実況行のみ（パース不能は空文字）。
+ * - **`TOPPAGE_PLATE_RESULT_SOURCE=pitch_pbp`**: 一球速報の決着 `resultJa` のみ。
  * - **`TOPPAGE_APPEARANCE_PRIMARY=0`**: zip を使わず常に `plateAppearanceLastResultText`（緊急ロールバック）。
  */
 export function plateAppearanceResolvedResultText(doc: CanonicalGameDocument, pa: PlateAppearance): string {
+  if (isPlateResultPitchPbp()) {
+    return plateAppearanceResultTextFromPitchOnly(pa)
+  }
+
+  if (isPlateResultTextPbp()) {
+    const line = textPlayLineMapForDoc(doc).get(String(pa.paId ?? "").trim()) ?? ""
+    return inferResultSummaryJaFromSportsnaviPlayLineText(line) ?? ""
+  }
+
   if (!isAppearancePrimaryZipEnabled()) return plateAppearanceLastResultText(pa)
 
   const pid = String(pa.paId ?? "").trim()
@@ -78,6 +126,33 @@ export function plateAppearanceResolvedResultText(doc: CanonicalGameDocument, pa
 
   if (isPlateResultAppearanceOnly()) return ""
   return plateAppearanceLastResultText(pa)
+}
+
+/**
+ * 対左右別（vs_hand）集計専用の打席結果テキスト。
+ *
+ * Phase 11 通算は `plateAppearanceResolvedResultText`（appearance_only 厳格）のまま。
+ * vs_hand だけ、zip に載らない打席を R/L へ振り分けるため段階的にフォールバックする。
+ *
+ * 優先順: 出場成績 zip → `resultSummaryJa`（実況補完済み）→ テキスト実況行
+ * （要約／一球は使わない。幽霊 PA に結果だけ載ると R/L が膨らみ通算を上回るため）
+ */
+export function plateAppearanceResultTextForVsHand(
+  doc: CanonicalGameDocument,
+  pa: PlateAppearance,
+): string {
+  const fromZip = plateAppearanceResolvedResultText(doc, pa).trim()
+  if (fromZip) return fromZip
+
+  const fromSummary = String(pa.resultSummaryJa ?? "").trim()
+  if (fromSummary) return fromSummary
+
+  const pid = String(pa.paId ?? "").trim()
+  const line = textPlayLineMapForDoc(doc).get(pid) ?? ""
+  const fromText = inferStrictResultJaFromSportsnaviPlayLineForVsHand(line)
+  if (fromText) return fromText
+
+  return ""
 }
 
 function lastPitchResult(doc: CanonicalGameDocument, pa: PlateAppearance): string {
@@ -411,19 +486,55 @@ function sortPasForSituationSim(pas: PlateAppearance[]): PlateAppearance[] {
   })
 }
 
+function scoreBasesContextByPaIdForGame(
+  gameId: string,
+  pas: PlateAppearance[],
+  projectRoot?: string,
+): Map<string, ScoreBasesContext> | null {
+  const root = (projectRoot ?? process.cwd()).trim()
+  if (!root || !gameId) return null
+  const snapshots = loadSportsnaviScoreSnapshots(root, gameId)
+  if (snapshots.length === 0) return null
+  return buildScoreBasesContextByPaId(
+    pas.map((p) => p.paId),
+    snapshots,
+  )
+}
+
+function rispFlagForPlateAppearance(
+  pa: PlateAppearance,
+  paStartBases: Bases,
+  scoreCtxByPaId: Map<string, ScoreBasesContext> | null,
+  playLine?: string,
+): boolean {
+  const pid = String(pa.paId ?? "").trim()
+  const scoreCtx = pid ? scoreCtxByPaId?.get(pid) : null
+  const atResult = scoreCtx?.resultBallClass ?? null
+  if (atResult) return classifySituationAtPaStart(atResult).risp
+
+  const hybridBases = basesBeforeForPlateAppearanceHybrid(pa, playLine, scoreCtx)
+  if (hybridBases) return classifySituationAtPaStart(hybridBases).risp
+
+  return classifySituationAtPaStart(paStartBases).risp
+}
+
 /**
- * RISP（得点圏）を Yahoo 一球由来の打席一覧から集計する。
- * - 走者状況は、同一イニング内の打席結果を簡易シミュレーションして「打席開始時」を推定する。
- * - ここでの RISP は「打席開始時に 2塁または 3塁に走者がいる」定義。
+ * RISP（得点圏）を打席一覧から集計する。
+ * - 一球速報 score の打撃確定スナップ `resultBallClass` が取れるときは「結果球時点に 2塁または 3塁に走者がいる」定義（スポナビ準拠）。
+ * - 取れないときは半回内の打席結果を簡易シミュレーションした打席開始塁にフォールバックする。
  */
-function updateRispFromPasInGame(
+export function updateRispFromPasInGame(
   byBatter: Map<string, BattingSeasonAggYahoo>,
   gameId: string,
   doc: CanonicalGameDocument,
   pas: PlateAppearance[] | undefined,
+  projectRoot?: string,
 ): void {
   const sorted = sortPasForSituationSim(pas ?? [])
   if (sorted.length === 0) return
+
+  const scoreCtxByPaId = scoreBasesContextByPaIdForGame(gameId, sorted, projectRoot)
+  const playMap = buildPaIdToSportsnaviPlayLineMap(doc)
 
   let curHalf = ""
   let state = emptyGameState()
@@ -436,7 +547,7 @@ function updateRispFromPasInGame(
 
     const bid = String(pa.yahooBatterId ?? "").trim()
     const result = lastPitchResult(doc, pa)
-    const { risp } = classifySituationAtPaStart(state.b)
+    const risp = rispFlagForPlateAppearance(pa, state.b, scoreCtxByPaId, playMap.get(pa.paId))
 
     if (bid && risp && isAtBat(result)) {
       const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
@@ -479,11 +590,21 @@ export function updateBattingAggFromPa(
   gameId: string,
   pa: PlateAppearance,
   doc?: CanonicalGameDocument,
+  basesBefore?: Bases,
+  scoreCtx?: ScoreBasesContext | null,
 ): void {
   agg.gameIds.add(gameId)
   agg.pa += 1
   const result = doc ? lastPitchResult(doc, pa) : plateAppearanceLastResultText(pa)
   updateBattingAggFromResultJa(agg, result)
+  if (basesBefore) {
+    agg.rbi += rbiCreditForPlateAppearance(
+      scoreCtx,
+      basesBefore,
+      result,
+      rbiCreditFromPlayResult,
+    )
+  }
 }
 
 function appearanceSlotsForBatterInDoc(doc: CanonicalGameDocument, yahooId: string): string[] {
@@ -541,9 +662,28 @@ export function csCountForBatterFromRunnerEvents(
   return count
 }
 
+function battingLineHasSupplementStats(line: BattingLine | null | undefined): boolean {
+  if (!line) return false
+  return (line.r ?? 0) > 0 || (line.rbi ?? 0) > 0 || (line.sb ?? 0) > 0 || (line.e ?? 0) > 0
+}
+
+function applyBattingLineSupplementStats(
+  agg: BattingSeasonAggYahoo,
+  gameId: string,
+  line: BattingLine | null | undefined,
+): void {
+  if (!battingLineHasSupplementStats(line)) return
+  agg.gameIds.add(gameId)
+  agg.r += line!.r ?? 0
+  agg.rbi += line!.rbi ?? 0
+  agg.sb += line!.sb ?? 0
+  agg.e += line!.e ?? 0
+}
+
 /**
  * 1 試合×1 打者: 出場成績末尾列の非空セルごとに 1 打席として `updateBattingAggFromResultJa`。
  * 得点・打点・盗塁は出場表の数値列があれば補完。盗塁死は `runnerEvents`（一球 score 由来優先）。
+ * 代走のみ（末尾列が空・battingLines.sb あり）でも得点表の盗塁等を反映する。
  */
 export function updateBattingAggFromAppearanceSlotsInGame(
   agg: BattingSeasonAggYahoo,
@@ -554,6 +694,9 @@ export function updateBattingAggFromAppearanceSlotsInGame(
 ): void {
   const slots = appearanceSlotsForBatterInDoc(doc, yahooBatterId)
   const exCs = csCountForBatterFromRunnerEvents(doc, yahooBatterId)
+  const line =
+    lineForSupplement ??
+    (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === yahooBatterId)
   let hadSlot = false
   for (const raw of slots) {
     const t = String(raw ?? "").trim()
@@ -562,19 +705,10 @@ export function updateBattingAggFromAppearanceSlotsInGame(
     agg.pa += 1
     updateBattingAggFromResultJa(agg, t)
   }
-  if (!hadSlot && exCs === 0) return
   if (hadSlot) {
     agg.gameIds.add(gameId)
-    const line =
-      lineForSupplement ??
-      (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === yahooBatterId)
-    if (line) {
-      agg.r += line.r ?? 0
-      agg.rbi += line.rbi ?? 0
-      agg.sb += line.sb ?? 0
-      agg.e += line.e ?? 0
-    }
   }
+  applyBattingLineSupplementStats(agg, gameId, line)
   if (exCs > 0) {
     agg.cs += exCs
     agg.gameIds.add(gameId)
@@ -609,12 +743,19 @@ export function aggregateBattingSeasonByYahooBatterFromAppearanceSlots(
     for (const bid of bids) {
       const slots = appearanceSlotsForBatterInDoc(doc, bid)
       const exCs = csCountForBatterFromRunnerEvents(doc, bid)
-      if (!slots.some((s) => String(s ?? "").trim() !== "") && exCs === 0) continue
-      const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
       const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
+      const hasSlots = slots.some((s) => String(s ?? "").trim() !== "")
+      if (!hasSlots && exCs === 0 && !battingLineHasSupplementStats(line)) continue
+      const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
       updateBattingAggFromAppearanceSlotsInGame(agg, gameId, doc, bid, line)
       byBatter.set(bid, agg)
     }
+
+    const pasForRisp = dedupePlateAppearancesByInningHalfOrder(
+      doc.domain?.plateAppearances ?? [],
+      gameId,
+    )
+    updateRispFromPasInGame(byBatter, gameId, doc, pasForRisp)
   }
   return byBatter
 }
@@ -646,6 +787,41 @@ export function shouldAggregateBattingFromPaOnlyForBatterInGame(
 ): boolean {
   const bid = String(yahooBatterId ?? "").trim()
   if (!bid) return false
+  if (!hasTrustworthyPlateAppearancesForBatterInGame(doc, bid)) return false
+
+  const lines = (doc.domain?.battingLines ?? []).filter(
+    (l) => String(l.yahooPlayerId ?? "").trim() === bid,
+  )
+  const gameId = doc.gameId
+  const allPas = doc.domain?.plateAppearances ?? []
+  const deduped = dedupePlateAppearancesByInningHalfOrder(allPas, gameId)
+  const myPas = deduped.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
+
+  let lineAb = 0
+  let lineH = 0
+  for (const line of lines) {
+    lineAb += line.ab ?? 0
+    lineH += line.h ?? 0
+  }
+
+  const tmp = emptyBattingSeasonAggYahoo()
+  const gid = String(gameId ?? "")
+  for (const pa of myPas) {
+    updateBattingAggFromPa(tmp, gid, pa, doc)
+  }
+
+  if (Math.abs(tmp.ab - lineAb) > 1) return false
+  if (Math.abs(tmp.h - lineH) > 1) return false
+  return true
+}
+
+/** 打席ログが集計に使える品質か（行との差分チェックは含まない） */
+export function hasTrustworthyPlateAppearancesForBatterInGame(
+  doc: CanonicalGameDocument,
+  yahooBatterId: string,
+): boolean {
+  const bid = String(yahooBatterId ?? "").trim()
+  if (!bid) return false
 
   const lines = (doc.domain?.battingLines ?? []).filter(
     (l) => String(l.yahooPlayerId ?? "").trim() === bid,
@@ -663,22 +839,6 @@ export function shouldAggregateBattingFromPaOnlyForBatterInGame(
     const peCount = Array.isArray(pa.pitchEvents) ? pa.pitchEvents.length : 0
     if (!hasSummary && peCount < 1) return false
   }
-
-  let lineAb = 0
-  let lineH = 0
-  for (const line of lines) {
-    lineAb += line.ab ?? 0
-    lineH += line.h ?? 0
-  }
-
-  const tmp = emptyBattingSeasonAggYahoo()
-  const gid = String(gameId ?? "")
-  for (const pa of myPas) {
-    updateBattingAggFromPa(tmp, gid, pa, doc)
-  }
-
-  if (Math.abs(tmp.ab - lineAb) > 1) return false
-  if (Math.abs(tmp.h - lineH) > 1) return false
   return true
 }
 
@@ -982,28 +1142,18 @@ export function mergeBattingSeasonAggYahoo(
 }
 
 /**
- * Phase11 / Phase12 と同一 SSOT の 1 試合×1 打者集計（Phase13 対チーム・球場・ホーム/ビジター用）。
- * `computeBattingTargetForGameAndBatter` と同じ分岐（appearance_slots / hybrid / PA-only）。
+ * 1 試合×1 打者: 出場成績行（H/AB 等）優先のハイブリッド集計。
+ * チーム順位表は公式チーム打撃（出場成績合算）に合わせるため常にこちらを使う。
  */
-export function aggregateBattingForBatterInGameForProfiles(
+export function aggregateBattingForBatterInGameHybrid(
   doc: CanonicalGameDocument,
   yahooBatterId: string,
+  options?: { projectRoot?: string; skipRisp?: boolean; /** 順位表: 公式は出場成績行合算のため PA 上書きをしない */ preferBattingLines?: boolean; /** 行があっても PA 経路で H/AB 等を積む */ forcePaAggregation?: boolean },
 ): BattingSeasonAggYahoo | null {
   const bid = String(yahooBatterId ?? "").trim()
   if (!bid) return null
   const gameId = String(doc.gameId ?? "").trim()
   if (!gameId) return null
-
-  if (isBattingSeasonAggFromAppearanceSlots()) {
-    const slots = appearanceSlotsForBatterInDoc(doc, bid)
-    const exCs = csCountForBatterFromRunnerEvents(doc, bid)
-    if (!slots.some((s) => String(s ?? "").trim() !== "") && exCs === 0) return null
-
-    const tmp = emptyBattingSeasonAggYahoo()
-    const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
-    updateBattingAggFromAppearanceSlotsInGame(tmp, gameId, doc, bid, line ?? null)
-    return tmp.pa > 0 || tmp.ab > 0 || tmp.h > 0 || tmp.hr > 0 || tmp.bb > 0 ? tmp : null
-  }
 
   const lines = (doc.domain?.battingLines ?? []).filter(
     (l) => String(l.yahooPlayerId ?? "").trim() === bid,
@@ -1028,9 +1178,15 @@ export function aggregateBattingForBatterInGameForProfiles(
     gidpByBatterFromBatterEvents,
   }
 
-  const usePaOnly = lines.length > 0 && shouldAggregateBattingFromPaOnlyForBatterInGame(doc, bid)
+  const usePaOnly =
+    !options?.preferBattingLines &&
+    lines.length > 0 &&
+    shouldAggregateBattingFromPaOnlyForBatterInGame(doc, bid)
+  const usePaPath =
+    myPas.length > 0 &&
+    (options?.forcePaAggregation || lines.length === 0 || usePaOnly)
 
-  if (lines.length > 0 && !usePaOnly) {
+  if (lines.length > 0 && !usePaPath) {
     for (const line of lines) {
       applyHybridBattingLineToAgg(tmp, doc, gameId, line, pre)
     }
@@ -1038,7 +1194,7 @@ export function aggregateBattingForBatterInGameForProfiles(
     for (const pa of myPas) {
       updateBattingAggFromPa(tmp, gameId, pa, doc)
     }
-    if (usePaOnly) {
+    if (usePaOnly || (options?.forcePaAggregation && lines.length > 0)) {
       for (const line of lines) {
         tmp.r += line.r ?? 0
         tmp.rbi += line.rbi ?? 0
@@ -1057,9 +1213,54 @@ export function aggregateBattingForBatterInGameForProfiles(
 
   if (tmp.pa === 0 && tmp.ab === 0 && tmp.h === 0 && tmp.hr === 0 && tmp.bb === 0) return null
 
-  const byBatter = new Map<string, BattingSeasonAggYahoo>([[bid, tmp]])
-  updateRispFromPasInGame(byBatter, gameId, doc, pasForHybrid)
-  return byBatter.get(bid) ?? tmp
+  if (!options?.skipRisp) {
+    const byBatter = new Map<string, BattingSeasonAggYahoo>([[bid, tmp]])
+    updateRispFromPasInGame(byBatter, gameId, doc, pasForHybrid, options?.projectRoot)
+    return byBatter.get(bid) ?? tmp
+  }
+
+  return tmp
+}
+
+/**
+ * チーム順位表: 出場成績行（battingLines）合算。PA 上書きは行わない。
+ */
+export function aggregateBattingForBatterInGameForStandings(
+  doc: CanonicalGameDocument,
+  yahooBatterId: string,
+  options?: { projectRoot?: string; skipRisp?: boolean },
+): BattingSeasonAggYahoo | null {
+  return aggregateBattingForBatterInGameHybrid(doc, yahooBatterId, {
+    ...options,
+    preferBattingLines: true,
+  })
+}
+
+/**
+ * Phase11 / Phase12 と同一 SSOT の 1 試合×1 打者集計（Phase13 対チーム・球場・ホーム/ビジター用）。
+ * `computeBattingTargetForGameAndBatter` と同じ分岐（appearance_slots / hybrid / PA-only）。
+ */
+export function aggregateBattingForBatterInGameForProfiles(
+  doc: CanonicalGameDocument,
+  yahooBatterId: string,
+): BattingSeasonAggYahoo | null {
+  const bid = String(yahooBatterId ?? "").trim()
+  if (!bid) return null
+  const gameId = String(doc.gameId ?? "").trim()
+  if (!gameId) return null
+
+  if (isBattingSeasonAggFromAppearanceSlots()) {
+    const slots = appearanceSlotsForBatterInDoc(doc, bid)
+    const exCs = csCountForBatterFromRunnerEvents(doc, bid)
+    if (!slots.some((s) => String(s ?? "").trim() !== "") && exCs === 0) return null
+
+    const tmp = emptyBattingSeasonAggYahoo()
+    const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
+    updateBattingAggFromAppearanceSlotsInGame(tmp, gameId, doc, bid, line ?? null)
+    return tmp.pa > 0 || tmp.ab > 0 || tmp.h > 0 || tmp.hr > 0 || tmp.bb > 0 ? tmp : null
+  }
+
+  return aggregateBattingForBatterInGameHybrid(doc, bid)
 }
 
 /**

@@ -3,14 +3,17 @@ export const revalidate = 0
 
 /**
  * 動的ルート: /ranking/pitching/[year]/[league]
- * 完成品は year=2026 のみ（それ以外は notFound）。
  */
 
 import { Suspense } from 'react'
+import {
+  TOP_PAGE_MODERN_LAYOUT_MAX_YEAR,
+  TOP_PAGE_MODERN_LAYOUT_MIN_YEAR,
+} from '@/lib/topPageModernLayout'
 import { notFound } from 'next/navigation'
 import { FullPageLoading } from '@/components/ui/spinner'
 import PitchingRankingPageClient from './PitchingRankingPageClient'
-import { loadMetricsFromRecordPitching } from '@/lib/ranking/recordPitching'
+import { loadMetricsFromRecordPitchingForYear } from '@/lib/ranking/recordPitching'
 import type { RankingViewModel } from '@/lib/ranking/types'
 
 interface PitchingRankingPageProps {
@@ -31,7 +34,12 @@ export default async function PitchingRankingPage({ params }: PitchingRankingPag
     notFound()
   }
 
-  if (year !== '2026') {
+  const yearNum = Number(year)
+  if (
+    !Number.isFinite(yearNum) ||
+    yearNum < TOP_PAGE_MODERN_LAYOUT_MIN_YEAR ||
+    yearNum > TOP_PAGE_MODERN_LAYOUT_MAX_YEAR
+  ) {
     notFound()
   }
 
@@ -44,7 +52,7 @@ export default async function PitchingRankingPage({ params }: PitchingRankingPag
     seasonRaw.toUpperCase() === 'CL' ? 'CL' : seasonRaw.toUpperCase() === 'PL' ? 'PL' : seasonRaw
 
   try {
-    const metrics = loadMetricsFromRecordPitching()
+    const metrics = loadMetricsFromRecordPitchingForYear(yearNum)
 
     if (metrics.length === 0) {
       return (

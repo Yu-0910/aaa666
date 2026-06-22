@@ -17,6 +17,8 @@ import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
   PITCHING_TOP_2026_MINI_METRICS,
+  normalizePitchingLeadersConfigFor2026,
+  pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
 import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
@@ -127,9 +129,16 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const teamRaw = String(row.team ?? "").trim()
   const teamCode = getTeamCode(teamRaw)
   const romanRaw = String(row.romanName ?? "").trim()
-  const rank = Math.min(5, Math.max(1, displayRank)) as LeaderRow["rank"]
+  const rank = Math.min(
+    pitchingTop2026SeasonTopN(metricLabel) ?? 5,
+    Math.max(1, displayRank)
+  ) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
-  const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
+  const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
+  const npbPlayerId =
+    explicitNpb ||
+    (/^\d{6,}$/.test(yahooPlayerId) ? yahooPlayerId : undefined) ||
+    (yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined)
 
   return {
     rank,
@@ -168,8 +177,7 @@ function extractTopPitchingLeadersFromRows(
 }
 
 function topNForPitchingMetric(metricLabel: string): number {
-  if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 5
-  return 1
+  return pitchingTop2026SeasonTopN(metricLabel) ?? 1
 }
 
 function buildPitchingLeadersFromMetricRows(
@@ -191,11 +199,11 @@ function buildPitchingLeadersFromMetricRows(
 
   if (Object.keys(leaders).length === 0) return null
 
-  return {
+  return normalizePitchingLeadersConfigFor2026({
     top3Metrics: [...PITCHING_TOP_2026_GRID_METRICS],
     miniMetrics: [...PITCHING_TOP_2026_MINI_METRICS],
     leaders,
-  }
+  })
 }
 
 export function buildPitchingLeadersConfigFromRankings(
@@ -248,7 +256,10 @@ export function getPitchingLeaders(year: string, league: string): LeadersConfig 
   if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
     const fromSnapshot = readTopLeadersSnapshot(year, upperLeague, "pitching")
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
-      return fromSnapshot
+      const fromRankings = hasPitchingRankingsJsonForLeague(year, upperLeague)
+        ? buildPitchingLeadersConfigFromRankings(year, upperLeague)
+        : null
+      return normalizePitchingLeadersConfigFor2026(fromSnapshot, fromRankings)
     }
   }
 
@@ -274,7 +285,8 @@ export async function getPitchingLeadersAsync(
   if (year === TOP_LEADERS_SNAPSHOT_YEAR) {
     const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, "pitching")
     if (fromSnapshot && Object.keys(fromSnapshot.leaders).length > 0) {
-      return fromSnapshot
+      const fromRankings = await buildPitchingLeadersConfigFromRankingsAsync(year, upperLeague)
+      return normalizePitchingLeadersConfigFor2026(fromSnapshot, fromRankings)
     }
   }
 

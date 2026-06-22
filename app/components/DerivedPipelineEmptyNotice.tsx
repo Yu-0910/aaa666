@@ -7,11 +7,16 @@ export default function DerivedPipelineEmptyNotice({
   variant,
   show,
 }: {
-  variant: "pitcher" | "fielder"
+  variant: "pitcher" | "fielder" | "catcher"
   show: boolean
 }) {
   if (!show) return null
-  const role = variant === "pitcher" ? "投手" : "野手"
+  const role =
+    variant === "pitcher" ? "投手" : variant === "catcher" ? "捕手" : "野手"
+  const catcherNote =
+    variant === "catcher"
+      ? "今季の試合データに捕手出場がまだ含まれていないか、派生 JSON が未生成です。"
+      : null
   return (
     <div
       className="mb-4 max-w-3xl rounded border border-amber-600/50 bg-amber-950/35 px-3 py-2.5 text-[11px] leading-relaxed text-amber-100/95"
@@ -19,6 +24,7 @@ export default function DerivedPipelineEmptyNotice({
       aria-live="polite"
     >
       <p className="font-bold text-amber-200">今季の計算済みデータがまだありません（{role}）</p>
+      {catcherNote ? <p className="mt-1 text-[10px] text-amber-100/85">{catcherNote}</p> : null}
       <p className="mt-1.5 text-[10px] text-amber-100/85">
         <code className="rounded bg-black/35 px-1 py-0.5 text-[9px]">_data/scraped_games/canonical</code>{" "}
         に試合成績が入り、
@@ -30,14 +36,5 @@ export default function DerivedPipelineEmptyNotice({
         <code className="rounded bg-black/35 px-1 py-0.5 text-[9px]">docs/plan_full_pipeline_from_games_to_pages_and_rankings.md</code>
       </p>
     </div>
-  )
-}
-
-/** 野手ブロック上部の常時注記（データがある場合も pipeline 依存であることを示す） */
-export function DerivedPipelineFielderHint() {
-  return (
-    <p className="mb-3 max-w-3xl text-[10px] leading-snug text-gray-500">
-      ※今季の各表は canonical 派生（計画書 Phase 3）の生成状況により「—」になることがあります。
-    </p>
   )
 }

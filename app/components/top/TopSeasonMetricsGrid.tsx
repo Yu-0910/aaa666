@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS } from "@/lib/topPageBatting2025Grid"
-import { topLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
+import { BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS, battingTop2025SeasonTopN, topLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
+import { pitchingTop2026SeasonTopN } from "@/lib/topPagePitching2026Grid"
 
 type LeaderRowRenderProps = {
   leader: Record<string, unknown>
@@ -64,6 +64,7 @@ function MetricPanel({
   metricKey,
   metricTitle,
   leaders,
+  topN,
   getRankingUrl,
   getStatsListUrl,
   onStatsListNavigate,
@@ -73,6 +74,7 @@ function MetricPanel({
   metricKey: string
   metricTitle: string
   leaders: Record<string, unknown[] | undefined>
+  topN?: number | null
   getRankingUrl: (metric: string) => string
   getStatsListUrl: () => string
   onStatsListNavigate?: (url: string) => void
@@ -81,6 +83,7 @@ function MetricPanel({
 }) {
   const rows = leaders[metricKey]
   if (!rows?.length) return null
+  const displayRows = topN != null ? rows.slice(0, topN) : rows
 
   const statsListClass = `relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
   const panelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
@@ -97,10 +100,10 @@ function MetricPanel({
         <StatsListControl href={getStatsListUrl()} onNavigate={onStatsListNavigate} className={statsListClass} />
       </div>
       <div className="min-w-0 space-y-0 overflow-hidden">
-        {rows.map((leader, leaderIndex) =>
+        {displayRows.map((leader, leaderIndex) =>
           renderLeaderRow({
             leader: leader as Record<string, unknown>,
-            stat: metricTitle,
+            stat: metricKey,
             index: leaderIndex,
           })
         )}
@@ -124,6 +127,10 @@ export function TopSeasonMetricsGrid({
   renderLeaderRow,
 }: TopSeasonMetricsGridProps) {
   const typography = topLeaderRowTypography(year, statsCategory, isWeeklyTab)
+  const topNForMetric =
+    statsCategory === "pitching"
+      ? (metric: string) => pitchingTop2026SeasonTopN(metric)
+      : (metric: string) => battingTop2025SeasonTopN(metric, String(year))
   const flatMetrics = metricRows.flat()
   const hasAny = flatMetrics.some((m) => (leaders[m]?.length ?? 0) > 0)
   if (!hasAny) return null
@@ -141,6 +148,7 @@ export function TopSeasonMetricsGrid({
                 metricKey={metricKey}
                 metricTitle={title}
                 leaders={leaders}
+                topN={topNForMetric(metricKey)}
                 getRankingUrl={getRankingUrl}
                 getStatsListUrl={getStatsListUrl}
                 onStatsListNavigate={onStatsListNavigate}

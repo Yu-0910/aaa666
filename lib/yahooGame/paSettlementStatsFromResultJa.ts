@@ -8,6 +8,7 @@ import {
   isSettlementPitchResultJa,
   isStrikeoutResultJa,
 } from "./paOutcomeResultJa"
+import { isAtBat } from "./resultJaHitBases"
 
 export { isWalkLikeResultText }
 
@@ -83,6 +84,7 @@ export function isSfResultJa(r: string | null | undefined): boolean {
 
 export type PaOutcomeStatsRow = {
   settlement: boolean
+  atBat: boolean
   strikeout: boolean
   walk: boolean
   hbp: boolean
@@ -96,14 +98,17 @@ export type PaOutcomeStatsRow = {
 export function paOutcomeStatsFromResultJa(
   r: string | null | undefined
 ): PaOutcomeStatsRow {
+  const text = (r ?? "").trim()
+  const tb = getTotalBasesFromResultJa(r)
   return {
     settlement: isSettlementPitchResultJa(r),
+    atBat: isAtBat(text),
     strikeout: isStrikeoutResultJa(r),
-    walk: isWalkLikeResultText(r ?? ""),
+    walk: isWalkLikeResultText(text),
     hbp: isHbpResultJa(r),
     sf: isSfResultJa(r),
     hit: isHitResultJa(r),
-    totalBases: getTotalBasesFromResultJa(r),
-    homeRun: isHomeRunFromResultJa(r),
+    totalBases: tb,
+    homeRun: tb === 4,
   }
 }

@@ -12,7 +12,14 @@ import {
 import type { CanonicalGameDocument, PlateAppearance } from '@/lib/yahooGame/types'
 import { plateAppearanceResolvedResultText } from '@/lib/yahooGame/canonicalBattingSeasonAgg'
 import { pickResultSummaryJaFromPitchEvents } from '@/lib/yahooGame/mergePhase10FromPitchRows'
-import { bucketPitchResultForTypeRow } from '@/lib/yahooGame/pitchCountSim'
+import {
+  aggregatePitchTypeRateCounts,
+  formatStrikePct,
+  formatWhiffPct,
+  formatWhiffPctPerPitch,
+  strikeCountFromRateCounts,
+  swingCountFromRateCounts,
+} from '@/lib/yahooGame/pitchTypeRateStats'
 import {
   isHbpResultJa,
   isSfResultJa,
@@ -188,7 +195,16 @@ export type PitchTypeStats = {
 }
 
 /** 投球詳細から球種別成績を集計 */
-export function aggregateByPitchType(plateAppearances: PlateAppearancePitches[]): PitchTypeStats[] {
+export type AggregateByPitchTypeOptions = {
+  /** Whiff% の分母。既定は swings（スイング企図）。pitches は SwStr% 参考用 */
+  whiffDenominator?: 'swings' | 'pitches'
+}
+
+export function aggregateByPitchType(
+  plateAppearances: PlateAppearancePitches[],
+  options?: AggregateByPitchTypeOptions,
+): PitchTypeStats[] {
+  const whiffDenominator = options?.whiffDenominator ?? 'swings'
   const allPitches = plateAppearances.flatMap((pa) => pa.pitches)
   if (allPitches.length === 0) return []
 
@@ -226,37 +242,20 @@ export function aggregateByPitchType(plateAppearances: PlateAppearancePitches[])
 
   const result: PitchTypeStats[] = []
   for (const [pitchType, pitches] of byType.entries()) {
-    let balls = 0
-    let swingMiss = 0
-    let taken = 0
-    let foul = 0
-    for (const p of pitches) {
-      switch (bucketPitchResultForTypeRow(p.result)) {
-        case 'balls':
-          balls += 1
-          break
-        case 'swing_miss':
-          swingMiss += 1
-          break
-        case 'taken':
-          taken += 1
-          break
-        case 'foul':
-          foul += 1
-          break
-      }
-    }
+    const rateCounts = aggregatePitchTypeRateCounts(pitches.map((p) => p.result))
+    const { balls, swingMiss, taken, foul } = rateCounts
     const set = settlementByType.get(pitchType) || { ab: 0, h: 0, hr: 0, tb: 0, so: 0, bb: 0, hbp: 0, sf: 0 }
-    // ストライク = 空振り相当+見逃し+ファウル+インプレイ（打数でアウト/安打＝三振以外のAB）
-    const inPlay = set.ab - set.so
-    const strikes = swingMiss + taken + foul + inPlay
+    const strikes = strikeCountFromRateCounts(rateCounts)
+    const swings = swingCountFromRateCounts(rateCounts)
 
     const speeds = pitches.map((p) => parseInt(p.speed_kmh, 10)).filter((n) => !isNaN(n))
     const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : null
 
-    const strikePct = pitches.length > 0 ? ((strikes / pitches.length) * 100).toFixed(1) + '%' : '—'
-    const swingTotal = swingMiss + foul + set.ab
-    const whiffPct = swingTotal > 0 ? ((swingMiss / swingTotal) * 100).toFixed(1) + '%' : '—'
+    const strikePct = formatStrikePct(strikes, pitches.length)
+    const whiffPct =
+      whiffDenominator === 'pitches'
+        ? formatWhiffPctPerPitch(swingMiss, pitches.length)
+        : formatWhiffPct(swingMiss, swings)
 
     const avg = set.ab > 0 ? slashRate3FromCounts(set.h, set.ab) : '—'
     const pa = set.ab + set.bb + set.hbp + set.sf
@@ -627,24 +626,11 @@ export function aggregateSpeedBandsStraightOnly(
       continue
     }
 
-    let swingMiss = 0
-    let taken = 0
-    let foul = 0
-    for (const p of pitches) {
-      switch (bucketPitchResultForTypeRow(p.result)) {
-        case 'swing_miss':
-          swingMiss += 1
-          break
-        case 'taken':
-          taken += 1
-          break
-        case 'foul':
-          foul += 1
-          break
-      }
-    }
-    const swingTotal = swingMiss + foul + set.ab
-    const whiffPct = swingTotal > 0 ? ((swingMiss / swingTotal) * 100).toFixed(1) + '%' : '—'
+    const rateCounts = aggregatePitchTypeRateCounts(pitches.map((p) => p.result))
+    const whiffPct = formatWhiffPct(
+      rateCounts.swingMiss,
+      swingCountFromRateCounts(rateCounts),
+    )
     const avg = set.ab > 0 ? slashRate3FromCounts(set.h, set.ab) : '—'
     const isop =
       set.ab > 0 ? slashRate3FromCounts(Math.max(0, set.tb - set.h), set.ab) : '—'

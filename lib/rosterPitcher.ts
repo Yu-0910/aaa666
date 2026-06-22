@@ -28,3 +28,9 @@ export function isFielderRegistrationPosition(
 ): boolean {
   return !isPitcherRegistrationPosition(position, options)
 }
+
+/** 2026 支配下公示のポジション文字列から「捕手登録」か（個人ページの捕手成績タブ表示用） */
+export function isCatcherRegistrationPosition(position: string): boolean {
+  const t = (position || "").normalize("NFC").replace(/[\s\u3000]+/g, "")
+  return t.includes("捕手")
+}

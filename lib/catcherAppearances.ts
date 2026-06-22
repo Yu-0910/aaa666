@@ -14,6 +14,60 @@ function normalizeNameKey(s: string): string {
   return compactPlayerName((s ?? "").trim())
 }
 
+/** 出場成績の守備位置セルが捕手を含むか（(一捕) は includes("(捕)") では拾えない） */
+export function isCatcherPositionCell(pos: string): boolean {
+  const p = (pos ?? "").trim()
+  if (!p) return false
+  if (/\([^)]*捕/.test(p)) return true
+  if (/捕/.test(p) && !/^走/.test(p)) return true
+  return false
+}
+
+const PBP_CATCHER_TO_RE =
+  /守備変更:\s*([^\s　]+)(?:\s+[^\s　→]+)?→(?:キャッチャー|捕手|捕)/g
+const PBP_CATCHER_FROM_RE = /守備変更:\s*([^\s　]+)\s+キャッチャー→/g
+const PBP_CATCHER_SUB_RE = /守備交代:\s*(?:捕手|キャッチャー)\s+([^\s　]+)/g
+const PBP_CATCHER_FIELDING_RE = /([^\s　：、,]+)\s*\(捕\)/g
+/** 実況上「持丸 (捕):パスボール」など、そのプレー時点の捕手 */
+const PBP_CATCHER_PLAYING_RE = /([^\s　：、,()]+)\s*\(捕\)\s*[:：]/g
+
+/** 守備交代・守備変更で捕手に入った選手名（出現順） */
+export function catcherSubstitutionEnteringNamesFromPbpLine(line: string): string[] {
+  const names: string[] = []
+  const push = (raw: string) => {
+    const n = String(raw ?? "").trim()
+    if (n) names.push(n)
+  }
+  for (const m of line.matchAll(PBP_CATCHER_TO_RE)) push(m[1] ?? "")
+  for (const m of line.matchAll(PBP_CATCHER_SUB_RE)) push(m[1] ?? "")
+  return names
+}
+
+/** その行のプレーでミットを構えていた捕手名（あれば） */
+export function explicitCatcherNameFromPbpLine(line: string): string | null {
+  const m = line.match(PBP_CATCHER_PLAYING_RE)
+  if (!m) return null
+  const n = String(m[1] ?? "").trim()
+  return n || null
+}
+
+function addCatcherIdsFromPbpLine(
+  line: string,
+  nameToId: Map<string, string>,
+  out: Set<string>,
+): void {
+  const addByName = (raw: string) => {
+    const key = normalizeNameKey(raw)
+    const id = key ? nameToId.get(key) : null
+    if (id) out.add(id)
+  }
+
+  for (const name of catcherSubstitutionEnteringNamesFromPbpLine(line)) addByName(name)
+  for (const m of line.matchAll(PBP_CATCHER_FROM_RE)) addByName(m[1] ?? "")
+  for (const m of line.matchAll(PBP_CATCHER_FIELDING_RE)) addByName(m[1] ?? "")
+  for (const m of line.matchAll(PBP_CATCHER_PLAYING_RE)) addByName(m[1] ?? "")
+}
+
 function buildNameToYahooId(doc: CanonicalGameDocument): Map<string, string> {
   const m = new Map<string, string>()
   for (const [id, name] of Object.entries(doc.game.yahooPlayersMentioned ?? {})) {
@@ -47,12 +101,11 @@ export function catcherYahooIdsFromCanonical(doc: CanonicalGameDocument): Set<st
     if (c?.yahooPlayerId) out.add(c.yahooPlayerId)
   }
 
-  // 出場成績（打撃行）に (捕) があれば捕手経験として拾う
+  // 出場成績（打撃行）: (捕) / (一捕) など
   for (const bl of doc.domain?.battingLines ?? []) {
     const id = (bl.yahooPlayerId ?? "").trim()
     if (!id) continue
-    const pos = (bl.positionCell ?? "").trim()
-    if (pos.includes("(捕)")) out.add(id)
+    if (isCatcherPositionCell(bl.positionCell ?? "")) out.add(id)
   }
 
   // play-by-play から捕手の守備交代/守備変更を拾う（名前→yahooId は近似）
@@ -60,26 +113,7 @@ export function catcherYahooIdsFromCanonical(doc: CanonicalGameDocument): Set<st
     for (const raw of sec.lines ?? []) {
       const line = (raw ?? "").trim()
       if (!line) continue
-
-      // 例: "守備交代:ライト 尾田" / "守備交代:捕手 ○○"
-      {
-        const m = line.match(/守備交代:捕手\s*([^\s　]+)/)
-        if (m) {
-          const key = normalizeNameKey(m[1] ?? "")
-          const id = key ? nameToId.get(key) : null
-          if (id) out.add(id)
-        }
-      }
-
-      // 例: "守備変更: 石川昂 →ファースト" / "... →捕手"
-      {
-        const m = line.match(/守備変更:\s*([^　 ]+)\s*[→→]\s*捕/)
-        if (m) {
-          const key = normalizeNameKey(m[1] ?? "")
-          const id = key ? nameToId.get(key) : null
-          if (id) out.add(id)
-        }
-      }
+      addCatcherIdsFromPbpLine(line, nameToId, out)
     }
   }
 

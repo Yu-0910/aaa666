@@ -6,7 +6,7 @@
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "node:url"
-import { compactPlayerName, isJapaneseNpbListedNameJa } from "@/lib/playerNameNormalize"
+import { compactPlayerName, isJapaneseNpbListedNameJa, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
 import { getProjectRoot } from "@/lib/projectRoot"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
@@ -163,8 +163,8 @@ export function getNewPlayers2026(): NpbRosterPlayer[] {
 
 /** 名簿の日本語名から「Ｓ．ファビアン」「Ｈ．メヒア」等の別表記キーを列挙 */
 export function rosterJaNameLookupKeys(nameJa: string): string[] {
-  const c = compactPlayerName(nameJa)
-  const keys = new Set<string>([c])
+  const c = rosterNameMatchKey(nameJa)
+  const keys = new Set<string>([c, compactPlayerName(nameJa)])
   const noInitial = c
     .replace(/^[\uFF21-\uFF3A\uFF41-\uFF5A][．.]/u, "")
     .replace(/^[A-Za-z][.]/u, "")
@@ -186,8 +186,8 @@ export function findRosterPlayerByPublicId(raw: string): NpbRosterPlayer | null 
     const lookupId = resolveNpbPlayerIdFromPublicId(id)
     return roster.find((r) => r.npb_player_id === lookupId) ?? null
   }
-  const key = compactPlayerName(id)
-  const direct = roster.find((r) => compactPlayerName(r.name_ja) === key)
+  const key = rosterNameMatchKey(id)
+  const direct = roster.find((r) => rosterNameMatchKey(r.name_ja) === key)
   if (direct) return direct
   const byAltJa = roster.find((r) => rosterJaNameLookupKeys(r.name_ja).includes(key))
   if (byAltJa) return byAltJa
@@ -231,7 +231,7 @@ export function findRosterPlayersMatchingJaHint(
 ): NpbRosterPlayer[] {
   const hint = (jaHint || "").trim()
   if (!hint || /^\d+$/.test(hint)) return []
-  const key = compactPlayerName(hint)
+  const key = rosterNameMatchKey(hint)
   if (!key) return []
 
   const teamFilter = String(opts?.teamFullName ?? "").trim()
@@ -243,7 +243,7 @@ export function findRosterPlayersMatchingJaHint(
   for (const r of roster) {
     const id = String(r.npb_player_id ?? "").trim()
     if (!id || seen.has(id)) continue
-    const direct = compactPlayerName(r.name_ja) === key
+    const direct = rosterNameMatchKey(r.name_ja) === key
     const alt = rosterJaNameLookupKeys(r.name_ja).includes(key)
     if (!direct && !alt) continue
     seen.add(id)

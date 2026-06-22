@@ -26,7 +26,9 @@ export async function fetchTopLeadersForPage(
   const upperLeague = league.toUpperCase()
 
   if (yearStr === TOP_LEADERS_SNAPSHOT_YEAR) {
-    // 2026: スナップショット（R2 直 / /data）を先に試す。API は Vercel 未設定時に 503 になりやすい
+    if (category === "pitching") {
+      return fetchLeadersJson(`/api/pitching-leaders/${yearStr}/${upperLeague}`)
+    }
     const snapshotUrl = topLeadersSnapshotPublicUrl(yearStr, upperLeague, category)
     try {
       const fromSnapshot = await fetchLeadersJson(snapshotUrl)

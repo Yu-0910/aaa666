@@ -9,6 +9,12 @@ import {
 
 export const WEEKLY_RANKINGS_WEEKS_TO_KEEP = 4
 
+const WEEK_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
+
+export function isValidWeeklyWeekKey(weekKey: string): boolean {
+  return WEEK_KEY_RE.test(weekKey)
+}
+
 /** JST 暦日 YYYY-MM-DD */
 export function todayYmdJst(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {

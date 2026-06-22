@@ -26,9 +26,9 @@ export function pitchingSeasonRowStatsFromAgg(agg: PitchingSeasonAggYahoo): Reco
   const babipAgainst = babipDenom > 0 ? (agg.h - agg.hr) / babipDenom : 0
 
   const gs = agg.gamesStarted
-  const qsRate = gs > 0 ? agg.qsStarts / gs : 0
-  const hqsRate = gs > 0 ? agg.hqsStarts / gs : 0
-  const sqsRate = gs > 0 ? agg.sqsStarts / gs : 0
+  const qsRate = gs > 0 ? (agg.qsStarts / gs) * 100 : 0
+  const hqsRate = gs > 0 ? (agg.hqsStarts / gs) * 100 : 0
+  const sqsRate = gs > 0 ? (agg.sqsStarts / gs) * 100 : 0
 
   return {
     era,

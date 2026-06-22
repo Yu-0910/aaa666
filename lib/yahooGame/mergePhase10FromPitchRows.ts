@@ -15,6 +15,7 @@ import { enrichPlateAppearancesWithResolvedPitcherIds } from "./resolvePitcherId
 import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import { runnerEventsFromTextPlayByPlay } from "./runnerEventsFromTextPlayByPlay"
 import { sortPitchEventsByPitchIndex } from "./sortPitchEventsByPitchIndex"
+import { enrichPlateAppearancesWithBaseBeforeFromText } from "./basesFromSportsnaviPlayLine"
 import { supplementPlateAppearancesFromTextPlayByPlay } from "./supplementPlateAppearancesFromTextPlayByPlay"
 import { buildPaId, comparePaIdChronological } from "./paIdFormat"
 
@@ -568,12 +569,15 @@ export function mergePhase10IntoCanonical(
   const supplemented = supplementPlateAppearancesFromTextPlayByPlay(doc, plateAppearances)
   const carried = applyCarryForwardPitcherForIntentionalWalks(supplemented)
   // 実況補完で打席が戻ることがあるため、出場成績との突き合わせは最後に行う
-  const plateAppearancesFilled = enrichPlateAppearancesWithResolvedPitcherIds(
-    alignZipOutcomesWithStatsTextCells(
-      doc,
-      alignSacBuntSummariesWithBattingLineCells(
+  const plateAppearancesFilled = enrichPlateAppearancesWithBaseBeforeFromText(
+    doc,
+    enrichPlateAppearancesWithResolvedPitcherIds(
+      alignZipOutcomesWithStatsTextCells(
         doc,
-        trimPhase10PlateAppearancesAgainstBattingLines(doc, carried),
+        alignSacBuntSummariesWithBattingLineCells(
+          doc,
+          trimPhase10PlateAppearancesAgainstBattingLines(doc, carried),
+        ),
       ),
     ),
   )

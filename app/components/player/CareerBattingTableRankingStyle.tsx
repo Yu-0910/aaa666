@@ -14,6 +14,9 @@ import {
 /** 列幅（背景の横幅）・文字・余白・行高を 7 割 */
 const CONTENT_SCALE = 0.7
 const s = (px: number) => Math.round(px * CONTENT_SCALE * 10) / 10
+/** 数値・年度・年齢列のフォント倍率 */
+const FONT_SIZE_SCALE = 1.15
+const sf = (px: number) => Math.round(px * FONT_SIZE_SCALE * 10) / 10
 
 const YEAR_WIDTH = s(48)
 const AGE_WIDTH = s(40)
@@ -23,11 +26,14 @@ const SALARY_COL_WIDTH = s(66)
 const LEFT_BLOCK_WIDTH = YEAR_WIDTH + FRAME_WIDTH + AGE_WIDTH
 
 const FONT_HEADER = s(10)
-/** 表内の数値（年度・年齢・指標・年俸）はベースサイズの 8 割 */
-const NUMERIC_FONT_SCALE = 0.8
-const nf = (px: number) => Math.round(px * NUMERIC_FONT_SCALE * 10) / 10
-const FONT_BODY = nf(18)
-const FONT_YEAR_TOTAL = nf(14)
+/** ランキング表の指標値（RankingUI compact: 16.83px）を通算表の 7 割スケールに合わせる */
+const RANKING_METRIC_FONT_PX = 16.83
+const FONT_METRIC = sf(s(RANKING_METRIC_FONT_PX))
+/** ランキング表の順位列（text-lg = 18px）を通算表の 7 割スケールに合わせる */
+const RANKING_YEAR_AGE_FONT_PX = 18
+const FONT_YEAR_AGE = sf(s(RANKING_YEAR_AGE_FONT_PX))
+const FONT_YEAR_TOTAL = sf(s(14))
+const METRIC_VALUE_CLASS = "bebas tabular-nums font-normal tracking-[-0.01em] text-white"
 const PAD_HEADER_X = s(8)
 const PAD_HEADER_Y = s(12)
 const ROW_MIN_H = s(32)
@@ -57,8 +63,20 @@ const headerLabelStyle: CSSProperties = {
   lineHeight: 1.2,
 }
 
-const bodyValueStyle: CSSProperties = {
-  fontSize: FONT_BODY,
+const yearAgeValueStyle: CSSProperties = {
+  fontSize: FONT_YEAR_AGE,
+  lineHeight: 1,
+  margin: 0,
+}
+
+const totalLabelStyle: CSSProperties = {
+  fontSize: FONT_YEAR_TOTAL,
+  lineHeight: 1,
+  margin: 0,
+}
+
+const metricValueStyle: CSSProperties = {
+  fontSize: FONT_METRIC,
   lineHeight: 1,
   margin: 0,
 }
@@ -202,8 +220,7 @@ export default function CareerBattingTableRankingStyle({
                         <span
                           className="bebas tabular-nums tracking-[0.02em] text-[#ffff44] font-bold"
                           style={{
-                            ...bodyValueStyle,
-                            fontSize: FONT_YEAR_TOTAL,
+                            ...totalLabelStyle,
                             transform: `translateY(${YEAR_AGE_NUDGE_Y}px)`,
                           }}
                         >
@@ -226,10 +243,9 @@ export default function CareerBattingTableRankingStyle({
                         >
                           <div style={cellCenterBox}>
                             <span
-                              className="bebas tabular-nums tracking-[0.02em] text-white font-thin"
+                              className={METRIC_VALUE_CLASS}
                               style={{
-                                ...bodyValueStyle,
-                                fontSize: FONT_BODY,
+                                ...yearAgeValueStyle,
                                 transform: `translateY(${YEAR_AGE_NUDGE_Y}px)`,
                               }}
                             >
@@ -253,9 +269,9 @@ export default function CareerBattingTableRankingStyle({
                         >
                           <div style={cellCenterBox}>
                             <span
-                              className="bebas tabular-nums tracking-[0.02em] font-thin"
+                              className={METRIC_VALUE_CLASS}
                               style={{
-                                ...bodyValueStyle,
+                                ...yearAgeValueStyle,
                                 transform: `translateY(${YEAR_AGE_NUDGE_Y}px)`,
                               }}
                             >
@@ -279,9 +295,9 @@ export default function CareerBattingTableRankingStyle({
                     >
                       <div style={cellCenterBox}>
                         <span
-                          className="bebas tabular-nums tracking-[0.02em] font-thin text-white/90"
+                          className={METRIC_VALUE_CLASS}
                           style={{
-                            ...bodyValueStyle,
+                            ...metricValueStyle,
                             transform: `translateY(${METRIC_VALUE_NUDGE_Y}px)`,
                           }}
                         >
@@ -301,9 +317,9 @@ export default function CareerBattingTableRankingStyle({
                   >
                     <div style={cellCenterBox}>
                       <span
-                        className="bebas tabular-nums tracking-[0.02em] font-thin text-white/90"
+                        className={METRIC_VALUE_CLASS}
                         style={{
-                          ...bodyValueStyle,
+                          ...metricValueStyle,
                           transform: `translateY(${METRIC_VALUE_NUDGE_Y}px)`,
                         }}
                       >

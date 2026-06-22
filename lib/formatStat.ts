@@ -1,3 +1,5 @@
+import { formatPitchingIpDisplay } from "@/lib/careerPitchingEnrich"
+
 /**
  * ランキングページ用の数値表示フォーマッタ
  * baseballdata.jp の表示ルールに準拠
@@ -173,6 +175,11 @@ export function formatStat(metricLabel: string, value: unknown): string {
     return '-';
   }
 
+  if (metricLabel === "回数" || metricLabel === "投球回") {
+    const s = formatPitchingIpDisplay(value)
+    return s === "—" ? "-" : s
+  }
+
   // 数値化
   const numValue = typeof value === 'number' ? value : Number(value);
   
@@ -196,8 +203,16 @@ export function formatStat(metricLabel: string, value: unknown): string {
     }
 
     case 'percent1': {
-      // 数値は既に0〜100の値として保持されている前提
-      return numValue.toFixed(1) + '%';
+      // QS率系は旧ビルドで 0〜1 比率で格納されている場合がある（再ビルド前の JSON 互換）
+      let displayVal = numValue
+      if (
+        (metricLabel === 'QS率' || metricLabel === 'HQS率' || metricLabel === 'SQS率') &&
+        displayVal > 0 &&
+        displayVal <= 1
+      ) {
+        displayVal = displayVal * 100
+      }
+      return displayVal.toFixed(1) + '%';
     }
 
     case 'decimal2': {
@@ -238,4 +253,14 @@ export function formatStat(metricLabel: string, value: unknown): string {
   }
 }
 
+/**
+ * ランキングページと同じルールで表示（個人ページ・通算表用。欠損は em dash）。
+ */
+export function formatRankingStatDisplay(metricLabel: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—"
+  const t = String(value).trim()
+  if (t === "—" || t === "-") return "—"
+  const s = formatStat(metricLabel, value)
+  return s === "-" ? "—" : s
+}
 

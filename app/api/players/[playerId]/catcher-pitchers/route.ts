@@ -36,7 +36,27 @@ export type CatcherPitchersApiResponse = {
       wins?: number
       losses?: number
       qsCount?: number
+      er?: number
+      ibb?: number
     }[]
+    seasonTotals?: {
+      bf: number
+      ab: number
+      h: number
+      hr: number
+      so: number
+      bb: number
+      hbp: number
+      ibb: number
+      ipOuts: number
+      er: number
+      era: number | null
+      whip: number | null
+      kPct: number | null
+      wins: number
+      losses: number
+      qsCount: number
+    }
   } | null
 }
 
@@ -63,7 +83,11 @@ export async function GET(
     const d = await loadCatcherPitcherSplitsFromRepoAsync(year, npb)
     return jsonDerivedResponse(
       d
-        ? { hasData: true, year, payload: { rows: d.rows } }
+        ? {
+            hasData: true,
+            year,
+            payload: { rows: d.rows, seasonTotals: d.seasonTotals },
+          }
         : { hasData: false, year, payload: null } satisfies CatcherPitchersApiResponse
     )
   } catch (e) {

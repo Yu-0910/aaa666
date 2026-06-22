@@ -9,6 +9,7 @@ import {
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_SEASON_GRID_CLASS,
   battingSeasonGridMetrics,
+  battingTop2025SeasonTopN,
   pad2025SeasonTopMetricLeaders,
   topLeaderRowTypography,
   usesBatting2026SeasonSixMetricGrid,
@@ -68,6 +69,7 @@ function StatsListControl({
 function MetricPanel({
   metric,
   leaders,
+  year,
   getRankingUrl,
   getStatsListUrl,
   onStatsListNavigate,
@@ -78,6 +80,7 @@ function MetricPanel({
 }: {
   metric: string
   leaders: Record<string, unknown[] | undefined>
+  year: number
   getRankingUrl: (metric: string) => string
   getStatsListUrl: () => string
   onStatsListNavigate?: (url: string) => void
@@ -88,6 +91,8 @@ function MetricPanel({
 }) {
   const rows = leaders[metric]
   if (!rows?.length) return null
+  const topN = battingTop2025SeasonTopN(metric, String(year))
+  const displayRows = topN != null ? rows.slice(0, topN) : rows
 
   const statsListClass = `relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
   const borderClass = bordered ? "border border-[#555]" : ""
@@ -104,7 +109,7 @@ function MetricPanel({
         <StatsListControl href={getStatsListUrl()} onNavigate={onStatsListNavigate} className={statsListClass} />
       </div>
       <div className="min-w-0 space-y-0 overflow-hidden">
-        {rows.map((leader, leaderIndex) =>
+        {displayRows.map((leader, leaderIndex) =>
           renderLeaderRow({ leader: leader as Record<string, unknown>, stat: metric, index: leaderIndex })
         )}
       </div>
@@ -137,6 +142,9 @@ export function BattingTopFourMetricsGrid({
       打点: "batting-top-2026-season-rbi",
       出塁率: "batting-top-2026-season-obp",
       長打率: "batting-top-2026-season-slg",
+      IsoP: "batting-top-2026-season-isop",
+      IsoD: "batting-top-2026-season-isod",
+      盗塁: "batting-top-2026-season-sb",
     }
     const seasonMetrics = battingSeasonGridMetrics(year)
     const hasAny = seasonMetrics.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
@@ -157,6 +165,7 @@ export function BattingTopFourMetricsGrid({
                 <MetricPanel
                   metric={metric}
                   leaders={displayLeaders}
+                  year={year}
                   getRankingUrl={getRankingUrl}
                   getStatsListUrl={getStatsListUrl}
                   onStatsListNavigate={onStatsListNavigate}
@@ -181,6 +190,7 @@ export function BattingTopFourMetricsGrid({
               key={metric}
               metric={metric}
               leaders={leaders}
+              year={year}
               getRankingUrl={getRankingUrl}
               getStatsListUrl={getStatsListUrl}
               onStatsListNavigate={onStatsListNavigate}

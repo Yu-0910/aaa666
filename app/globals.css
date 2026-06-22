@@ -130,17 +130,17 @@
     background-color: #000;
     color: #fff;
     /* Set default font weight to semibold for all Japanese text */
-    font-family: "Noto Sans JP", "Inter", sans-serif;
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif;
     font-weight: 600;
   }
 
   .latin {
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-inter), "Inter", sans-serif;
     font-feature-settings: "tnum" 1;
   }
 
   .bebas {
-    font-family: "Bebas Neue", sans-serif;
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
     letter-spacing: 0.05em;
   }
 
@@ -178,6 +178,32 @@
   .player-page-fonts .bebas {
     font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
     letter-spacing: 0.05em;
+  }
+
+  /* キャリアハイ系のみ bebas 数値（表の latin セルは Inter のまま） */
+  .player-page-fonts .bebas.tabular-nums {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* 今季の成績タブ: 表の数値セルを 1.3 倍 */
+  .player-page-fonts .player-season-tab-numerics td.latin.font-black.tabular-nums,
+  .player-page-fonts .player-season-tab-numerics td.align-middle.font-black.tabular-nums:not(.text-left),
+  .player-page-fonts .player-season-tab-numerics span.latin.font-black.tabular-nums,
+  .player-page-fonts .player-season-tab-numerics div.font-black.tabular-nums {
+    font-size: 1.3em !important;
+  }
+
+  /* 伊藤大海の今季タブ数値: Bebas Neue・細め・各セルの指定サイズの 1.3 倍 */
+  .player-page-fonts .pitcher-season-career-high-numerics td.text-center.font-black,
+  .player-page-fonts .pitcher-season-career-high-numerics td.align-middle.font-black:not(.text-left),
+  .player-page-fonts .pitcher-season-career-high-numerics span.font-black.tabular-nums,
+  .player-page-fonts .pitcher-season-career-high-numerics div.font-black.tabular-nums {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
+    letter-spacing: 0.032em;
+    font-weight: 400 !important;
+    font-size: 1.3em !important;
   }
 
   /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 狭い幅でも縮むよう下限を抑え、親より狭いときは横スクロール */
@@ -238,7 +264,7 @@
     height: 100%;
   }
 
-  /* 2026 シーズン TOP: 上段〜2段目（各1〜5位・同一UI） */
+  /* 2026 シーズン TOP: 1段目 OPS/打率/本塁打（各1〜5位）、2〜3段目（各1〜3位） */
   .batting-top-2026-season-grid {
     display: grid;
     width: 100%;
@@ -247,7 +273,8 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-areas:
       "ops avg hr"
-      "rbi obp slg";
+      "rbi obp slg"
+      "isop isod sb";
     gap: 0.25rem;
   }
 
@@ -275,12 +302,27 @@
     grid-area: slg;
   }
 
+  .batting-top-2026-season-grid > .batting-top-2026-season-isop {
+    grid-area: isop;
+  }
+
+  .batting-top-2026-season-grid > .batting-top-2026-season-isod {
+    grid-area: isod;
+  }
+
+  .batting-top-2026-season-grid > .batting-top-2026-season-sb {
+    grid-area: sb;
+  }
+
   .batting-top-2026-season-grid > .batting-top-2025-season-ops,
   .batting-top-2026-season-grid > .batting-top-2025-season-avg,
   .batting-top-2026-season-grid > .batting-top-2025-season-hr,
   .batting-top-2026-season-grid > .batting-top-2026-season-rbi,
   .batting-top-2026-season-grid > .batting-top-2026-season-obp,
-  .batting-top-2026-season-grid > .batting-top-2026-season-slg {
+  .batting-top-2026-season-grid > .batting-top-2026-season-slg,
+  .batting-top-2026-season-grid > .batting-top-2026-season-isop,
+  .batting-top-2026-season-grid > .batting-top-2026-season-isod,
+  .batting-top-2026-season-grid > .batting-top-2026-season-sb {
     min-width: 0;
     min-height: 0;
   }
@@ -290,11 +332,14 @@
   .batting-top-2026-season-grid > .batting-top-2025-season-hr > *,
   .batting-top-2026-season-grid > .batting-top-2026-season-rbi > *,
   .batting-top-2026-season-grid > .batting-top-2026-season-obp > *,
-  .batting-top-2026-season-grid > .batting-top-2026-season-slg > * {
+  .batting-top-2026-season-grid > .batting-top-2026-season-slg > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-isop > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-isod > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-sb > * {
     height: 100%;
   }
 
-  /* 2026 シーズン TOP 投球: 防御率｜勝利｜K-BB％ / K％｜HLD｜セーブ */
+  /* 2026 シーズン TOP 投球: 防御率｜勝利｜K-BB％ / K％｜HLD｜セーブ / WHIP｜QS率｜P/IP */
   .pitching-top-2026-season-grid {
     display: grid;
     width: 100%;
@@ -303,7 +348,8 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-areas:
       "era w kbb"
-      "kpct hld sv";
+      "kpct hld sv"
+      "whip qsr pip";
     gap: 0.25rem;
   }
 
@@ -331,12 +377,27 @@
     grid-area: sv;
   }
 
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-whip {
+    grid-area: whip;
+  }
+
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-qsr {
+    grid-area: qsr;
+  }
+
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip {
+    grid-area: pip;
+  }
+
   .pitching-top-2026-season-grid > .pitching-top-2026-season-era,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-w,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-kbb,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-kpct,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-hld,
-  .pitching-top-2026-season-grid > .pitching-top-2026-season-sv {
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-sv,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-whip,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-qsr,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip {
     min-width: 0;
     min-height: 0;
   }
@@ -346,7 +407,59 @@
   .pitching-top-2026-season-grid > .pitching-top-2026-season-kbb > *,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-kpct > *,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-hld > *,
-  .pitching-top-2026-season-grid > .pitching-top-2026-season-sv > * {
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-sv > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-whip > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-qsr > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip > * {
     height: 100%;
   }
+}
+
+/* 投手個人ページ: 巡目別の下からカウント別球種一覧が続いて現れる */
+@keyframes pitch-type-side-panel-emerge {
+  from {
+    opacity: 0;
+    transform: translateY(-0.65rem) scaleY(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes pitch-type-side-row-emerge {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pitch-type-side-panel-emerge {
+  transform-origin: top center;
+  animation: pitch-type-side-panel-emerge 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pitch-type-side-row-emerge {
+  animation: pitch-type-side-row-emerge 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pitch-type-side-panel-emerge,
+  .pitch-type-side-panel-reveal-grid {
+    transition: none !important;
+  }
+
+  .pitch-type-side-panel-emerge,
+  .pitch-type-side-row-emerge {
+    animation: none !important;
+  }
+}\n\n/* build-offline font variable fallbacks */
+:root {
+  --font-inter: "Inter", "Segoe UI", Arial, sans-serif;
+  --font-noto-sans-jp: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-bebas-neue: "Bebas Neue", "Arial Narrow", Arial, sans-serif;
 }

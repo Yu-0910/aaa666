@@ -53,6 +53,9 @@ export const teamColors: Record<string, string> = {
   Hs: "#ffdb00",
 }
 
+/** パ順位表・今週タブの bebas 数値（細さ・字間） */
+export const TOP_PAGE_BEBAS_NUMERIC_CLASS = "bebas tabular-nums font-normal tracking-[-0.01em]"
+
 export const teamRomanNames: Record<string, string> = {
   H: "Hanshin Tigers",
   G: "Yomiuri Giants",
@@ -516,7 +519,7 @@ export const mainTabs = [
   { id: 1, label: "今週", type: "weekly" },
   { id: 2, label: "予想投手", type: "probables" },
   { id: 3, label: "最新情報", type: "articles" },
-  { id: 4, label: "Quiz", type: "quiz" },
+  { id: 4, label: "順位表", type: "standings_tab" },
 ] as const
 
 export const subTabs = [

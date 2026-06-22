@@ -22,18 +22,20 @@ import {
   BATTING_TOP_2025_RBI_TOP_N,
   BATTING_TOP_2026_SEASON_ALL_METRICS,
   battingTop2025SeasonTopN,
+  normalizeBattingLeadersConfigForModern,
 } from "@/lib/topPageBatting2025Grid"
+import { usesTopPageModernLayout } from "@/lib/topPageModernLayout"
 
 const TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
 const MINI_METRICS = ["出塁率", "長打率", "打点", "安打", "盗塁"] as const
 const ALL_TOP_METRICS = [...TOP3_METRICS, ...MINI_METRICS] as const
 
 function battingTopMetricsForYear(year: string): readonly string[] {
-  return Number(year) === 2026 ? BATTING_TOP_2026_SEASON_ALL_METRICS : ALL_TOP_METRICS
+  return usesTopPageModernLayout(Number(year)) ? BATTING_TOP_2026_SEASON_ALL_METRICS : ALL_TOP_METRICS
 }
 
 function battingMiniMetricsForYear(year: string): readonly string[] {
-  if (Number(year) === 2026) return []
+  if (usesTopPageModernLayout(Number(year))) return []
   return MINI_METRICS
 }
 
@@ -130,7 +132,11 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const romanRaw = String(row.romanName ?? "").trim()
   const rank = Math.min(5, Math.max(1, displayRank)) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
-  const npbPlayerId = yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined
+  const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
+  const npbPlayerId =
+    explicitNpb ||
+    (/^\d{6,}$/.test(yahooPlayerId) ? yahooPlayerId : undefined) ||
+    (yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined)
 
   return {
     rank,
@@ -206,11 +212,15 @@ function buildBattingLeadersFromRowMaps(
     if (top.length > 0) leaders[metricLabel] = top
   }
   if (Object.keys(leaders).length === 0) return null
-  return {
-    top3Metrics: [...TOP3_METRICS],
-    miniMetrics: [...battingMiniMetricsForYear(year)],
-    leaders,
-  }
+  return normalizeBattingLeadersConfigForModern(
+    {
+      top3Metrics: [...battingTopMetricsForYear(year)],
+      miniMetrics: [...battingMiniMetricsForYear(year)],
+      leaders,
+    },
+    null,
+    year
+  )
 }
 
 export function buildBattingLeadersConfigFromRankings(
@@ -244,4 +254,45 @@ export async function buildBattingLeadersConfigFromRankingsAsync(
   }
   if (metricRows.size === 0) return null
   return buildBattingLeadersFromRowMaps(year, league, metricRows)
+}
+
+const EMPTY_LEADERS: LeadersConfig = {
+  top3Metrics: [],
+  miniMetrics: [],
+  leaders: {},
+}
+
+/** トップページ向け: ランキング JSON を正とし、スナップショット等とマージしてモダン形式に揃える */
+export async function finalizeBattingLeadersConfigForTopPageAsync(
+  year: string,
+  league: string,
+  supplement?: LeadersConfig | null
+): Promise<LeadersConfig | null> {
+  const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, league)
+  if (!usesTopPageModernLayout(Number(year))) {
+    return fromRankings ?? supplement ?? null
+  }
+  const normalized = normalizeBattingLeadersConfigForModern(
+    fromRankings ?? EMPTY_LEADERS,
+    supplement,
+    year
+  )
+  return Object.keys(normalized.leaders).length > 0 ? normalized : null
+}
+
+export function finalizeBattingLeadersConfigForTopPage(
+  year: string,
+  league: string,
+  supplement?: LeadersConfig | null
+): LeadersConfig | null {
+  const fromRankings = buildBattingLeadersConfigFromRankings(year, league)
+  if (!usesTopPageModernLayout(Number(year))) {
+    return fromRankings ?? supplement ?? null
+  }
+  const normalized = normalizeBattingLeadersConfigForModern(
+    fromRankings ?? EMPTY_LEADERS,
+    supplement,
+    year
+  )
+  return Object.keys(normalized.leaders).length > 0 ? normalized : null
 }

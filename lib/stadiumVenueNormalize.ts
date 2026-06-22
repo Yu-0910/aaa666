@@ -221,3 +221,10 @@ export function teamHomeStadiumCanonical(teamShort: string): string | null {
   const raw = map[key]
   return raw ? normalizeStadiumSplitValue(raw) : null
 }
+
+/** 投手・野手個人ページの球場表のみ、表示名を短縮する */
+export function formatPlayerPageStadiumDisplay(display: string): string {
+  if (display === "みずほPayPay") return "みずほPay"
+  if (display === "横浜スタジアム") return "横浜S"
+  return display
+}

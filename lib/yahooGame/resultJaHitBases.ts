@@ -26,7 +26,6 @@ function isSacFly(result: string): boolean {
  */
 export function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
   // 括弧を剥がすと「ボール」だけになり塁打が落ちるため、先に安打系キーワードを見る
-  if (/ランエンドヒット/.test(result)) return 1
   const core = stripBracketNotes(result)
   if (/本塁打|ホームラン|HR/.test(core)) return 4
   if (/左中本|右中本|左本|右本|中本(?:$)/.test(core)) return 4

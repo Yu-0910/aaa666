@@ -1,5 +1,6 @@
 /**
- * yahoo_games_pilot の JSON を優先し、無ければ canonical の plateAppearances から球種別を組み立てる
+ * canonical の plateAppearances がある試合は canonical から再計算を優先し、
+ * 無い場合のみ yahoo_games_pilot の JSON を読む。
  */
 
 import { buildPitchTypesResponseFromCanonical } from "./pitchTypesFromCanonical"
@@ -16,10 +17,15 @@ export function loadPitchTypesJsonOrCanonical(
   const yid = yahooPitcherId.trim()
   if (!gid || !yid) return null
 
-  const fromFile = loadPitchTypesJson(projectRoot, gid, yid)
-  if (fromFile) return fromFile
-
   const doc = loadCanonicalGameDocument(projectRoot, gid)
-  if (!doc) return null
-  return buildPitchTypesResponseFromCanonical(gid, yid, doc.domain.plateAppearances ?? [])
+  if (doc) {
+    const fromCanonical = buildPitchTypesResponseFromCanonical(
+      gid,
+      yid,
+      doc.domain.plateAppearances ?? [],
+    )
+    if (fromCanonical) return fromCanonical
+  }
+
+  return loadPitchTypesJson(projectRoot, gid, yid)
 }

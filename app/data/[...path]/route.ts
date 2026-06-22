@@ -1,6 +1,6 @@
 /**
  * 表示用 JSON プロキシ（Phase 6）
- * /data/rankings/* と /data/top-leaders/* を RANKINGS_BASE_URL 配下へ転送
+ * /data/rankings/* / /data/top-leaders/* / /data/standings/* を RANKINGS_BASE_URL 配下へ転送
  */
 
 import { handleDisplayDataGet, type DisplayDataKind } from '@/lib/displayData/proxy'
@@ -9,11 +9,11 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const KINDS: DisplayDataKind[] = ['rankings', 'top-leaders']
+const KINDS: DisplayDataKind[] = ['rankings', 'top-leaders', 'standings']
 
 function parseKind(pathSegments: string[]): { kind: DisplayDataKind; rest: string[] } | null {
   const head = pathSegments[0]
-  if (head === 'rankings' || head === 'top-leaders') {
+  if (head === 'rankings' || head === 'top-leaders' || head === 'standings') {
     return { kind: head, rest: pathSegments.slice(1) }
   }
   return null
