@@ -75,3 +75,15 @@ __pycache__/
 *.bak
 *.bak_*
 *-bak-*
+# _data backup/staging/temp outputs
+_data/master_csv__backup*/
+_data/master_csv__rescrape_staging*/
+_data/npb_rescrape/
+_data/raw/
+_data/external/
+_data/scraped_external/
+_data/reports/
+_data/hirakawa_trial*
+_data/*_trial*
+_data/*_no_line.txt
+_data/*_hybrid*.txt
