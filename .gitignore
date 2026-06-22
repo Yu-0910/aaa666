@@ -37,9 +37,41 @@ output/reports/
 output/master/
 public/data/rankings/
 public/data/top-leaders/
+public/data/standings/
 
 # 表示用派生 JSON（本番 SSOT は R2。ローカル工場出力のみ Git 外）
 _data/derived/
 
 # Phase2 Yahoo 試合スクレイプ生HTML（正規化JSONのみコミット可）
 _data/scraped_games/raw/
+_data/scraped_games/raw_sportsnavi/
+_data/scraped_games/raw_sportsnavi_text/
+_data/scraped_games/raw_sportsnavi_stats/
+_data/scraped_games/raw_sportsnavi_score/
+_data/scraped_games/raw_yahoo_text/
+_data/scraped_games/derived/
+
+# スクレイプ・取得キャッシュ（再生成可能）
+_data/cache/
+_data/yahoo_games_pilot/
+_data/yahoo_game_meta/
+
+# 診断・試行の一時出力（_data 直下）
+_data/_tmp*
+_data/_*trial*
+_data/diag_*
+_data/*.out.txt
+
+# ローカル作業ログ・一時ファイル（リポジトリ直下）
+_tmp_*
+build-log.txt
+_phase10_batch_logs/
+
+# Python キャッシュ
+__pycache__/
+*.pyc
+
+# エディタ・パッチ作業のバックアップ
+*.bak
+*.bak_*
+*-bak-*
