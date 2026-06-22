@@ -4,9 +4,17 @@
  * 巡目:
  *   試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上）。paId でソート。
  *
- * 状況別:
- *   イニング（表裏）ごとに打席を順に処理し、打席結果テキストで走者を簡易シミュレーション
- *   （lib/yahooGame/paSituationSim）。先頭球時点のメタが無い場合の近似。
+ * 状況別 `base_sit`（スポナビ準拠・既定）:
+ *   - **塁分類**: 打撃確定スナップ `resultBallClass`（一球速報 score の「＋N点」行の #base class）
+ *   - **打点**: 同一スナップの `#result` span「＋N点」（`resultBallRbi`）。無いときのみ塁+結果の近似
+ *   - **打席結果**: 出場成績末尾列（`appearance_only`）
+ *   巡目・打順別・守備位置別の打席開始塁は textPlayByPlay → score ハイブリッド → pa.baseBefore。
+ *
+ * 状況別・塁（`TOPPAGE_SITUATION_BASES_SOURCE=score_illustration` または `--score-bases`）:
+ *   巡目用の打席開始塁は score 入口スナップ。状況別分類・打点は上記と同じ resultBallClass / resultBallRbi。
+ *
+ * 状況別（`TOPPAGE_PLATE_RESULT_SOURCE=pitch_pbp`）:
+ *   半回内の打席を一球の決着 resultJa で `paSituationSim` 簡易シミュ。結果も一球のみ（非本番）。
  *
  * 打順別（スタメン1〜9）・スタメン守備位置別:
  *   canonical の startingLineup（battingOrder / fieldingPosition + yahooPlayerId）で
@@ -19,6 +27,8 @@
  *
  * 使い方:
  *   npx tsx scripts/phase15_build_pa_round_and_situation_from_canonical.ts --year 2026
+ *   # 塁=一球イラスト・結果=出場成績: npm run phase15:build:batting-splits:score-bases
+ *   # 塁・結果とも一球: TOPPAGE_PLATE_RESULT_SOURCE=pitch_pbp npm run phase15:build:batting-splits:pitch-pbp
  *
  * 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）。
  */
@@ -31,15 +41,27 @@ import {
   applyPlayResult,
   classifySituationAtPaStart,
   emptyGameState,
+  type Bases,
 } from "../lib/yahooGame/paSituationSim"
+import { isPlateResultPitchPbp } from "../lib/yahooGame/plateResultSourceFeatureFlag"
 import {
   emptyBattingSeasonAggYahoo,
-  plateAppearanceLastResultText,
+  plateAppearanceResolvedResultText,
   updateBattingAggFromPa,
   type BattingSeasonAggYahoo,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
 import { loadVsHandRowsFromCanonicalWithDebug } from "../lib/seasonStatsPilot"
+import { basesBeforeForPlateAppearanceHybrid } from "../lib/yahooGame/basesFromSportsnaviPlayLine"
+import { buildPaIdToSportsnaviPlayLineMap } from "../lib/yahooGame/supplementPlateAppearancesFromTextPlayByPlay"
+import {
+  basesAtResultBallForSituationSplit,
+  basesBeforeFromScoreIllustration,
+  buildScoreBasesContextByPaId,
+  type ScoreBasesContext,
+} from "../lib/yahooGame/basesFromSportsnaviScoreSnapshot"
+import { isSituationBasesFromScoreIllustration } from "../lib/yahooGame/situationBasesSourceFeatureFlag"
+import { loadSportsnaviScoreSnapshots } from "../lib/yahooGame/sportsnaviScoreSnapshotIO"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import {
@@ -58,6 +80,12 @@ function parseArgs(): { year: string } {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    }
+    if (args[i] === "--pitch-pbp") {
+      process.env.TOPPAGE_PLATE_RESULT_SOURCE = "pitch_pbp"
+    }
+    if (args[i] === "--score-bases") {
+      process.env.TOPPAGE_SITUATION_BASES_SOURCE = "score_illustration"
     }
   }
   return { year }
@@ -222,6 +250,8 @@ function compareHalfKeys(a: string, b: string): number {
 
 function main(): void {
   const { year } = parseArgs()
+  const usePitchPbp = isPlateResultPitchPbp()
+  const useScoreBases = isSituationBasesFromScoreIllustration()
   const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
     console.error("[phase15] no canonical games found under _data/scraped_games/canonical/")
@@ -253,11 +283,19 @@ function main(): void {
     return m
   }
 
-  function addBatOrderAgg(bid: string, slot: string, gameId: string, pa: PlateAppearance): void {
+  function addBatOrderAgg(
+    bid: string,
+    slot: string,
+    gameId: string,
+    pa: PlateAppearance,
+    doc: CanonicalGameDocument,
+    basesBefore: Bases,
+    scoreCtx: ScoreBasesContext | null | undefined,
+  ): void {
     const bm = ensureBatOrderMap(bid)
     const key = `bat_order_${slot}`
     const agg = bm.get(key) ?? emptyBattingSeasonAggYahoo()
-    updateBattingAggFromPa(agg, gameId, pa)
+    updateBattingAggFromPa(agg, gameId, pa, doc, basesBefore, scoreCtx)
     bm.set(key, agg)
   }
 
@@ -275,10 +313,13 @@ function main(): void {
     fieldKey: string,
     gameId: string,
     pa: PlateAppearance,
+    doc: CanonicalGameDocument,
+    basesBefore: Bases,
+    scoreCtx: ScoreBasesContext | null | undefined,
   ): void {
     const fm = ensureStarterFieldMap(bid)
     const agg = fm.get(fieldKey) ?? emptyBattingSeasonAggYahoo()
-    updateBattingAggFromPa(agg, gameId, pa)
+    updateBattingAggFromPa(agg, gameId, pa, doc, basesBefore, scoreCtx)
     fm.set(fieldKey, agg)
   }
 
@@ -293,11 +334,59 @@ function main(): void {
     return m
   }
 
-  function addSitAgg(bid: string, sitKey: string, gameId: string, pa: PlateAppearance): void {
+  function addSitAgg(
+    bid: string,
+    sitKey: string,
+    gameId: string,
+    pa: PlateAppearance,
+    doc: CanonicalGameDocument,
+    basesBefore: Bases,
+    scoreCtx: ScoreBasesContext | null | undefined,
+  ): void {
     const sm = ensureSitMap(bid)
     const agg = sm.get(sitKey) ?? emptyBattingSeasonAggYahoo()
-    updateBattingAggFromPa(agg, gameId, pa)
+    updateBattingAggFromPa(agg, gameId, pa, doc, basesBefore, scoreCtx)
     sm.set(sitKey, agg)
+  }
+
+  function applyGameRbiReconcileFromBattingLines(
+    doc: CanonicalGameDocument,
+    inferredRbiByBid: Map<string, number>,
+    byBatterRound: Map<string, Map<string, BattingSeasonAggYahoo>>,
+    byBatterSit?: Map<string, Map<string, BattingSeasonAggYahoo>>,
+  ): void {
+    for (const line of doc.domain?.battingLines ?? []) {
+      const bid = String(line.yahooPlayerId ?? "").trim()
+      if (!bid) continue
+      const lineRbi = line.rbi ?? 0
+      const inferred = inferredRbiByBid.get(bid) ?? 0
+      const delta = lineRbi - inferred
+      if (delta === 0) continue
+
+      const roundBucket = byBatterRound.get(bid)
+      if (roundBucket) {
+        let bestKey = "5"
+        let bestPa = -1
+        for (const [rk, agg] of roundBucket) {
+          if (agg.pa > bestPa) {
+            bestPa = agg.pa
+            bestKey = rk
+          }
+        }
+        const roundAgg = roundBucket.get(bestKey) ?? emptyBattingSeasonAggYahoo()
+        roundAgg.rbi += delta
+        roundBucket.set(bestKey, roundAgg)
+      }
+
+      const sitBucket = byBatterSit?.get(bid)
+      const rispAgg = sitBucket?.get("risp")
+      if (rispAgg && rispAgg.pa > 0) {
+        rispAgg.rbi += delta
+        sitBucket!.set("risp", rispAgg)
+      }
+
+      inferredRbiByBid.set(bid, lineRbi)
+    }
   }
 
   const mergedDocsByGameId = new Map<string, CanonicalGameDocument>()
@@ -312,30 +401,14 @@ function main(): void {
     const gameId = doc.gameId
     const pas = [...(doc.domain.plateAppearances ?? [])].sort(comparePlateAppearances)
     const appearanceCount = new Map<string, number>()
-
-    for (const pa of pas) {
-      const bid = (pa.yahooBatterId ?? "").trim()
-      if (!bid) continue
-      allBattersWithPas.add(bid)
-      const n = (appearanceCount.get(bid) ?? 0) + 1
-      appearanceCount.set(bid, n)
-      const roundKey = n <= 4 ? String(n) : "5"
-      const roundMap = ensureRoundMap(bid)
-      const agg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
-      updateBattingAggFromPa(agg, gameId, pa)
-      roundMap.set(roundKey, agg)
-    }
-
+    const inferredRbiInGame = new Map<string, number>()
     const starterSlot = starterSlotByYahooId(doc)
     const starterField = starterFieldKeyByYahooId(doc)
-    for (const pa of pas) {
-      const bid = (pa.yahooBatterId ?? "").trim()
-      if (!bid) continue
-      const slot = starterSlot.get(bid)
-      if (slot) addBatOrderAgg(bid, slot, gameId, pa)
-      const fieldKey = starterField.get(bid)
-      if (fieldKey) addStarterFieldAgg(bid, fieldKey, gameId, pa)
-    }
+    const playLineByPaId = usePitchPbp ? null : buildPaIdToSportsnaviPlayLineMap(doc)
+    const scoreCtxByPaId = buildScoreBasesContextByPaId(
+      pas.map((p) => p.paId),
+      loadSportsnaviScoreSnapshots(projectRoot, doc.gameId),
+    )
 
     const halfGroups = new Map<string, PlateAppearance[]>()
     for (const pa of pas) {
@@ -345,21 +418,83 @@ function main(): void {
       list.push(pa)
       halfGroups.set(hk, list)
     }
-    const sortedHalfKeys = [...halfGroups.keys()].sort(compareHalfKeys)
-    for (const hk of sortedHalfKeys) {
-      let state = emptyGameState()
-      const groupPas = halfGroups.get(hk) ?? []
-      for (const pa of groupPas) {
-        const bid = (pa.yahooBatterId ?? "").trim()
-        if (!bid) continue
-        const { detail, risp } = classifySituationAtPaStart(state.b)
-        addSitAgg(bid, detail, gameId, pa)
-        if (risp) addSitAgg(bid, "risp", gameId, pa)
-        // 非得点圏: 2・3塁走者なし（ランナーなし・1塁のみ）
-        if (!risp) addSitAgg(bid, "no_risp", gameId, pa)
-        state = applyPlayResult(state, plateAppearanceLastResultText(pa))
+
+    function processPlateAppearance(
+      pa: PlateAppearance,
+      basesBefore: Bases,
+      basesForSituation: Bases | null,
+      includeSituation: boolean,
+    ): void {
+      const bid = (pa.yahooBatterId ?? "").trim()
+      if (!bid) return
+      allBattersWithPas.add(bid)
+
+      const n = (appearanceCount.get(bid) ?? 0) + 1
+      appearanceCount.set(bid, n)
+      const roundKey = n <= 4 ? String(n) : "5"
+      const roundMap = ensureRoundMap(bid)
+      const scoreCtx = scoreCtxByPaId.get(pa.paId)
+      const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
+      const rbiBefore = roundAgg.rbi
+      updateBattingAggFromPa(roundAgg, gameId, pa, doc, basesBefore, scoreCtx)
+      roundMap.set(roundKey, roundAgg)
+      inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
+
+      const slot = starterSlot.get(bid)
+      if (slot) addBatOrderAgg(bid, slot, gameId, pa, doc, basesBefore, scoreCtx)
+      const fieldKey = starterField.get(bid)
+      if (fieldKey) addStarterFieldAgg(bid, fieldKey, gameId, pa, doc, basesBefore, scoreCtx)
+
+      if (includeSituation && basesForSituation) {
+        const { detail, risp } = classifySituationAtPaStart(basesForSituation)
+        addSitAgg(bid, detail, gameId, pa, doc, basesForSituation, scoreCtx)
+        if (risp) addSitAgg(bid, "risp", gameId, pa, doc, basesForSituation, scoreCtx)
+        if (!risp) addSitAgg(bid, "no_risp", gameId, pa, doc, basesForSituation, scoreCtx)
       }
     }
+
+    const sortedHalfKeys = [...halfGroups.keys()].sort(compareHalfKeys)
+    for (const hk of sortedHalfKeys) {
+      const groupPas = halfGroups.get(hk) ?? []
+      if (usePitchPbp) {
+        let state = emptyGameState()
+        for (const pa of groupPas) {
+          const basesBefore: Bases = {
+            r1: state.b.r1,
+            r2: state.b.r2,
+            r3: state.b.r3,
+          }
+          const basesForSit = basesAtResultBallForSituationSplit(
+            scoreCtxByPaId.get(pa.paId),
+            basesBefore,
+          )
+          const result = plateAppearanceResolvedResultText(doc, pa).trim()
+          if (result) processPlateAppearance(pa, basesBefore, basesForSit, true)
+          else processPlateAppearance(pa, basesBefore, basesForSit, false)
+          if (result) state = applyPlayResult(state, result)
+        }
+      } else {
+        for (const pa of groupPas) {
+          const scoreCtx = scoreCtxByPaId.get(pa.paId)
+          const basesBefore = useScoreBases
+            ? basesBeforeFromScoreIllustration(
+                scoreCtx,
+                playLineByPaId!.get(pa.paId),
+                pa,
+              )
+            : basesBeforeForPlateAppearanceHybrid(
+                pa,
+                playLineByPaId!.get(pa.paId),
+                scoreCtx,
+              )
+          const basesForSit = basesAtResultBallForSituationSplit(scoreCtx, basesBefore)
+          const bForRound = basesBefore ?? { r1: false, r2: false, r3: false }
+          processPlateAppearance(pa, bForRound, basesForSit, !!(basesBefore || basesForSit))
+        }
+      }
+    }
+
+    applyGameRbiReconcileFromBattingLines(doc, inferredRbiInGame, byBatterRound, byBatterSit)
   }
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_batting_splits", year)
@@ -441,7 +576,7 @@ function main(): void {
       }
     }
     const payload = {
-      schemaVersion: "phase15-player-season-batting-splits-v1",
+      schemaVersion: "phase15-player-season-batting-splits-v2",
       seasonYear: year,
       yahooBatterId: bid,
       generatedAt: new Date().toISOString(),
@@ -449,8 +584,17 @@ function main(): void {
         paRoundDefinition:
           "試合内で当該打者の k 回目の打席を k 巡目（k>=5 は 5巡目以上に集約）。打席順は paId からソート。",
         situationSplits: "base_sit",
-        situationNote:
-          "打席結果テキストから走者を簡易シミュレーション（paSituationSim）。公式記録の代替ではない。",
+        situationClassification: "resultBallClass",
+        situationRbiSource: "resultBallRbi",
+        situationBasesSource: usePitchPbp
+          ? "pitch_pbp_sim"
+          : useScoreBases
+            ? "score_illustration"
+            : "text_hybrid",
+        situationNote: usePitchPbp
+          ? "非本番: 状況別は pitch_pbp シミュ。本番は appearance_only + resultBallClass/resultBallRbi。"
+          : "状況別 base_sit: 塁=打撃確定スナップ resultBallClass（スポナビ一球速報）。打点=同一スナップ #result の「＋N点」resultBallRbi。打席結果=出場成績 zip。巡目・打順・守備位置の打席開始塁のみ text_hybrid（または score_illustration）。risp/no_risp 行の打点残差は試合出場成績との差を risp 行に補正。",
+        plateResultSource: usePitchPbp ? "pitch_pbp" : "appearance_only",
         batOrderNote:
           "スタメン登録の打順（1〜9）。代打・途中出場のみでスタメン名簿に無い打席は集計対象外。",
         starterFieldNote:

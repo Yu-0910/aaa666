@@ -228,9 +228,11 @@ def get_player_pitching_for_year(
             if g is not None and g == 0:
                 continue
             ip_val, ip_cells = _parse_ip_cells(cells, col_map['IP'])
+            # ヘッダより行が長い分は IP 周辺の colspan ずれ（例: 120 + 120 + 空）
+            row_extra = max(0, len(cells) - header_len)
             ip_extra = max(0, ip_cells - 1)
-            if ip_extra == 0 and len(cells) > header_len and len(cells) - header_len >= 2:
-                ip_extra = 3
+            if ip_cells == 1 and row_extra > 0:
+                ip_extra = row_extra
 
             def _cell_idx(key: str) -> int:
                 idx = col_map.get(key)
@@ -249,6 +251,50 @@ def get_player_pitching_for_year(
                 if not t or t in ('-', '－'):
                     return None
                 return (_safe_float(t) if as_float else _safe_int(t))
+
+            def _read_tail() -> Optional[Dict[str, Any]]:
+                """行末 R/ER/ERA と被安〜三振を固定オフセットで読む（NPB 表の IP 列ずれ対策）"""
+                if len(cells) < 11:
+                    return None
+                era_t = cells[-1].get_text(strip=True).replace(',', '')
+                if not era_t or era_t in ('-', '－'):
+                    return None
+                era_v = _safe_float(era_t)
+                if era_v is None or era_v > 15:
+                    return None
+                er_v = _safe_int(cells[-2].get_text(strip=True))
+                r_v = _safe_int(cells[-3].get_text(strip=True))
+                if er_v is None or r_v is None:
+                    return None
+                return {
+                    'H': _safe_int(cells[-10].get_text(strip=True)),
+                    'HR': _safe_int(cells[-9].get_text(strip=True)),
+                    'BB': _safe_int(cells[-8].get_text(strip=True)),
+                    'HBP': _safe_int(cells[-7].get_text(strip=True)),
+                    'SO': _safe_int(cells[-6].get_text(strip=True)),
+                    'WP': _safe_int(cells[-5].get_text(strip=True)),
+                    'BK': _safe_int(cells[-4].get_text(strip=True)),
+                    'R': r_v,
+                    'ER': er_v,
+                    'ERA': era_v,
+                }
+
+            def _row_plausible(data: Dict[str, Any]) -> bool:
+                ip_d = data.get('IP')
+                er_v = data.get('ER') or 0
+                era_v = data.get('ERA')
+                h_v = data.get('H') or 0
+                if ip_d is None or float(ip_d) <= 0:
+                    return False
+                if isinstance(era_v, (int, float)) and float(era_v) > 15:
+                    return False
+                if h_v > float(ip_d) * 1.5:
+                    return False
+                if er_v > 0 and isinstance(era_v, (int, float)):
+                    exp = round((float(er_v) * 9) / float(ip_d), 2)
+                    if abs(float(era_v) - exp) > 0.25:
+                        return False
+                return True
 
             row_data: Dict[str, Any] = {
                 'year': year,
@@ -277,6 +323,10 @@ def get_player_pitching_for_year(
                 idx = _cell_idx(ckey)
                 if idx >= 0 and idx < len(cells):
                         row_data[key] = _safe_float(cells[idx].get_text(strip=True)) if key == 'WPCT' else _safe_int(cells[idx].get_text(strip=True))
+            if not _row_plausible(row_data):
+                tail = _read_tail()
+                if tail:
+                    row_data.update({k: v for k, v in tail.items() if v is not None})
             return row_data
     return None
 

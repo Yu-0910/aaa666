@@ -5,6 +5,8 @@
  *   npm run appearance-slots:phase5:rebuild-2026 -- --skip-backup
  *
  * Phase11 直後に validate:appearance-slots-vs-line-ab:fail（成績表打数列 vs 末尾スロット）。
+ * verify:cs-runner-events-appearance-slots（CS=score / 代走のみ SB 退行検証）。
+ * 末尾で top-leaders:build:2026（TOPページ盗塁等の表示用スナップショット）。
  * 詳細: docs/data_operation_rules.md §出場成績 HTML のパースと打数整合
  */
 import { spawnSync } from "node:child_process"
@@ -43,6 +45,7 @@ function main() {
   run("Phase15 splits", "npm", ["run", "phase15:build:batting-splits"])
   run("Phase12 rankings", "npm", ["run", "phase12:build:rankings"])
   run("validate phase11 vs phase12", "npm", ["run", "validate:batting-phase11-vs-phase12"])
+  run("top-leaders 2026", "npm", ["run", "top-leaders:build:2026"])
   console.log("\n[appearance-slots:phase5] done")
 }
 

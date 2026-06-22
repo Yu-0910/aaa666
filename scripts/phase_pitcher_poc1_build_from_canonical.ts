@@ -15,9 +15,15 @@
  *   - splits.vsHand / bySituation / byInning: plateAppearances から対象投手（yahooPitcherId）で集計
  *     （左右はスタメン → yahooPlayersMentioned + 名簿 bat_hand: resolveBatHandJaForBatter。
  *      両打者は投手の投球腕に応じて右打／左打に換算: 左投→右打側、右投→左打側）
- *   - splits.byStadium: 試合ごとの pitchingLines を yahoo_game_meta の球場名で合算
+ *   - splits.byStadium: 試合ごとの pitchingLines を Phase0 日程（stadiumByGameId）の球場名で合算（Phase13 打撃と同一）
  *   - splits.byOpponentTeam: 試合ごとの pitchingLines を対戦相手チーム名（scoreboard）で合算
- *   - splits.byDayNight: 試合ごとの pitchingLines を yahoo_game_meta のデー/ナイターで合算
+ *   - splits.byDayNight: 試合ごとの pitchingLines を Phase0/raw_sportsnavi 開始時刻（yahoo_game_meta 補完）で合算
+ *   - splits.byHomeAway: 試合ごとの pitchingLines を scoreboard 先攻/後攻（空なら試合前情報補完）で合算
+ *   - splits.byPaRoundPitchTypes: 巡目別球種（pitchEvents 球種割合）
+ *   - splits.byPaRoundPitchTypesVsL / VsR: 巡目別球種（対左打者／対右打者。vsHand と同じ打者・投手腕換算）
+ *   - splits.byCount: カウント別投球成績（0-0〜3-2、phase16 と同じ最終球直前 B-S）
+ *   - splits.byCountPitchTypes: カウント別球種（0-0〜3-2、Phase 32）
+ *   - splits.byCountPitchTypesVsL / VsR: カウント別球種（対左打者／対右打者）
  *
  * 使い方:
  *   npx tsx scripts/phase_pitcher_poc1_build_from_canonical.ts --year 2026
@@ -59,12 +65,31 @@ import {
   classifySituationAtPaStart,
   emptyGameState,
 } from "../lib/yahooGame/paSituationSim"
+import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
+import { loadDayNightByGameId } from "../lib/loadDayNightByGameId"
 import { getNpbRoster2026 } from "../lib/npbRoster"
 import {
   effectiveVsHandBucketForPitcherSplit,
   resolveBatHandJaForBatter,
 } from "../lib/yahooGame/batterHandFromCanonical"
 import { parseRosterCsv, type RosterRow } from "../lib/yahooGame/rosterCsv"
+import { buildEstimatedErByPaId } from "../lib/yahooGame/estimatedErByPaIdFromTextPbp"
+import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
+import { teamsRoughlyMatch } from "../lib/yahooGame/startingCatcherFromCanonical"
+import {
+  addPitchToCountPitchTypesAcc,
+  buildPitcherCountPitchTypesRows,
+  emptyPitcherCountPitchTypesAcc,
+  ensurePitcherCountPitchTypesAcc,
+  type PitcherCountPitchTypesByNpb,
+} from "../lib/yahooGame/pitcherCountPitchTypesAgg"
+import {
+  countBeforePitchAtIndex,
+  isValidPitchCountKey,
+  ORDERED_PITCH_COUNT_KEYS,
+  pitchCountKeyForPlateAppearance,
+} from "../lib/yahooGame/pitchCountSim"
+import { sortPitchEventsByPitchIndex } from "../lib/yahooGame/sortPitchEventsByPitchIndex"
 import type {
   PitcherSeasonPocPayload,
   PitcherSeasonPocStadiumRow,
@@ -265,6 +290,8 @@ type SeasonAgg = {
   completeGames: number
   shutouts: number
   qsCount: number
+  hqsCount: number
+  sqsCount: number
   winCount: number
   lossCount: number
   saveCount: number
@@ -278,24 +305,39 @@ function emptySeasonAgg(): SeasonAgg {
     completeGames: 0,
     shutouts: 0,
     qsCount: 0,
+    hqsCount: 0,
+    sqsCount: 0,
     winCount: 0,
     lossCount: 0,
     saveCount: 0,
   }
 }
 
-/** scoreboard の2チームから、投手側名簿 team 文字列に対する対戦相手を推定 */
+/** scoreboard 先攻/後攻（空なら試合前情報補完）から投手所属側のホーム/ビジターを推定 */
+function pitcherHomeAwayInGame(
+  doc: CanonicalGameDocument,
+  pitcherTeam: string,
+): "home" | "away" | null {
+  const board = doc.game.scoreboard ?? []
+  if (board.length < 2) return null
+  const visitorName = (board[0].teamName ?? "").trim()
+  const homeName = (board[1].teamName ?? "").trim()
+  if (!visitorName || !homeName) return null
+  if (teamsRoughlyMatch(pitcherTeam, homeName)) return "home"
+  if (teamsRoughlyMatch(pitcherTeam, visitorName)) return "away"
+  return null
+}
+
+/** scoreboard の先攻/後攻から、投手所属チームに対する対戦相手名を返す（teamsRoughlyMatch で突合） */
 function opponentTeamName(canonical: CanonicalGameDocument, pitcherTeam: string): string {
   const board = canonical.game.scoreboard ?? []
   if (board.length < 2) return ""
-  const names = board.map((r) => (r.teamName ?? "").trim()).filter(Boolean)
-  if (names.length !== 2) return ""
-  const h = pitcherTeam || ""
-  const isHiroshima = h.includes("広島") || h.includes("カープ")
-  const isChunichi = h.includes("中日")
-  if (isHiroshima) return names.find((n) => n.includes("中日")) ?? ""
-  if (isChunichi) return names.find((n) => n.includes("広島") || n.includes("カープ")) ?? ""
-  return names[0] === h ? names[1]! : names[0]!
+  const visitorName = (board[0].teamName ?? "").trim()
+  const homeName = (board[1].teamName ?? "").trim()
+  if (!visitorName || !homeName) return ""
+  if (teamsRoughlyMatch(pitcherTeam, homeName)) return visitorName
+  if (teamsRoughlyMatch(pitcherTeam, visitorName)) return homeName
+  return ""
 }
 
 function main(): void {
@@ -313,18 +355,47 @@ function main(): void {
     process.exit(1)
   }
 
-  /** gameId -> 球場名（yahoo_game_meta。無ければ「未設定」） */
-  const stadiumByGameId = new Map<string, string>()
-  /** gameId -> デー/ナイター（メタ欠落は「未設定」） */
-  const dayNightByGameId = new Map<string, "day" | "night" | "未設定">()
-  for (const doc of docs) {
-    const meta = loadYahooGameMeta(projectRoot, doc.gameId)
-    const name = (meta?.meta?.stadiumName ?? "").trim()
-    stadiumByGameId.set(doc.gameId, name || "未設定")
-    const dk = meta?.meta?.dayNight?.kind
-    dayNightByGameId.set(
-      doc.gameId,
-      dk === "day" || dk === "night" ? dk : "未設定",
+  /** gameId -> scoreboard 補完済み canonical（Phase13 / Phase6 と同一） */
+  const enrichedDocByGameId = new Map<string, CanonicalGameDocument>()
+  function enrichedDoc(base: CanonicalGameDocument): CanonicalGameDocument {
+    const gid = String(base.gameId ?? "").trim()
+    let cached = enrichedDocByGameId.get(gid)
+    if (!cached) {
+      cached = injectTeamsFromTextPbpIfMissing(base)
+      enrichedDocByGameId.set(gid, cached)
+    }
+    return cached
+  }
+
+  /** gameId -> 球場名（Phase0 日程 + canonical 補完。Phase13 打撃球場別と同一） */
+  const stadiumByGameId = loadScheduleStadiumByGameId(year, projectRoot)
+  const canonicalIds = new Set(docs.map((d) => String(d.gameId ?? "").trim()))
+  let missingStadium = 0
+  for (const gid of canonicalIds) {
+    if (gid && !stadiumByGameId.has(gid)) missingStadium++
+  }
+  console.log(
+    `[phase_pitcher_poc1] stadiumByGameId: ${stadiumByGameId.size} entries, canonical games missing stadium: ${missingStadium}/${canonicalIds.size}`,
+  )
+  if (missingStadium > 0) {
+    console.warn(
+      "[phase_pitcher_poc1] WARN: 球場未設定の試合があります。Phase0 日程の再取得、または canonical の対戦表記を確認してください。",
+    )
+  }
+  /** gameId -> デー/ナイター（yahoo_game_meta + raw_sportsnavi 開始時刻。欠落は「未設定」） */
+  const dayNightByGameId = loadDayNightByGameId(
+    year,
+    projectRoot,
+    docs.map((d) => String(d.gameId ?? "").trim()),
+  )
+  const canonicalIdsForDn = new Set(docs.map((d) => String(d.gameId ?? "").trim()))
+  let missingDayNight = 0
+  for (const gid of canonicalIdsForDn) {
+    if (gid && dayNightByGameId.get(gid) === "未設定") missingDayNight++
+  }
+  if (missingDayNight > 0) {
+    console.warn(
+      `[phase_pitcher_poc1] WARN: デー/ナイター未設定の試合: ${missingDayNight}/${canonicalIdsForDn.size}（raw_sportsnavi 再取得を確認）`,
     )
   }
 
@@ -475,7 +546,7 @@ function main(): void {
   }
 
   for (const doc of docs) {
-    const stadiumKey = stadiumByGameId.get(doc.gameId) ?? "未設定"
+    const stadiumKey = stadiumByGameId.get(String(doc.gameId ?? "").trim()) ?? "未設定"
     const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
     for (const m of mergedLines.values()) {
       const npb = npbByYahooPitcherId.get(m.yahooPlayerId)
@@ -516,12 +587,13 @@ function main(): void {
   }
 
   for (const doc of docs) {
+    const docEnriched = enrichedDoc(doc)
     const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
     for (const m of mergedLines.values()) {
       const npb = npbByYahooPitcherId.get(m.yahooPlayerId)
       if (!npb || !byNpb.has(npb)) continue
       const pitcherRow = byNpb.get(npb)!
-      const opp = opponentTeamName(doc, pitcherRow.team)
+      const opp = opponentTeamName(docEnriched, pitcherRow.team)
       const oppKey = (opp || "").trim() || "未設定"
       const a = ensureOpponentLineAgg(npb, oppKey)
       a.outs += m.outs
@@ -540,6 +612,59 @@ function main(): void {
       if (m.decision === "win") a.wins += 1
       else if (m.decision === "loss") a.losses += 1
     }
+  }
+
+  /** pitchingLines をホーム/ビジター別に合算（1 試合あたり games++、QS は 6 回以上かつ自責 3 以下） */
+  const homeAwayPitchByNpb = new Map<string, Map<string, StadiumLineAgg>>()
+  function ensureHomeAwayLineAgg(npb: string, haKey: string): StadiumLineAgg {
+    let m = homeAwayPitchByNpb.get(npb)
+    if (!m) {
+      m = new Map()
+      homeAwayPitchByNpb.set(npb, m)
+    }
+    let a = m.get(haKey)
+    if (!a) {
+      a = emptyStadiumLineAgg()
+      m.set(haKey, a)
+    }
+    return a
+  }
+
+  let missingHomeAway = 0
+  for (const doc of docs) {
+    const docEnriched = enrichedDoc(doc)
+    const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
+    for (const m of mergedLines.values()) {
+      const npb = npbByYahooPitcherId.get(m.yahooPlayerId)
+      if (!npb || !byNpb.has(npb)) continue
+      const pitcherRow = byNpb.get(npb)!
+      const haKey = pitcherHomeAwayInGame(docEnriched, pitcherRow.team)
+      if (!haKey) {
+        missingHomeAway++
+        continue
+      }
+      const a = ensureHomeAwayLineAgg(npb, haKey)
+      a.outs += m.outs
+      a.bf += m.bf
+      a.h += m.h
+      a.hr += m.hr
+      a.so += m.so
+      a.bb += m.bb
+      a.hbp += m.hbp
+      a.bk += m.bk
+      a.r += m.r
+      a.er += m.er
+      a.pitches += m.pitches
+      a.games += 1
+      if (m.outs >= 18 && m.er <= 3) a.qsCount += 1
+      if (m.decision === "win") a.wins += 1
+      else if (m.decision === "loss") a.losses += 1
+    }
+  }
+  if (missingHomeAway > 0) {
+    console.warn(
+      `[phase_pitcher_poc1] WARN: ホーム/ビジター未判定の pitchingLines 行: ${missingHomeAway}（scoreboard 補完後もチーム不一致）`,
+    )
   }
 
   /** pitchingLines をデー/ナイター別に合算（1 試合あたり games++、QS は 6 回以上かつ自責 3 以下） */
@@ -598,112 +723,17 @@ function main(): void {
   }
   const emptyPaAgg = (): PaAgg => ({ bf: 0, ab: 0, h: 0, hr: 0, so: 0, bb: 0, hbp: 0, outs: 0, er: 0 })
 
-  function isPaLikePlayByPlayLine(line: string): boolean {
-    const s = (line ?? "").trim()
-    if (!s) return false
-    // 明示的に「打席の結果」ではないメモ類
-    if (s.startsWith("－")) return false
-    if (/けん制|コーチマウンド|タイム|守備交代|投手交代|代打|代走|盗塁|暴投|ボーク/.test(s)) return false
-    // 典型的な打席結果
-    return /アウト|ヒット|安打|二塁打|三塁打|本塁打|ホームラン|四球|敬遠|死球|三振|併殺|犠打|犠飛/.test(s)
-  }
-
-  function parseInningHalfFromSectionTitle(t: string): { inning: number; half: "表" | "裏" } | null {
-    const s = (t ?? "").trim()
-    const m = s.match(/^(\d+)回(表|裏)$/)
-    if (!m) return null
-    const inning = parseInt(m[1] ?? "", 10)
-    const half = (m[2] ?? "") as "表" | "裏"
-    if (!Number.isFinite(inning) || inning <= 0) return null
-    return { inning, half }
-  }
-
-  function scoreBeforeHalf(
-    scoreboard: Array<{ innings?: string[]; teamName?: string }>,
-    battingIndex: 0 | 1,
-    inning: number
-  ): number {
-    const inn = scoreboard?.[battingIndex]?.innings ?? []
-    const end = Math.max(0, Math.min(inn.length, inning - 1))
-    let sum = 0
-    for (let i = 0; i < end; i++) {
-      const n = parseInt(String(inn[i] ?? "0").replace(/[^\d]/g, ""), 10)
-      if (Number.isFinite(n)) sum += n
-    }
-    return sum
-  }
-
-  function buildEstimatedErByPaId(doc: CanonicalGameDocument): Map<string, number> {
-    const out = new Map<string, number>()
-    const scoreboard = doc.game?.scoreboard ?? []
-    if (scoreboard.length < 2) return out
-
-    const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
-    const pasByHalf = new Map<string, PlateAppearance[]>()
-    for (const pa of pas) {
-      const hk = halfKeyFromPaId(pa.paId)
-      if (!hk) continue
-      const list = pasByHalf.get(hk) ?? []
-      list.push(pa)
-      pasByHalf.set(hk, list)
-    }
-
-    const mark0 = ((scoreboard[0]?.teamName ?? "").trim()[0] ?? "").trim()
-    const mark1 = ((scoreboard[1]?.teamName ?? "").trim()[0] ?? "").trim()
-    const markToIdx = new Map<string, 0 | 1>()
-    if (mark0) markToIdx.set(mark0, 0)
-    if (mark1) markToIdx.set(mark1, 1)
-
-    const sections = doc.game?.textPlayByPlay ?? []
-    for (const sec of sections) {
-      const parsed = parseInningHalfFromSectionTitle(sec.sectionTitle)
-      if (!parsed) continue
-      const hk = `${parsed.inning}-${parsed.half}`
-      const paList = pasByHalf.get(hk) ?? []
-      if (paList.length === 0) continue
-
-      const battingIndex: 0 | 1 = parsed.half === "表" ? 0 : 1
-      let prevBattingScore = scoreBeforeHalf(scoreboard, battingIndex, parsed.inning)
-
-      let paIdx = 0
-      for (const rawLine of sec.lines ?? []) {
-        const line = (rawLine ?? "").trim()
-        if (!line) continue
-
-        // スコア表記（例: "広 0-1 中"）から打撃側の得点増分を推定
-        let delta = 0
-        const m = line.match(/([^\s])\s*(\d+)-(\d+)\s*([^\s])/)
-        if (m) {
-          const aMark = (m[1] ?? "").trim()
-          const bMark = (m[4] ?? "").trim()
-          const aScore = parseInt(m[2] ?? "0", 10) || 0
-          const bScore = parseInt(m[3] ?? "0", 10) || 0
-          const aIdx = markToIdx.get(aMark) ?? null
-          const bIdx = markToIdx.get(bMark) ?? null
-          const battingScore =
-            battingIndex === aIdx ? aScore : battingIndex === bIdx ? bScore : null
-          if (battingScore != null) {
-            delta = Math.max(0, battingScore - prevBattingScore)
-            prevBattingScore = battingScore
-          }
-        }
-
-        if (!isPaLikePlayByPlayLine(line)) continue
-        const pa = paList[paIdx]
-        if (!pa) break
-        if (delta > 0) out.set(pa.paId, (out.get(pa.paId) ?? 0) + delta)
-        paIdx += 1
-      }
-    }
-
-    return out
-  }
-
   const vsHand = new Map<string, { vsR: PaAgg; vsL: PaAgg; vsB: PaAgg; vsUnknown: PaAgg }>()
   const bySit = new Map<string, Map<string, PaAgg>>()
+  const byCount = new Map<string, Map<string, PaAgg>>()
   const byInn = new Map<string, Map<number, PaAgg>>()
   const byPaRound = new Map<string, Map<string, PaAgg>>()
   const byPaRoundPitchTypes = new Map<string, Map<string, Map<string, number>>>()
+  const byPaRoundPitchTypesVsL = new Map<string, Map<string, Map<string, number>>>()
+  const byPaRoundPitchTypesVsR = new Map<string, Map<string, Map<string, number>>>()
+  const byCountPitchTypes: PitcherCountPitchTypesByNpb = new Map()
+  const byCountPitchTypesVsL: PitcherCountPitchTypesByNpb = new Map()
+  const byCountPitchTypesVsR: PitcherCountPitchTypesByNpb = new Map()
   const goAoByNpb = new Map<string, { go: number; ao: number }>()
 
   function addGoAo(npb: string, kind: ReturnType<typeof classifyBattedBallOutForGoAo>) {
@@ -727,6 +757,14 @@ function main(): void {
     if (!m) {
       m = new Map()
       bySit.set(npb, m)
+    }
+    return m
+  }
+  function ensureCount(npb: string) {
+    let m = byCount.get(npb)
+    if (!m) {
+      m = new Map()
+      byCount.set(npb, m)
     }
     return m
   }
@@ -754,6 +792,52 @@ function main(): void {
     }
     return m
   }
+  function ensurePaRoundPitchTypesVsL(npb: string) {
+    let m = byPaRoundPitchTypesVsL.get(npb)
+    if (!m) {
+      m = new Map()
+      byPaRoundPitchTypesVsL.set(npb, m)
+    }
+    return m
+  }
+  function ensurePaRoundPitchTypesVsR(npb: string) {
+    let m = byPaRoundPitchTypesVsR.get(npb)
+    if (!m) {
+      m = new Map()
+      byPaRoundPitchTypesVsR.set(npb, m)
+    }
+    return m
+  }
+
+  const PA_ROUND_PITCH_TYPE_KEYS = ["1", "2", "3", "4", "5"] as const
+  function paRoundPitchTypeLabel(k: (typeof PA_ROUND_PITCH_TYPE_KEYS)[number]): string {
+    return k === "1"
+      ? "1巡目"
+      : k === "2"
+        ? "2巡目"
+        : k === "3"
+          ? "3巡目"
+          : k === "4"
+            ? "4巡目"
+            : "5巡目以上"
+  }
+  function buildPaRoundPitchTypesRows(
+    rm: Map<string, Map<string, number>> | undefined,
+  ): NonNullable<PitcherSeasonPocPayload["splits"]["byPaRoundPitchTypes"]> {
+    return PA_ROUND_PITCH_TYPE_KEYS.map((k) => {
+      const tm = rm?.get(k)
+      const pitchesTotal = [...(tm?.values() ?? [])].reduce((s, n) => s + n, 0)
+      if (!tm || pitchesTotal <= 0) return null
+      const rows = [...tm.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([pitchType, pitches]) => ({
+          pitch_type: pitchType,
+          pitches,
+          pct: Math.round((pitches / pitchesTotal) * 1000) / 10,
+        }))
+      return { key: k, label: paRoundPitchTypeLabel(k), pitches_total: pitchesTotal, rows }
+    }).filter((row): row is NonNullable<typeof row> => row != null)
+  }
 
   const ibbByNpb = new Map<string, number>()
 
@@ -776,6 +860,22 @@ function main(): void {
       const outsAdded = outsAddedFromPaResult(res)
       addGoAo(npb, classifyBattedBallOutForGoAo(res))
 
+      // カウント別投球成績（phase16 打撃と同じ最終球直前 B-S + 四球寄せ）
+      {
+        const ck = pitchCountKeyForPlateAppearance(pa.pitchEvents, res)
+        if (ck) {
+          const cm = ensureCount(npb)
+          const agg = cm.get(ck) ?? emptyPaAgg()
+          addPitcherPaCount(agg, res)
+          agg.outs += outsAdded
+          agg.er += erDelta
+          cm.set(ck, agg)
+        }
+      }
+
+      const bid = (pa.yahooBatterId ?? "").trim()
+      const batJa = bid ? resolveBatHandJaForBatter(doc, bid, rosterForBatHand) : ""
+
       // 巡目別の球種投球数: 各球はその球の投手 ID に帰す（打席途中交代で先発の球が後任に丸ごと載らないようにする）。
       // 巡目キーは「その投手にとこの打席が始まる前の BF 順」から決める（下の BF 加算より前）。
       {
@@ -788,11 +888,62 @@ function main(): void {
             const idx0 = bfInGameByNpb.get(eNpb) ?? 0
             const round0 = Math.min(5, Math.floor(idx0 / 9) + 1)
             const key0 = String(round0)
+            const pt = (e.pitchTypeJa ?? "").trim() || "不明"
+
             const rm = ensurePaRoundPitchTypes(eNpb)
             const tm = rm.get(key0) ?? new Map<string, number>()
-            const pt = (e.pitchTypeJa ?? "").trim() || "不明"
             tm.set(pt, (tm.get(pt) ?? 0) + 1)
             rm.set(key0, tm)
+
+            const pitcherThrowRaw = (
+              rosterForBatHand.find((r) => r.npb_player_id === eNpb)?.throw_hand ?? ""
+            ).toUpperCase()
+            const pitcherThrow: "R" | "L" | "" =
+              pitcherThrowRaw === "R" || pitcherThrowRaw === "L" ? pitcherThrowRaw : ""
+            const bats = effectiveVsHandBucketForPitcherSplit(batJa, pitcherThrow)
+            if (bats === "L") {
+              const rmL = ensurePaRoundPitchTypesVsL(eNpb)
+              const tmL = rmL.get(key0) ?? new Map<string, number>()
+              tmL.set(pt, (tmL.get(pt) ?? 0) + 1)
+              rmL.set(key0, tmL)
+            } else if (bats === "R") {
+              const rmR = ensurePaRoundPitchTypesVsR(eNpb)
+              const tmR = rmR.get(key0) ?? new Map<string, number>()
+              tmR.set(pt, (tmR.get(pt) ?? 0) + 1)
+              rmR.set(key0, tmR)
+            }
+          }
+        }
+      }
+
+      // カウント別球種（Phase 32）: 各球を投球直前 B-S に帰属。四球寄せは使わない。
+      {
+        const ev = pa.pitchEvents ?? []
+        if (ev.length > 0) {
+          const sorted = sortPitchEventsByPitchIndex(ev)
+          for (let i = 0; i < sorted.length; i++) {
+            const e = sorted[i]!
+            const ePid = String(e.yahooPitcherId ?? "").trim() || pid
+            const eNpb = npbByYahooPitcherId.get(ePid) ?? null
+            if (!eNpb || !byNpb.has(eNpb)) continue
+            const ck = countBeforePitchAtIndex(sorted, i)
+            if (!ck || !isValidPitchCountKey(ck)) continue
+            const acc = ensurePitcherCountPitchTypesAcc(byCountPitchTypes, eNpb)
+            addPitchToCountPitchTypesAcc(acc, ck, e.pitchTypeJa)
+
+            const pitcherThrowRaw = (
+              rosterForBatHand.find((r) => r.npb_player_id === eNpb)?.throw_hand ?? ""
+            ).toUpperCase()
+            const pitcherThrow: "R" | "L" | "" =
+              pitcherThrowRaw === "R" || pitcherThrowRaw === "L" ? pitcherThrowRaw : ""
+            const bats = effectiveVsHandBucketForPitcherSplit(batJa, pitcherThrow)
+            if (bats === "L") {
+              const accL = ensurePitcherCountPitchTypesAcc(byCountPitchTypesVsL, eNpb)
+              addPitchToCountPitchTypesAcc(accL, ck, e.pitchTypeJa)
+            } else if (bats === "R") {
+              const accR = ensurePitcherCountPitchTypesAcc(byCountPitchTypesVsR, eNpb)
+              addPitchToCountPitchTypesAcc(accR, ck, e.pitchTypeJa)
+            }
           }
         }
       }
@@ -812,8 +963,6 @@ function main(): void {
         pm.set(key, agg)
       }
 
-      const bid = (pa.yahooBatterId ?? "").trim()
-      const batJa = bid ? resolveBatHandJaForBatter(doc, bid, rosterForBatHand) : ""
       const pitcherThrowRaw = (
         rosterForBatHand.find((r) => r.npb_player_id === npb)?.throw_hand ?? ""
       ).toUpperCase()
@@ -900,6 +1049,8 @@ function main(): void {
       e.gamesStarted = f.gamesStarted
       e.gamesInRelief = f.gamesInRelief
       e.qsCount = f.qsCount
+      e.hqsCount = f.hqsCount
+      e.sqsCount = f.sqsCount
       e.holds = f.holds
       e.winCount = f.winCount
       e.lossCount = f.lossCount
@@ -986,6 +1137,7 @@ function main(): void {
     const stMap = stadiumPitchByNpb.get(npb) ?? new Map<string, StadiumLineAgg>()
     const oppMap = opponentPitchByNpb.get(npb) ?? new Map<string, StadiumLineAgg>()
     const dnMap = dayNightPitchByNpb.get(npb) ?? new Map<string, StadiumLineAgg>()
+    const haMap = homeAwayPitchByNpb.get(npb) ?? new Map<string, StadiumLineAgg>()
     const mapStadiumRow = (key: string, a: StadiumLineAgg): PitcherSeasonPocStadiumRow => {
       const era = eraFrom(a.er, a.outs)
       const whip = whipFrom(a.h, a.bb, a.outs)
@@ -1020,6 +1172,12 @@ function main(): void {
       .filter(([, a]) => a.outs > 0 || a.bf > 0)
       .sort((x, y) => x[0].localeCompare(y[0], "ja"))
       .map(([key, a]) => mapStadiumRow(key, a))
+    const byHomeAwayRows: PitcherSeasonPocStadiumRow[] = (["home", "away"] as const).flatMap((k) => {
+      const a = haMap.get(k)
+      if (!a || (a.outs <= 0 && a.bf <= 0)) return []
+      const row = mapStadiumRow(k, a)
+      return [{ ...row, label: k === "home" ? "ホーム" : "アウェー" }]
+    })
     const byDayNightRows: PitcherSeasonPocStadiumRow[] = (["day", "night"] as const).flatMap((k) => {
       const a = dnMap.get(k)
       if (!a || (a.outs <= 0 && a.bf <= 0)) return []
@@ -1108,6 +1266,18 @@ function main(): void {
           const qc = seasonAggByNpb.get(npb)?.qsCount ?? 0
           return gs > 0 ? qc / gs : null
         })(),
+        hqsCount: seasonAggByNpb.get(npb)?.hqsCount ?? 0,
+        sqsCount: seasonAggByNpb.get(npb)?.sqsCount ?? 0,
+        hqsRate: (() => {
+          const gs = seasonAggByNpb.get(npb)?.gamesStarted ?? 0
+          const hc = seasonAggByNpb.get(npb)?.hqsCount ?? 0
+          return gs > 0 ? hc / gs : null
+        })(),
+        sqsRate: (() => {
+          const gs = seasonAggByNpb.get(npb)?.gamesStarted ?? 0
+          const sc = seasonAggByNpb.get(npb)?.sqsCount ?? 0
+          return gs > 0 ? sc / gs : null
+        })(),
         winCount: seasonAggByNpb.get(npb)?.winCount ?? 0,
         lossCount: seasonAggByNpb.get(npb)?.lossCount ?? 0,
         saveCount: seasonAggByNpb.get(npb)?.saveCount ?? 0,
@@ -1150,6 +1320,18 @@ function main(): void {
             }
           })
           .filter(Boolean),
+        byCount: ORDERED_PITCH_COUNT_KEYS.map((k) => {
+          const cm = byCount.get(npb)
+          const a = cm?.get(k)
+          if (!a || a.bf === 0) return null
+          return {
+            key: k,
+            label: k,
+            ...a,
+            avg: fmtAvg(a.ab, a.h),
+            ...enrichSplit(a),
+          }
+        }).filter((row): row is NonNullable<typeof row> => row != null),
         byPaRound: (["1", "2", "3", "4", "5"] as const)
           .map((k) => {
             const pm = byPaRound.get(npb)
@@ -1174,32 +1356,18 @@ function main(): void {
             }
           })
           .filter((row): row is NonNullable<typeof row> => row != null),
-        byPaRoundPitchTypes: (["1", "2", "3", "4", "5"] as const)
-          .map((k) => {
-            const rm = byPaRoundPitchTypes.get(npb)
-            const tm = rm?.get(k)
-            const pitchesTotal = [...(tm?.values() ?? [])].reduce((s, n) => s + n, 0)
-            if (!tm || pitchesTotal <= 0) return null
-            const label =
-              k === "1"
-                ? "1巡目"
-                : k === "2"
-                  ? "2巡目"
-                  : k === "3"
-                    ? "3巡目"
-                    : k === "4"
-                      ? "4巡目"
-                      : "5巡目以上"
-            const rows = [...tm.entries()]
-              .sort((a, b) => b[1] - a[1])
-              .map(([pitchType, pitches]) => ({
-                pitch_type: pitchType,
-                pitches,
-                pct: Math.round((pitches / pitchesTotal) * 1000) / 10,
-              }))
-            return { key: k, label, pitches_total: pitchesTotal, rows }
-          })
-          .filter((row): row is NonNullable<typeof row> => row != null),
+        byPaRoundPitchTypes: buildPaRoundPitchTypesRows(byPaRoundPitchTypes.get(npb)),
+        byPaRoundPitchTypesVsL: buildPaRoundPitchTypesRows(byPaRoundPitchTypesVsL.get(npb)),
+        byPaRoundPitchTypesVsR: buildPaRoundPitchTypesRows(byPaRoundPitchTypesVsR.get(npb)),
+        byCountPitchTypes: buildPitcherCountPitchTypesRows(
+          byCountPitchTypes.get(npb) ?? emptyPitcherCountPitchTypesAcc(),
+        ),
+        byCountPitchTypesVsL: buildPitcherCountPitchTypesRows(
+          byCountPitchTypesVsL.get(npb) ?? emptyPitcherCountPitchTypesAcc(),
+        ),
+        byCountPitchTypesVsR: buildPitcherCountPitchTypesRows(
+          byCountPitchTypesVsR.get(npb) ?? emptyPitcherCountPitchTypesAcc(),
+        ),
         byInning: [...innMap.entries()]
           .sort((a, b) => a[0] - b[0])
           .map(([inn, a]) => ({
@@ -1210,6 +1378,7 @@ function main(): void {
           })),
         byStadium: byStadiumRows,
         byOpponentTeam: byOpponentTeamRows,
+        byHomeAway: byHomeAwayRows,
         byDayNight: byDayNightRows,
         byCatcher: existing?.splits?.byCatcher ?? [],
       },

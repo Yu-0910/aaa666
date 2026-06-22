@@ -1,10 +1,11 @@
 /**
- * Phase 26: スタメン捕手の試合だけを対象に、捕手別の「巡目別の球種一覧」を生成する。
+ * Phase 26: 実守備捕手ごとに「巡目別の球種一覧」を生成する。
  *
  * 定義（投手側と同じ近似）:
  * - 巡目キーは「その試合で守備側チームが迎えたBF順」を9人ごとに 1→2→3→4→5+ とする（厳密な打順循環は追わない）。
  * - pitch_type は plateAppearances.pitchEvents[].pitchTypeJa を加算（無ければスキップ）。
- * - 捕手の対象は「その守備側チームのスタメン捕手」。捕手交替は追えないのでスタメン固定扱い。
+ * - 捕手の対象は各打席時点の実守備捕手（textPlayByPlay の守備交代追跡）。
+ * - byPaRoundPitchTypesVsL / VsR: 各球の投手利き腕と打者利き腕で対左／対右に振り分け（phase_pitcher_poc1 と同換算）。
  *
  * 出力:
  *   _data/derived/player_catcher_pa_round_pitch_types/{year}/npb_{npbCatcherId}.json
@@ -17,9 +18,10 @@ import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import type { CanonicalGameDocument } from "@/lib/yahooGame/types"
 import {
-  fieldingTeamNameFromInningHalf,
-  getStartingCatcherForTeam,
-} from "@/lib/yahooGame/startingCatcherFromCanonical"
+  buildCatcherYahooIdByPaTimeline,
+  resolveActiveCatcherYahooIdForPlateAppearance,
+} from "@/lib/yahooGame/activeCatcherFromCanonical"
+import { fieldingTeamNameFromInningHalf } from "@/lib/yahooGame/startingCatcherFromCanonical"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 import type {
   CatcherPaRoundPitchTypesDerived,
@@ -27,6 +29,12 @@ import type {
 } from "@/lib/catcherPaRoundPitchTypes"
 import { comparePlateAppearances } from "@/lib/yahooGame/pitcherPocHelpers"
 import { mergePhase10RestoredIntoDocIfPresent } from "@/lib/seasonStatsPilot"
+import { getNpbRoster2026 } from "@/lib/npbRoster"
+import {
+  effectiveVsHandBucketForPitcherSplit,
+  pitcherThrowHandRLFromYahooPitcherId,
+  resolveBatHandJaForBatter,
+} from "@/lib/yahooGame/batterHandFromCanonical"
 
 function parseArgs(argv: string[]): { year: string } {
   const yearIdx = argv.indexOf("--year")
@@ -56,6 +64,46 @@ function keyForRound(round: number): "1" | "2" | "3" | "4" | "5" {
   return "5"
 }
 
+type RoundPitchMap = Map<string, Map<string, number>>
+
+function ensureCatcherRoundMap(
+  byCatcher: Map<string, RoundPitchMap>,
+  catcherNpbId: string
+): RoundPitchMap {
+  let rm = byCatcher.get(catcherNpbId)
+  if (!rm) {
+    rm = new Map()
+    byCatcher.set(catcherNpbId, rm)
+  }
+  return rm
+}
+
+function addPitch(
+  roundMap: RoundPitchMap,
+  roundKey: string,
+  pitchType: string,
+  count = 1
+) {
+  const tm = roundMap.get(roundKey) ?? new Map<string, number>()
+  tm.set(pitchType, (tm.get(pitchType) ?? 0) + count)
+  roundMap.set(roundKey, tm)
+}
+
+function buildRoundRows(roundMap: RoundPitchMap): CatcherPaRoundPitchTypesRoundRow[] {
+  return (["1", "2", "3", "4", "5"] as const).map((k) => {
+    const m = roundMap.get(k) ?? new Map<string, number>()
+    const pitches_total = [...m.values()].reduce((a, b) => a + b, 0)
+    const rows = [...m.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([pitch_type, pitches]) => ({
+        pitch_type,
+        pitches,
+        pct: pitches_total > 0 ? Math.round((pitches / pitches_total) * 1000) / 10 : 0,
+      }))
+    return { key: k, pitches_total, rows }
+  })
+}
+
 function main() {
   const root = getProjectRoot()
   const { year } = parseArgs(process.argv.slice(2))
@@ -70,27 +118,18 @@ function main() {
     process.exit(1)
   }
 
-  // catcherNpbId -> roundKey -> pitchType -> count
-  const byCatcher = new Map<string, Map<string, Map<string, number>>>()
+  const rosterForBatHand = getNpbRoster2026()
+
+  const byCatcher = new Map<string, RoundPitchMap>()
+  const byCatcherVsL = new Map<string, RoundPitchMap>()
+  const byCatcherVsR = new Map<string, RoundPitchMap>()
 
   for (const f of files) {
     const p = path.join(canonicalDir, f)
     const doc = readCanonicalFile(p)
     if (!doc) continue
 
-    // その試合のスタメン捕手（チームごと）を先に解決
-    const starterCatcherByTeam = new Map<string, string>() // teamName -> catcherNpbId
-    for (const t of doc.game.teams ?? []) {
-      const teamName = (t.teamName ?? "").trim()
-      if (!teamName) continue
-      const cat = getStartingCatcherForTeam(doc, teamName)
-      if (!cat?.yahooPlayerId) continue
-      const npb = resolveNpbPlayerIdFromPublicId(cat.yahooPlayerId)
-      if (!npb) continue
-      starterCatcherByTeam.set(teamName, npb)
-    }
-
-    // 守備側チームの BF カウント（試合単位）
+    const catcherTimeline = buildCatcherYahooIdByPaTimeline(doc)
     const bfByTeam = new Map<string, number>()
 
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
@@ -98,7 +137,9 @@ function main() {
       const inningHalf = (pa.inningHalf ?? "").trim()
       const fieldingTeam = inningHalf ? fieldingTeamNameFromInningHalf(doc, inningHalf) : null
       if (!fieldingTeam) continue
-      const catcherNpbId = starterCatcherByTeam.get(fieldingTeam) ?? null
+      const catcherYid = resolveActiveCatcherYahooIdForPlateAppearance(doc, pa, catcherTimeline)
+      if (!catcherYid) continue
+      const catcherNpbId = resolveNpbPlayerIdFromPublicId(catcherYid)
       if (!catcherNpbId) continue
 
       const idx = bfByTeam.get(fieldingTeam) ?? 0
@@ -109,45 +150,47 @@ function main() {
       const ev = pa.pitchEvents ?? []
       if (!ev.length) continue
 
-      let rm = byCatcher.get(catcherNpbId)
-      if (!rm) {
-        rm = new Map()
-        byCatcher.set(catcherNpbId, rm)
-      }
-      const tm = rm.get(roundKey) ?? new Map<string, number>()
+      const bid = (pa.yahooBatterId ?? "").trim()
+      const batJa = bid ? resolveBatHandJaForBatter(doc, bid, rosterForBatHand) : ""
+
+      const baseMap = ensureCatcherRoundMap(byCatcher, catcherNpbId)
+      const vsLMap = ensureCatcherRoundMap(byCatcherVsL, catcherNpbId)
+      const vsRMap = ensureCatcherRoundMap(byCatcherVsR, catcherNpbId)
+
       for (const e of ev) {
         const pt = (e.pitchTypeJa ?? "").trim() || "不明"
-        tm.set(pt, (tm.get(pt) ?? 0) + 1)
+        addPitch(baseMap, roundKey, pt)
+
+        const pitcherYid = String(e.yahooPitcherId ?? pa.yahooPitcherId ?? "").trim()
+        const pitcherThrow = pitcherThrowHandRLFromYahooPitcherId(pitcherYid)
+        const bucket = effectiveVsHandBucketForPitcherSplit(batJa, pitcherThrow)
+        if (bucket === "L") {
+          addPitch(vsLMap, roundKey, pt)
+        } else if (bucket === "R") {
+          addPitch(vsRMap, roundKey, pt)
+        }
       }
-      rm.set(roundKey, tm)
     }
   }
 
   const outDir = path.join(root, "_data", "derived", "player_catcher_pa_round_pitch_types", year)
   ensureDir(outDir)
 
+  const catcherIds = new Set([...byCatcher.keys(), ...byCatcherVsL.keys(), ...byCatcherVsR.keys()])
+
   let wrote = 0
-  for (const [catcherNpbId, roundMap] of byCatcher) {
-    const byPaRoundPitchTypes: CatcherPaRoundPitchTypesRoundRow[] = (["1", "2", "3", "4", "5"] as const).map(
-      (k) => {
-        const m = roundMap.get(k) ?? new Map<string, number>()
-        const pitches_total = [...m.values()].reduce((a, b) => a + b, 0)
-        const rows = [...m.entries()]
-          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-          .map(([pitch_type, pitches]) => ({
-            pitch_type,
-            pitches,
-            pct: pitches_total > 0 ? Math.round((pitches / pitches_total) * 1000) / 10 : 0,
-          }))
-        return { key: k, pitches_total, rows }
-      }
-    )
+  for (const catcherNpbId of catcherIds) {
+    const byPaRoundPitchTypes = buildRoundRows(byCatcher.get(catcherNpbId) ?? new Map())
+    const byPaRoundPitchTypesVsL = buildRoundRows(byCatcherVsL.get(catcherNpbId) ?? new Map())
+    const byPaRoundPitchTypesVsR = buildRoundRows(byCatcherVsR.get(catcherNpbId) ?? new Map())
 
     const payload: CatcherPaRoundPitchTypesDerived = {
       schemaVersion: "player-catcher-pa-round-pitch-types-v1",
       seasonYear: year,
       npbCatcherId: catcherNpbId,
       byPaRoundPitchTypes,
+      byPaRoundPitchTypesVsL,
+      byPaRoundPitchTypesVsR,
     }
 
     fs.writeFileSync(
@@ -162,4 +205,3 @@ function main() {
 }
 
 main()
-

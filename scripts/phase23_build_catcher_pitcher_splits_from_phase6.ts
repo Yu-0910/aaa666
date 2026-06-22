@@ -13,7 +13,11 @@
 import fs from "fs"
 import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
-import type { CatcherPitcherSplitRow, CatcherPitcherSplitsDerived } from "@/lib/catcherPitcherSplits"
+import type {
+  CatcherPitcherSplitRow,
+  CatcherPitcherSplitsDerived,
+} from "@/lib/catcherPitcherSplits"
+import { buildCatcherPitcherSeasonTotals } from "@/lib/catcherPitcherSplits"
 import type { PitcherSeasonPocPayload, PitcherSeasonPocCatcherRow } from "@/lib/pitcherSeasonPocTypes"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
@@ -94,6 +98,8 @@ function main() {
         wins: r.wins ?? undefined,
         losses: r.losses ?? undefined,
         qsCount: r.qsCount ?? undefined,
+        er: r.er ?? undefined,
+        ibb: r.ibb ?? undefined,
       }
       const arr = byCatcher.get(catcherNpbId) ?? []
       arr.push(row)
@@ -106,6 +112,7 @@ function main() {
 
   let wrote = 0
   for (const [catcherNpbId, rows] of byCatcher) {
+    const seasonTotals = buildCatcherPitcherSeasonTotals(rows) ?? undefined
     const sorted = rows
       .slice()
       .sort((a, b) => (b.bf ?? 0) - (a.bf ?? 0) || a.pitcherName.localeCompare(b.pitcherName))
@@ -116,6 +123,7 @@ function main() {
       seasonYear: year,
       npbCatcherId: catcherNpbId,
       rows: sorted,
+      seasonTotals,
     }
     fs.writeFileSync(
       path.join(outDir, `npb_${catcherNpbId}.json`),

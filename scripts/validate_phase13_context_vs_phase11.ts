@@ -10,6 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
+import { resolveVsTeamValueForBatterInGame } from "../lib/yahooGame/batterGameContextFromCanonical"
 import {
   aggregateBattingForBatterInGameForProfiles,
   emptyBattingSeasonAggYahoo,
@@ -17,7 +18,6 @@ import {
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
-import { dedupePlateAppearancesByInningHalfOrder } from "../lib/yahooGame/dedupePlateAppearances"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -53,48 +53,8 @@ function parseArgs(): { year: string; fail: boolean; yahoo: string | null } {
   return { year, fail, yahoo }
 }
 
-function resolveStadiumName(_gameId: string): string {
-  return "未設定"
-}
-
-function contextFromInningHalf(
-  doc: CanonicalGameDocument,
-  half: string,
-): { vsTeamValue: string } | null {
-  const sb = doc.game.scoreboard
-  if (sb.length < 2) return null
-  const visitorName = (sb[0].teamName ?? "").trim()
-  const homeName = (sb[1].teamName ?? "").trim()
-  if (!visitorName || !homeName) return null
-  const isTop = /表/.test(half)
-  const isBottom = /裏/.test(half)
-  if (!isTop && !isBottom) return null
-  return { vsTeamValue: `vs_${isTop ? homeName : visitorName}` }
-}
-
 function resolveVsTeamForBatter(doc: CanonicalGameDocument, bid: string): string | null {
-  const pas = dedupePlateAppearancesByInningHalfOrder(
-    doc.domain?.plateAppearances ?? [],
-    doc.gameId,
-  )
-  const myPa = pas.find((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
-  if (myPa) {
-    return contextFromInningHalf(doc, String(myPa.inningHalf ?? "").trim())?.vsTeamValue ?? null
-  }
-  const teams = doc.game.teams ?? []
-  if (teams.length >= 2) {
-    const onVisitor = (teams[0]?.startingLineup ?? []).some(
-      (p) => String(p.yahooPlayerId ?? "").trim() === bid,
-    )
-    const onHome = (teams[1]?.startingLineup ?? []).some(
-      (p) => String(p.yahooPlayerId ?? "").trim() === bid,
-    )
-    const visitorName = (doc.game.scoreboard[0]?.teamName ?? "").trim()
-    const homeName = (doc.game.scoreboard[1]?.teamName ?? "").trim()
-    if (onVisitor && !onHome && homeName) return `vs_${homeName}`
-    if (onHome && !onVisitor && visitorName) return `vs_${visitorName}`
-  }
-  return null
+  return resolveVsTeamValueForBatterInGame(doc, bid)
 }
 
 function recomputeVsTeam(

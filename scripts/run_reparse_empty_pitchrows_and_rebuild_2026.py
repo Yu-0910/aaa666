@@ -5,7 +5,8 @@ pitchRows が空（中止除く）の試合について:
   1. 空の derived/{gameId}_phase10_restored.json を削除
   2. run_yahoo_phase10_restore.py（キャッシュ HTML 利用・ネット再取得なし）
   3. canonical へマージ
-  4. 球種別派生 + 打撃プロフィール／ランキング再生成
+  4. phase14 球種派生 + phase:pitcher-poc1（巡目別・カウント別投球成績・カウント別球種含む）+ phase25 投手シーズン球種表
+  5. 打撃プロフィール／ランキング再生成
 
 使い方:
   python scripts/run_reparse_empty_pitchrows_and_rebuild_2026.py
@@ -160,10 +161,20 @@ def main() -> None:
     if npm_run(root, "phase14:build:pitch") != 0:
         sys.exit(1)
 
+    if npm_run(root, "phase:pitcher-poc1") != 0:
+        sys.exit(1)
+
+    if npm_run(root, "phase25:build:pitcher-season-pitch-types") != 0:
+        sys.exit(1)
+
     if npm_run(root, "rebuild:batting-profile-and-rankings-2026") != 0:
         sys.exit(1)
 
-    print("\n[reparse] 完了: 解析やり直し → canonical マージ → phase14 → 打撃プロフィール/ランキング", flush=True)
+    print(
+        "\n[reparse] 完了: 解析やり直し → canonical マージ → phase14"
+        " → phase:pitcher-poc1 → phase25 → 打撃プロフィール/ランキング",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

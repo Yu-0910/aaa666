@@ -31,6 +31,17 @@ const CHECKS = [
     url: () => `${R2_BASE}/data/top-leaders/2026/CL/batting.json`,
   },
   {
+    label: 'R2 standings 2026 CL',
+    url: () => `${R2_BASE}/data/standings/2026/CL.json`,
+    parseStandings: true,
+  },
+  {
+    label: '本番 /data standings 2026 CL',
+    url: () => `${SITE_BASE}/data/standings/2026/CL.json`,
+    needsSite: true,
+    parseStandings: true,
+  },
+  {
     label: '本番 /data プロキシ 2026',
     url: () => `${SITE_BASE}/data/rankings/2026/CL/OPS.json`,
     needsSite: true,
@@ -69,6 +80,13 @@ async function probe(label, url, opts = {}) {
         const top = raw.leaders.OPS[0]
         detail += ` | OPS1位 ${top.name} value=${top.value}`
         if (raw.error) detail += ` ERROR: ${raw.error}`
+      } else if (opts.parseStandings && raw?.rows?.[0]) {
+        const top = raw.rows[0]
+        detail += ` | 1位 ${top.teamName ?? top.team} ${top.w}-${top.l}-${top.t} (G${top.g})`
+        if (raw.generatedAt) detail += ` generatedAt=${raw.generatedAt}`
+        if (raw.schemaVersion !== 'team-standings-v1') {
+          detail += ` ⚠ schemaVersion=${raw.schemaVersion}`
+        }
       } else if (raw?.error) {
         detail += ` | error: ${raw.error}`
       }

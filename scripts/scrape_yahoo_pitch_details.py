@@ -40,6 +40,31 @@ except ImportError:
 
 BASE_URL = "https://baseball.yahoo.co.jp"
 PLAYER_ID_PATTERN = re.compile(r"/npb/player/(\d+)/top")
+_HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+_HTTP_SESSION: requests.Session | None = None
+
+
+def _get_http_session() -> requests.Session:
+    global _HTTP_SESSION
+    if _HTTP_SESSION is None:
+        _HTTP_SESSION = requests.Session()
+        _HTTP_SESSION.headers.update(_HTTP_HEADERS)
+    return _HTTP_SESSION
+
+
+def _is_transient_fetch_error(exc: BaseException) -> bool:
+    if isinstance(
+        exc,
+        (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            requests.exceptions.ChunkedEncodingError,
+        ),
+    ):
+        return True
+    if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+        return exc.response.status_code in (429, 502, 503, 504)
+    return False
 
 
 def build_index(inning: int, top_bottom: str, bat_order: int) -> str:
@@ -163,6 +188,8 @@ def fetch_pitch_detail_score_pages_for_pa(
                     html = None
         if html is None:
             html = fetch_html(url)
+            if statistics is not None:
+                statistics["network_fetches"] = statistics.get("network_fetches", 0) + 1
             if html and cache_dir is not None:
                 try:
                     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -214,17 +241,26 @@ def parse_pitch_details_merged_score_pages(
     return merged
 
 
-def fetch_html(url: str) -> str | None:
-    """HTMLを取得（UTF-8）"""
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    try:
-        r = requests.get(url, headers=headers, timeout=30)
-        r.raise_for_status()
-        r.encoding = "utf-8"
-        return r.text
-    except Exception as e:
-        print(f"  ❌ 取得失敗: {url} - {e}")
-        return None
+def fetch_html(url: str, *, max_attempts: int = 3) -> str | None:
+    """HTMLを取得（UTF-8）。成功時は待機なし。接続リセット等の一時障害のみ短いバックオフで再試行。"""
+    session = _get_http_session()
+    last_err: Exception | None = None
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            # 再試行時だけ短い待機（成功パスにはコストゼロ）
+            time.sleep(1.0 * attempt)
+        try:
+            r = session.get(url, timeout=30)
+            r.raise_for_status()
+            r.encoding = "utf-8"
+            return r.text
+        except Exception as e:
+            last_err = e
+            if not _is_transient_fetch_error(e) or attempt >= max_attempts - 1:
+                break
+            print(f"  ⚠️ 再試行 {attempt + 2}/{max_attempts}: {url} - {e}")
+    print(f"  ❌ 取得失敗: {url} - {last_err}")
+    return None
 
 
 def px_to_zone_25(top_px: float, left_px: float) -> tuple[int, int, int]:

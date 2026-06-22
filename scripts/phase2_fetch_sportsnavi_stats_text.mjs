@@ -126,7 +126,12 @@ function rebuildStaleCanonicalForGameIds(root, year, gameIds) {
     env: process.env,
   })
   if (r.status !== 0) {
-    console.warn(`[phase2:stats-text] canonical rebuild exited with status ${r.status ?? "unknown"}`)
+    const msg = `[phase2:stats-text] canonical rebuild exited with status ${r.status ?? "unknown"}`
+    console.warn(msg)
+    appendPipelineBulkLog(root, "phase2_fetch", msg)
+    if (process.env.TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD === "1") {
+      process.exit(r.status ?? 1)
+    }
   }
 }
 

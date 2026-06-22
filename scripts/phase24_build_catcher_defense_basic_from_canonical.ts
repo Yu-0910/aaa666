@@ -1,10 +1,12 @@
 /**
- * Phase 24: canonical の play-by-play テキストから盗塁（成功/阻止）を推定し、
- * 捕手別の盗塁阻止率（CS%）を派生JSONとして保存する。
+ * Phase 24: canonical から捕手別の守備基本指標を派生JSONとして保存する。
+ * - 盗塁成功/盗塁死（CS%）
+ * - 背後投球数（plateAppearances.pitchEvents 件数）
+ * - GO/AO 用ゴロ/フライアウト推定件数
+ * - パスボール・捕逸（PB/9 の分子。暴投は除外）
  *
- * 注意:
- * - canonical のみだと捕手交替の完全追跡は難しいため、原則「守備側チームの先発捕手」に帰属させる。
- * - 盗塁の表記は揺れがあるためベストエフォート。
+ * 帰属: 実況の守備交代・(捕) 表記から追跡した「その打席時点の捕手」
+ * （先発捕手固定は使わない）。
  *
  * 出力:
  *   _data/derived/player_catcher_defense_basic/{year}/npb_{npbCatcherId}.json
@@ -16,9 +18,9 @@ import fs from "fs"
 import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import type { CanonicalGameDocument } from "@/lib/yahooGame/types"
-import { fieldingTeamNameFromInningHalf, getStartingCatcherForTeam } from "@/lib/yahooGame/startingCatcherFromCanonical"
-import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 import type { CatcherDefenseBasicDerived } from "@/lib/catcherDefenseBasic"
+import { mergePhase10RestoredIntoDocIfPresent } from "@/lib/seasonStatsPilot"
+import { aggregateCatcherDefenseBasicByNpbId } from "@/lib/yahooGame/activeCatcherFromCanonical"
 
 function parseArgs(argv: string[]): { year: string } {
   const yearIdx = argv.indexOf("--year")
@@ -40,16 +42,6 @@ function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true })
 }
 
-function isSbSuccessLine(line: string): boolean {
-  // 例: "盗塁成功", "二盗成功", "三盗成功"
-  return /(盗塁成功|[二三]盗成功)/.test(line)
-}
-
-function isCaughtStealingLine(line: string): boolean {
-  // 例: "盗塁死", "盗塁刺", "二盗死", "三盗死"
-  return /(盗塁死|盗塁刺|[二三]盗死)/.test(line)
-}
-
 function main() {
   const root = getProjectRoot()
   const { year } = parseArgs(process.argv.slice(2))
@@ -64,36 +56,28 @@ function main() {
     process.exit(1)
   }
 
-  // npbCatcherId -> agg
-  const sbByCatcher = new Map<string, { sb: number; cs: number }>()
+  const sbByCatcher = new Map<
+    string,
+    { sb: number; cs: number; pb: number; pitches: number; ground: number; air: number }
+  >()
 
   for (const f of files) {
     const p = path.join(canonicalDir, f)
     const doc = readCanonicalFile(p)
     if (!doc) continue
 
-    // section ごとに守備側チームを推定し、先発捕手へ帰属
-    for (const sec of doc.game.textPlayByPlay ?? []) {
-      const inningHalf = String(sec.sectionTitle ?? "").trim()
-      const fieldingTeam = fieldingTeamNameFromInningHalf(doc, inningHalf)
-      if (!fieldingTeam) continue
-      const cat = getStartingCatcherForTeam(doc, fieldingTeam)
-      if (!cat?.yahooPlayerId) continue
-      const catcherNpbId = resolveNpbPlayerIdFromPublicId(cat.yahooPlayerId)
-      if (!catcherNpbId) continue
-
-      let agg = sbByCatcher.get(catcherNpbId)
+    for (const [npbId, counts] of aggregateCatcherDefenseBasicByNpbId(doc)) {
+      let agg = sbByCatcher.get(npbId)
       if (!agg) {
-        agg = { sb: 0, cs: 0 }
-        sbByCatcher.set(catcherNpbId, agg)
+        agg = { sb: 0, cs: 0, pb: 0, pitches: 0, ground: 0, air: 0 }
+        sbByCatcher.set(npbId, agg)
       }
-
-      for (const rawLine of sec.lines ?? []) {
-        const line = String(rawLine ?? "").trim()
-        if (!line) continue
-        if (isSbSuccessLine(line)) agg.sb += 1
-        else if (isCaughtStealingLine(line)) agg.cs += 1
-      }
+      agg.sb += counts.sb
+      agg.cs += counts.cs
+      agg.pb += counts.pb
+      agg.pitches += counts.pitches
+      agg.ground += counts.ground
+      agg.air += counts.air
     }
   }
 
@@ -112,11 +96,15 @@ function main() {
       sb: a.sb,
       cs: a.cs,
       csPct,
+      pb: a.pb > 0 ? a.pb : undefined,
+      pitches: a.pitches,
+      battedBallOuts:
+        a.ground > 0 || a.air > 0 ? { ground: a.ground, air: a.air } : undefined,
     }
     fs.writeFileSync(
       path.join(outDir, `npb_${npbCatcherId}.json`),
       JSON.stringify(payload, null, 2),
-      "utf8"
+      "utf8",
     )
     wrote += 1
   }
@@ -125,4 +113,3 @@ function main() {
 }
 
 main()
-

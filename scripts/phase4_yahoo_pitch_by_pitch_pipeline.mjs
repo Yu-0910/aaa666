@@ -16,16 +16,21 @@
  * - ネットワーク負荷が大きい（打席ごとにアクセス）。途中停止しても再実行で続きから再開できる。
  * - **空の `pitchRows` だけの derived は「未完了」**（docs/data_operation_rules.md §一括取得 2026-05）。
  *   存在しても restore を再実行する（`--force` なし・キャッシュ HTML 利用可）。
+ * - merge stamp 指紋は **`pitchRows` のみ**を正とする（`rows` キーは読まない）。誤 stamp は mergeVersion bump で無効化。
+ * - 試合中止/ノーゲームは score raw ゲートと同様 **restore・merge 対象外**（打席 0 で exit 2 にならない）。
  */
 
 import fs from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
+import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
 
 const MERGE_STAMP_SCHEMA = "phase4-yahoo-phase10-merge-stamp-v1"
 // merge ロジックを変えたら bump（stamp を無効化して再マージさせる）
-const MERGE_STAMP_MERGE_VERSION = "mergePhase10IntoCanonical@2026-05-08"
+const MERGE_STAMP_MERGE_VERSION = "mergePhase10IntoCanonical@2026-05-31"
+/** stamp 指紋が誤って空配列になると merge skip が連鎖するため、pitchRows>0 ではこの値と一致させない */
+const EMPTY_PHASE10_ROWS_FINGERPRINT = createHash("sha256").update("[]", "utf8").digest("hex")
 
 function nowIsoLocal() {
   const d = new Date()
@@ -104,12 +109,43 @@ function fileExists(p) {
   }
 }
 
+/**
+ * 試合中止/ノーゲーム（Phase4 一球復元の対象外）。
+ * main raw の bb-head01__title を優先。無ければ canonical の missingOrPartial / タイトル。
+ */
+function isCancelledGame(root, gameId, canonPath) {
+  const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
+  if (fileExists(mainPath)) {
+    try {
+      if (isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"))) return true
+    } catch {
+      // ignore
+    }
+  }
+  if (fileExists(canonPath)) {
+    try {
+      const c = readJson(canonPath)
+      const miss = c?.game?.missingOrPartial ?? []
+      if (miss.some((s) => String(s).includes("game cancelled"))) return true
+      const title = String(c?.game?.meta?.documentTitle ?? c?.game?.meta?.ogTitle ?? "")
+      if (/試合中止|ノーゲーム|コールド/.test(title)) return true
+    } catch {
+      // ignore
+    }
+  }
+  return false
+}
+
+/** phase10 derived JSON から pitchRows 配列（schema 正: `pitchRows`。`rows` は読まない）。 */
+function pitchRowsFromPhase10Json(restoredJson) {
+  return Array.isArray(restoredJson?.pitchRows) ? restoredJson.pitchRows : []
+}
+
 /** `pitchRows` 件数。ファイル無し・壊れ JSON は 0。 */
 function phase10PitchRowCount(phase10Path) {
   if (!fileExists(phase10Path)) return 0
   try {
-    const j = readJson(phase10Path)
-    return Array.isArray(j?.pitchRows) ? j.pitchRows.length : 0
+    return pitchRowsFromPhase10Json(readJson(phase10Path)).length
   } catch {
     return 0
   }
@@ -146,21 +182,32 @@ function computePhase10RowsFingerprint(rows) {
   return createHash("sha256").update(JSON.stringify(stable), "utf8").digest("hex")
 }
 
-function shouldSkipMergeByStamp(stampPath, expected) {
+function readMergeStamp(stampPath) {
   const t = safeReadText(stampPath).trim()
-  if (!t) return false
+  if (!t) return null
   try {
-    const j = JSON.parse(t)
-    if (j?.schemaVersion !== MERGE_STAMP_SCHEMA) return false
-    return (
-      j?.mergeVersion === expected.mergeVersion &&
-      j?.phase10RowsFingerprint === expected.phase10RowsFingerprint &&
-      j?.gameId === expected.gameId
-    )
+    return JSON.parse(t)
   } catch {
-    // 旧 stamp（単なる timestamp）等は再マージ対象にする
+    return null
+  }
+}
+
+function shouldSkipMergeByStamp(stampPath, expected, { pitchRowCount = 0 } = {}) {
+  const j = readMergeStamp(stampPath)
+  if (!j || j?.schemaVersion !== MERGE_STAMP_SCHEMA) return false
+  // 誤 stamp（空指紋）で pitchRows ありの merge を skip しない（2026-05-31 再発対策）
+  if (
+    pitchRowCount > 0 &&
+    j?.phase10RowsFingerprint === EMPTY_PHASE10_ROWS_FINGERPRINT &&
+    expected.phase10RowsFingerprint !== EMPTY_PHASE10_ROWS_FINGERPRINT
+  ) {
     return false
   }
+  return (
+    j?.mergeVersion === expected.mergeVersion &&
+    j?.phase10RowsFingerprint === expected.phase10RowsFingerprint &&
+    j?.gameId === expected.gameId
+  )
 }
 
 function run(cmd, args, label) {
@@ -223,6 +270,7 @@ async function main() {
   let merged = 0
   let skippedRestore = 0
   let skippedMerge = 0
+  let skippedCancelled = 0
   let failed = 0
 
   for (let i = 0; i < gameIds.length; i++) {
@@ -243,6 +291,24 @@ async function main() {
     if (!fileExists(canonPath)) {
       console.warn(`[phase4] skip ${gameId}: missing canonical`)
       failed += 1
+      continue
+    }
+
+    if (isCancelledGame(root, gameId, canonPath)) {
+      skippedCancelled += 1
+      console.log(`[phase4] skip ${gameId}: game cancelled (試合中止/ノーゲーム) — phase10 対象外`)
+      if (fileExists(phase10Path) && phase10PitchRowCount(phase10Path) === 0) {
+        try {
+          fs.unlinkSync(phase10Path)
+          console.log(`[phase4] removed empty ${path.basename(phase10Path)} (cancelled)`)
+        } catch {
+          // ignore
+        }
+      }
+      const elapsedGame = Date.now() - startedGame
+      console.log(
+        `[phase4] ${i + 1}/${gameIds.length} gameId=${gameId} end   ${nowIsoLocal()} (elapsed ${formatMs(elapsedGame)})`,
+      )
       continue
     }
 
@@ -289,14 +355,18 @@ async function main() {
     if (!force && fileExists(stampPath) && fileExists(phase10Path)) {
       try {
         const restoredJson = readJson(phase10Path)
-        const rows = Array.isArray(restoredJson?.rows) ? restoredJson.rows : []
+        const rows = pitchRowsFromPhase10Json(restoredJson)
         const fp = computePhase10RowsFingerprint(rows)
         if (
-          shouldSkipMergeByStamp(stampPath, {
-            gameId,
-            mergeVersion: MERGE_STAMP_MERGE_VERSION,
-            phase10RowsFingerprint: fp,
-          })
+          shouldSkipMergeByStamp(
+            stampPath,
+            {
+              gameId,
+              mergeVersion: MERGE_STAMP_MERGE_VERSION,
+              phase10RowsFingerprint: fp,
+            },
+            { pitchRowCount: rows.length },
+          )
         ) {
           skippedMerge += 1
           console.log(`[phase4] merge: skipped (stamp match)`)
@@ -313,9 +383,16 @@ async function main() {
       let phase10RowsFingerprint = ""
       try {
         const restoredJson = readJson(phase10Path)
-        const rows = Array.isArray(restoredJson?.rows) ? restoredJson.rows : []
+        const rows = pitchRowsFromPhase10Json(restoredJson)
         phase10RowsFingerprint = computePhase10RowsFingerprint(rows)
-      } catch {}
+        if (rows.length > 0 && phase10RowsFingerprint === EMPTY_PHASE10_ROWS_FINGERPRINT) {
+          throw new Error(
+            `[phase4] stamp fingerprint sanity failed for ${gameId}: pitchRows=${rows.length} but empty hash`,
+          )
+        }
+      } catch (e) {
+        throw new Error(String(e?.message ?? e))
+      }
       fs.writeFileSync(
         stampPath,
         JSON.stringify(
@@ -347,8 +424,12 @@ async function main() {
 
   console.log(
     `[phase4] year=${year} targets=${gameIds.length} restored=${restored} merged=${merged} ` +
-      `skippedRestore=${skippedRestore} skippedMerge=${skippedMerge} failed=${failed}`
+      `skippedRestore=${skippedRestore} skippedMerge=${skippedMerge} skippedCancelled=${skippedCancelled} failed=${failed}`,
   )
+  if (failed > 0) {
+    console.error(`[phase4] ${failed} game(s) failed — canonical の pitchEvents が未更新の可能性があります`)
+    process.exit(1)
+  }
 }
 
 main().catch((e) => {

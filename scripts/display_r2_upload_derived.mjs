@@ -82,6 +82,8 @@ const DERIVED_CATEGORIES = [
   'player_catcher_starting_summary',
   'player_catcher_pa_round_pitch_types',
   'pitcher_season_pitch_types',
+  'player_matchup_batting',
+  'player_matchup_pitching',
   'player_fa_estimates',
   /** 通算タブ: profile-merged API（fetchDerivedJsonServer） */
   'player_profile',

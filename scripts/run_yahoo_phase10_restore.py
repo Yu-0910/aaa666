@@ -232,6 +232,29 @@ def synthetic_intentional_walk_pitch_row(
     }
 
 
+def _main_html_cancelled(html: str | None) -> bool:
+    """Sportsnavi 試合トップの bb-head01__title が試合中止/ノーゲームか（lib/yahooGame/sportsnaviStatsTextParse.mjs と同義）。"""
+    if not html:
+        return False
+    return bool(
+        re.search(
+            r'<h2[^>]*\bbb-head01__title\b[^>]*>\s*(試合中止|ノーゲーム)\s*</h2>',
+            html,
+            re.I,
+        )
+    )
+
+
+def _load_main_html_cancelled(root: Path, game_id: str) -> bool:
+    main_path = root / "_data" / "scraped_games" / "raw_sportsnavi" / f"{game_id}.html"
+    if not main_path.is_file():
+        return False
+    try:
+        return _main_html_cancelled(main_path.read_text(encoding="utf-8"))
+    except OSError:
+        return False
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Phase10: 一球ログを取得して derived JSON に保存")
     ap.add_argument("--game-id", default="2021038624", help="試合ID")
@@ -253,6 +276,9 @@ def main() -> None:
 
     game_id = args.game_id.strip()
     root = Path(__file__).resolve().parent.parent
+    if _load_main_html_cancelled(root, game_id):
+        safe_print(f"[phase10] skip {game_id}: game cancelled — no pitch-by-pitch to restore")
+        sys.exit(0)
     score_cache_dir = root / "_data" / "scraped_games" / "raw_sportsnavi_score" / game_id
     raw_text = root / "_data" / "scraped_games" / "raw" / game_id / "text.html"
     text_url = f"{BASE_URL}/npb/game/{game_id}/text"
@@ -303,19 +329,22 @@ def main() -> None:
         half_key = f"{inning}|{top_bottom}"
         index0 = build_index(inning, top_bottom, bat_order)
         safe_print(f"  [{i + 1}/{len(pas)}] {index0} ... ", end="", flush=True)
+        pa_stats: dict[str, int] = {}
         chain = fetch_pitch_detail_score_pages_for_pa(
             game_id,
             inning,
             top_bottom,
             bat_order,
-            sleep_sec=args.sleep,
+            sleep_sec=0.0,
             cache_dir=score_cache_dir,
             force=bool(args.force),
+            statistics=pa_stats,
         )
         if not chain:
             missing.append(f"score:{index0}:fetch_failed")
             safe_print("❌ fetch")
-            time.sleep(args.sleep)
+            if args.sleep > 0 and pa_stats.get("network_fetches", 0) > 0:
+                time.sleep(args.sleep)
             continue
         pages_html = [h for _ix, h in chain]
         rows = parse_pitch_details_merged_score_pages(
@@ -357,7 +386,9 @@ def main() -> None:
             else:
                 missing.append(f"score:{index0}:no_pitch_rows")
                 safe_print("⚠️ 投球なし")
-        time.sleep(args.sleep)
+        # score-raw と同様: キャッシュのみの打席では待機しない（日次一括の所要時間短縮）
+        if args.sleep > 0 and i < len(pas) - 1 and pa_stats.get("network_fetches", 0) > 0:
+            time.sleep(args.sleep)
 
     out = {
         "schemaVersion": "yahoo-phase10-restored-v1",
@@ -373,6 +404,9 @@ def main() -> None:
     safe_print(f"\nWrote {out_path} (pitch rows={len(all_rows)}, missing={len(missing)})")
 
     if len(pas) == 0:
+        if _load_main_html_cancelled(root, game_id):
+            safe_print(f"[phase10] skip {game_id}: game cancelled (0 PA expected)")
+            sys.exit(0)
         safe_print(
             "[phase10] ERROR: 打席一覧 0 件のまま空 pitchRows を書きました。"
             " Phase2b canonical を先に用意するか --text-from-raw を確認してください。",

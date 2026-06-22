@@ -12,6 +12,7 @@ import {
   bucketPitchResultForTypeRow,
   classifyPitchResultForCountJa,
 } from "../lib/yahooGame/pitchCountSim"
+import { isInPlayPitchResultJa } from "../lib/yahooGame/pitchTypeRateStats"
 
 function main(): void {
   const raw = readFileSync(0, "utf8")
@@ -27,12 +28,15 @@ function main(): void {
     ? arr.map((s) => (typeof s === "string" ? s : String(s ?? "")))
     : []
 
-  const byString: Record<string, { countKind: string; typeBucket: string }> =
-    {}
+  const byString: Record<
+    string,
+    { countKind: string; typeBucket: string; inPlay: boolean }
+  > = {}
   for (const s of strings) {
     byString[s] = {
       countKind: classifyPitchResultForCountJa(s),
       typeBucket: bucketPitchResultForTypeRow(s),
+      inPlay: isInPlayPitchResultJa(s),
     }
   }
   process.stdout.write(

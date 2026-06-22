@@ -31,6 +31,12 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from lib.pitching_historical_metrics import (  # noqa: E402
+    resolve_ip_raw,
+    resolve_pitching_float,
+    resolve_pitching_int,
+)
 DEFAULT_ROSTER = ROOT / "_data" / "npb_roster_2026.csv"
 DEFAULT_MASTER_DIRS = [
     ROOT / "_data" / "master_csv_calculated",
@@ -206,25 +212,64 @@ def batting_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[s
     }
 
 
+def _pitching_int(row: Dict[str, str], *keys: str) -> Optional[int]:
+    for k in keys:
+        if k not in row:
+            continue
+        v = row.get(k)
+        if v is None or str(v).strip() == "":
+            continue
+        n = safe_int(v)
+        if n is not None:
+            return n
+    return None
+
+
+def _pitching_float(row: Dict[str, str], *keys: str) -> Optional[float]:
+    for k in keys:
+        if k not in row:
+            continue
+        v = row.get(k)
+        if v is None or str(v).strip() == "":
+            continue
+        f = safe_float(v)
+        if f is not None:
+            return f
+    return None
+
+
 def pitching_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[str, Any]:
+    ip_cell = resolve_ip_raw(row)
+    ip_raw = (str(ip_cell).strip() if ip_cell is not None else "") or None
     return {
         "year": year,
         "league": league,
         "team": (row.get("team") or "").strip(),
-        "games": safe_int(row.get("G") or row.get("登板")),
-        "wins": safe_int(row.get("W") or row.get("勝利")),
-        "losses": safe_int(row.get("L") or row.get("敗北")),
-        "saves": safe_int(row.get("SV") or row.get("セーブ")),
-        "ip": (row.get("IP") or row.get("投球回") or "").strip() or None,
-        "era": safe_float(row.get("ERA") or row.get("防御率")),
-        "bf": safe_int(row.get("BF") or row.get("打者")),
-        "hits_allowed": safe_int(row.get("H") or row.get("安打")),
-        "hr_allowed": safe_int(row.get("HR") or row.get("本塁打")),
-        "bb": safe_int(row.get("BB") or row.get("四球")),
-        "hbp": safe_int(row.get("HBP") or row.get("死球")),
-        "so": safe_int(row.get("SO") or row.get("三振")),
-        "er": safe_int(row.get("ER") or row.get("自責点")),
-        "holds": safe_int(row.get("HOLD") or row.get("HP")),
+        "games": resolve_pitching_int(row, "試合"),
+        "wins": resolve_pitching_int(row, "勝利"),
+        "losses": resolve_pitching_int(row, "敗戦"),
+        "saves": resolve_pitching_int(row, "Ｓ"),
+        "ip": ip_raw,
+        "era": resolve_pitching_float(row, "防御率"),
+        "bf": resolve_pitching_int(row, "被打者"),
+        "hits_allowed": resolve_pitching_int(row, "被安"),
+        "hr_allowed": resolve_pitching_int(row, "被本"),
+        "bb": resolve_pitching_int(row, "四球"),
+        "ibb": resolve_pitching_int(row, "敬遠"),
+        "hbp": resolve_pitching_int(row, "死球"),
+        "so": resolve_pitching_int(row, "三振"),
+        "er": resolve_pitching_int(row, "自責"),
+        "r": resolve_pitching_int(row, "失点"),
+        "holds": resolve_pitching_int(row, "HLD"),
+        "hp": resolve_pitching_int(row, "ＨＰ"),
+        "cg": resolve_pitching_int(row, "完投"),
+        "sho": resolve_pitching_int(row, "完封"),
+        "wp": resolve_pitching_int(row, "暴投"),
+        "k_bb_pct": resolve_pitching_float(row, "K-BB％"),
+        "whip": resolve_pitching_float(row, "WHIP"),
+        "wpct": resolve_pitching_float(row, "勝率"),
+        "k_pct": resolve_pitching_float(row, "K％"),
+        "bb_pct": resolve_pitching_float(row, "BB％"),
     }
 
 
@@ -294,6 +339,34 @@ def index_master_files(
     return rows_indexed, skipped
 
 
+def career_row_dedupe_key(r: Dict[str, Any]) -> Tuple[Any, Any, Any]:
+    return (r.get("year"), r.get("league"), r.get("team"))
+
+
+def merge_career_rows_from_id_and_name(
+    id_rows: List[Dict[str, Any]],
+    name: str,
+    team: str,
+    name_index: Dict[str, List[Dict[str, Any]]],
+    *,
+    use_name_team_keys: bool,
+) -> List[Dict[str, Any]]:
+    """player_id 索引と名前+球団索引を年度単位でユニオン（2025 の空 ID 行を落とさない）。"""
+    merged = list(id_rows)
+    seen = {career_row_dedupe_key(r) for r in merged}
+    keys = normalize_name_team_keys(name, team) if use_name_team_keys else [normalize_name_key(name, team)]
+    for key in keys:
+        if not key:
+            continue
+        for r in name_index.get(key, []):
+            rk = career_row_dedupe_key(r)
+            if rk in seen:
+                continue
+            seen.add(rk)
+            merged.append(r)
+    return merged
+
+
 def resolve_batting_rows(
     norm_id: str,
     name: str,
@@ -301,19 +374,10 @@ def resolve_batting_rows(
     batting_index: Dict[str, List[Dict[str, Any]]],
     batting_name_index: Dict[str, List[Dict[str, Any]]],
 ) -> List[Dict[str, Any]]:
-    rows = list(batting_index.get(norm_id, []))
-    if rows:
-        return rows
-    merged: List[Dict[str, Any]] = []
-    seen = set()
-    for key in normalize_name_team_keys(name, team):
-        for r in batting_name_index.get(key, []):
-            rid = (r.get("year"), r.get("league"), r.get("team"))
-            if rid in seen:
-                continue
-            seen.add(rid)
-            merged.append(r)
-    return merged
+    id_rows = list(batting_index.get(norm_id, []))
+    return merge_career_rows_from_id_and_name(
+        id_rows, name, team, batting_name_index, use_name_team_keys=True
+    )
 
 
 def resolve_pitching_rows(
@@ -323,10 +387,10 @@ def resolve_pitching_rows(
     pitching_index: Dict[str, List[Dict[str, Any]]],
     pitching_name_index: Dict[str, List[Dict[str, Any]]],
 ) -> List[Dict[str, Any]]:
-    rows = list(pitching_index.get(norm_id, []))
-    if rows:
-        return rows
-    return list(pitching_name_index.get(normalize_name_key(name, team), []))
+    id_rows = list(pitching_index.get(norm_id, []))
+    return merge_career_rows_from_id_and_name(
+        id_rows, name, team, pitching_name_index, use_name_team_keys=False
+    )
 
 
 def sort_career_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

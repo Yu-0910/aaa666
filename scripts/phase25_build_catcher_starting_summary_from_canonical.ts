@@ -1,25 +1,35 @@
 /**
- * Phase 25: canonical から「スタメン捕手として出た試合」を集計し、捕手別の基本サマリを生成する。
+ * Phase 25: canonical から「試合内 BF 最大の実守備捕手」として帰属した試合を集計し、捕手別の基本サマリを生成する。
  *
  * 要件:
- * - 先発: スタメン捕手の回数
- * - 勝利/敗戦/勝率: スタメン捕手として出た試合のチーム勝敗
- * - QS率/HQS率/SQS率: 母数はスタメン捕手回数（その試合の先発投手が条件を満たしたかでカウント）
+ * - 先発: 試合内 BF 最大の実守備捕手として帰属した回数（phase6 と同じ主捕手定義）
+ * - 勝利/敗戦/勝率: 主捕手として帰属した試合のチーム勝敗
+ * - QS率/HQS率/SQS率: 母数は主捕手回数（その試合の先発投手が条件を満たしたかでカウント）
  *
  * 出力:
  *   _data/derived/player_catcher_starting_summary/{year}/npb_{npbCatcherId}.json
  *
- * 入力は各試合 JSON を `mergePhase10RestoredIntoDocIfPresent` 後に読む（Phase11 と同一前提）。
+ * 入力は Phase11 と同一の `loadCanonicalGamesMergedForDerivedPipeline`。
+ * scoreboard が空の試合は順位表と同様に出場成績 HTML の「計」列で得点を補完する。
  */
 
 import fs from "fs"
 import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import type { CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
-import { getStartingCatcherForTeam } from "@/lib/yahooGame/startingCatcherFromCanonical"
+import { primaryCatcherYahooIdByFieldingTeam } from "@/lib/yahooGame/activeCatcherFromCanonical"
+import { teamsRoughlyMatch } from "@/lib/yahooGame/startingCatcherFromCanonical"
 import { inferPitcherTeamForNf3Line } from "@/lib/yahooGame/pitcherPocHelpers"
+import { rosterTeamToRankingShort } from "@/lib/yahooGame/canonicalPitchingSeasonAgg"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 import type { CatcherStartingSummaryDerived } from "@/lib/catcherStartingSummary"
+import {
+  getGameScoreSides,
+  type ScoreboardSide,
+} from "@/lib/standings/leagueGameFilter"
+import { loadScoreboardFromSportsnaviStatsRaw } from "@/lib/standings/sportsnaviStatsScoreboard"
 
 function parseArgs(argv: string[]): { year: string } {
   const yearIdx = argv.indexOf("--year")
@@ -27,25 +37,8 @@ function parseArgs(argv: string[]): { year: string } {
   return { year: year || "2026" }
 }
 
-function readCanonicalFile(p: string): CanonicalGameDocument | null {
-  try {
-    const j = JSON.parse(fs.readFileSync(p, "utf8")) as CanonicalGameDocument
-    if (j?.schemaVersion !== "yahoo-game-canonical-v1" || !j.gameId) return null
-    return mergePhase10RestoredIntoDocIfPresent(j)
-  } catch {
-    return null
-  }
-}
-
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true })
-}
-
-function parseRuns(s: string | undefined): number | null {
-  const t = String(s ?? "").trim()
-  if (!t) return null
-  const n = parseInt(t, 10)
-  return Number.isFinite(n) ? n : null
 }
 
 function ipToOuts(ip: string | undefined): number {
@@ -73,24 +66,29 @@ function qsFlagsFromStarter(line: PitchingLine | null): { qs: boolean; hqs: bool
 }
 
 function starterPitcherLineForTeam(doc: CanonicalGameDocument, teamName: string): PitchingLine | null {
-  // pitchingLines はチーム情報を直接持たないため、推定関数でチームを割り当てる
   const lines = doc.domain?.pitchingLines ?? []
-  const forTeam = lines.filter((pl) => inferPitcherTeamForNf3Line(doc, (pl.yahooPlayerId ?? "").trim()) === teamName)
-  // 先発はそのチームの投球行の先頭（従来の前提と揃える）
+  const forTeam = lines.filter(
+    (pl) => inferPitcherTeamForNf3Line(doc, (pl.yahooPlayerId ?? "").trim()) === teamName,
+  )
   return forTeam.length > 0 ? forTeam[0]! : null
+}
+
+function findTeamScoreSide(teamName: string, sides: ScoreboardSide[]): ScoreboardSide | null {
+  const short = rosterTeamToRankingShort(teamName)
+  for (const side of sides) {
+    if (side.teamShort === short) return side
+    if (teamsRoughlyMatch(side.teamShort, teamName)) return side
+    if (teamsRoughlyMatch(side.teamShort, short)) return side
+  }
+  return null
 }
 
 function main() {
   const root = getProjectRoot()
   const { year } = parseArgs(process.argv.slice(2))
-  const canonicalDir = path.join(root, "_data", "scraped_games", "canonical")
-  if (!fs.existsSync(canonicalDir)) {
-    console.error("[phase25] missing canonical dir:", canonicalDir)
-    process.exit(1)
-  }
-  const files = fs.readdirSync(canonicalDir).filter((f) => f.endsWith(".json"))
-  if (!files.length) {
-    console.error("[phase25] no canonical files under:", canonicalDir)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(root)
+  if (!docs.length) {
+    console.error("[phase25] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
@@ -99,28 +97,23 @@ function main() {
     { starts: number; wins: number; losses: number; qs: number; hqs: number; sqs: number }
   >()
 
-  for (const f of files) {
-    const p = path.join(canonicalDir, f)
-    const doc = readCanonicalFile(p)
-    if (!doc) continue
+  for (const baseDoc of docs) {
+    const doc = injectTeamsFromTextPbpIfMissing(baseDoc)
+    const sides = getGameScoreSides(doc, {
+      sportsnaviStatsScoreboard: loadScoreboardFromSportsnaviStatsRaw(root, doc.gameId),
+    })
+    if (!sides || sides.length < 2) continue
 
-    const board = doc.game.scoreboard ?? []
-    if (board.length < 2) continue
-    const visitor = (board[0]?.teamName ?? "").trim()
-    const home = (board[1]?.teamName ?? "").trim()
-    const vRuns = parseRuns(board[0]?.runs)
-    const hRuns = parseRuns(board[1]?.runs)
-    if (!visitor || !home || vRuns == null || hRuns == null) continue
-
-    const winner = vRuns > hRuns ? visitor : hRuns > vRuns ? home : null
-    const loser = vRuns > hRuns ? home : hRuns > vRuns ? visitor : null
-
+    const primaryByTeam = primaryCatcherYahooIdByFieldingTeam(doc)
     for (const t of doc.game.teams ?? []) {
       const teamName = (t.teamName ?? "").trim()
       if (!teamName) continue
-      const cat = getStartingCatcherForTeam(doc, teamName)
-      if (!cat?.yahooPlayerId) continue
-      const catcherNpbId = resolveNpbPlayerIdFromPublicId(cat.yahooPlayerId)
+      const primaryYid =
+        primaryByTeam.get(teamName) ??
+        [...primaryByTeam.entries()].find(([tn]) => teamsRoughlyMatch(tn, teamName))?.[1] ??
+        null
+      if (!primaryYid) continue
+      const catcherNpbId = resolveNpbPlayerIdFromPublicId(primaryYid)
       if (!catcherNpbId) continue
 
       let agg = byCatcher.get(catcherNpbId)
@@ -130,8 +123,14 @@ function main() {
       }
       agg.starts += 1
 
-      if (winner && teamName === winner) agg.wins += 1
-      if (loser && teamName === loser) agg.losses += 1
+      const teamSide = findTeamScoreSide(teamName, sides)
+      if (teamSide) {
+        const other = sides.find((s) => s !== teamSide)
+        if (other) {
+          if (teamSide.runs > other.runs) agg.wins += 1
+          else if (teamSide.runs < other.runs) agg.losses += 1
+        }
+      }
 
       const starter = starterPitcherLineForTeam(doc, teamName)
       const flags = qsFlagsFromStarter(starter)
@@ -176,4 +175,3 @@ function main() {
 }
 
 main()
-

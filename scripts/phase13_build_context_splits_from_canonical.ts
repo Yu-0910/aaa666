@@ -17,6 +17,10 @@
  */
 
 import { normalizeStadiumSplitValue } from "@/lib/stadiumVenueNormalize"
+import {
+  resolveGameContextForBatter,
+  type BatterGameContextSplit,
+} from "@/lib/yahooGame/batterGameContextFromCanonical"
 import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
@@ -112,91 +116,6 @@ function toSeasonStatsRow(splitType: string, splitValue: string, agg: BattingSea
   }
 }
 
-type GameContextSplit = {
-  stadium: string
-  vsTeamValue: string
-  homeAway: "home" | "visitor"
-}
-
-function contextFromInningHalf(
-  doc: CanonicalGameDocument,
-  half: string,
-  stadiumByGameId: Map<string, string>,
-): GameContextSplit | null {
-  const sb = doc.game.scoreboard
-  if (sb.length < 2) return null
-  const visitorName = (sb[0].teamName ?? "").trim()
-  const homeName = (sb[1].teamName ?? "").trim()
-  if (!visitorName || !homeName) return null
-
-  const isTop = /表/.test(half)
-  const isBottom = /裏/.test(half)
-  if (!isTop && !isBottom) return null
-
-  const stadium = normalizeStadiumSplitValue(
-    stadiumByGameId.get(String(doc.gameId ?? "").trim()) ?? "未設定",
-  )
-
-  return {
-    stadium,
-    vsTeamValue: `vs_${isTop ? homeName : visitorName}`,
-    homeAway: isTop ? "visitor" : "home",
-  }
-}
-
-/** 打席の表裏から対戦相手・ホーム/ビジターを決める。打席が無いときはスタメン名簿で所属側を推定。 */
-function resolveGameContextForBatter(
-  doc: CanonicalGameDocument,
-  yahooBatterId: string,
-  stadiumByGameId: Map<string, string>,
-): GameContextSplit | null {
-  const bid = String(yahooBatterId ?? "").trim()
-  if (!bid) return null
-
-  const pas = dedupePlateAppearancesByInningHalfOrder(
-    doc.domain?.plateAppearances ?? [],
-    doc.gameId,
-  )
-  const myPa = pas.find((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
-  if (myPa) {
-    return contextFromInningHalf(doc, String(myPa.inningHalf ?? "").trim(), stadiumByGameId)
-  }
-
-  const teams = doc.game.teams ?? []
-  if (teams.length >= 2) {
-    const onVisitor = (teams[0]?.startingLineup ?? []).some(
-      (p) => String(p.yahooPlayerId ?? "").trim() === bid,
-    )
-    const onHome = (teams[1]?.startingLineup ?? []).some(
-      (p) => String(p.yahooPlayerId ?? "").trim() === bid,
-    )
-    const sb = doc.game.scoreboard
-    const visitorName = (sb[0]?.teamName ?? "").trim()
-    const homeName = (sb[1]?.teamName ?? "").trim()
-    if (visitorName && homeName) {
-      const stadium = normalizeStadiumSplitValue(
-        stadiumByGameId.get(String(doc.gameId ?? "").trim()) ?? "未設定",
-      )
-      if (onVisitor && !onHome) {
-        return {
-          stadium,
-          vsTeamValue: `vs_${homeName}`,
-          homeAway: "visitor",
-        }
-      }
-      if (onHome && !onVisitor) {
-        return {
-          stadium,
-          vsTeamValue: `vs_${visitorName}`,
-          homeAway: "home",
-        }
-      }
-    }
-  }
-
-  return null
-}
-
 function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {
   const ids = new Set<string>()
   for (const line of doc.domain?.battingLines ?? []) {
@@ -221,7 +140,7 @@ function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {
 function addGameAggToSplits(
   byBatter: Map<string, Map<string, BattingSeasonAggYahoo>>,
   bid: string,
-  ctx: GameContextSplit,
+  ctx: BatterGameContextSplit,
   gameAgg: BattingSeasonAggYahoo,
 ): void {
   const m = byBatter.get(bid) ?? new Map<string, BattingSeasonAggYahoo>()

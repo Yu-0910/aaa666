@@ -230,19 +230,16 @@ def format_ops(ab: int, h: int, tb: int, bb: int, hbp: int, sf: int) -> str:
     return f"{(obp + slg):.3f}"
 
 
-def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dict]:
-    """打席ごとの投球リストを球種別に集計（1 PA = 1 list of pitches）。戻り値は (行, settlement_by_type)。"""
+def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dict, dict]:
+    """打席ごとの投球リストを球種別に集計。戻り値は (行, settlement_by_type, total_rate)。"""
     if not all_pitch_rows:
-        return [], {}
+        return [], {}, {"swing_miss": 0, "taken": 0, "foul": 0, "in_play": 0, "balls": 0}
 
     root = Path(__file__).resolve().parent.parent
     result_texts = [(p.get("result") or "").strip() for p in all_pitch_rows]
-    type_bucket_by_result = {
-        s: pair[1]
-        for s, pair in batch_pitch_result_classifications(
+    type_bucket_by_result = batch_pitch_result_classifications(
             result_texts, root
-        ).items()
-    }
+        )
 
     by_type = {}
     for p in all_pitch_rows:
@@ -279,7 +276,7 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
         rec = settlement_by_type[pt]
         result = (last.get("result") or "").strip()
         o = outcome_by[result]
-        if o["settlement"]:
+        if o.get("atBat"):
             rec["ab"] += 1
             if o["hit"]:
                 rec["h"] += 1
@@ -305,9 +302,13 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
         swing_miss = 0
         taken = 0
         foul_n = 0
+        in_play_n = 0
         for p in pitches:
             rkey = (p.get("result") or "").strip()
-            bkt = type_bucket_by_result.get(rkey, "none")
+            cls = type_bucket_by_result.get(rkey)
+            if not cls:
+                continue
+            bkt = cls["typeBucket"]
             if bkt == "balls":
                 balls += 1
             elif bkt == "swing_miss":
@@ -316,12 +317,12 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
                 taken += 1
             elif bkt == "foul":
                 foul_n += 1
+            elif cls.get("inPlay"):
+                in_play_n += 1
         foul = foul_n
-        in_play = set_rec["ab"] - set_rec["so"]
-        strikes = swing_miss + taken + foul + in_play
+        strikes = swing_miss + taken + foul + in_play_n
         strike_pct = f"{(strikes / n * 100):.1f}%" if n else "—"
-        swing_total = swing_miss + foul + set_rec["ab"]
-        whiff_pct = f"{(swing_miss / swing_total * 100):.1f}%" if swing_total else "—"
+        whiff_pct = f"{(swing_miss / n * 100):.1f}%" if n else "—"
         ab = set_rec["ab"]
         avg = f"{(set_rec['h'] / ab):.3f}" if ab else "—"
         ops = format_ops(ab, set_rec["h"], set_rec["tb"], set_rec["bb"], set_rec["hbp"], set_rec["sf"])
@@ -350,7 +351,26 @@ def aggregate_by_pitch_type(all_pitch_rows: list[dict]) -> tuple[list[dict], dic
         })
 
     result_rows.sort(key=lambda x: -x["pitches"])
-    return result_rows, settlement_by_type
+
+    total_rate = {"swing_miss": 0, "taken": 0, "foul": 0, "in_play": 0, "balls": 0}
+    for p in all_pitch_rows:
+        rkey = (p.get("result") or "").strip()
+        cls = type_bucket_by_result.get(rkey)
+        if not cls:
+            continue
+        bkt = cls["typeBucket"]
+        if bkt == "balls":
+            total_rate["balls"] += 1
+        elif bkt == "swing_miss":
+            total_rate["swing_miss"] += 1
+        elif bkt == "taken":
+            total_rate["taken"] += 1
+        elif bkt == "foul":
+            total_rate["foul"] += 1
+        elif cls.get("inPlay"):
+            total_rate["in_play"] += 1
+
+    return result_rows, settlement_by_type, total_rate
 
 
 def main():
@@ -418,7 +438,7 @@ def main():
         sys.exit(1)
 
     # 3) 球種別に集計
-    aggregated, settlement_by_type = aggregate_by_pitch_type(all_pitches)
+    aggregated, settlement_by_type, total_rate = aggregate_by_pitch_type(all_pitches)
     total_pitches = len(all_pitches)
     total_ab = sum(r["ab"] for r in aggregated)
     total_h = sum(r["h"] for r in aggregated)
@@ -430,10 +450,14 @@ def main():
     total_sf = sum(rec["sf"] for rec in settlement_by_type.values())
     total_avg = f"{(total_h / total_ab):.3f}" if total_ab else "—"
     total_ops = format_ops(total_ab, total_h, total_tb, total_bb, total_hbp, total_sf)
-    total_strikes = sum(r["swing_miss"] + r["taken"] + r["foul"] + (r["ab"] - r["so"]) for r in aggregated)
-    total_swing_miss = sum(r["swing_miss"] for r in aggregated)
-    total_swing_denom = sum(r["swing_miss"] + r["foul"] + r["ab"] for r in aggregated)
-    total_whiff = f"{(total_swing_miss / total_swing_denom * 100):.1f}%" if total_swing_denom else "—"
+    total_strikes = (
+        total_rate["swing_miss"]
+        + total_rate["taken"]
+        + total_rate["foul"]
+        + total_rate["in_play"]
+    )
+    total_swing_miss = total_rate["swing_miss"]
+    total_whiff = f"{(total_swing_miss / total_pitches * 100):.1f}%" if total_pitches else "—"
 
     out_data = {
         "game_id": game_id,
@@ -446,9 +470,9 @@ def main():
             "pct": 100.0,
             "avg_speed_kmh": None,
             "swing_miss": total_swing_miss,
-            "taken": sum(r["taken"] for r in aggregated),
-            "foul": sum(r["foul"] for r in aggregated),
-            "balls": sum(r["balls"] for r in aggregated),
+            "taken": total_rate["taken"],
+            "foul": total_rate["foul"],
+            "balls": total_rate["balls"],
             "strike_pct": f"{(total_strikes / total_pitches * 100):.1f}%" if total_pitches else "—",
             "whiff_pct": total_whiff,
             "avg": total_avg,

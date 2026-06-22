@@ -1,12 +1,14 @@
 /**
- * Phase 6: スタメン捕手（守備「捕」）で打席を振り分け、player_season_pitching_poc JSON に splits.byCatcher を付与する。
+ * Phase 6: 実守備捕手（守備交代追跡）で打席を振り分け、player_season_pitching_poc JSON に splits.byCatcher を付与する。
  *
  * 前提: `npm run phase:pitcher-poc1` 済み（npb_*.json が存在すること）
- * 捕手交替は canonical に無い限り反映されない（先発捕手固定）。
+ * 捕手帰属: activeCatcherFromCanonical（実況の守備交代・(捕) 表記）。
+ * 回数・自責点・防御率は試合ごとの pitchingLines を「BF 最大の実守備捕手」に帰属して合算（按分しない）。
  *
  * npx tsx scripts/phase6_build_pitcher_catcher_splits.ts --year 2026
  *
  * canonical 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み）。
+ * scoreboard が空の canonical 向けに Phase13 と同様 `injectTeamsFromTextPbpIfMissing` で先攻/後攻を補完する。
  */
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs"
@@ -15,13 +17,15 @@ import { fileURLToPath } from "url"
 import type { PlateAppearance } from "../lib/yahooGame/types"
 import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
+import { isIntentionalWalkResultText } from "../lib/baseballWalkResult"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
 import { comparePlateAppearances, teamForYahooPlayerId } from "../lib/yahooGame/pitcherPocHelpers"
 import {
-  fieldingTeamNameFromInningHalf,
-  getStartingCatcherForTeam,
-  teamsRoughlyMatch,
-} from "../lib/yahooGame/startingCatcherFromCanonical"
+  buildCatcherYahooIdByPaTimeline,
+  resolveActiveCatcherYahooIdForPlateAppearance,
+} from "../lib/yahooGame/activeCatcherFromCanonical"
+import { fieldingTeamNameFromInningHalf, teamsRoughlyMatch } from "../lib/yahooGame/startingCatcherFromCanonical"
 import type { PitcherSeasonPocPayload } from "../lib/pitcherSeasonPocTypes"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -47,6 +51,7 @@ type PaAgg = {
   so: number
   bb: number
   hbp: number
+  ibb: number
 }
 
 const emptyPaAgg = (): PaAgg => ({
@@ -57,6 +62,7 @@ const emptyPaAgg = (): PaAgg => ({
   so: 0,
   bb: 0,
   hbp: 0,
+  ibb: 0,
 })
 
 function ipToOuts(ip: string | undefined): number {
@@ -126,6 +132,14 @@ function main(): void {
 
   const yahooPitcherToNpb = loadYahooPitcherIdToNpbMap(outDir, files)
 
+  /** Phase13 と同型: scoreboard 空でも試合前情報から先攻/後攻を補完した doc */
+  const docByGameId = new Map(
+    docs.map((baseDoc) => [
+      baseDoc.gameId,
+      injectTeamsFromTextPbpIfMissing(baseDoc),
+    ] as const),
+  )
+
   /** npbPlayerId -> Map<catcherYahooId, PaAgg> */
   const byNpbCatcher = new Map<string, Map<string, PaAgg>>()
 
@@ -145,7 +159,9 @@ function main(): void {
     m2.set(cyid, (m2.get(cyid) ?? 0) + 1)
   }
 
-  for (const doc of docs) {
+  for (const baseDoc of docs) {
+    const doc = docByGameId.get(baseDoc.gameId) ?? injectTeamsFromTextPbpIfMissing(baseDoc)
+    const catcherTimeline = buildCatcherYahooIdByPaTimeline(doc)
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
     for (const pa of pas) {
       const pid = yahooPitcherIdForVsHandFromPa(pa)
@@ -159,8 +175,12 @@ function main(): void {
       const pitcherFromLineup = teamForYahooPlayerId(doc, pid)
       if (pitcherFromLineup && !teamsRoughlyMatch(pitcherFromLineup, fieldingTeam)) continue
 
-      const cat = getStartingCatcherForTeam(doc, fieldingTeam)
-      if (!cat) continue
+      const catcherYid = resolveActiveCatcherYahooIdForPlateAppearance(
+        doc,
+        pa as PlateAppearance,
+        catcherTimeline,
+      )
+      if (!catcherYid) continue
 
       const res = lastPitchResult(pa as PlateAppearance)
       let m = byNpbCatcher.get(npb)
@@ -168,19 +188,27 @@ function main(): void {
         m = new Map()
         byNpbCatcher.set(npb, m)
       }
-      const agg = m.get(cat.yahooPlayerId) ?? emptyPaAgg()
+      const agg = m.get(catcherYid) ?? emptyPaAgg()
       addPitcherPaCount(agg, res)
-      m.set(cat.yahooPlayerId, agg)
+      if (isIntentionalWalkResultText(res)) agg.ibb += 1
+      m.set(catcherYid, agg)
 
-      bumpBf(doc.gameId, pid, cat.yahooPlayerId)
+      bumpBf(baseDoc.gameId, pid, catcherYid)
     }
   }
 
   /**
-   * 捕手別の勝敗/QS%（球場別と同様の「1試合=1行」）を付与する。
-   * - 試合内で捕手交替が追えない/複数捕手が混在する場合は「その投手のBFが最大の捕手」に帰属させる。
+   * 捕手別の試合帰属（1試合=1捕手: BF 最大。同点は catcherId 昇順）。
+   * pitchingLines の ip/er/decision/QS も同一捕手に合算する。
    */
-  type CatcherGameAgg = { games: number; wins: number; losses: number; qsCount: number }
+  type CatcherGameAgg = {
+    games: number
+    wins: number
+    losses: number
+    qsCount: number
+    ipOuts: number
+    er: number
+  }
   const catcherGameAggByNpb = new Map<string, Map<string, CatcherGameAgg>>()
   const ensureCatcherGameAgg = (npb: string, cyid: string): CatcherGameAgg => {
     let m = catcherGameAggByNpb.get(npb)
@@ -190,21 +218,21 @@ function main(): void {
     }
     let a = m.get(cyid)
     if (!a) {
-      a = { games: 0, wins: 0, losses: 0, qsCount: 0 }
+      a = { games: 0, wins: 0, losses: 0, qsCount: 0, ipOuts: 0, er: 0 }
       m.set(cyid, a)
     }
     return a
   }
 
-  for (const doc of docs) {
-    const gameId = doc.gameId
+  for (const baseDoc of docs) {
+    const gameId = baseDoc.gameId
     const perPitcher = bfByGamePitcherCatcher.get(gameId) ?? new Map()
     for (const [pid, perCatcher] of perPitcher.entries()) {
       const npb = yahooPitcherToNpb.get(pid)
       if (!npb) continue
 
       // その試合の pitchingLines から投手の 1 行を取る（無ければスキップ）
-      const line = (doc.domain?.pitchingLines ?? []).find((pl) => (pl.yahooPlayerId ?? "").trim() === pid)
+      const line = (baseDoc.domain?.pitchingLines ?? []).find((pl) => (pl.yahooPlayerId ?? "").trim() === pid)
       if (!line) continue
 
       // 帰属捕手（最大BF。tieは catcherId の昇順）
@@ -214,6 +242,8 @@ function main(): void {
 
       const a = ensureCatcherGameAgg(npb, cyid)
       a.games += 1
+      a.ipOuts += ipToOuts(line.ip)
+      a.er += line.er ?? 0
       const decision = line.decision ?? null
       if (decision === "win") a.wins += 1
       if (decision === "loss") a.losses += 1
@@ -241,10 +271,6 @@ function main(): void {
 
     const cmap = byNpbCatcher.get(npb)
     const gmap = catcherGameAggByNpb.get(npb) ?? new Map<string, CatcherGameAgg>()
-    const basic = payload.basic
-    const totalBf = Math.max(1, basic.bf)
-    const totalOuts = basic.ipOuts
-    const totalEr = basic.er
 
     const rows: NonNullable<PitcherSeasonPocPayload["splits"]["byCatcher"]> = []
     if (cmap) {
@@ -252,13 +278,12 @@ function main(): void {
       for (const cyid of sortedIds) {
         const a = cmap.get(cyid)!
         if (a.bf <= 0) continue
-        const share = a.bf / totalBf
-        const ipOutsC = Math.round(totalOuts * share)
-        const erC = totalEr * share
+        const cg = gmap.get(cyid) ?? null
+        const ipOutsC = cg?.ipOuts ?? 0
+        const erC = cg?.er ?? 0
         const era = ipOutsC > 0 ? (erC * 27) / ipOutsC : null
         const ipNum = ipOutsC / 3
         const whip = ipNum > 0 ? (a.h + a.bb) / ipNum : null
-        const cg = gmap.get(cyid) ?? null
         const wins = cg?.wins ?? 0
         const losses = cg?.losses ?? 0
         const games = cg?.games ?? 0
@@ -296,6 +321,8 @@ function main(): void {
           losses,
           qsCount,
           qsPct,
+          er: erC,
+          ibb: a.ibb,
         })
       }
     }
@@ -304,7 +331,7 @@ function main(): void {
     payload.source = {
       ...payload.source,
       catcherNote:
-        "捕手は各打席の守備側チームのスタメン「捕」（表裏とスコアボード先攻/後攻で守備チームを決定）。救援投手はスタメンに名前がなくても可。交替は未反映。防御率・回数は打席数比で投手全体の自責点・イニングを按分。",
+        "捕手は各打席時点の実守備捕手（textPlayByPlay の守備交代・(捕) 表記を追跡）。1試合内で複数捕手に打席が分かれる場合は BF 最大の捕手に pitchingLines（回数・自責点・勝敗・QS）を帰属。打者・安打等は打席単位で集計。",
     }
 
     writeFileSync(path, JSON.stringify(payload, null, 2), "utf8")

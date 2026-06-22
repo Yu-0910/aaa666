@@ -58,6 +58,8 @@ const loadedEnv = loadDotEnvFile(ENV_FILE)
 const UPLOADS = [
   { local: 'public/data/rankings', keyPrefix: 'data/rankings' },
   { local: 'public/data/top-leaders', keyPrefix: 'data/top-leaders' },
+  { local: 'public/data/standings', keyPrefix: 'data/standings' },
+  { local: 'public/data/top-probables', keyPrefix: 'data/top-probables' },
 ]
 
 function walkJsonFiles(dir, acc = []) {
@@ -113,7 +115,11 @@ async function main() {
         const matchTop =
           u.keyPrefix === 'data/top-leaders' &&
           (rel.startsWith(`${y}/`) || rel.startsWith(`weekly/${y}/`))
-        if (!matchRankings && !matchTop) continue
+        const matchStandings =
+          u.keyPrefix === 'data/standings' && rel.startsWith(`${y}/`)
+        const matchProbables =
+          u.keyPrefix === 'data/top-probables' && rel.startsWith(`${y}/`)
+        if (!matchRankings && !matchTop && !matchStandings && !matchProbables) continue
       }
       files.push({ local: f, key: `${u.keyPrefix}/${rel}` })
     }

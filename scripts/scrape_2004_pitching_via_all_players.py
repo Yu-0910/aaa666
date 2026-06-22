@@ -18,11 +18,6 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-if sys.platform == 'win32':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-
 import requests
 from bs4 import BeautifulSoup
 
@@ -102,6 +97,24 @@ def _get(url: str, retry: int = 2) -> Optional[str]:
         except requests.RequestException as e:
             print(f"  ⚠️ {url}: {e}")
     return None
+
+
+def _get_player_html(player_id: str, cache_dir: Path, retry: int = 2) -> Tuple[Optional[str], bool]:
+    """
+    選手個人ページは統合スクレイパと同じキャッシュを使う。
+    Returns: (html, fetched_via_network)
+    """
+    cache_path = cache_dir / f"{player_id}.html"
+    if cache_path.is_file():
+        return cache_path.read_text(encoding='utf-8', errors='replace'), False
+
+    url = f"https://npb.jp/bis/players/{player_id}.html"
+    html = _get(url, retry=retry)
+    if html:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(html, encoding='utf-8')
+        return html, True
+    return None, False
 
 
 def get_team_urls_for_year(year: int) -> List[Tuple[str, str, str]]:
@@ -230,199 +243,32 @@ def _safe_float(v: Any) -> Optional[float]:
         return None
 
 
-def _parse_ip_cells(cells: List, ip_idx: int) -> Tuple[Optional[float], int]:
-    """
-    投球回をパース。NPBは「5」+「.1」の2セル、「0」+「+」+「0」の3セル（0回0/3）などの形式あり。
-    返す: (IPの値, 消費したセル数)
-    """
-    if ip_idx >= len(cells):
-        return None, 0
-    t0 = cells[ip_idx].get_text(strip=True).replace(',', '')
-    if not t0:
-        return None, 1
-    try:
-        whole = int(t0)
-    except ValueError:
-        return _safe_float(t0), 1
-
-    # 次セルが .1/.2 形式（例: 5.1 = 5回1/3）
-    if ip_idx + 1 < len(cells):
-        t1 = cells[ip_idx + 1].get_text(strip=True)
-        if re.match(r'^\.\d+$', t1):
-            return _safe_float(t0 + t1), 2
-        # 次が "+" でその次が 0/1/2（例: 0+0/3 = 0.0回）
-        if t1 == '+' and ip_idx + 2 < len(cells):
-            t2 = cells[ip_idx + 2].get_text(strip=True)
-            if t2 in ('0', '1', '2'):
-                frac = int(t2) / 3.0
-                return whole + frac, 3
-    return float(whole), 1
-
-
-def get_player_pitching_for_year(player_id: str, player_name_ja: str, team: str, league: str, year: int) -> Optional[Dict[str, Any]]:
+def get_player_pitching_for_year(
+    player_id: str,
+    player_name_ja: str,
+    team: str,
+    league: str,
+    year: int,
+    cache_dir: Path,
+) -> Tuple[Optional[Dict[str, Any]], bool]:
     """選手ページから指定年度の投手成績1行を取得。なければ None。"""
-    url = f"https://npb.jp/bis/players/{player_id}.html"
-    html = _get(url)
+    from lib.npb_player_unified import parse_pitching_from_html
+
+    html, fetched_network = _get_player_html(player_id, cache_dir)
     if not html:
-        return None
-    soup = BeautifulSoup(html, 'lxml')
-    for table in soup.find_all('table'):
-        rows = table.find_all('tr')
-        if len(rows) < 2:
-            continue
-        header_cells = rows[0].find_all(['th', 'td'])
-        header_texts = [c.get_text(strip=True) for c in header_cells]
-        header_joined = ''.join(header_texts).replace(' ', '')
-        if '年度' not in header_joined or '防御率' not in header_joined or '投球回' not in header_joined:
-            continue
-        if '登板' not in header_joined and '試合' not in header_joined:
-            continue
-        col_map: Dict[str, int] = {}
-        for i, h in enumerate(header_texts):
-            h = h.replace(' ', '')
-            if '年度' in h:
-                col_map['year'] = i
-            elif '登板' in h:
-                col_map['G'] = i
-            elif '勝利' in h:
-                col_map['W'] = i
-            elif '敗北' in h:
-                col_map['L'] = i
-            elif 'セーブ' in h:
-                col_map['SV'] = i
-            elif h == 'H' and 'HP' in header_joined:
-                col_map['HOLD'] = i
-            elif 'HP' in h or h == 'ＨＰ':
-                col_map['HP'] = i
-            elif '完投' in h:
-                col_map['CG'] = i
-            elif '完封' in h:
-                col_map['SHO'] = i
-            elif '勝率' in h:
-                col_map['WPCT'] = i
-            elif '打者' in h:
-                col_map['BF'] = i
-            elif '投球回' in h:
-                col_map['IP'] = i
-            elif '安打' in h:
-                col_map['H'] = i
-            elif '本塁打' in h:
-                col_map['HR'] = i
-            elif '四球' in h and '故意' not in h:
-                col_map['BB'] = i
-            elif '死球' in h:
-                col_map['HBP'] = i
-            elif '三振' in h:
-                col_map['SO'] = i
-            elif '暴投' in h:
-                col_map['WP'] = i
-            elif 'ボーク' in h:
-                col_map['BK'] = i
-            elif '失点' in h:
-                col_map['R'] = i
-            elif '自責' in h:
-                col_map['ER'] = i
-            elif '防御率' in h:
-                col_map['ERA'] = i
-        if 'year' not in col_map or 'G' not in col_map:
-            continue
-        # 投球回より後にある列（複数セル時にオフセットが必要）
-        cols_after_ip = ['H', 'HR', 'BB', 'HBP', 'SO', 'WP', 'BK', 'R', 'ER', 'ERA']
-
-        for row in rows[1:]:
-            cells = row.find_all(['th', 'td'])
-            if col_map['year'] >= len(cells):
-                continue
-            year_val = cells[col_map['year']].get_text(strip=True).replace(' ', '')
-            year_str = str(year)
-            year_zen = str(year).translate(str.maketrans('0123456789', '０１２３４５６７８９'))
-            if year_val != year_str and year_val != year_zen:
-                continue
-            g = _safe_int(cells[col_map['G']].get_text(strip=True)) if col_map.get('G') is not None and col_map['G'] < len(cells) else None
-            if g is not None and g == 0:
-                continue
-
-            # ホールド導入前行: データにH・HP列が無く2列詰まる。HOLD=0, HP=0 とし列オフセット-2を適用
-            cols_need_old_offset = ['CG', 'SHO', 'WPCT', 'BF', 'IP', 'H', 'HR', 'BB', 'HBP', 'SO', 'WP', 'BK', 'R', 'ER', 'ERA']
-            old_format = (col_map.get('ERA') is not None and col_map['ERA'] >= len(cells)
-                          and col_map.get('CG') is not None and col_map['CG'] >= 2)
-
-            # 投球回パース（0+0/3 等の複数セル形式に対応。1登板0回でH欠損になる原因を解消）
-            ip_col_idx = (col_map['IP'] - 2) if old_format and col_map.get('IP') is not None else col_map.get('IP')
-            ip_val, ip_cells = _parse_ip_cells(cells, ip_col_idx) if ip_col_idx is not None and ip_col_idx < len(cells) else (None, 1)
-            ip_extra = max(0, ip_cells - 1)
-
-            def _cell_idx(key: str) -> int:
-                idx = col_map.get(key)
-                if idx is None:
-                    return -1
-                if old_format and key in cols_need_old_offset:
-                    idx = idx - 2
-                if key in cols_after_ip:
-                    idx = idx + ip_extra
-                return idx
-
-            def _read_cell(key: str, as_float: bool = False) -> Any:
-                idx = _cell_idx(key)
-                if idx < 0 or idx >= len(cells):
-                    return None
-                t = cells[idx].get_text(strip=True).replace(',', '')
-                if not t or t in ('-', '－'):
-                    return None
-                return (_safe_float(t) if as_float else _safe_int(t))
-
-            h_val = _read_cell('H')
-            # IP=0/空 で H が空の場合: 0回は被安打0のケースが多いため補完
-            if h_val is None and (ip_val is None or ip_val == 0) and g is not None and g <= 2:
-                bf_val = _read_cell('BF')
-                if bf_val is not None and bf_val > 0:
-                    h_val = 0
-
-            row_data: Dict[str, Any] = {
-                'year': year,
-                'league': league,
-                'team': team,
-                'player_id': player_id,
-                'player_name_ja': player_name_ja,
-                'player_name_en': '',
-                'G': g,
-                'IP': ip_val,
-                'W': _read_cell('W'),
-                'L': _read_cell('L'),
-                'SV': _read_cell('SV'),
-                'ERA': _read_cell('ERA', as_float=True),
-                'BF': _read_cell('BF'),
-                'H': h_val,
-                'HR': _read_cell('HR'),
-                'BB': _read_cell('BB'),
-                'IBB': None,
-                'HBP': _read_cell('HBP'),
-                'SO': _read_cell('SO'),
-                'ER': _read_cell('ER'),
-                'R': _read_cell('R'),
-            }
-            # HOLD/HP: ホールド導入前行ではデータに無いため 0 とする
-            if old_format:
-                row_data['HOLD'] = 0
-                row_data['HP'] = 0
-            else:
-                if col_map.get('HOLD') is not None and _cell_idx('HOLD') < len(cells):
-                    row_data['HOLD'] = _safe_int(cells[_cell_idx('HOLD')].get_text(strip=True))
-                if col_map.get('HP') is not None and _cell_idx('HP') < len(cells):
-                    row_data['HP'] = _safe_int(cells[_cell_idx('HP')].get_text(strip=True))
-            # CG/SHO/WPCT は投球回より前。WP/BK は投球回より後で cols_after_ip に含まれる
-            if col_map.get('CG') is not None and _cell_idx('CG') < len(cells):
-                row_data['CG'] = _safe_int(cells[_cell_idx('CG')].get_text(strip=True))
-            if col_map.get('SHO') is not None and _cell_idx('SHO') < len(cells):
-                row_data['SHO'] = _safe_int(cells[_cell_idx('SHO')].get_text(strip=True))
-            if col_map.get('WPCT') is not None and _cell_idx('WPCT') < len(cells):
-                row_data['WPCT'] = _safe_float(cells[_cell_idx('WPCT')].get_text(strip=True))
-            if col_map.get('WP') is not None and _cell_idx('WP') < len(cells):
-                row_data['WP'] = _safe_int(cells[_cell_idx('WP')].get_text(strip=True))
-            if col_map.get('BK') is not None and _cell_idx('BK') < len(cells):
-                row_data['BK'] = _safe_int(cells[_cell_idx('BK')].get_text(strip=True))
-            return row_data
-    return None
+        return None, fetched_network
+    parsed = parse_pitching_from_html(
+        html,
+        player_id,
+        player_name_ja,
+        {year},
+        default_league=league,
+        default_team=team,
+    )
+    row = parsed.get(year)
+    if row is None:
+        return None, fetched_network
+    return row, fetched_network
 
 
 def _log_progress(log_path: Optional[Path], msg: str) -> None:
@@ -442,13 +288,30 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--year', type=int, default=2004, help='取得する年度（例: 2003）')
     parser.add_argument('--test', action='store_true', help='球団URL取得のみ実行')
+    parser.add_argument('--staging', action='store_true', help='Phase 3用ステージング出力に保存する')
+    parser.add_argument('--out-dir', type=str, default='', help='出力ディレクトリを明示指定する')
+    parser.add_argument('--cache-dir', type=str, default='', help='選手個人ページHTMLキャッシュ（既定: _data/cache/npb_player_page）')
     parser.add_argument('--progress-log', type=str, default='', help='進捗ログを書き出すファイルパス（相対はプロジェクトの_data配下）')
     args = parser.parse_args()
     year = args.year
 
     project_root = Path(__file__).resolve().parents[1]
-    out_dir = project_root / '_data' / 'master_csv__import_1950_2024'
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+        if not out_dir.is_absolute():
+            out_dir = project_root / out_dir
+    elif args.staging:
+        out_dir = project_root / '_data' / 'master_csv__rescrape_staging'
+    else:
+        out_dir = project_root / '_data' / 'master_csv__import_1950_2024'
     out_dir.mkdir(parents=True, exist_ok=True)
+    if args.cache_dir:
+        cache_dir = Path(args.cache_dir)
+        if not cache_dir.is_absolute():
+            cache_dir = project_root / cache_dir
+    else:
+        cache_dir = project_root / '_data' / 'cache' / 'npb_player_page'
+    cache_dir.mkdir(parents=True, exist_ok=True)
 
     progress_log: Optional[Path] = None
     if args.progress_log:
@@ -475,6 +338,7 @@ def main():
     seen_ids: Dict[str, set] = {'PL': set(), 'CL': set()}
     total_players = 0
     total_pitchers = 0
+    total_network_gets = 0
 
     for team_name, league, team_url in teams:
         players = get_player_list_from_team_page(team_url)
@@ -484,7 +348,9 @@ def main():
         for i, (pid, pname) in enumerate(players):
             if pid in seen_ids[league]:
                 continue
-            row = get_player_pitching_for_year(pid, pname, team_name, league, year)
+            row, fetched_network = get_player_pitching_for_year(pid, pname, team_name, league, year, cache_dir)
+            if fetched_network:
+                total_network_gets += 1
             if row:
                 seen_ids[league].add(pid)
                 by_league[league].append(row)
@@ -496,7 +362,8 @@ def main():
         time.sleep(0.25)
 
     print(f"\n取得: 延べ選手 {total_players}名、{year}年投手成績あり {total_pitchers}名")
-    _log_progress(progress_log, f"{year}年 完了 延べ{total_players}名 投手成績{total_pitchers}名 CL:{len(by_league['CL'])} PL:{len(by_league['PL'])}")
+    print(f"  選手ページ network GET: {total_network_gets} 回（キャッシュ命中は除外）")
+    _log_progress(progress_log, f"{year}年 完了 延べ{total_players}名 投手成績{total_pitchers}名 network_gets:{total_network_gets} CL:{len(by_league['CL'])} PL:{len(by_league['PL'])}")
     print(f"  CL: {len(by_league['CL'])}名  PL: {len(by_league['PL'])}名")
 
     for league in ('PL', 'CL'):
@@ -523,4 +390,8 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.platform == 'win32':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
     main()

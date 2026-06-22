@@ -47,6 +47,19 @@ type DaySnapshotV2 = {
   stadiumByGameId: Record<string, string>
 }
 
+type DaySnapshotV3 = {
+  schemaVersion: "sportsnavi-schedule-day-v3"
+  year: string
+  dateJst: string
+  fetchedAt: string
+  sourceUrl: string
+  gameIds: string[]
+  games: ScheduleGameEntry[]
+  stadiumByGameId: Record<string, string>
+}
+
+type DaySnapshot = DaySnapshotV2 | DaySnapshotV3
+
 type DayDiffV1 = {
   schemaVersion: "sportsnavi-schedule-day-diff-v1"
   year: string
@@ -192,7 +205,7 @@ async function main() {
   for (let di = 0; di < days.length; di++) {
     const ymd = days[di]!
     const snapPath = path.join(outByDate, `${ymd}.json`)
-    const prevSnap = readJsonIfExists<DaySnapshotV2>(snapPath)
+    const prevSnap = readJsonIfExists<DaySnapshot>(snapPath)
 
     // 交流戦は `league` 側が「試合はありません」になるため、`inter` も併用する。
     const urlLeague = `https://baseball.yahoo.co.jp/npb/schedule/first/league?date=${encodeURIComponent(ymd)}`
@@ -220,13 +233,15 @@ async function main() {
     if (gameIds.length > PHASE0_MAX_GAMES_PER_DAY) {
       const revertTo =
         prevSnap &&
-        (prevSnap.schemaVersion === "sportsnavi-schedule-day-v2" ||
+        (prevSnap.schemaVersion === "sportsnavi-schedule-day-v3" ||
+          prevSnap.schemaVersion === "sportsnavi-schedule-day-v2" ||
           prevSnap.schemaVersion === "sportsnavi-schedule-day-v1") &&
         Array.isArray(prevSnap.gameIds)
           ? [...prevSnap.gameIds]
           : []
       const revertGames =
-        prevSnap?.schemaVersion === "sportsnavi-schedule-day-v2" && Array.isArray(prevSnap.games)
+        prevSnap?.schemaVersion === "sportsnavi-schedule-day-v3" ||
+        prevSnap?.schemaVersion === "sportsnavi-schedule-day-v2"
           ? [...prevSnap.games]
           : revertTo.map((id) => ({ gameId: id, stadiumName: prevSnap?.stadiumByGameId?.[id] ?? "未設定" }))
       const msg = `date=${ymd} extracted ${extractedIds.length} gameIds (>${PHASE0_MAX_GAMES_PER_DAY}); sample=${extractedIds
@@ -248,8 +263,8 @@ async function main() {
       stadiumByGameId[gid] = name
     }
 
-    const snap: DaySnapshotV2 = {
-      schemaVersion: "sportsnavi-schedule-day-v2",
+    const snap: DaySnapshotV3 = {
+      schemaVersion: "sportsnavi-schedule-day-v3",
       year,
       dateJst: ymd,
       fetchedAt,
@@ -267,7 +282,9 @@ async function main() {
 
     if (
       prev &&
-      (prev.schemaVersion === "sportsnavi-schedule-day-v2" || prev.schemaVersion === "sportsnavi-schedule-day-v1")
+      (prev.schemaVersion === "sportsnavi-schedule-day-v3" ||
+        prev.schemaVersion === "sportsnavi-schedule-day-v2" ||
+        prev.schemaVersion === "sportsnavi-schedule-day-v1")
     ) {
       const prevSet = new Set(prev.gameIds ?? [])
       const curSet = new Set(gameIds)

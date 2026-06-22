@@ -86,6 +86,7 @@ def batch_pa_outcome_classifications(
     result: dict[str, PaOutcomeRow] = {}
     bool_keys = (
         "settlement",
+        "atBat",
         "strikeout",
         "walk",
         "hbp",

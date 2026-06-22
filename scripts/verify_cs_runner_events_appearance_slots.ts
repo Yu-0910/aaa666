@@ -90,6 +90,25 @@ function run(): void {
   assert.ok(csOnlyAgg, "出場スロット無しでも score CS で集計対象")
   assert.equal(csOnlyAgg!.cs, 1)
 
+  const pinchSbBid = "8888888"
+  const pinchSbDoc = minimalDoc({
+    domain: {
+      battingLines: [
+        {
+          yahooPlayerId: pinchSbBid,
+          playerName: "代走テスト",
+          sb: 2,
+          inferredFrom: "stats_row_v0",
+        },
+      ],
+      plateAppearances: [],
+      runnerEvents: [],
+    },
+  })
+  const pinchSbAgg = aggregateBattingSeasonByYahooBatterFromAppearanceSlots([pinchSbDoc]).get(pinchSbBid)
+  assert.ok(pinchSbAgg, "出場スロット無しでも battingLines.sb で集計対象")
+  assert.equal(pinchSbAgg!.sb, 2, "代走のみの盗塁も battingLines から加算")
+
   console.log("[verify_cs_runner_events_appearance_slots] OK")
 }
 

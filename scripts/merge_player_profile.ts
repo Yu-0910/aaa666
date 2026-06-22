@@ -12,12 +12,29 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { dirname, join } from "path"
+import {
+  enrichCareerPitchingRows,
+  computeCareerPitchingTotalFromRows,
+} from "../lib/careerPitchingEnrich"
 
 type AnyDict = Record<string, any>
 
 const ROOT = process.cwd()
 
-const PATH_TARGETS = join(ROOT, "_data", "player_profile", "_targets_2026.json")
+const cliArgs = process.argv.slice(2)
+const historicalCareerOnly = cliArgs.includes("--historical-career-only")
+const targetsArg = cliArgs.find((a) => a.startsWith("--targets="))?.slice("--targets=".length)
+
+const PATH_TARGETS = join(
+  ROOT,
+  targetsArg ??
+    (historicalCareerOnly
+      ? "_data/player_profile/_targets_historical_career.json"
+      : "_data/npb_rescrape/targets_profile_roman.json"),
+)
+const PATH_ROSTER_2026 = join(ROOT, "_data", "npb_roster_2026.csv")
+const PATH_TARGETS_2026 = join(ROOT, "_data", "player_profile", "_targets_2026.json")
+const DIR_META = join(ROOT, "_data", "derived", "npb_player_meta")
 const DIR_CAREER = join(ROOT, "_data", "derived", "player_profile", "career_from_master")
 const DIR_PROFILE = join(ROOT, "_data", "derived", "player_profile", "profile_npb")
 const DIR_SALARY = join(ROOT, "_data", "derived", "player_salary")
@@ -280,6 +297,11 @@ function computePitchingTotal(rows: AnyDict[]): AnyDict {
   total.er = sumNums(rows, "er")
   total.r = sumNums(rows, "r") // may be missing in Phase1 rows
   total.holds = sumNums(rows, "holds")
+  total.hp = sumNums(rows, "hp")
+  total.ibb = sumNums(rows, "ibb")
+  total.cg = sumNums(rows, "cg")
+  total.sho = sumNums(rows, "sho")
+  total.wp = sumNums(rows, "wp")
 
   // IP: sum outs
   let outs = 0
@@ -304,97 +326,219 @@ function computePitchingTotal(rows: AnyDict[]): AnyDict {
   return total
 }
 
+function inferRegistrationPosition(battingRows: AnyDict[], pitchingRows: AnyDict[]): string {
+  const hasBat = battingRows.length > 0
+  const hasPit = pitchingRows.length > 0
+  if (hasPit && !hasBat) return "投手"
+  if (hasBat && !hasPit) return "外野手"
+  return ""
+}
+
+function loadRoster2026Ids(): Set<string> {
+  const ids = new Set<string>()
+  if (!existsSync(PATH_ROSTER_2026)) return ids
+  const text = readFileSync(PATH_ROSTER_2026, "utf-8")
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim() || line.startsWith("npb_player_id")) continue
+    const pid = String(line.split(",")[0] ?? "").trim().replace(/\D/g, "")
+    if (pid) ids.add(pid.replace(/^0+/, "") || "0")
+  }
+  return ids
+}
+
+function readProfileForPlayer(pid: string): AnyDict {
+  const npbPath = join(DIR_PROFILE, `npb_${pid}.json`)
+  if (existsSync(npbPath)) return readJsonIfExists(npbPath)
+  const legacyPath = join(DIR_PROFILE, `${pid}.json`)
+  if (existsSync(legacyPath)) return readJsonIfExists(legacyPath)
+  return readJsonIfExists(join(DIR_META, `${pid}.json`))
+}
+
+function mergeRichFromCareer(
+  t: AnyDict,
+  pid: string,
+  mismatchAll: MismatchRow[],
+): boolean {
+  const careerPath = join(DIR_CAREER, `${pid}.json`)
+  if (!existsSync(careerPath)) return false
+
+  const career = readJson(careerPath)
+  const profile = readProfileForPlayer(pid)
+  const salary = readJsonIfExists(join(DIR_SALARY, `${pid}.json`))
+
+  const nameJa = String(t.name_ja ?? profile.name_ja ?? career.name_ja ?? "").trim()
+  const salaryByYear = salaryMapFromPayload(salary)
+  const salaryYears = Object.keys(salaryByYear)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  const battingRowsRaw: AnyDict[] = (career.career_batting?.rows ?? []) as AnyDict[]
+  const pitchingRowsRaw: AnyDict[] = (career.career_pitching?.rows ?? []) as AnyDict[]
+
+  const battingRows = attachSalaryToRows(battingRowsRaw, salaryByYear)
+  const pitchingRows = attachSalaryToRows(
+    enrichCareerPitchingRows(pitchingRowsRaw as Record<string, unknown>[]),
+    salaryByYear,
+  )
+
+  const battingYears = yearsFromRows(battingRows)
+  const pitchingYears = yearsFromRows(pitchingRows)
+
+  if (battingRows.length > 0) {
+    mismatchAll.push(
+      ...collectYearMismatches(pid, nameJa, "batting", battingYears, salaryYears),
+    )
+  }
+  if (pitchingRows.length > 0) {
+    mismatchAll.push(
+      ...collectYearMismatches(pid, nameJa, "pitching", pitchingYears, salaryYears),
+    )
+  }
+
+  const battingTotal = computeBattingTotal(battingRows)
+  battingTotal.salary_yen = null
+
+  let pitchingBlock: AnyDict | null = null
+  if (career.career_pitching) {
+    const pitchingTotal = computeCareerPitchingTotalFromRows(
+      pitchingRows as Record<string, unknown>[],
+    )
+    pitchingTotal.salary_yen = null
+    pitchingBlock = {
+      ...(career.career_pitching ?? { rows: [] }),
+      rows: pitchingRows,
+      total: pitchingTotal,
+      source: "master_csv",
+    }
+  }
+
+  const merged: AnyDict = {
+    npb_player_id: pid,
+    name_ja: nameJa,
+    profile: profile.profile ?? {},
+    salary_by_year: salary.salary_by_year ?? {},
+    career_total_salary_est_yen: salary.career_total_salary_est_yen ?? null,
+    career_total_salary_display: salary.career_total_salary_display ?? null,
+    career_batting: career.career_batting
+      ? {
+          ...career.career_batting,
+          rows: battingRows,
+          total: battingTotal,
+          source: "master_csv",
+        }
+      : null,
+    career_pitching: pitchingBlock,
+    meta: {
+      merged_at: new Date().toISOString(),
+      career_built_from: "master_csv_calculated",
+      profile_source: profile.profile ? "NPB_OFFICIAL" : undefined,
+      ...(historicalCareerOnly
+        ? {
+            page_kind: "career_only_non_roster",
+            registration_position: inferRegistrationPosition(battingRowsRaw, pitchingRowsRaw),
+          }
+        : {}),
+    },
+  }
+
+  writeJson(join(DIR_OUT, `npb_${pid}.json`), merged)
+  return true
+}
+
+function mergeProfileOnly(
+  t: AnyDict,
+  pid: string,
+  existing: AnyDict,
+): boolean {
+  const profile = readProfileForPlayer(pid)
+  const profileBlock = profile.profile ?? existing.profile ?? {}
+  const hasProfile = Boolean(
+    String(profileBlock.birth_date_raw ?? "").trim() ||
+      String(profileBlock.pro_debut_raw ?? "").trim() ||
+      String(profileBlock.career_raw ?? "").trim(),
+  )
+  if (!hasProfile && Object.keys(existing).length === 0) return false
+
+  const nameJa = String(t.name_ja ?? profile.name_ja ?? existing.name_ja ?? "").trim()
+  const merged: AnyDict = {
+    npb_player_id: pid,
+    name_ja: nameJa,
+    profile: profileBlock,
+    salary_by_year: existing.salary_by_year ?? {},
+    career_total_salary_est_yen: existing.career_total_salary_est_yen ?? null,
+    career_total_salary_display: existing.career_total_salary_display ?? null,
+    career_batting: existing.career_batting ?? null,
+    career_pitching: existing.career_pitching ?? null,
+    meta: {
+      ...(existing.meta ?? {}),
+      merged_at: new Date().toISOString(),
+      profile_source: profile.profile ? "NPB_OFFICIAL" : existing.meta?.profile_source,
+    },
+  }
+
+  writeJson(join(DIR_OUT, `npb_${pid}.json`), merged)
+  return true
+}
+
 function main(): void {
+  if (!existsSync(PATH_TARGETS)) {
+    console.error(`ERROR: targets not found: ${PATH_TARGETS}`)
+    process.exit(1)
+  }
+
   const targets = readJson(PATH_TARGETS) as AnyDict[]
   mkdirSync(DIR_OUT, { recursive: true })
 
+  const roster2026Ids = historicalCareerOnly ? loadRoster2026Ids() : null
   const mismatchAll: MismatchRow[] = []
   let mergedCount = 0
+  let richCount = 0
+  let profileOnlyCount = 0
+  let skippedRoster = 0
 
   for (const t of targets) {
-    const pid = String(t.npb_player_id ?? "").trim()
+    const pid = String(t.player_id ?? t.npb_player_id ?? "").trim()
     if (!pid) continue
 
-    const careerPath = join(DIR_CAREER, `${pid}.json`)
-    if (!existsSync(careerPath)) continue
-
-    const career = readJson(careerPath)
-    const profile = readJsonIfExists(join(DIR_PROFILE, `${pid}.json`))
-    const salary = readJsonIfExists(join(DIR_SALARY, `${pid}.json`))
-
-    const nameJa = String(t.name_ja ?? profile.name_ja ?? career.name_ja ?? "").trim()
-    const salaryByYear = salaryMapFromPayload(salary)
-    const salaryYears = Object.keys(salaryByYear)
-      .map(Number)
-      .sort((a, b) => a - b)
-
-    const battingRowsRaw: AnyDict[] = (career.career_batting?.rows ?? []) as AnyDict[]
-    const pitchingRowsRaw: AnyDict[] = (career.career_pitching?.rows ?? []) as AnyDict[]
-
-    const battingRows = attachSalaryToRows(battingRowsRaw, salaryByYear)
-    const pitchingRows = attachSalaryToRows(pitchingRowsRaw, salaryByYear)
-
-    const battingYears = yearsFromRows(battingRows)
-    const pitchingYears = yearsFromRows(pitchingRows)
-
-    if (battingRows.length > 0) {
-      mismatchAll.push(
-        ...collectYearMismatches(pid, nameJa, "batting", battingYears, salaryYears),
-      )
-    }
-    if (pitchingRows.length > 0) {
-      mismatchAll.push(
-        ...collectYearMismatches(pid, nameJa, "pitching", pitchingYears, salaryYears),
-      )
+    const norm = pid.replace(/\D/g, "").replace(/^0+/, "") || "0"
+    if (roster2026Ids?.has(norm)) {
+      skippedRoster += 1
+      continue
     }
 
-    const battingTotal = computeBattingTotal(battingRows)
-    battingTotal.salary_yen = null
+    const outPath = join(DIR_OUT, `npb_${pid}.json`)
+    const existing = readJsonIfExists(outPath)
 
-    let pitchingBlock: AnyDict | null = null
-    if (career.career_pitching) {
-      const pitchingTotal = computePitchingTotal(pitchingRows)
-      pitchingTotal.salary_yen = null
-      pitchingBlock = {
-        ...(career.career_pitching ?? { rows: [] }),
-        rows: pitchingRows,
-        total: pitchingTotal,
-        source: "master_csv",
-      }
+    if (mergeRichFromCareer(t, pid, mismatchAll)) {
+      mergedCount += 1
+      richCount += 1
+      continue
     }
 
-    const merged: AnyDict = {
-      npb_player_id: pid,
-      name_ja: nameJa,
-      profile: profile.profile ?? {},
-      salary_by_year: salary.salary_by_year ?? {},
-      career_total_salary_est_yen: salary.career_total_salary_est_yen ?? null,
-      career_total_salary_display: salary.career_total_salary_display ?? null,
-      career_batting: career.career_batting
-        ? {
-            ...career.career_batting,
-            rows: battingRows,
-            total: battingTotal,
-            source: "master_csv",
-          }
-        : null,
-      career_pitching: pitchingBlock,
-      meta: {
-        merged_at: new Date().toISOString(),
-        career_built_from: "master_csv_calculated",
-        profile_source: profile.profile ? "NPB_OFFICIAL" : undefined,
-      },
-    }
+    if (historicalCareerOnly) continue
 
-    writeJson(join(DIR_OUT, `${pid}.json`), merged)
-    mergedCount += 1
+    if (mergeProfileOnly(t, pid, existing)) {
+      mergedCount += 1
+      profileOnlyCount += 1
+    }
   }
 
   writeMismatchCsv(mismatchAll)
 
-  console.log("=== Phase 6: merge 完了 ===")
+  const label = historicalCareerOnly ? "historical career-only" : "Phase 6 / Phase4-B"
+  console.log(`=== ${label}: merge 完了 ===`)
+  console.log(`  targets: ${PATH_TARGETS}`)
   console.log(`  merged: ${mergedCount} 件 -> ${DIR_OUT}`)
+  console.log(`    rich (career_from_master): ${richCount}`)
+  if (!historicalCareerOnly) {
+    console.log(`    profile-only: ${profileOnlyCount}`)
+  } else {
+    console.log(`    skipped (2026 roster): ${skippedRoster}`)
+  }
   console.log(`  年俸×成績 年度不一致: ${mismatchAll.length} 行 -> ${PATH_MISMATCH_REPORT}`)
+  if (!historicalCareerOnly && !existsSync(PATH_TARGETS)) {
+    console.warn(`  warn: ${PATH_TARGETS} が無いため 2026 名簿向け ${PATH_TARGETS_2026} は未使用`)
+  }
 }
 
 main()

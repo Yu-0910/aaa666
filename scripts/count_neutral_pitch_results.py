@@ -52,7 +52,7 @@ def main() -> None:
         if row is None:
             print(f"internal error: missing classification for {s!r}", file=sys.stderr)
             sys.exit(1)
-        k = row[0]
+        k = row["countKind"]
         by_kind[k] = by_kind.get(k, 0) + 1
         if k == "neutral":
             neutral_examples[s] = neutral_examples.get(s, 0) + 1

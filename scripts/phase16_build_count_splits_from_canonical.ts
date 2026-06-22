@@ -16,7 +16,8 @@ import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
-import { countBeforeLastPitch, isValidPitchCountKey } from "../lib/yahooGame/pitchCountSim"
+import { pitchCountKeyForPlateAppearance } from "../lib/yahooGame/pitchCountSim"
+import { plateAppearanceLastResultText } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import {
   emptyBattingSeasonAggYahoo,
   updateBattingAggFromPa,
@@ -151,8 +152,9 @@ function main(): void {
     for (const pa of doc.domain.plateAppearances ?? []) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
-      const ck = countBeforeLastPitch(pa.pitchEvents)
-      if (!ck || !isValidPitchCountKey(ck)) continue
+      const resultText = plateAppearanceLastResultText(pa)
+      const ck = pitchCountKeyForPlateAppearance(pa.pitchEvents, resultText)
+      if (!ck) continue
       const cm = ensureCountMap(bid)
       const agg = cm.get(ck) ?? emptyBattingSeasonAggYahoo()
       updateBattingAggFromPa(agg, gameId, pa)
@@ -188,7 +190,7 @@ function main(): void {
       generatedAt: new Date().toISOString(),
       meta: {
         countDefinition:
-          "最終球を投げる直前の B-S。一球の resultJa をボール/ストライク/ファウルとしてシミュレーション（近似）。",
+          "最終球直前の B-S（resultJa シミュ）。四球・敬遠はログ不足時に 3-0 / 3-1 へ寄せる（Yahoo カウント別に合わせる近似）。",
       },
       source: {
         canonicalGames: docs.map((d) => d.gameId).sort(),

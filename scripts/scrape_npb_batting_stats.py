@@ -209,13 +209,12 @@ def scrape_batting_stats(year: int, league: str, retry: int = 3) -> List[Dict[st
     Returns:
         選手成績のリスト（辞書形式）
     """
-    # 2025年以降はURL構造が変更されている
-    if year >= 2025:
-        # 新しいURL構造: https://npb.jp/bis/2025/stats/bat_p.html (PL) or bat_c.html (CL)
+    # 2005年以降: https://npb.jp/bis/2025/stats/bat_p.html (PL) or bat_c.html (CL)
+    if year >= 2005:
         league_code = 'p' if league.upper() == 'PL' else 'c'
         url = f"https://npb.jp/bis/{year}/stats/bat_{league_code}.html"
     else:
-        # 旧URL構造: https://npb.jp/bis/stats/2024/pl/batting.html
+        # 2004年以前: 旧URL構造（現在は404の年度あり）
         league_lower = league.lower()
         url = f"https://npb.jp/bis/stats/{year}/{league_lower}/batting.html"
     
@@ -342,10 +341,10 @@ def scrape_batting_stats(year: int, league: str, retry: int = 3) -> List[Dict[st
                         col_map['TB'] = idx
                     elif '打点' in header_text or header_text == 'RBI':
                         col_map['RBI'] = idx
-                    elif '盗塁' in header_text or header_text == 'SB':
-                        col_map['SB'] = idx
-                    elif '盗塁死' in header_text or header_text == 'CS':
+                    elif '盗塁刺' in header_text or '盗塁死' in header_text or header_text == 'CS':
                         col_map['CS'] = idx
+                    elif header_text == '盗塁' or header_text == 'SB':
+                        col_map['SB'] = idx
                     elif '犠打' in header_text or header_text == 'SH':
                         col_map['SH'] = idx
                     elif '犠飛' in header_text or header_text == 'SF':
