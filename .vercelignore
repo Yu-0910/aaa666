@@ -15,7 +15,10 @@ _data/master_csv__import_1950_2024/
 _data/master_csv/
 
 # 工場・スクレイプ・PoC（本番表示は R2。Vercel ビルドから除外）
-_data/scraped_games/
+_data/scraped_games/**
+!_data/scraped_games/derived/
+_data/scraped_games/derived/**
+!_data/scraped_games/derived/*_batting_master_bridge.csv
 _data/cache/
 _data/sportsnavi_schedule_snapshots/
 _data/sportsnavi_schedule_diff/

@@ -49,7 +49,8 @@ _data/scraped_games/raw_sportsnavi_text/
 _data/scraped_games/raw_sportsnavi_stats/
 _data/scraped_games/raw_sportsnavi_score/
 _data/scraped_games/raw_yahoo_text/
-_data/scraped_games/derived/
+_data/scraped_games/derived/*
+!_data/scraped_games/derived/*_batting_master_bridge.csv
 
 # スクレイプ・取得キャッシュ（再生成可能）
 _data/cache/
