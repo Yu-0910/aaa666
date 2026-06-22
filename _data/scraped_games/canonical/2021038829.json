@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038829",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "734cf2f04bd9ce344fef3e9b400dd9d9ac93ea853a89c6c430ca3611d5bde5da",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月8日 阪神タイガースvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -4037,6 +4037,18 @@
         ]
       },
       {
+        "paId": "2021038829-7-表-5",
+        "inningHalf": "7回表",
+        "yahooBatterId": "2101034",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021038829-7-裏-1",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "2109980",
+        "resultSummaryJa": "三振"
+      },
+      {
         "paId": "2021038829-7-裏-2",
         "inningHalf": "7回裏",
         "yahooPitcherId": "2117433",
@@ -4595,6 +4607,12 @@
         ]
       },
       {
+        "paId": "2021038829-9-表-4",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1600021",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038829-9-表-5",
         "inningHalf": "9回表",
         "yahooPitcherId": "2103707",
@@ -4926,6 +4944,24 @@
             "resultJa": "二ゴロ"
           }
         ]
+      },
+      {
+        "paId": "2021038829-9-裏-1",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1700079",
+        "resultSummaryJa": "一ゴロ"
+      },
+      {
+        "paId": "2021038829-9-裏-2",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "2104697",
+        "resultSummaryJa": "三振"
+      },
+      {
+        "paId": "2021038829-9-裏-3",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1900050",
+        "resultSummaryJa": "安打"
       },
       {
         "paId": "2021038829-9-裏-4",
@@ -8864,5 +8900,5 @@
       }
     ]
   },
-  "eventsFingerprint": "ba35b5ca6771e42ac7d5036dbb0092213f0f65f131afda66325d4c65c06b507a"
+  "eventsFingerprint": "b4ebaa1a6baa716b16f2f5c32ab233e1be18198c86d96817a107d926b4e725eb"
 }

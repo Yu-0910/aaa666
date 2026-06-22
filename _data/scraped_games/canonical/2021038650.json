@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038650",
-  "builtAt": "2026-05-27T04:28:58.026Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "3b57b1163dc1a22b8a45da23294483fb2dd6edf2d60652840aca05c6c14d23f3",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月1日 東北楽天ゴールデンイーグルスvs.福岡ソフトバンクホークス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1242,7 +1242,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038650.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038650.html",
       "seasonYear=2026",
-      "phase10:score:0120400:trailing_intermediate_single_page_next_required",
       "phase10:score:0120400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -7396,22 +7395,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038650-score-1",
-        "inningHalf": "1回裏",
-        "kind": "CS",
-        "yahooRunnerId": "1800117",
-        "runnerNameJa": "辰己",
-        "sourceLine": "[0120400] 盗塁失敗（辰己） 8 辰己 1 2 3 4 5 1 ボール 2 ファウル 3 ボール 4 見逃し 5 ボール 次の打者 小郷 裕哉 打者 黒川 史陽 #24 左打 打率 .375 (16-6) 投手 徐 若熙 #18 右投 投球数 打者数 防御率 11 3 0.00",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038650-score-2",
+        "eventId": "2021038650-runner-1",
         "inningHalf": "3回裏",
         "kind": "CS",
         "yahooRunnerId": "1800118",
-        "runnerNameJa": "太田",
-        "sourceLine": "[0320300] 盗塁失敗（太田） 2 太田 1 2 3 4 5 6 7 8 1 ボール 2 見逃し 3 ファウル 4 ファウル 5 ボール 6 ファウル 7 ボール 8 空三振 次の打者 佐藤 直樹 打者 小深田 大翔 #0 左打 打率 .111 (9-1) 投手 徐 若熙 #18 右投 投球数 打者数 防御率 41 8 0.00",
-        "sourceTier": "score"
+        "sourceLine": "3： 9番 小深田 大翔 一死一塁 一塁けん制:ランナー 太田 帰塁 空振り三振！一塁走者 太田 も盗塁失敗でダブルプレー 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

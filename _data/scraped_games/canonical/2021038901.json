@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038901",
-  "builtAt": "2026-05-27T04:56:32.450Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "1483c37bba4f086bf0c29ae90aa1b6ffb02cd89b21ffab54122e15b96e0fc887",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月23日 埼玉西武ライオンズvs.オリックス・バファローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1167,8 +1167,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038901.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038901.html",
       "seasonYear=2026",
-      "phase10:score:0210400:trailing_intermediate_single_page_next_required",
-      "phase10:score:0410400:trailing_intermediate_single_page_next_required",
       "phase10:score:0210400:trailing_intermediate_single_page_next_required",
       "phase10:score:0410400:trailing_intermediate_single_page_next_required"
     ],
@@ -7062,22 +7060,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038901-score-1",
-        "inningHalf": "2回表",
-        "kind": "CS",
-        "yahooRunnerId": "1400196",
-        "runnerNameJa": "宗",
-        "sourceLine": "[0210400] 盗塁失敗（宗）、西武・残り2回 6 宗 投手 佐藤 爽 #75 左投 投球数 打者数 防御率 37 6 2.95",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038901-score-2",
+        "eventId": "2021038901-runner-1",
         "inningHalf": "4回裏",
         "kind": "SB",
         "yahooRunnerId": "2117028",
-        "runnerNameJa": "カナリオ",
-        "sourceLine": "[0420400] 盗塁成功（カナリオ）、ランナー3塁 25 カナリオ 1 2 1 ボール 2 見逃し 次の打者 渡部 聖弥 打者 滝澤 夏央 #62 左打 打率 .267 (101-27) 見三振 、 遊ゴロ 投手 髙島 泰都 #96 右投 投球数 打者数 防御率 68 19 2.75",
-        "sourceTier": "score"
+        "sourceLine": "4： 2番 滝澤 夏央 二死一塁 一塁けん制:ランナー カナリオ 帰塁 若月 (捕):悪送球 一塁走者 カナリオ :盗塁成功 一塁走者 カナリオ はさらに三塁まで進塁 三塁 ランナー三塁の1-1からセンターへのタイムリーヒット 西 2-0 オ 一塁",
+        "sourceTier": "rawTextSteal"
+      },
+      {
+        "eventId": "2021038901-runner-2",
+        "inningHalf": "5回表",
+        "kind": "SB",
+        "yahooRunnerId": "2103747",
+        "sourceLine": "6： 1番 中川 圭太 二死一三塁 －西武:コーチマウンドへむかう－ 一塁けん制:ランナー 渡部 帰塁 また一塁けん制:ランナー 渡部 帰塁 一塁走者 渡部 :盗塁成功 二三塁 ランナー二三塁からショートゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

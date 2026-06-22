@@ -2,9 +2,10 @@
   "schemaVersion": "sportsnavi-schedule-day-v2",
   "year": "2026",
   "dateJst": "2026-04-08",
-  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "fetchedAt": "2026-05-30T15:28:52.900Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-04-08",
   "gameIds": [
+    "2021038682",
     "2021038683",
     "2021038684",
     "2021038685",
@@ -12,6 +13,10 @@
     "2021038687"
   ],
   "games": [
+    {
+      "gameId": "2021038682",
+      "stadiumName": "横浜スタジアム"
+    },
     {
       "gameId": "2021038683",
       "stadiumName": "甲子園球場"
@@ -34,6 +39,7 @@
     }
   ],
   "stadiumByGameId": {
+    "2021038682": "横浜スタジアム",
     "2021038683": "甲子園球場",
     "2021038684": "マツダ",
     "2021038685": "楽天モバイル",

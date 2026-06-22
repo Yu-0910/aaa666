@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038853",
-  "builtAt": "2026-05-27T04:47:27.780Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "718ae33d58655ab723a7ee26327234fcfb414e5777fd319f049829578994c21c",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月13日 東京ヤクルトスワローズvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1440,7 +1440,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038853.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038853.html",
       "seasonYear=2026",
-      "phase10:score:0310600:trailing_intermediate_single_page_next_required",
       "phase10:score:0310600:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -7810,22 +7809,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038853-score-1",
+        "eventId": "2021038853-runner-1",
         "inningHalf": "3回表",
         "kind": "CS",
         "yahooRunnerId": "2000056",
-        "runnerNameJa": "中野",
-        "sourceLine": "[0310600] 1塁けん制 けん制飛び出し（中野）、挟まれる（中野）、盗塁失敗（中野） 7 中野 投手 山野 太一 #26 左投 投球数 打者数 防御率 64 14 2.45 ワンシーム - 142km/h （ 詳細 ） 打者 小野寺 暖 #60 右打 打率 .200 (10-2) 空三振 1 2 3 1 空振り 2 ボール 3 ファウル 次の打者 伏見 寅威 阪神攻撃中 前へ 打者6 次へ 球場名： 神宮 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 阪神 0 0 2 0 0 0 0 0 0 2 6 0 ヤクルト 1 0 0 0 0 0 0 3 X 4 7 1 2026/5/13 21:23 ヤクルト 選手名 打率 1 中 丸山 和郁 左 .418 2 左 サンタナ 右 .244 3 右 増田 珠 右 .323 4 二 内山 壮真 右 .356 5 一",
-        "sourceTier": "score"
+        "sourceLine": "6： 6番 小野寺 暖 二死一塁 一塁けん制:ランナー 中野 帰塁 一塁けん制:ランナー 中野 スタート 一塁走者 中野 :けん制球に誘い出され盗塁失敗 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038853-score-2",
+        "eventId": "2021038853-runner-2",
         "inningHalf": "8回裏",
         "kind": "SB",
         "yahooRunnerId": "2000028",
-        "runnerNameJa": "並木",
-        "sourceLine": "[0820200] 盗塁成功（並木）、ランナー2塁 0 並木 1 2 3 4 1 ボール 2 ファウル 3 ボール 4 ボール 次の打者 澤井 廉 打者 石井 巧 #38 右打 打率 .000 (8-0) 見三振 、 空三振 投手 桐敷 拓馬 #47 左投 投球数 打者数 防御率 7 1 5.40",
-        "sourceTier": "score"
+        "sourceLine": "2： 7番 石井 巧 無死一塁 一塁走者 武岡 →代走: 並木 一塁けん制:ランナー 並木 帰塁 一塁走者 並木 :盗塁成功 二塁 0アウト二塁の3-2からセンターへの同点タイムリーツーベース！ ヤ 2-2 神 二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

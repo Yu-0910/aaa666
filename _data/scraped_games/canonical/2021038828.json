@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038828",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "775431f50d40d7fc9d26c40f6f4a20a1e8e9b25cee9571c6b4e3fafe5afe94f1",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月8日 中日ドラゴンズvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3786,6 +3786,12 @@
         ]
       },
       {
+        "paId": "2021038828-7-表-2",
+        "inningHalf": "7回表",
+        "yahooBatterId": "2112330",
+        "resultSummaryJa": "右飛"
+      },
+      {
         "paId": "2021038828-7-表-3",
         "inningHalf": "7回表",
         "yahooPitcherId": "1400199",
@@ -4468,6 +4474,12 @@
             "resultJa": "見三振"
           }
         ]
+      },
+      {
+        "paId": "2021038828-8-裏-4",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "1500050",
+        "resultSummaryJa": "四球"
       },
       {
         "paId": "2021038828-8-裏-5",
@@ -8297,5 +8309,5 @@
       }
     ]
   },
-  "eventsFingerprint": "57d2b0d27f37b5303045e424573c1331192c2c6f57a438c32cad68c0d9a42a41"
+  "eventsFingerprint": "4abb365ec4d31857dfa763bacaaf67bde66e49857a56ed3fc5b8a2a97326264e"
 }

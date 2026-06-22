@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "year": "2026",
+  "dateJst": "2026-06-28",
+  "fetchedAt": "2026-06-22T11:35:09.281Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-28",
+  "gameIds": [
+    "2021039062",
+    "2021039063",
+    "2021039064",
+    "2021039065",
+    "2021039066",
+    "2021039067"
+  ],
+  "games": [
+    {
+      "gameId": "2021039062",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "中日",
+      "homeTeamCode": "S",
+      "awayTeamCode": "D"
+    },
+    {
+      "gameId": "2021039063",
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "巨人",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039064",
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "阪神",
+      "homeTeamCode": "C",
+      "awayTeamCode": "H"
+    },
+    {
+      "gameId": "2021039065",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "日本ハム",
+      "homeTeamCode": "L",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021039066",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "ソフトバンク",
+      "homeTeamCode": "M",
+      "awayTeamCode": "Hs"
+    },
+    {
+      "gameId": "2021039067",
+      "stadiumName": "地方球場",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "楽天",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "E"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039062": "神宮球場",
+    "2021039063": "横浜スタジアム",
+    "2021039064": "マツダ",
+    "2021039065": "ベルーナD",
+    "2021039066": "ZOZOマリン",
+    "2021039067": "地方球場"
+  }
+}

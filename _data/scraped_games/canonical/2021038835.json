@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038835",
-  "builtAt": "2026-05-27T04:46:25.807Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "ad2df2ad93b977605a1a0eba3820b275ba3b705e698493a3efca2fa1bdc765ac",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月9日 阪神タイガースvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1294,7 +1294,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038835.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038835.html",
       "seasonYear=2026",
-      "phase10:score:0120400:trailing_intermediate_single_page_next_required",
       "phase10:score:0120400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -3673,6 +3672,12 @@
         ]
       },
       {
+        "paId": "2021038835-8-表-4",
+        "inningHalf": "8回表",
+        "yahooBatterId": "1200053",
+        "resultSummaryJa": "四球"
+      },
+      {
         "paId": "2021038835-8-表-5",
         "inningHalf": "8回表",
         "yahooPitcherId": "1700137",
@@ -4006,6 +4011,12 @@
         ]
       },
       {
+        "paId": "2021038835-9-表-1",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1700066",
+        "resultSummaryJa": "右飛"
+      },
+      {
         "paId": "2021038835-9-表-2",
         "inningHalf": "9回表",
         "yahooPitcherId": "1900046",
@@ -4157,6 +4168,12 @@
             "resultJa": "空三振"
           }
         ]
+      },
+      {
+        "paId": "2021038835-9-裏-2",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "2000027",
+        "resultSummaryJa": "三飛"
       },
       {
         "paId": "2021038835-9-裏-3",
@@ -6494,40 +6511,28 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038835-score-1",
+        "eventId": "2021038835-runner-1",
         "inningHalf": "2回表",
         "kind": "CS",
         "yahooRunnerId": "1800046",
-        "runnerNameJa": "勝又",
-        "sourceLine": "[0210400] 1塁けん制 挟まれる（勝又）、盗塁失敗（勝又） 28 勝又 投手 大竹 耕太郎 #21 左投 投球数 打者数 防御率 17 6 2.36",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 林 琢真 二死一塁 一塁けん制:ランナー 勝又 帰塁 一塁けん制:ランナー 勝又 スタート 一塁走者 勝又 :けん制球に誘い出され盗塁失敗 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038835-score-2",
+        "eventId": "2021038835-runner-2",
         "inningHalf": "4回裏",
         "kind": "SB",
         "yahooRunnerId": "1800067",
-        "runnerNameJa": "木浪",
-        "sourceLine": "[0420300] 盗塁成功（木浪）、ランナー2塁 0 木浪 1 2 3 4 1 ファウル 2 ボール 3 ボール 4 空振り 次の打者 小幡 竜平 打者 坂本 誠志郎 #12 右打 打率 .210 (62-13) 三ゴロ 投手 篠木 健太郎 #30 右投 投球数 打者数 防御率 68 15 1.93",
-        "sourceTier": "score"
+        "sourceLine": "3： 7番 坂本 誠志郎 一死一塁 一塁けん制:ランナー 木浪 帰塁 一塁けん制:ランナー 木浪 帰塁 一塁走者 木浪 :盗塁成功 二塁 内角低めのフォークを打つもショートライナー 二塁走者 木浪 は塁を飛び出しておりダブルプレー！ 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038835-score-3",
-        "inningHalf": "5回表",
-        "kind": "CS",
-        "yahooRunnerId": "2100277",
-        "runnerNameJa": "松尾",
-        "sourceLine": "[0510300] 盗塁失敗（松尾） 5 松尾 投手 大竹 耕太郎 #21 左投 投球数 打者数 防御率 43 14 2.15",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038835-score-4",
+        "eventId": "2021038835-runner-3",
         "inningHalf": "7回裏",
         "kind": "SB",
         "yahooRunnerId": "2000057",
-        "runnerNameJa": "髙寺",
-        "sourceLine": "[0720400] 盗塁成功（髙寺）、ランナー2塁 67 髙寺 1 2 1 ボール 2 空振り 次の打者 森下 翔太 打者 中野 拓夢 #7 左打 打率 .296 (125-37) 空三振 、 二ゴロ 、 二ゴロ 投手 ルイーズ #49 右投 投球数 打者数 防御率 13 3 0.87",
-        "sourceTier": "score"
+        "sourceLine": "4： 2番 中野 拓夢 二死一塁 一塁走者 髙寺 :盗塁成功 二塁 ピッチャーゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [
@@ -7383,5 +7388,5 @@
       }
     ]
   },
-  "eventsFingerprint": "cf5f7ddef8bd2f5e9de966a4621ec838cdee7bd18be3c61fcae24c9bff1fe9d1"
+  "eventsFingerprint": "b1febab6c5a1af396ba23ce6032d0ca29e0fb170c7c813d341cd7a1483b79e41"
 }

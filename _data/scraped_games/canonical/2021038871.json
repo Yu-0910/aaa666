@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038871",
-  "builtAt": "2026-05-27T04:51:32.786Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "e08f70ddc2099704a994ab7dd03b395340587738772a5fa1d49b4d51ba0a816b",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月16日 千葉ロッテマリーンズvs.オリックス・バファローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1169,7 +1169,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038871.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038871.html",
       "seasonYear=2026",
-      "phase10:score:0520400:no_pitch_rows",
       "phase10:score:0520400:no_pitch_rows"
     ],
     "pitchByPitchNote": {
@@ -6959,22 +6958,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038871-score-1",
+        "eventId": "2021038871-runner-1",
         "inningHalf": "2回裏",
         "kind": "SB",
         "yahooRunnerId": "2103693",
-        "runnerNameJa": "池田",
-        "sourceLine": "[0220300] 盗塁成功（池田）、ランナー2塁 00 池田 1 2 3 4 5 6 1 ボール 2 ボール 3 ボール 4 ファウル 5 ファウル 6 空三振 次の打者 寺地 隆成 打者 井上 広大 #39 右打 打率 .118 (17-2) 投手 田嶋 大樹 #29 左投 投球数 打者数 防御率 25 6 4.26",
-        "sourceTier": "score"
+        "sourceLine": "3： 7番 井上 広大 一死一塁 一塁けん制:ランナー 池田 帰塁 空振り三振に倒れるもスタートを切っていた一塁走者 池田 が盗塁成功 2アウト二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038871-score-2",
+        "eventId": "2021038871-runner-2",
         "inningHalf": "6回裏",
         "kind": "SB",
         "yahooRunnerId": "1700098",
-        "runnerNameJa": "和田",
-        "sourceLine": "[0620400] 盗塁成功（和田）、ランナー2,3塁 63 和田 57 小川 1 2 1 ファウル 2 見逃し 次の打者 池田 来翔 打者 佐藤 都志也 #32 左打 打率 .237 (76-18) 左安 、 三飛 投手 田嶋 大樹 #29 左投 投球数 打者数 防御率 88 22 3.52",
-        "sourceTier": "score"
+        "sourceLine": "4： 5番 佐藤 都志也 一死一三塁 一塁走者 山口 →代走: 和田 一塁走者 和田 :盗塁成功 二三塁 ランナー二三塁の2-2からレフトへのタイムリーヒットでロッテ先制！ ロ 2-0 オ 二塁 0:51 【6回裏】均衡破った!! マリーンズ・佐藤都志也 レフト前への2点タイムリーヒットで先制!! 2026年5月16日 千葉ロッテマリーンズ 対 オリックス・バファローズ",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

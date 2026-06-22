@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038911",
-  "builtAt": "2026-05-27T19:12:28.609Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "36bb158e3013fe9717230e0ad47c5ccf80be5ab74bd3d0b9341d4e518a1408df",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月26日 横浜DeNAベイスターズvs.オリックス・バファローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1887,7 +1887,47 @@
       {
         "paId": "2021038911-2-表-4",
         "inningHalf": "2回表",
-        "yahooBatterId": "1900088"
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1900088",
+        "resultSummaryJa": "ボール[ランエンドヒット、ヘッドスライディング]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1900088",
+            "speedKmh": 139,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1900088",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 1,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1900088",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 22,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1900088",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 22,
+            "resultJa": "ボール[ランエンドヒット、ヘッドスライディング]"
+          }
+        ]
       },
       {
         "paId": "2021038911-2-裏-1",
@@ -4827,6 +4867,42 @@
       },
       {
         "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1900088",
+        "speedKmh": 139,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1900088",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 1,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1900088",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 22,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1900088",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 22,
+        "resultJa": "ボール[ランエンドヒット、ヘッドスライディング]"
+      },
+      {
+        "pitchIndex": 1,
         "yahooPitcherId": "1300058",
         "yahooBatterId": "1600107",
         "speedKmh": 127,
@@ -7635,5 +7711,5 @@
       }
     ]
   },
-  "eventsFingerprint": "732cec4bbbbb14ed707f5bd67d4981a30291f1fdf48f872ff5d40b926a78555f"
+  "eventsFingerprint": "da545c17b9f9bcc05306d93faca7e7d36e166aafdf597023cdacecdcaf86654c"
 }

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "yahoo-game-canonical-v1",
+  "gameId": "2021038950",
+  "builtAt": "2026-06-14T18:31:38.865Z",
+  "sourceSchema": "sportsnavi-stats-text-v1",
+  "sourceCompositeFingerprint": "b794e31544b9be29d7716a6bdce42fc402d8414e7fb569da021e23fe1d237861",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "game": {
+    "meta": {
+      "documentTitle": "2026年6月2日 広島東洋カープvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
+      "ogTitle": "2026年6月2日 広島東洋カープvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ"
+    },
+    "scoreboard": [],
+    "teams": [],
+    "textPlayByPlay": [],
+    "statsPlayerLinkedRows": [],
+    "yahooPlayersMentioned": {},
+    "missingOrPartial": [
+      "phase2: game cancelled (試合中止); empty stats/text expected",
+      "rawMainPath=_data/scraped_games/raw_sportsnavi/2021038950.html",
+      "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038950.html",
+      "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038950.html",
+      "seasonYear=2026"
+    ],
+    "pitchByPitchNote": {
+      "status": "partial",
+      "note": "Sportsnavi Phase2: stats/text parsed; pitch-by-pitch / 一球速報は別ソースが必要"
+    }
+  },
+  "domain": {
+    "plateAppearances": [],
+    "pitchEvents": [],
+    "runnerEvents": [],
+    "battingLines": [],
+    "pitchingLines": []
+  }
+}

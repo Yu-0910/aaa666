@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "year": "2026",
+  "dateJst": "2026-06-17",
+  "fetchedAt": "2026-06-16T19:28:02.217Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-06-17",
+  "gameIds": [
+    "2021044685",
+    "2021044686",
+    "2021044743"
+  ],
+  "games": [
+    {
+      "gameId": "2021044685",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "西武",
+      "homeTeamCode": "H",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021044686",
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "日本ハム",
+      "homeTeamCode": "C",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021044743",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "楽天",
+      "homeTeamCode": "H",
+      "awayTeamCode": "E"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021044685": "甲子園球場",
+    "2021044686": "マツダ",
+    "2021044743": "甲子園球場"
+  }
+}

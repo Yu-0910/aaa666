@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038832",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "f23ac2541c3859e4d3559b66248e07ab88ae901af739a0be6712c8983d4ee9db",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月8日 オリックス・バファローズvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -4285,6 +4285,12 @@
             "resultJa": "左安"
           }
         ]
+      },
+      {
+        "paId": "2021038832-9-表-5",
+        "inningHalf": "9回表",
+        "yahooBatterId": "2050143",
+        "resultSummaryJa": "空三振"
       }
     ],
     "pitchEvents": [
@@ -7646,5 +7652,5 @@
       }
     ]
   },
-  "eventsFingerprint": "61bb261d99fffec1b473f110d9d44644a988cbd2cf6ced01ca17bd317d89e5ed"
+  "eventsFingerprint": "b7c439216ff2f64b2826dff30989cd21c6c1c145e617abd2fd648d80cfc67ba3"
 }

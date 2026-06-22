@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038836",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "ba02ba6cb3760c3ecee040a962eea6cf031192f3b2b646d667e83b2caa5cacc6",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月9日 広島東洋カープvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3287,6 +3287,12 @@
         ]
       },
       {
+        "paId": "2021038836-6-裏-2",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "2110422",
+        "resultSummaryJa": "中飛"
+      },
+      {
         "paId": "2021038836-6-裏-3",
         "inningHalf": "6回裏",
         "yahooPitcherId": "1750696",
@@ -3971,6 +3977,12 @@
         ]
       },
       {
+        "paId": "2021038836-9-表-2",
+        "inningHalf": "9回表",
+        "yahooBatterId": "2113365",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
         "paId": "2021038836-9-表-3",
         "inningHalf": "9回表",
         "yahooPitcherId": "2110267",
@@ -4221,6 +4233,12 @@
             "resultJa": "二ゴロ[詰り]"
           }
         ]
+      },
+      {
+        "paId": "2021038836-9-裏-1",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1961927",
+        "resultSummaryJa": "空三振"
       },
       {
         "paId": "2021038836-9-裏-2",
@@ -7688,5 +7706,5 @@
       }
     ]
   },
-  "eventsFingerprint": "166414de64f71bedaf2e0569b8fe0521aa94063d386f76ec784ecc24012289d0"
+  "eventsFingerprint": "851ce59d98660153888d98f1bb3b4c4813d2d16614d4ed7e146fea7e0fc315d5"
 }

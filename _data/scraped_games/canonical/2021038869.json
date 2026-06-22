@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038869",
-  "builtAt": "2026-05-27T04:50:36.491Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "396f35c85e0bd8029cf853a94ac146fb9cd42731a7c4bcb1720c0b158d0bc211",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月16日 北海道日本ハムファイターズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1155,7 +1155,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038869.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038869.html",
       "seasonYear=2026",
-      "phase10:score:0710400:trailing_intermediate_single_page_next_required",
       "phase10:score:0710400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -6598,13 +6597,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038869-score-1",
+        "eventId": "2021038869-runner-1",
         "inningHalf": "5回裏",
         "kind": "SB",
         "yahooRunnerId": "2108090",
-        "runnerNameJa": "カストロ",
-        "sourceLine": "[0520400] 盗塁成功（カストロ）、ランナー2塁 6 カストロ 1 2 3 4 1 見逃し 2 ファウル 3 ボール 4 ボール 次の打者 レイエス 打者 万波 中正 #66 右打 打率 .221 (136-30) 四球 、 左２ 投手 黒田 将矢 #57 右投 投球数 打者数 防御率 4 0 0.00",
-        "sourceTier": "score"
+        "sourceLine": "4： 3番 万波 中正 二死一塁 －西武:監督マウンドへむかう－ 投手交代: 佐藤爽 → 黒田 一塁走者 カストロ :盗塁成功 二塁 フォアボールを選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

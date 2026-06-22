@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038796",
-  "builtAt": "2026-05-27T05:50:00.598Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "76a4862df02616f2ec3d8f947af80123053751633c4bca41c03ddf0cc8fb0361",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月1日 千葉ロッテマリーンズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7730,13 +7730,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038796-score-1",
+        "eventId": "2021038796-runner-1",
         "inningHalf": "3回裏",
         "kind": "SB",
         "yahooRunnerId": "1900081",
-        "runnerNameJa": "佐藤",
-        "sourceLine": "[0320400] 盗塁成功（佐藤）、ランナー2塁 32 佐藤 1 2 1 ボール 2 ボール 次の打者 西川 史礁 打者 藤原 恭大 #1 左打 打率 .306 (98-30) 一ゴロ 投手 佐藤 爽 #75 左投 投球数 打者数 防御率 43 9 0.00",
-        "sourceTier": "score"
+        "sourceLine": "4： 1番 藤原 恭大 二死一塁 一塁走者 佐藤 :盗塁成功 二塁 デッドボールを受ける 一二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

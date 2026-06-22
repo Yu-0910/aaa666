@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038839",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "69e30dd8bfdf225ea1863e9e08bd62dd7075e5d0eccd91f8f3bc442353b1b94d",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月9日 福岡ソフトバンクホークスvs.千葉ロッテマリーンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -4651,6 +4651,12 @@
             "resultJa": "四球"
           }
         ]
+      },
+      {
+        "paId": "2021038839-9-裏-4",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "800081",
+        "resultSummaryJa": "左飛"
       }
     ],
     "pitchEvents": [
@@ -8272,5 +8278,5 @@
       }
     ]
   },
-  "eventsFingerprint": "95702e2e0c29b23d8b629cae5ac3bdf40263cf55a600570a3411eba82b0dbe50"
+  "eventsFingerprint": "3fd723918e72e82e2b5194c53fa862e423f40c36768a0fecd11323ab3b72a45f"
 }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038787",
-  "builtAt": "2026-05-27T04:39:08.424Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "530cb669b6218380b560f47f73c4563a74081604a02c0fb5fb64695fd170af35",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月29日 オリックス・バファローズvs.福岡ソフトバンクホークス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1165,7 +1165,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038787.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038787.html",
       "seasonYear=2026",
-      "phase10:score:0320500:trailing_intermediate_single_page_next_required",
       "phase10:score:0320500:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -7571,13 +7570,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038787-score-1",
-        "inningHalf": "3回裏",
+        "eventId": "2021038787-runner-1",
+        "inningHalf": "2回表",
         "kind": "CS",
-        "yahooRunnerId": "1800104",
-        "runnerNameJa": "中川",
-        "sourceLine": "[0320500] 盗塁失敗（中川） 67 中川 1 2 3 4 1 ボール 2 見逃し 3 ファウル 4 ボール 次の打者 紅林 弘太郎 打者 若月 健矢 #2 右打 打率 .211 (57-12) 左安 投手 大関 友久 #47 左投 投球数 打者数 防御率 65 16 4.05",
-        "sourceTier": "score"
+        "yahooRunnerId": "1000175",
+        "sourceLine": "3： 6番 今宮 健太 一死一塁 一塁けん制:ランナー 牧原大 帰塁 一塁けん制:ランナー 牧原大 スタート 一塁走者 牧原大 :けん制球に誘い出され盗塁失敗 2アウト ファーストへのファウルフライに倒れる 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

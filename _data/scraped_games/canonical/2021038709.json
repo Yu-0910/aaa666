@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038709",
-  "builtAt": "2026-05-27T05:33:06.982Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "d1e088b38f034484d49c293920bb609296aff9207ccad17e501b15a12de02fbc",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月12日 埼玉西武ライオンズvs.千葉ロッテマリーンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7621,13 +7621,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038709-score-1",
+        "eventId": "2021038709-runner-1",
         "inningHalf": "5回表",
         "kind": "SB",
         "yahooRunnerId": "1800050",
-        "runnerNameJa": "藤原",
-        "sourceLine": "[0510400] 盗塁成功（藤原）、ランナー2塁 1 藤原 投手 平良 海馬 #61 右投 投球数 打者数 防御率 87 20 0.00",
-        "sourceTier": "score"
+        "sourceLine": "4： 3番 ソト 二死一塁 一塁けん制:ランナー 藤原 帰塁 一塁走者 藤原 :すかさず初球から走って盗塁成功 二塁 一打先制の場面でショートフライ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

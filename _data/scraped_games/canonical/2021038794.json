@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038794",
-  "builtAt": "2026-05-27T04:40:03.252Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "52aceca53f1760606d0eec470471cf36ae7f058b199a90f356de4638e66f2e0e",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月1日 広島東洋カープvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1559,8 +1559,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038794.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038794.html",
       "seasonYear=2026",
-      "phase10:score:0320500:trailing_intermediate_single_page_next_required",
-      "phase10:score:0610500:trailing_intermediate_single_page_next_required",
       "phase10:score:0320500:trailing_intermediate_single_page_next_required",
       "phase10:score:0610500:trailing_intermediate_single_page_next_required"
     ],
@@ -8498,49 +8496,36 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038794-score-1",
+        "eventId": "2021038794-runner-1",
         "inningHalf": "1回裏",
         "kind": "SB",
         "yahooRunnerId": "1800072",
-        "runnerNameJa": "小園",
-        "sourceLine": "[0120400] 盗塁成功（小園）、ランナー2塁 5 小園 1 2 1 ボール 2 ボール 次の打者 野間 峻祥 打者 坂倉 将吾 #31 左打 打率 .235 (68-16) 投手 柳 裕也 #17 右投 投球数 打者数 防御率 14 3 1.56",
-        "sourceTier": "score"
+        "sourceLine": "4： 4番 坂倉 将吾 二死一塁 一塁走者 小園 :盗塁成功 二塁 フォアボールを選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038794-score-2",
+        "eventId": "2021038794-runner-2",
         "inningHalf": "2回裏",
         "kind": "SB",
         "yahooRunnerId": "2050203",
-        "runnerNameJa": "佐々木",
-        "sourceLine": "[0220200] 盗塁成功（佐々木）、ランナー3塁 10 佐々木 1 2 3 4 5 6 7 1 見逃し 2 ボール 3 ボール 4 ボール 5 ファウル 6 ファウル 7 空三振 次の打者 持丸 泰輝 打者 平川 蓮 #51 左打 打率 .195 (41-8) 投手 柳 裕也 #17 右投 投球数 打者数 防御率 33 6 1.54",
-        "sourceTier": "score"
+        "sourceLine": "2： 7番 平川 蓮 無死一塁 一塁けん制:ランナー 佐々木 帰塁 一塁けん制:ランナー 佐々木 帰塁 空振り三振に倒れるもスタートを切っていた一塁走者 佐々木 が盗塁成功 木下 (捕):悪送球 一塁走者 佐々木 はさらに三塁まで進塁 1アウト三塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038794-score-3",
+        "eventId": "2021038794-runner-3",
         "inningHalf": "3回表",
         "kind": "SB",
         "yahooRunnerId": "2103780",
-        "runnerNameJa": "福永",
-        "sourceLine": "[0310300] 盗塁成功（福永）、ランナー2塁 7 福永 投手 岡本 駿 #53 右投 投球数 打者数 防御率 45 11 1.27",
-        "sourceTier": "score"
+        "sourceLine": "3： 3番 村松 開人 一死一塁 一塁走者 福永 :盗塁成功 二塁 低めの真っ直ぐを打つもセンターフライ 2アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038794-score-4",
-        "inningHalf": "3回裏",
-        "kind": "CS",
-        "yahooRunnerId": "1600124",
-        "runnerNameJa": "坂倉",
-        "sourceLine": "[0320500] 盗塁失敗（坂倉） 31 坂倉 1 2 3 1 見逃し 2 ボール 3 見逃し 次の打者 佐々木 泰 打者 野間 峻祥 #37 左打 打率 .292 (24-7) 投ゴロ 投手 柳 裕也 #17 右投 投球数 打者数 防御率 56 13 1.72",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038794-score-5",
+        "eventId": "2021038794-runner-4",
         "inningHalf": "6回表",
         "kind": "CS",
         "yahooRunnerId": "2103845",
-        "runnerNameJa": "鵜飼",
-        "sourceLine": "[0610500] 1塁けん制 けん制飛び出し（鵜飼）、盗塁失敗（鵜飼） 66 鵜飼 投手 髙 太一 #22 左投 投球数 打者数 防御率 9 1 0.00",
-        "sourceTier": "score"
+        "sourceLine": "5： 2番 福永 裕基 二死一塁 一塁けん制:ランナー 鵜飼 帰塁 一塁けん制:ランナー 鵜飼 帰塁 一塁けん制:ランナー 鵜飼 帰塁 一塁けん制:ランナー 鵜飼 スタート 一塁走者 鵜飼 :けん制球に誘い出され盗塁失敗 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

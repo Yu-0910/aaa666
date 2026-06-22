@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038786",
-  "builtAt": "2026-05-27T04:38:12.920Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "cdaa584d5acd26c7ee5165da4c2f26b1d50f7c94db51b1fdffea61999b003fb0",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月29日 千葉ロッテマリーンズvs.東北楽天ゴールデンイーグルス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1097,7 +1097,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038786.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038786.html",
       "seasonYear=2026",
-      "phase10:score:0220400:trailing_intermediate_single_page_next_required",
       "phase10:score:0220400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -6414,31 +6413,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038786-score-1",
+        "eventId": "2021038786-runner-1",
         "inningHalf": "1回表",
         "kind": "CS",
         "yahooRunnerId": "1800117",
-        "runnerNameJa": "辰己",
-        "sourceLine": "[0110200] 1塁けん制 けん制飛び出し（辰己）、挟まれる（辰己）、盗塁失敗（辰己） 8 辰己 投手 西野 勇士 #29 右投 投球数 打者数 防御率 7 1 5.73",
-        "sourceTier": "score"
+        "sourceLine": "2： 2番 黒川 史陽 無死一塁 一塁けん制:ランナー 辰己 スタート 一塁走者 辰己 :けん制球に誘い出され盗塁失敗 1アウト 外角高めの球を打つもレフトフライ 2アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038786-score-2",
+        "eventId": "2021038786-runner-2",
         "inningHalf": "1回裏",
         "kind": "SB",
         "yahooRunnerId": "1800050",
-        "runnerNameJa": "藤原",
-        "sourceLine": "[0120200] 盗塁成功（藤原）、ランナー2塁 1 藤原 1 2 3 1 ファウル 2 ファウル 3 ボール 次の打者 寺地 隆成 打者 西川 史礁 #6 右打 打率 .323 (99-32) 投手 前田 健太 #18 右投 投球数 打者数 防御率 8 1 2.45",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038786-score-3",
-        "inningHalf": "2回裏",
-        "kind": "CS",
-        "yahooRunnerId": "2106798",
-        "runnerNameJa": "友杉",
-        "sourceLine": "[0220400] 盗塁失敗（友杉） 4 友杉 1 2 3 1 ファウル 2 ボール 3 見逃し 次の打者 小川 龍成 打者 佐藤 都志也 #32 左打 打率 .184 (38-7) 投手 前田 健太 #18 右投 投球数 打者数 防御率 35 7 3.00",
-        "sourceTier": "score"
+        "sourceLine": "2： 2番 西川 史礁 無死一塁 一塁けん制:ランナー 藤原 帰塁 一塁走者 藤原 :盗塁成功 二塁 セカンドゴロ 1アウト三塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

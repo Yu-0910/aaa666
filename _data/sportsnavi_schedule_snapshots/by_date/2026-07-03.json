@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "year": "2026",
+  "dateJst": "2026-07-03",
+  "fetchedAt": "2026-06-22T11:35:09.281Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-07-03",
+  "gameIds": [
+    "2021039082",
+    "2021039083",
+    "2021039084",
+    "2021039085",
+    "2021039086",
+    "2021039087"
+  ],
+  "games": [
+    {
+      "gameId": "2021039082",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "DeNA",
+      "homeTeamCode": "S",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039083",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "巨人",
+      "homeTeamCode": "D",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039084",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "広島",
+      "homeTeamCode": "H",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039085",
+      "stadiumName": "楽天モバイル",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "日本ハム",
+      "homeTeamCode": "E",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021039086",
+      "stadiumName": "地方球場",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "西武",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021039087",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "ロッテ",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "M"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039082": "神宮球場",
+    "2021039083": "バンテリンD",
+    "2021039084": "甲子園球場",
+    "2021039085": "楽天モバイル",
+    "2021039086": "地方球場",
+    "2021039087": "みずほPayPay"
+  }
+}

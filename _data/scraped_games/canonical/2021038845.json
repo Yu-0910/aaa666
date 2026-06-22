@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038845",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "bd8eeb0541143aca861c309b17ee62ee7ff6e46f482b540d7bbb8f8b8ae26a38",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月10日 福岡ソフトバンクホークスvs.千葉ロッテマリーンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3621,6 +3621,18 @@
         ]
       },
       {
+        "paId": "2021038845-6-表-2",
+        "inningHalf": "6回表",
+        "yahooBatterId": "1900081",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021038845-6-表-3",
+        "inningHalf": "6回表",
+        "yahooBatterId": "1460080",
+        "resultSummaryJa": "空三振"
+      },
+      {
         "paId": "2021038845-6-表-4",
         "inningHalf": "6回表",
         "yahooPitcherId": "1800043",
@@ -3673,6 +3685,12 @@
             "resultJa": "中安"
           }
         ]
+      },
+      {
+        "paId": "2021038845-6-表-5",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2103693",
+        "resultSummaryJa": "空三振"
       },
       {
         "paId": "2021038845-6-裏-1",
@@ -4510,6 +4528,12 @@
             "resultJa": "空三振[ワンバウンド]"
           }
         ]
+      },
+      {
+        "paId": "2021038845-9-表-3",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1700020",
+        "resultSummaryJa": "右飛"
       },
       {
         "paId": "2021038845-9-表-4",
@@ -8182,5 +8206,5 @@
       }
     ]
   },
-  "eventsFingerprint": "6d778c132e599a2892686d2c3319b1ee688b2f7a6f97789e8819d64ddb7b7d60"
+  "eventsFingerprint": "e886a723cf8d788d78feb025ca94fcd427d7f209e172c3debb171f682ad4be03"
 }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038859",
-  "builtAt": "2026-05-27T04:49:37.602Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "20bfbb9af7fec746f14e1c30f64f5ee29d7215f3dce71fb16021a0f010d40e85",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月14日 千葉ロッテマリーンズvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1128,7 +1128,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038859.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038859.html",
       "seasonYear=2026",
-      "phase10:score:0520400:no_pitch_rows",
       "phase10:score:0520400:no_pitch_rows"
     ],
     "pitchByPitchNote": {
@@ -5721,22 +5720,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038859-score-1",
+        "eventId": "2021038859-runner-1",
         "inningHalf": "1回裏",
         "kind": "SB",
         "yahooRunnerId": "1900082",
-        "runnerNameJa": "髙部",
-        "sourceLine": "[0120200] 盗塁成功（髙部）、ランナー2塁 0 髙部 1 2 3 1 空振り 2 ファウル 3 ボール 次の打者 西川 史礁 打者 小川 龍成 #57 左打 打率 .302 (96-29) 投手 細野 晴希 #29 左投 投球数 打者数 防御率 8 1 2.34",
-        "sourceTier": "score"
+        "sourceLine": "2： 2番 小川 龍成 無死一塁 一塁走者 髙部 :盗塁成功 二塁 ファーストゴロ 1アウト三塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038859-score-2",
+        "eventId": "2021038859-runner-2",
         "inningHalf": "5回裏",
         "kind": "CS",
         "yahooRunnerId": "2000089",
-        "runnerNameJa": "小川",
-        "sourceLine": "[0520400] 1塁けん制 けん制飛び出し（小川）、盗塁失敗（小川） 57 小川 次の打者 山口 航輝 打者 西川 史礁 #6 右打 打率 .275 (149-41) 右安 、 遊ゴロ 投手 細野 晴希 #29 左投 投球数 打者数 防御率 70 20 2.75 ロッテ攻撃中 前へ 打者4 次へ 球場名： ZOZOマリン 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 日本ハム 0 1 0 0 0 0 0 0 2 3 7 0 ロッテ 3 0 0 0 0 1 1 0 X 5 9 1 2026/5/14 20:31 ベースボールLIVEで配信を見る（外部・PR） ロッテ 選手名 打率 1 中 髙部 瑛斗 左 .235 2 二 小川 龍成 左 .313 3 右 西川 史礁 右 .275 4 一 山口 航輝 右 .143 5 捕 佐藤 都志也 左 .235 6 指",
-        "sourceTier": "score"
+        "sourceLine": "4： 3番 西川 史礁 二死一塁 一塁けん制:ランナー 小川 帰塁 また一塁けん制:ランナー 小川 帰塁 一塁けん制:ランナー 小川 スタート 一塁走者 小川 :けん制球に誘い出され盗塁失敗 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038779",
-  "builtAt": "2026-05-27T05:45:23.337Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "5db2a5c105558a2e486cba7dbe60b1ce88d87217410d4c1a786cfe4c2d7923f2",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月28日 埼玉西武ライオンズvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6387,13 +6387,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038779-score-1",
+        "eventId": "2021038779-runner-1",
         "inningHalf": "9回裏",
         "kind": "SB",
         "yahooRunnerId": "2117028",
-        "runnerNameJa": "カナリオ",
-        "sourceLine": "[0920300] 盗塁成功（カナリオ）、ランナー3塁 25 カナリオ 1 2 3 1 ファウル 2 ボール 3 ボール 次の打者 平沢 大河 打者 林 安可 #73 左打 打率 .229 (83-19) 空三振 、 中飛 、 中飛 投手 柳川 大晟 #47 右投 投球数 打者数 防御率 11 2 2.16",
-        "sourceTier": "score"
+        "sourceLine": "3： 5番 林 安可 一死二塁 二塁走者 カナリオ :盗塁成功 三塁 ファーストゴロ 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

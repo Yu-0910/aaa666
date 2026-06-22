@@ -2,42 +2,48 @@
   "schemaVersion": "sportsnavi-schedule-day-v2",
   "year": "2026",
   "dateJst": "2026-05-22",
-  "fetchedAt": "2026-05-23T12:55:06.974Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-22",
+  "fetchedAt": "2026-05-30T15:28:52.900Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-05-22",
   "gameIds": [
-    "2021038892",
-    "2021038893",
-    "2021038894",
-    "2021038895",
-    "2021038896"
+    "2021038909",
+    "2021038910",
+    "2021038911",
+    "2021038912",
+    "2021038913",
+    "2021038914"
   ],
   "games": [
     {
-      "gameId": "2021038892",
+      "gameId": "2021038909",
       "stadiumName": "東京ドーム"
     },
     {
-      "gameId": "2021038893",
+      "gameId": "2021038910",
+      "stadiumName": "神宮球場"
+    },
+    {
+      "gameId": "2021038911",
+      "stadiumName": "横浜スタジアム"
+    },
+    {
+      "gameId": "2021038912",
       "stadiumName": "バンテリンD"
     },
     {
-      "gameId": "2021038894",
-      "stadiumName": "楽天モバイル"
+      "gameId": "2021038913",
+      "stadiumName": "甲子園球場"
     },
     {
-      "gameId": "2021038895",
-      "stadiumName": "ベルーナD"
-    },
-    {
-      "gameId": "2021038896",
-      "stadiumName": "みずほPayPay"
+      "gameId": "2021038914",
+      "stadiumName": "マツダ"
     }
   ],
   "stadiumByGameId": {
-    "2021038892": "東京ドーム",
-    "2021038893": "バンテリンD",
-    "2021038894": "楽天モバイル",
-    "2021038895": "ベルーナD",
-    "2021038896": "みずほPayPay"
+    "2021038909": "東京ドーム",
+    "2021038910": "神宮球場",
+    "2021038911": "横浜スタジアム",
+    "2021038912": "バンテリンD",
+    "2021038913": "甲子園球場",
+    "2021038914": "マツダ"
   }
 }

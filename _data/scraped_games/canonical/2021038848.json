@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038848",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "ccda71d51beb5d64cf5798b4bb623f874dfcfa8daa456ad890735d937db2a3c6",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月12日 横浜DeNAベイスターズvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3447,6 +3447,12 @@
         ]
       },
       {
+        "paId": "2021038848-6-表-1",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2000044",
+        "resultSummaryJa": "一ゴロ"
+      },
+      {
         "paId": "2021038848-6-表-2",
         "inningHalf": "6回表",
         "yahooPitcherId": "1700058",
@@ -4005,6 +4011,12 @@
         ]
       },
       {
+        "paId": "2021038848-7-裏-5",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "2101034",
+        "resultSummaryJa": "見三振"
+      },
+      {
         "paId": "2021038848-8-表-1",
         "inningHalf": "8回表",
         "yahooPitcherId": "1700067",
@@ -4390,6 +4402,18 @@
             "resultJa": "右安"
           }
         ]
+      },
+      {
+        "paId": "2021038848-9-表-2",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1500091",
+        "resultSummaryJa": "四球"
+      },
+      {
+        "paId": "2021038848-9-表-3",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1961300",
+        "resultSummaryJa": "見三振"
       },
       {
         "paId": "2021038848-9-表-4",
@@ -8114,5 +8138,5 @@
       }
     ]
   },
-  "eventsFingerprint": "3a46ac21b9604822b45bd6693c6cfff07b2da77bef039a5dd2b8d3ff17781d94"
+  "eventsFingerprint": "915d8cd142f6920011d9533aebea6217446d2c70d6f28b212a0a6cb10198476e"
 }

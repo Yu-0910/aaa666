@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038780",
-  "builtAt": "2026-05-27T04:37:12.781Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "5aeb09a3e9f38604139031912826d7ac1351f21749ae53080b9e530b15dee517",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月28日 千葉ロッテマリーンズvs.東北楽天ゴールデンイーグルス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1188,7 +1188,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038780.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038780.html",
       "seasonYear=2026",
-      "phase10:score:0720400:trailing_intermediate_single_page_next_required",
       "phase10:score:0720400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -7000,40 +6999,28 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038780-score-1",
+        "eventId": "2021038780-runner-1",
         "inningHalf": "4回表",
         "kind": "SB",
         "yahooRunnerId": "900056",
-        "runnerNameJa": "浅村",
-        "sourceLine": "[0410400] 盗塁成功（浅村）、ランナー2塁 3 浅村 投手 ジャクソン #42 右投 投球数 打者数 防御率 68 14 4.39 ナックルカーブ - 131km/h （ 詳細 ） 打者 マッカスカー #34 右打 打率 .130 (23-3) 四球 1 2 3 4 1 見逃し 2 ファウル 3 ボール 4 ボール 次の打者 小郷 裕哉 楽天攻撃中 前へ 打者4 次へ 球場名： ZOZOマリン 自動更新 手動更新 更新 更新情報があります 0:25 【4回表】イーグルス・浅村栄斗 2010年から17年連続の盗塁を記録!! 2026年4月28日 千葉ロッテマリーンズ 対 東北楽天ゴールデンイーグルス パーソル パ・リーグTV 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 楽天 0 0 0 0 0 0 0 0 1 1 4 0 ロッテ 0 0 0 0 1 2 0 0 X 3 9 0 2026/4/28",
-        "sourceTier": "score"
+        "sourceLine": "4： 6番 マッカスカー 二死一塁 一塁走者 浅村 :盗塁成功 二塁 粘りを見せて8球目に四球を選ぶ 一二塁 0:25 【4回表】イーグルス・浅村栄斗 2010年から17年連続の盗塁を記録!! 2026年4月28日 千葉ロッテマリーンズ 対 東北楽天ゴールデンイーグルス",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038780-score-2",
+        "eventId": "2021038780-runner-2",
         "inningHalf": "4回裏",
         "kind": "CS",
         "yahooRunnerId": "1950286",
-        "runnerNameJa": "西川",
-        "sourceLine": "[0420200] 盗塁失敗（西川） 6 西川 1 2 3 4 5 6 7 1 ボール 2 見逃し 3 ファウル 4 ボール 5 ファウル 6 ボール 7 空三振 次の打者 ソト 打者 寺地 隆成 #65 左打 打率 .231 (91-21) 遊ゴロ 投手 荘司 康誠 #19 右投 投球数 打者数 防御率 53 11 2.40",
-        "sourceTier": "score"
+        "sourceLine": "2： 3番 寺地 隆成 無死一塁 空振り三振！一塁走者 西川 も盗塁失敗でダブルプレー 2アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038780-score-3",
+        "eventId": "2021038780-runner-3",
         "inningHalf": "5回裏",
         "kind": "SB",
         "yahooRunnerId": "2106798",
-        "runnerNameJa": "友杉",
-        "sourceLine": "[0520400] 盗塁成功（友杉）、ランナー2塁 4 友杉 1 1 ボール 次の打者 小川 龍成 打者 佐藤 都志也 #32 左打 打率 .167 (36-6) 一ゴロ 投手 荘司 康誠 #19 右投 投球数 打者数 防御率 71 16 2.27",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038780-score-4",
-        "inningHalf": "7回裏",
-        "kind": "CS",
-        "yahooRunnerId": "1950286",
-        "runnerNameJa": "西川",
-        "sourceLine": "[0720400] 盗塁失敗（西川） 6 西川 1 2 1 見逃し 2 見逃し 次の打者 池田 来翔 打者 寺地 隆成 #65 左打 打率 .237 (93-22) 遊ゴロ 、 空三振 、 左本 投手 宋 家豪 #43 右投 投球数 打者数 防御率 14 3 1.13",
-        "sourceTier": "score"
+        "sourceLine": "4： 8番 佐藤 都志也 二死一塁 一塁けん制:ランナー 友杉 帰塁 また一塁けん制:ランナー 友杉 帰塁 一塁走者 友杉 :積極的に初球から走って盗塁成功 二塁 ランナー二塁の1-0からライトへのタイムリーヒットでロッテ先制！ ロ 1-0 楽 一塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

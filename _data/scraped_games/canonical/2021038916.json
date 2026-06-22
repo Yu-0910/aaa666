@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038916",
-  "builtAt": "2026-05-28T06:48:13.592Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "2867a466b4cd60f013617803326c4dc2199bb586eb33f5e92549628f45a893df",
-  "normalizedFetchedAt": "2026-05-28T06:38:04.250Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月27日 東京ヤクルトスワローズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -9513,7 +9513,16 @@
         "resultJa": "空三振"
       }
     ],
-    "runnerEvents": [],
+    "runnerEvents": [
+      {
+        "eventId": "2021038916-runner-1",
+        "inningHalf": "6回表",
+        "kind": "SB",
+        "yahooRunnerId": "1750472",
+        "sourceLine": "5： 8番 源田 壮亮 二死一塁 一塁走者 古賀悠 :盗塁成功 二塁 カウント2-2から見逃し三振 3アウト",
+        "sourceTier": "rawTextSteal"
+      }
+    ],
     "battingLines": [
       {
         "yahooPlayerId": "2117028",

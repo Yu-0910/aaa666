@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038777",
-  "builtAt": "2026-05-27T04:35:22.644Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "ac07595c58778c41953b55f4a2d7ee7d5fcb700364e221042de4203436cd8a13",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月28日 東京ヤクルトスワローズvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8138,13 +8138,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038777-score-1",
+        "eventId": "2021038777-runner-1",
+        "inningHalf": "1回裏",
+        "kind": "SB",
+        "yahooRunnerId": "1650522",
+        "sourceLine": "3： 3番 内山 壮真 一死一塁 一塁走者 丸山和 :盗塁成功 二塁 フォアボールを選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
+      },
+      {
+        "eventId": "2021038777-runner-2",
         "inningHalf": "2回裏",
         "kind": "SB",
         "yahooRunnerId": "2000026",
-        "runnerNameJa": "内山",
-        "sourceLine": "[0221000] 盗塁成功（内山）、ランナー2塁 3 内山 1 2 3 1 ボール 2 見逃し 3 見逃し 次の打者 岩田 幸宏 打者 赤羽 由紘 #00 右打 打率 .283 (53-15) 三失 投手 才木 浩人 #35 右投 投球数 打者数 防御率 48 13 5.06",
-        "sourceTier": "score"
+        "sourceLine": "10： 5番 赤羽 由紘 二死一塁 一塁走者 内山 :盗塁成功 二塁 カウント2-2から空振り三振でバッターアウト 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

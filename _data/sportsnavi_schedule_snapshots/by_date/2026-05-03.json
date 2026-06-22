@@ -2,40 +2,46 @@
   "schemaVersion": "sportsnavi-schedule-day-v2",
   "year": "2026",
   "dateJst": "2026-05-03",
-  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "fetchedAt": "2026-05-30T15:28:52.900Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-03",
   "gameIds": [
-    "2021038805",
     "2021038804",
+    "2021038805",
+    "2021038806",
     "2021038807",
-    "2021038809",
-    "2021038808"
+    "2021038808",
+    "2021038809"
   ],
   "games": [
+    {
+      "gameId": "2021038804",
+      "stadiumName": "神宮球場"
+    },
     {
       "gameId": "2021038805",
       "stadiumName": "甲子園球場"
     },
     {
-      "gameId": "2021038804",
-      "stadiumName": "神宮球場"
+      "gameId": "2021038806",
+      "stadiumName": "マツダ"
     },
     {
       "gameId": "2021038807",
       "stadiumName": "エスコンＦ"
     },
     {
-      "gameId": "2021038809",
-      "stadiumName": "みずほPayPay"
-    },
-    {
       "gameId": "2021038808",
       "stadiumName": "ZOZOマリン"
+    },
+    {
+      "gameId": "2021038809",
+      "stadiumName": "みずほPayPay"
     }
   ],
   "stadiumByGameId": {
     "2021038804": "神宮球場",
     "2021038805": "甲子園球場",
+    "2021038806": "マツダ",
     "2021038807": "エスコンＦ",
     "2021038808": "ZOZOマリン",
     "2021038809": "みずほPayPay"

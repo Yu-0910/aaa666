@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-06-03",
+  "fetchedAt": "2026-06-03T18:56:30.017Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-06-03",
+  "gameIds": [
+    "2021038951",
+    "2021038952",
+    "2021038953",
+    "2021038954",
+    "2021038955",
+    "2021038956"
+  ],
+  "games": [
+    {
+      "gameId": "2021038951",
+      "stadiumName": "東京ドーム"
+    },
+    {
+      "gameId": "2021038952",
+      "stadiumName": "神宮球場"
+    },
+    {
+      "gameId": "2021038953",
+      "stadiumName": "横浜スタジアム"
+    },
+    {
+      "gameId": "2021038954",
+      "stadiumName": "バンテリンD"
+    },
+    {
+      "gameId": "2021038955",
+      "stadiumName": "甲子園球場"
+    },
+    {
+      "gameId": "2021038956",
+      "stadiumName": "マツダ"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038951": "東京ドーム",
+    "2021038952": "神宮球場",
+    "2021038953": "横浜スタジアム",
+    "2021038954": "バンテリンD",
+    "2021038955": "甲子園球場",
+    "2021038956": "マツダ"
+  }
+}

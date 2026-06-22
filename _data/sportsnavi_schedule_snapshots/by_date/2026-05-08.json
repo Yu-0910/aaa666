@@ -2,9 +2,10 @@
   "schemaVersion": "sportsnavi-schedule-day-v2",
   "year": "2026",
   "dateJst": "2026-05-08",
-  "fetchedAt": "2026-05-23T12:55:06.974Z",
+  "fetchedAt": "2026-05-30T15:28:52.900Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-08",
   "gameIds": [
+    "2021038828",
     "2021038829",
     "2021038830",
     "2021038831",
@@ -12,6 +13,10 @@
     "2021038833"
   ],
   "games": [
+    {
+      "gameId": "2021038828",
+      "stadiumName": "バンテリンD"
+    },
     {
       "gameId": "2021038829",
       "stadiumName": "甲子園球場"
@@ -34,6 +39,7 @@
     }
   ],
   "stadiumByGameId": {
+    "2021038828": "バンテリンD",
     "2021038829": "甲子園球場",
     "2021038830": "マツダ",
     "2021038831": "ベルーナD",

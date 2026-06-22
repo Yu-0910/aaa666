@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038922",
-  "builtAt": "2026-05-28T20:13:01.650Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "164c4f1386a2557fd0a30fe9f7ad15ebc3a5612152e0465895ada50c463e7648",
-  "normalizedFetchedAt": "2026-05-28T19:43:45.809Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月28日 東京ヤクルトスワローズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7670,40 +7670,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038922-score-1",
+        "eventId": "2021038922-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "1100061",
-        "runnerNameJa": "桑原",
-        "sourceLine": "[0110400] 盗塁成功（桑原）、ランナー2塁 7 桑原 投手 小川 泰弘 #29 右投 投球数 打者数 防御率 16 3 5.47",
-        "sourceTier": "score"
+        "sourceLine": "4： 4番 ネビン 一死一塁 一塁走者 桑原 :盗塁成功 二塁 四球を選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038922-score-2",
+        "eventId": "2021038922-runner-2",
         "inningHalf": "2回裏",
         "kind": "CS",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0220200] 1塁けん制 けん制飛び出し（岩田）、盗塁失敗（岩田） 64 岩田 1 1 ボール 次の打者 鈴木 叶 打者 内山 壮真 #3 右打 打率 .247 (77-19) 投手 武内 夏暉 #21 左投 投球数 打者数 防御率 22 5 3.16",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038922-score-3",
-        "inningHalf": "5回表",
-        "kind": "CS",
-        "yahooRunnerId": "2103618",
-        "runnerNameJa": "滝澤",
-        "sourceLine": "[0510300] 盗塁失敗（滝澤）、ヤクルト・残り2回 62 滝澤 投手 小川 泰弘 #29 右投 投球数 打者数 防御率 83 20 5.34",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038922-score-4",
-        "inningHalf": "9回表",
-        "kind": "SB",
-        "yahooRunnerId": "2103618",
-        "runnerNameJa": "滝澤",
-        "sourceLine": "[0910800] 盗塁成功（滝澤）、ランナー2塁 62 滝澤 25 カナリオ 投手 大道 温貴 #46 右投 投球数 打者数 防御率 40 11 16.20",
-        "sourceTier": "score"
+        "sourceLine": "2： 6番 内山 壮真 無死一塁 一塁けん制:ランナー 岩田 帰塁 また一塁けん制:ランナー 岩田 帰塁 一塁けん制:ランナー 岩田 スタート 一塁走者 岩田 :けん制球に誘い出され盗塁失敗 1アウト ハーフスイングを取られて空振り三振でバッターアウト 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

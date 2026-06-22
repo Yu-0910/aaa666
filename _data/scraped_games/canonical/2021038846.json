@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038846",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "91405130bb75fd769eed846c4923293c6c3b720e9310b209b1d6e425452ff045",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月12日 読売ジャイアンツvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3354,6 +3354,12 @@
         ]
       },
       {
+        "paId": "2021038846-5-裏-1",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "2000007",
+        "resultSummaryJa": "投ゴロ"
+      },
+      {
         "paId": "2021038846-5-裏-2",
         "inningHalf": "5回裏",
         "yahooPitcherId": "1600123",
@@ -3957,6 +3963,12 @@
         ]
       },
       {
+        "paId": "2021038846-7-裏-3",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "700003",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
         "paId": "2021038846-7-裏-4",
         "inningHalf": "7回裏",
         "yahooPitcherId": "1950429",
@@ -4513,6 +4525,12 @@
             "resultJa": "空三振"
           }
         ]
+      },
+      {
+        "paId": "2021038846-9-表-4",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1400173",
+        "resultSummaryJa": "三飛"
       },
       {
         "paId": "2021038846-9-裏-1",
@@ -8107,5 +8125,5 @@
       }
     ]
   },
-  "eventsFingerprint": "51a7986d7e8e4f7d31aa6be70bd3c97a59788396a8d35f4936a5e25645de04cf"
+  "eventsFingerprint": "8ef59433939c201b348ea9c12da40eb0ebe3232a8f60840a1c1798ce82463a4a"
 }

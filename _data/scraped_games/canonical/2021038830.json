@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038830",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "cc4d191dd8b34009add121e73c671b97a9d25e7166592887028f968f9345bea7",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月8日 広島東洋カープvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3369,6 +3369,12 @@
         ]
       },
       {
+        "paId": "2021038830-5-裏-2",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1800074",
+        "resultSummaryJa": "左飛"
+      },
+      {
         "paId": "2021038830-5-裏-3",
         "inningHalf": "5回裏",
         "yahooPitcherId": "1300045",
@@ -4251,6 +4257,18 @@
         ]
       },
       {
+        "paId": "2021038830-8-表-4",
+        "inningHalf": "8回表",
+        "yahooBatterId": "900044",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021038830-8-裏-1",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "2110422",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038830-8-裏-2",
         "inningHalf": "8回裏",
         "yahooPitcherId": "1600075",
@@ -4764,6 +4782,12 @@
         ]
       },
       {
+        "paId": "2021038830-9-裏-2",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1950955",
+        "resultSummaryJa": "右飛"
+      },
+      {
         "paId": "2021038830-9-裏-3",
         "inningHalf": "9回裏",
         "yahooPitcherId": "1961046",
@@ -4834,6 +4858,12 @@
             "resultJa": "四球"
           }
         ]
+      },
+      {
+        "paId": "2021038830-9-裏-4",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1961927",
+        "resultSummaryJa": "左飛"
       }
     ],
     "pitchEvents": [
@@ -8592,5 +8622,5 @@
       }
     ]
   },
-  "eventsFingerprint": "a03dfdda44d37419df4358c389b007ab700bbe9ba63a6a0b466011cbae96d092"
+  "eventsFingerprint": "a6a861310b0df8ba0b7cb5324874f84d7e1ac036d4d5b3dfa2e6e580f30af2fa"
 }

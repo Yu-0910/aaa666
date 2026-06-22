@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038847",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "ef4a81df5b22f675db0258f91506bfda6c2d90ffe8bf8961c2b535173966a0d1",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月12日 東京ヤクルトスワローズvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -2986,6 +2986,12 @@
         ]
       },
       {
+        "paId": "2021038847-5-裏-3",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1600003",
+        "resultSummaryJa": "二ゴロ"
+      },
+      {
         "paId": "2021038847-6-表-1",
         "inningHalf": "6回表",
         "yahooPitcherId": "2000033",
@@ -3479,6 +3485,12 @@
             "resultJa": "中安[バットの先、バット折れる]"
           }
         ]
+      },
+      {
+        "paId": "2021038847-7-表-4",
+        "inningHalf": "7回表",
+        "yahooBatterId": "2109980",
+        "resultSummaryJa": "本塁打"
       },
       {
         "paId": "2021038847-7-表-5",
@@ -4237,6 +4249,12 @@
         ]
       },
       {
+        "paId": "2021038847-9-表-4",
+        "inningHalf": "9回表",
+        "yahooBatterId": "2000027",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038847-9-表-5",
         "inningHalf": "9回表",
         "yahooPitcherId": "1600121",
@@ -4388,6 +4406,11 @@
             "resultJa": "四球"
           }
         ]
+      },
+      {
+        "paId": "2021038847-9-表-8",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1900050"
       },
       {
         "paId": "2021038847-9-裏-1",
@@ -7948,5 +7971,5 @@
       }
     ]
   },
-  "eventsFingerprint": "4630ac840ec7950009a001d338d43edd0640d737d5046a2a849907dcef0e4be3"
+  "eventsFingerprint": "2d3574511e9901abe6809568a98cd0657008e57cc1a1112905693788f14ac828"
 }

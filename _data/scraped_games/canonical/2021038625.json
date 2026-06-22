@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038625",
-  "builtAt": "2026-05-27T05:07:35.343Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "dca3119bd50e89fc3b40ff3819e8ec3dc99b0f6ac380bfb71cf5f18cc063cd94",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年3月27日 千葉ロッテマリーンズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6134,13 +6134,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038625-score-1",
+        "eventId": "2021038625-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "2000075",
-        "runnerNameJa": "長谷川",
-        "sourceLine": "[0110400] 盗塁成功（長谷川）、ランナー2塁 63 長谷川 投手 毛利 海大 #13 左投 投球数 打者数 防御率 10 3 0.00",
-        "sourceTier": "score"
+        "sourceLine": "4： 4番 カナリオ 二死一塁 一塁けん制:ランナー 長谷川 帰塁 一塁走者 長谷川 :盗塁成功 二塁 一打先制の場面でショートゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

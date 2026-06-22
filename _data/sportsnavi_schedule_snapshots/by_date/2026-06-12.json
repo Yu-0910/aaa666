@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "year": "2026",
+  "dateJst": "2026-06-12",
+  "fetchedAt": "2026-06-12T15:29:10.555Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-06-12",
+  "gameIds": [
+    "2021038999",
+    "2021039000",
+    "2021039001",
+    "2021039002",
+    "2021039003",
+    "2021039004"
+  ],
+  "games": [
+    {
+      "gameId": "2021038999",
+      "stadiumName": "エスコンＦ"
+    },
+    {
+      "gameId": "2021039000",
+      "stadiumName": "楽天モバイル"
+    },
+    {
+      "gameId": "2021039001",
+      "stadiumName": "ベルーナD"
+    },
+    {
+      "gameId": "2021039002",
+      "stadiumName": "ZOZOマリン"
+    },
+    {
+      "gameId": "2021039003",
+      "stadiumName": "京セラD大阪"
+    },
+    {
+      "gameId": "2021039004",
+      "stadiumName": "みずほPayPay"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021038999": "エスコンＦ",
+    "2021039000": "楽天モバイル",
+    "2021039001": "ベルーナD",
+    "2021039002": "ZOZOマリン",
+    "2021039003": "京セラD大阪",
+    "2021039004": "みずほPayPay"
+  }
+}

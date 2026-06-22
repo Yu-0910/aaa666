@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038802",
-  "builtAt": "2026-05-27T04:42:18.987Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "53f2d80b753f4aeafe12e441831865129b95dfc3e3118d89ca4f2be4cad6ca62",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月2日 千葉ロッテマリーンズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1368,8 +1368,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038802.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038802.html",
       "seasonYear=2026",
-      "phase10:score:0220500:trailing_intermediate_single_page_next_required",
-      "phase10:score:0810400:trailing_intermediate_single_page_next_required",
       "phase10:score:0220500:trailing_intermediate_single_page_next_required",
       "phase10:score:0810400:trailing_intermediate_single_page_next_required"
     ],
@@ -7407,22 +7405,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038802-score-1",
+        "eventId": "2021038802-runner-1",
         "inningHalf": "5回裏",
         "kind": "SB",
         "yahooRunnerId": "2106798",
-        "runnerNameJa": "友杉",
-        "sourceLine": "[0520300] 盗塁成功（友杉）、ランナー2塁 4 友杉 1 2 1 ボール 2 空振り 次の打者 小川 龍成 打者 佐藤 都志也 #32 左打 打率 .186 (43-8) 見三振 投手 武内 夏暉 #21 左投 投球数 打者数 防御率 69 16 3.06",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038802-score-2",
-        "inningHalf": "8回表",
-        "kind": "CS",
-        "yahooRunnerId": "1600134",
-        "runnerNameJa": "石井",
-        "sourceLine": "[0810400] 盗塁失敗（石井） 4 石井 投手 ロング #73 左投 投球数 打者数 防御率 15 3 1.59",
-        "sourceTier": "score"
+        "sourceLine": "3： 8番 佐藤 都志也 一死一塁 一塁走者 友杉 :盗塁成功 二塁 外角のストレートを打つもレフトフライ 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

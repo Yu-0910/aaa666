@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038843",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "940e5a4864ce165fa3e540af7f7181eac9679defe5515158cfcbe2267228e206",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月10日 埼玉西武ライオンズvs.東北楽天ゴールデンイーグルス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3000,6 +3000,12 @@
         ]
       },
       {
+        "paId": "2021038843-5-表-4",
+        "inningHalf": "5回表",
+        "yahooBatterId": "1800118",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038843-5-表-5",
         "inningHalf": "5回表",
         "yahooPitcherId": "2103657",
@@ -3961,6 +3967,12 @@
             "resultJa": "三ゴロ[ランニングスロー]"
           }
         ]
+      },
+      {
+        "paId": "2021038843-9-表-2",
+        "inningHalf": "9回表",
+        "yahooBatterId": "2103740",
+        "resultSummaryJa": "空三振"
       },
       {
         "paId": "2021038843-9-表-3",
@@ -7187,5 +7199,5 @@
       }
     ]
   },
-  "eventsFingerprint": "bd518774e554f35f69ca777e2c8772352ee0c663958978fabf4c9ca82ef2ec10"
+  "eventsFingerprint": "32a7860c367e91d004cd68d1360f4e74e092959b7d533adc743774efec0b891c"
 }

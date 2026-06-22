@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038840",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "128fb9a6f55b1902be14f7867487136fe9a9e87b06283ae82a78293b89a6c739",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月10日 中日ドラゴンズvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3693,6 +3693,12 @@
         ]
       },
       {
+        "paId": "2021038840-6-表-6",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2106178",
+        "resultSummaryJa": "空三振"
+      },
+      {
         "paId": "2021038840-6-裏-1",
         "inningHalf": "6回裏",
         "yahooPitcherId": "2118291",
@@ -4026,6 +4032,12 @@
         ]
       },
       {
+        "paId": "2021038840-7-裏-1",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "900410",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038840-7-裏-2",
         "inningHalf": "7回裏",
         "yahooPitcherId": "1700027",
@@ -4276,6 +4288,12 @@
             "resultJa": "四球"
           }
         ]
+      },
+      {
+        "paId": "2021038840-8-表-4",
+        "inningHalf": "8回表",
+        "yahooBatterId": "700003",
+        "resultSummaryJa": "安打"
       },
       {
         "paId": "2021038840-8-表-5",
@@ -4566,6 +4584,12 @@
         ]
       },
       {
+        "paId": "2021038840-9-表-4",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1750321",
+        "resultSummaryJa": "二ゴロ"
+      },
+      {
         "paId": "2021038840-9-表-5",
         "inningHalf": "9回表",
         "yahooPitcherId": "2107860",
@@ -4843,6 +4867,18 @@
             "resultJa": "一失[イレギュラー]"
           }
         ]
+      },
+      {
+        "paId": "2021038840-9-裏-4",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1500076",
+        "resultSummaryJa": "右飛"
+      },
+      {
+        "paId": "2021038840-9-裏-5",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "1500050",
+        "resultSummaryJa": "空三振"
       }
     ],
     "pitchEvents": [
@@ -8540,5 +8576,5 @@
       }
     ]
   },
-  "eventsFingerprint": "0d3ce8e7a73d657d4ab43052e29ff091353d62c6733afe471423092ffee3f8b8"
+  "eventsFingerprint": "9c5cdccc0b87b488f0e6876a95d69090c41eff7aefc9f0fff0b6527e4737cc2c"
 }

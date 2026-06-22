@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038763",
-  "builtAt": "2026-05-27T19:12:24.644Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "506355229aaf514fde540392c68570054e327e07a0d2b33af73e88167786c7ab",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月24日 オリックス・バファローズvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1118,7 +1118,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038763.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038763.html",
       "seasonYear=2026",
-      "phase10:score:0220400:trailing_intermediate_single_page_next_required",
       "phase10:score:0220400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -5990,31 +5989,36 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038763-score-1",
+        "eventId": "2021038763-runner-1",
+        "inningHalf": "1回表",
+        "kind": "SB",
+        "yahooRunnerId": "1700025",
+        "sourceLine": "4： 4番 郡司 裕也 二死一塁 一塁走者 清宮幸 :盗塁成功 二塁 ランナー二塁の2-2から先制のタイムリーヒット！ オ 0-1 日 一塁 1:00 【1回表】3試合連続タイムリー!! ファイターズ・郡司裕也 センターへ抜ける一打で先制!! 2026年4月24日 オリックス・バファローズ 対 北海道日本ハムファイターズ",
+        "sourceTier": "rawTextSteal"
+      },
+      {
+        "eventId": "2021038763-runner-2",
         "inningHalf": "4回裏",
         "kind": "SB",
         "yahooRunnerId": "2103747",
-        "runnerNameJa": "渡部",
-        "sourceLine": "[0420300] 盗塁成功（渡部）、ランナー2塁 0 渡部 1 2 3 1 空振り 2 ボール 3 ボール 次の打者 太田 椋 打者 西川 龍馬 #7 左打 打率 .318 (88-28) 一ゴロ 投手 伊藤 大海 #17 右投 投球数 打者数 防御率 39 11 4.39 スイーパー - 130km/h （ 詳細 ） オリックス攻撃中 前へ 打者3 次へ 球場名： 京セラD大阪 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 日本ハム 1 0 0 0 0 0 0 0 1 2 5 0 オリックス 0 0 0 0 0 0 3 0 X 3 7 0 2026/4/24 20:42 ベースボールLIVEで配信を見る（外部・PR） オリックス 選手名 打率 1 中 渡部 遼人 左 .406 2 三 宗 佑磨 左 .240 3 左 西川 龍馬 左 .318 4 一 太田",
-        "sourceTier": "score"
+        "sourceLine": "3： 3番 西川 龍馬 一死一塁 一塁走者 渡部 :盗塁成功 二塁 見逃し三振 2アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038763-score-2",
+        "eventId": "2021038763-runner-3",
         "inningHalf": "6回裏",
         "kind": "SB",
         "yahooRunnerId": "2103747",
-        "runnerNameJa": "渡部",
-        "sourceLine": "[0620400] 盗塁成功（渡部）、ランナー2塁 0 渡部 1 1 空振り 次の打者 西川 龍馬 打者 宗 佑磨 #6 左打 打率 .240 (75-18) 空三振 、 見三振 投手 伊藤 大海 #17 右投 投球数 打者数 防御率 61 19 4.03 スイーパー - 131km/h （ 詳細 ） オリックス攻撃中 前へ 打者4 次へ 球場名： 京セラD大阪 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 日本ハム 1 0 0 0 0 0 0 0 1 2 5 0 オリックス 0 0 0 0 0 0 3 0 X 3 7 0 2026/4/24 20:42 ベースボールLIVEで配信を見る（外部・PR） オリックス 選手名 打率 1 中 渡部 遼人 左 .424 2 三 宗 佑磨 左 .240 3 左 西川 龍馬 左 .315 4 一 太田 椋 右 .265 5",
-        "sourceTier": "score"
+        "sourceLine": "4： 2番 宗 佑磨 二死一塁 一塁走者 渡部 :すかさず初球から走って盗塁成功 二塁 一打同点の場面で空振り三振！決定機を逃す 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038763-score-3",
+        "eventId": "2021038763-runner-4",
         "inningHalf": "9回表",
         "kind": "SB",
         "yahooRunnerId": "2106284",
-        "runnerNameJa": "矢澤",
-        "sourceLine": "[0910500] 盗塁成功（矢澤）、ランナー2塁 12 矢澤 投手 マチャド #42 右投 投球数 打者数 防御率 18 4 1.17",
-        "sourceTier": "score"
+        "sourceLine": "5： 6番 田宮 裕涼 二死一塁 一塁走者 レイエス →代走: 矢澤 一塁走者 矢澤 :盗塁成功 二塁 一打同点の場面でショートゴロ 3アウト 試合終了",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

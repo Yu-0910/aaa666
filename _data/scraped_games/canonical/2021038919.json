@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038919",
-  "builtAt": "2026-05-28T07:06:40.368Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "091073e19404a1f4bf6f094fc1fc3a045ec335ee3280cb72409ddbc3ac7ce0eb",
-  "normalizedFetchedAt": "2026-05-28T06:38:04.250Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月27日 阪神タイガースvs.北海道日本ハムファイターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7244,22 +7244,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038919-score-1",
-        "inningHalf": "5回表",
-        "kind": "SB",
-        "yahooRunnerId": "1851204",
-        "runnerNameJa": "水野",
-        "sourceLine": "[0510700] 盗塁成功（水野）、ランナー3塁 43 水野 14 加藤貴 投手 大竹 耕太郎 #21 左投 投球数 打者数 防御率 69 19 2.47",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038919-score-2",
+        "eventId": "2021038919-runner-1",
         "inningHalf": "6回表",
         "kind": "CS",
         "yahooRunnerId": "2108090",
-        "runnerNameJa": "カストロ",
-        "sourceLine": "[0610200] 盗塁失敗（カストロ）、日本ハム・残り1回 6 カストロ 投手 工藤 泰成 #49 右投 投球数 打者数 防御率 8 1 1.74",
-        "sourceTier": "score"
+        "sourceLine": "2： 4番 レイエス 無死一塁 日本ハム・カストロの二塁盗塁アウトの判定を巡り、日本ハムがリクエスト リプレー検証後判定変わらず 空振り三振！一塁走者 カストロ も盗塁失敗でダブルプレー 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

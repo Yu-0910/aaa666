@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "yahoo-game-canonical-v1",
+  "gameId": "2021039026",
+  "builtAt": "2026-06-14T18:31:38.865Z",
+  "sourceSchema": "sportsnavi-stats-text-v1",
+  "sourceCompositeFingerprint": "d31c89b849f6bf5cb677d0cfe5403f11272d5369b545ee18867b934bb9ae6d9d",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "game": {
+    "meta": {
+      "documentTitle": "2026年6月20日 北海道日本ハムファイターズvs.福岡ソフトバンクホークス 試合出場成績 - プロ野球 - スポーツナビ",
+      "ogTitle": "2026年6月20日 北海道日本ハムファイターズvs.福岡ソフトバンクホークス 試合出場成績 - プロ野球 - スポーツナビ"
+    },
+    "scoreboard": [],
+    "teams": [],
+    "textPlayByPlay": [],
+    "statsPlayerLinkedRows": [],
+    "yahooPlayersMentioned": {},
+    "missingOrPartial": [
+      "phase2: stats HTML present but no player rows parsed",
+      "phase2: hint: スポナビ /stats は CSR のため、初回 fetch が空テーブルだけになることがある。phase2_fetch は遅延再試行する。手動では npm run phase2:sportsnavi:stats-text -- --year 2026 --game-ids 2021039026 --force",
+      "phase2: text HTML present but no bb-liveText sections parsed",
+      "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039026.html",
+      "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039026.html",
+      "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039026.html",
+      "seasonYear=2026"
+    ],
+    "pitchByPitchNote": {
+      "status": "partial",
+      "note": "Sportsnavi Phase2: stats/text parsed; pitch-by-pitch / 一球速報は別ソースが必要"
+    }
+  },
+  "domain": {
+    "plateAppearances": [],
+    "pitchEvents": [],
+    "runnerEvents": [],
+    "battingLines": [],
+    "pitchingLines": []
+  }
+}

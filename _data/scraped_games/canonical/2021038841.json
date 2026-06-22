@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038841",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "40394a4c2dfea85c975854c41166ec056ce0ba7565a88934bf5a5425eec98b0e",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月10日 阪神タイガースvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -3669,6 +3669,12 @@
         ]
       },
       {
+        "paId": "2021038841-7-裏-3",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "2109980",
+        "resultSummaryJa": "安打"
+      },
+      {
         "paId": "2021038841-7-裏-4",
         "inningHalf": "7回裏",
         "yahooPitcherId": "1800049",
@@ -3766,6 +3772,17 @@
             "resultJa": "空三振"
           }
         ]
+      },
+      {
+        "paId": "2021038841-8-表-1",
+        "inningHalf": "8回表",
+        "yahooBatterId": "1900035",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021038841-8-表-2",
+        "inningHalf": "8回表",
+        "yahooBatterId": "2101034"
       },
       {
         "paId": "2021038841-8-表-3",
@@ -7358,5 +7375,5 @@
       }
     ]
   },
-  "eventsFingerprint": "e0c8a7faa25648381186116ea7fe679757d04eefa8452feac0b31e86e372d854"
+  "eventsFingerprint": "e791b325decae9e26423f22f51064d3d8e03081e8e366321a9633126f8406b7e"
 }

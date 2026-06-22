@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038637",
-  "builtAt": "2026-05-27T03:39:52.347Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "da7174d94f23a83b4761b548cb9f863f7efefcdb7604ee8a15207111f87bcadc",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年3月29日 千葉ロッテマリーンズvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -4254,6 +4254,12 @@
             "resultJa": "死球"
           }
         ]
+      },
+      {
+        "paId": "2021038637-9-裏-5",
+        "inningHalf": "9回裏",
+        "yahooBatterId": "2000094",
+        "resultSummaryJa": "中飛"
       }
     ],
     "pitchEvents": [
@@ -7455,5 +7461,5 @@
       }
     ]
   },
-  "eventsFingerprint": "678f0b1289588636b4542c8ef7a1847a2a8c2beb6b6afdeb75c92cf8c3002ca1"
+  "eventsFingerprint": "4354164b072e2b5acc81219d4b89ff1824d7fda1b4fc49c69e78c647271404df"
 }

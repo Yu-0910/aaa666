@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038856",
-  "builtAt": "2026-05-27T04:48:34.701Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "f2c079572a741e6725c77dd5712a0108e47018e5f8a30140ab69d13146d75950",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月13日 福岡ソフトバンクホークスvs.埼玉西武ライオンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1224,7 +1224,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038856.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038856.html",
       "seasonYear=2026",
-      "phase10:score:0520400:trailing_intermediate_single_page_next_required",
       "phase10:score:0520400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -6811,13 +6810,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038856-score-1",
+        "eventId": "2021038856-runner-1",
         "inningHalf": "3回表",
         "kind": "SB",
         "yahooRunnerId": "2117028",
-        "runnerNameJa": "カナリオ",
-        "sourceLine": "[0310500] 盗塁成功（カナリオ）、ランナー2,3塁 25 カナリオ 4 石井 投手 藤原 大翔 #22 右投 投球数 打者数 防御率 40 10 3.86",
-        "sourceTier": "score"
+        "sourceLine": "5： 2番 西川 愛也 一死一三塁 －ソフトバンク:内野手マウンドへ集まる－ 一塁走者 カナリオ :盗塁成功 二三塁 1アウト二三塁の2-0からライトへの犠牲フライを放つ 西武勝ち越し！ ソ 1-2 西 2アウト三塁 0:57 【3回表】チャンスを活かした!! ライオンズ・西川愛也 ライトへの犠牲フライで勝ち越し!! 2026年5月13日 福岡ソフトバンクホークス 対 埼玉西武ライオンズ",
+        "sourceTier": "rawTextSteal"
+      },
+      {
+        "eventId": "2021038856-runner-2",
+        "inningHalf": "9回裏",
+        "kind": "SB",
+        "yahooRunnerId": "1000175",
+        "sourceLine": "5： 5番 野村 勇 二死一三塁 一塁走者 近藤 →代走: 牧原大 一塁走者 牧原大 :盗塁成功 二三塁 一打逆転サヨナラの場面でワンバウンドした球を空振り三振 3アウト 試合終了 0:17 【9回裏】今季2度目の完投勝利!! ライオンズ・高橋光成 9回129球1失点の好投で5勝目!! 2026年5月13日 福岡ソフトバンクホークス 対 埼玉西武ライオンズ",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

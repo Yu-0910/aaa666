@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "year": "2026",
+  "dateJst": "2026-06-22",
+  "fetchedAt": "2026-06-22T11:35:09.281Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-22",
+  "gameIds": [
+    "2021039035",
+    "2021044743"
+  ],
+  "games": [
+    {
+      "gameId": "2021039035",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "西武",
+      "homeTeamCode": "E",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021044743",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "楽天",
+      "homeTeamCode": "H",
+      "awayTeamCode": "E"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039035": "東京ドーム",
+    "2021044743": "甲子園球場"
+  }
+}

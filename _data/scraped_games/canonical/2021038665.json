@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038665",
-  "builtAt": "2026-05-27T04:29:25.892Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "b3ac24262ff9e3c94db613592955a7e00a90d3b6320512158140aed87f94baf0",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月4日 東京ヤクルトスワローズvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1507,7 +1507,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038665.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038665.html",
       "seasonYear=2026",
-      "phase10:score:0420400:no_pitch_rows",
       "phase10:score:0420400:no_pitch_rows"
     ],
     "pitchByPitchNote": {
@@ -9151,22 +9150,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038665-score-1",
+        "eventId": "2021038665-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "2103780",
-        "runnerNameJa": "福永",
-        "sourceLine": "[0110500] 盗塁成功（福永）、ランナー2塁 7 福永 投手 山野 太一 #26 左投 投球数 打者数 防御率 20 4 3.52",
-        "sourceTier": "score"
+        "sourceLine": "5： 5番 サノー 二死一塁 一塁けん制:ランナー 福永 帰塁 一塁けん制:ランナー 福永 帰塁 一塁走者 福永 :盗塁成功 二塁 死球を受ける 一二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038665-score-2",
-        "inningHalf": "4回裏",
-        "kind": "CS",
-        "yahooRunnerId": "2000133",
-        "runnerNameJa": "オスナ",
-        "sourceLine": "[0420400] けん制飛び出し（オスナ）、挟まれる（オスナ）、盗塁失敗（オスナ） 13 オスナ 次の打者 増田 珠 打者 岩田 幸宏 #64 左打 打率 .240 (25-6) 二ゴロ 、 一安 投手 梅野 雄吾 #46 右投 投球数 打者数 防御率 21 3 10.80 ヤクルト攻撃中 前へ 打者4 次へ 球場名： 神宮 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 中日 1 0 0 1 2 0 2 0 0 6 10 0 ヤクルト 0 1 5 0 2 3 0 0 X 11 14 0 2026/4/4 18:02 ヤクルト 選手名 打率 1 遊 長岡 秀樹 左 .222 2 左 サンタナ 右 .174 3 捕 鈴木 叶 右 .273 4 一 オスナ 右 .231 5 中 岩田 幸宏 左 .240 6 右 増田 珠 右 .231 7 二 伊藤 琉偉 右 .2",
-        "sourceTier": "score"
+        "eventId": "2021038665-runner-2",
+        "inningHalf": "5回表",
+        "kind": "SB",
+        "yahooRunnerId": "1750701",
+        "sourceLine": "3： 3番 福永 裕基 一死一塁 一塁けん制:ランナー 田中 帰塁 また一塁けん制:ランナー 田中 帰塁 一塁走者 田中 :盗塁成功 二塁 粘りを見せるも8球目を空振り、三振を喫する 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

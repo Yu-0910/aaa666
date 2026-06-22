@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038758",
-  "builtAt": "2026-05-27T04:35:18.447Z",
+  "builtAt": "2026-06-14T18:31:38.865Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "5178d915c1a9acf5e340f02c9eee397d3792f22cc56223fc5e1b44605f9e40e7",
-  "normalizedFetchedAt": "2026-05-27T03:39:52.347Z",
+  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月23日 北海道日本ハムファイターズvs.東北楽天ゴールデンイーグルス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1312,8 +1312,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021038758.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021038758.html",
       "seasonYear=2026",
-      "phase10:score:0110400:trailing_intermediate_single_page_next_required",
-      "phase10:score:0320400:trailing_intermediate_single_page_next_required",
       "phase10:score:0110400:trailing_intermediate_single_page_next_required",
       "phase10:score:0320400:trailing_intermediate_single_page_next_required"
     ],
@@ -7468,40 +7466,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038758-score-1",
-        "inningHalf": "1回表",
-        "kind": "CS",
-        "yahooRunnerId": "1800117",
-        "runnerNameJa": "辰己",
-        "sourceLine": "[0110400] 盗塁失敗（辰己） 8 辰己 投手 福島 蓮 #45 右投 投球数 打者数 防御率 19 3 0.00",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038758-score-2",
-        "inningHalf": "3回裏",
-        "kind": "CS",
-        "yahooRunnerId": "2106284",
-        "runnerNameJa": "矢澤",
-        "sourceLine": "[0320400] 盗塁失敗（矢澤） 12 矢澤 1 2 3 1 ボール 2 ファウル 3 ボール 次の打者 レイエス 打者 西川 遥輝 #7 左打 打率 .138 (29-4) 四球 投手 瀧中 瞭太 #57 右投 投球数 打者数 防御率 36 10 0.96",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021038758-score-3",
+        "eventId": "2021038758-runner-1",
         "inningHalf": "5回裏",
         "kind": "SB",
         "yahooRunnerId": "1850932",
-        "runnerNameJa": "奈良間",
-        "sourceLine": "[0520200] 盗塁成功（奈良間）、ランナー2塁 58 奈良間 1 2 3 4 5 6 7 8 1 空振り 2 見逃し 3 ボール 4 ボール 5 ファウル 6 ボール 7 ファウル 8 空三振 次の打者 田宮 裕涼 打者 大塚 瑠晏 #49 左打 打率 .500 (4-2) 右安 投手 瀧中 瞭太 #57 右投 投球数 打者数 防御率 68 16 1.35",
-        "sourceTier": "score"
+        "sourceLine": "2： 8番 大塚 瑠晏 無死一塁 一塁けん制:ランナー 奈良間 帰塁 一塁けん制:ランナー 奈良間 帰塁 また一塁けん制:ランナー 奈良間 帰塁 空振り三振に倒れるもスタートを切っていた一塁走者 奈良間 が盗塁成功 1アウト二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021038758-score-4",
+        "eventId": "2021038758-runner-2",
         "inningHalf": "8回裏",
         "kind": "SB",
         "yahooRunnerId": "2000080",
-        "runnerNameJa": "五十幡",
-        "sourceLine": "[0820400] 盗塁成功（五十幡）、ランナー3塁 50 五十幡 1 2 1 ボール 2 見逃し 次の打者 水野 達稀 打者 奈良間 大己 #58 右打 打率 .365 (52-19) 右邪飛 、 中安 、 左飛 投手 西垣 雅矢 #49 右投 投球数 打者数 防御率 8 3 1.80",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 奈良間 大己 二死一塁 太田 (捕):悪送球 一塁走者 五十幡 :盗塁成功 一塁走者 五十幡 はさらに三塁まで進塁 三塁 一打同点の場面で外角低めの変化球を打つもセンターフライ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [
