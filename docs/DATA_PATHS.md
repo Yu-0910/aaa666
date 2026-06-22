@@ -71,13 +71,23 @@
 canonical を増やしたあと、派生 JSON（Phase 11 / PoC1 等）を更新したら **必ず** 野手・投手ランキング JSON も揃える。
 
 - **派生一括（例）**: `npm run phase3:derived:2026`
-- **続けてランキング**: `npm run rankings:rebuild`（Phase 12 + 19 + 28 → `team-games.json` 同梱 → top-leaders）
+- **続けてランキング**: `npm run rankings:rebuild`（Phase 12 + 19 + 28 + **29（順位表）** → `team-games.json` 同梱 → top-leaders）
 - **一括エイリアス**: `npm run phase3:derived:2026:and-rankings`（上記を連続実行）
 - **2026 規定の検証**: `npm run validate:ranking-qualifying-2026`（Phase 5。`--fail` で CI 用 exit 1）
 
 投手の Yahoo→NPB インデックスは `npm run build:yahoo-pitcher-npb-index`（PoC 由来＋ランキング掲載 ID の名簿補完）。PoC 生成の末尾でも実行される。
 
 個人の Phase 11 JSON と野手ランキング JSON が同じ canonical 由来か確認する: `npm run validate:batting-phase11-vs-phase12`（不一致は派生とランキングの**生成タイミングのズレ**が典型）。
+
+| パス | 役割 |
+|------|------|
+| `_data/derived/player_matchup_batting/{year}/npb_*.json` | 野手個人ページ「対戦成績」— 対戦投手別（**Phase30**） |
+| `_data/derived/player_matchup_pitching/{year}/npb_*.json` | 投手個人ページ「対戦成績」— 対戦打者別（**Phase30**） |
+| `_data/derived/player_batter_vs_team_count_pitch_types/{year}/yahoo_*.json` | 野手個人ページ「球団別」— 対戦球団×カウント別配球（**Phase33**） |
+
+**検証**: `npm run validate:phase31-matchup-vs-phase11:fail`（全相手打数合計 ≤ Phase11 通算打数、打者↔投手の双方向一致）。Phase30 の直後に日次パイプラインでも実行される。
+
+**検証（Phase33）**: `npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail`（全球団投球合計 ≤ Phase14 球種別投球合計）。Phase33 の直後に日次パイプラインでも実行される。
 
 Yahoo 一球の **Phase10 取得**（同一打席が複数の投球表に分かれるケース・再取得の目安）は **`docs/yahoo_plate_appearance_batting_rules.md` §6a** を参照。
 
@@ -103,7 +113,7 @@ Yahoo 一球の **Phase10 取得**（同一打席が複数の投球表に分か�
 
 **トップ今週タブ用スナップショット**: `npm run top-weekly-leaders:build:2026`（週間 JSON + 当週 `team-games.json` で率系規定を適用して切り出し）
 
-**更新順**: `phase3:derived:2026`（Phase 17/7 含む）→ `npm run rankings:rebuild`（Phase 12/19/28 + top-leaders + top-weekly-leaders）
+**更新順**: `phase3:derived:2026`（Phase 17/7 含む）→ `npm run rankings:rebuild`（Phase 12/19/28/**29** + top-leaders + top-weekly-leaders）
 
 ### 2026 通算ランキング JSON の種類（Phase 4）
 
@@ -111,6 +121,45 @@ Yahoo 一球の **Phase10 取得**（同一打席が複数の投球表に分か�
 |----------|------|
 | `{指標}.json` | 率系: 規定到達者のみ（`team-games` 基準）。カウント系: 全員 |
 | `{指標}_all.json` | 通算のみ・全選手（安打・本塁打等はこちらを fetch） |
+
+---
+
+## チーム順位表（2026・Phase 29）
+
+トップ「順位表」タブの要件は **`docs/plan_team_standings_phase0_spec.md`**。  
+勝敗は出場成績 HTML の **「計」列**（`raw_sportsnavi_stats`）。打撃・投手率指標は canonical から球団別合算。
+
+| パス | 役割 |
+|------|------|
+| `_data/derived/team_standings/{year}/{CL\|PL}.json` | 工場派生（Git 外） |
+| `public/data/standings/{year}/{CL\|PL}.json` | 表示用ローカル出力（Git 外・R2 アップロード元） |
+| R2 `data/standings/{year}/{CL\|PL}.json` | **本番 SSOT**（ブラウザは `/data/standings/...` 経由） |
+
+**生成**: `npm run phase29:build:standings -- --year 2026`
+
+**更新順**: `rankings:rebuild` および `daily:npb-pipeline` の派生ブロック末尾で **Phase28 の直後・top-leaders の直前**に実行（`rankings:rebuild` と同順）。
+
+**本番反映**: `npm run display:r2:upload:2026` / `display:refresh:2026` / `pipeline:sync:2026`（**`daily:npb-pipeline` だけでは R2 は更新されない**）。
+
+**検証**: `npm run validate:team-standings:2026:fail`（Phase29 直後に日次パイプラインでも実行）
+
+**再発防止計画**: `docs/plan_team_standings_pipeline_refresh_phases.md`
+
+---
+
+## チームページ（2026・表示のみ）
+
+| パス | 役割 |
+|------|------|
+| `/teams/{teamCode}/2026/batting` | 所属選手の打撃ランキング（リーグ JSON をクライアントフィルタ） |
+| `/teams/{teamCode}/2026/pitching` | 所属選手の投手ランキング（同上） |
+| `/teams/{teamCode}/2026/catchers` | 所属捕手一覧（個人捕手派生 API を並列取得） |
+
+**データ**: 打撃・投手は `public/data/rankings/` の既存 JSON をそのまま使用（チーム別の再ビルドなし）。捕手は `_data/derived/player_catcher_*` と名簿。
+
+**導線**: トップ順位表の球団名・モバイルドロワー「球団ページ」（`lib/teamPage/teamPageNavLinks.ts`）。
+
+詳細: `docs/plan_team_page_phase0_spec.md`
 
 ---
 

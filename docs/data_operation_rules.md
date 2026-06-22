@@ -11,7 +11,7 @@
 
 実装: `lib/yahooGame/plateResultSourceFeatureFlag.ts` / `battingSeasonAggSourceFeatureFlag.ts`。日次は `run_daily_npb_pipeline.mjs` の `childEnv` で両方を明示。
 
-**トップページ表示（指標名・上位選手・数値）**: ランキングページ用 JSON（Phase12/19/28）から **切り出した軽量スナップショット**を日次一括の末尾で再生成する。TOP タブは `top-leaders:build:2026`、今週タブは `phase28:build:weekly-rankings` のあと `top-weekly-leaders:build:2026`。指標ラベル（OPS・打率・防御率など）は `loadMetricsFromRecord()` 等の **Record 定義と同一**（手書きしない）。
+**トップページ表示（指標名・上位選手・数値・順位表）**: ランキングページ用 JSON（Phase12/19/28）から **切り出した軽量スナップショット**を日次一括の末尾で再生成する。TOP タブは `top-leaders:build:2026`、今週タブは `phase28:build:weekly-rankings` のあと `top-weekly-leaders:build:2026`。**順位表タブ**は Phase29 の `public/data/standings/` を正とする。指標ラベル（OPS・打率・防御率など）は `loadMetricsFromRecord()` 等の **Record 定義と同一**（手書きしない）。
 
 ### 一括取得：依存順序・完了定義・再発防止（2026-05 更新）
 
@@ -26,7 +26,7 @@
 | 3 | **`derived/{gameId}_phase10_restored.json` の存在 ≠ 完了**。`pitchRows.length > 0`（または試合中止）だけを Phase10 完了とする。空配列の JSON は **未完了**とみなし、restore を再実行する。 |
 | 3b | **二死・走者アウトで3アウト・打者打席結果なし**の打席は、Yahoo の `score?index=` に投球詳細表が **無い仕様**。`pitchEvents` 欠損を修復対象に **含めない**（`missingOrPartial` は `runner_out_ends_half_no_ab`）。敬遠と同様に **再取得では埋まらない**。 |
 | 4 | **Phase2b で canonical を作り直した試合**は、同じ日付範囲で **必ず Phase4（復元＋マージ）** を実行する。 |
-| 5 | **トップページの指標名・数値**は `public/data/rankings/`（通算）と週間ランキング JSON を正とし、**Phase12/19/28 のあと**に `top-leaders` / `top-weekly-leaders` を必ず実行する（ランキングだけ更新してトップを古いままにしない）。 |
+| 5 | **トップページの指標名・数値・順位表**は `public/data/rankings/`（通算）・週間ランキング JSON・`public/data/standings/` を正とし、**Phase12/19/28/29 のあと**に `top-leaders` / `top-weekly-leaders` を必ず実行する（ランキングだけ更新してトップ・順位表を古いままにしない）。 |
 
 #### 推奨パイプライン順序（1試合・日次の最小セット）
 
@@ -44,8 +44,11 @@
 | 10 | 派生 | Phase11〜17/7 等（日次は `run_daily_npb_pipeline.mjs` の派生ブロック） |
 | 11 | 通算ランキング JSON | `phase12:build:rankings` → `phase19:build:pitching-rankings`（各リーグに **`team-games.json`** を同梱。率系 `{指標}.json` は規定到達者のみ） |
 | 12 | 週間ランキング JSON | `phase28:build:weekly-rankings`（**Phase17/7 後**。週別 **`team-games.json`** + 率系絞り込み） |
+| 12b | **チーム順位表 JSON** | **`phase29:build:standings`**（canonical 出場成績「計」列から勝敗・率指標。`rankings:rebuild` と同位置） |
 | 13 | トップ表示スナップショット | `top-leaders:build:2026` → `top-weekly-leaders:build:2026`（**2026 は率系に規定フィルタあり**） |
 | 14 | 規定 SSOT 検証（任意） | `validate:ranking-qualifying-2026`（`team-games`・OPS/防御率 JSON の整合） |
+| 14b | **順位表 JSON 検証** | **`validate:team-standings:2026:fail`**（Phase29 直後。日次パイプラインで実行） |
+| 15 | **本番 R2 反映**（日次締め） | `display:r2:upload:2026` または **`pipeline:sync:2026`**（ローカル生成だけでは本番 UI は変わらない） |
 
 **禁止・非推奨**
 
@@ -75,7 +78,7 @@
 | 状況 | やること |
 |------|----------|
 | シーズン初回・月次メンテ | `npm run daily:npb-pipeline:complete`（`--force-canonical` + `--yahoo-force`） |
-| score HTML はあるが `pitchRows` 空 | **HTML の再取得は不要**。空 JSON を削除して `npm run reparse:empty-pitchrows-2026`（キャッシュ HTML から解析のみ） |
+| score HTML はあるが `pitchRows` 空 | **HTML の再取得は不要**。空 JSON を削除して `npm run reparse:empty-pitchrows-2026`（キャッシュ HTML から解析のみ。**phase14 + phase:pitcher-poc1 + phase25** まで再生成） |
 | キャッシュ疑い・欠損多 | `phase4:yahoo:pitch-by-pitch` に `--force`（HTML も取り直し・時間増） |
 | Phase2b だけやり直した | **同じ `--from`/`--to` で Phase4 を必ず再実行**（マージまで） |
 
@@ -83,10 +86,10 @@
 
 | 頻度 | 内容 |
 |------|------|
-| **毎日** | `npm run daily:npb-pipeline`（`--skip-yahoo-phase10` なし、`--no-score-raw` なし） |
+| **毎日** | `npm run daily:npb-pipeline`（`--skip-yahoo-phase10` なし、`--no-score-raw` なし）。**本番表示まで更新**する場合は締めに `npm run pipeline:sync:2026` または `npm run display:refresh:2026` |
 | **毎日（自動）** | `npm run watch:daily-pipeline` … 土日 18:00 / 平日 21:00（JST）から当日試合を監視し、全試合終了相当で `daily:npb-pipeline` を起動（§試合終了待ち監視） |
 | **週1 or 月1** | `npm run diag:pitch-by-pitch-coverage` で空 `pitchRows` を監視。あれば `reparse:empty-pitchrows-2026` |
-| **canonical 大量再生成後** | 必ず Phase4 + `phase14:build:pitch` + 必要な派生 |
+| **canonical 大量再生成後** | 必ず Phase4 + `phase14:build:pitch` + `phase:pitcher-poc1`（**Phase 32** カウント別球種 `byCountPitchTypes` 含む）+ 必要な派生 |
 | **球場別打撃が空・未設定** | `npm run rebuild:stadium-context:2026`（`repair:schedule-stadium-unset` で canonical から **未設定→球場名** + Phase13）。日次 Phase0 でも当日分の `stadiumByGameId` は更新される |
 | **日程に無い canonical の球場** | `lib/stadiumInferFromCanonical.ts` … 2026-05-12/13 巨人–広島・2026-05-19 ヤクルト–巨人は **地方球場**。ホームは試合前情報の **後攻** → 無ければタイトル vs 左。`stadiumByGameId` が **未設定** の gameId も読込時に上書き補完 |
 | **球場名の表記ゆれ** | SSOT: `lib/stadiumVenueNormalize.ts`（`normalizeStadiumSplitValue`）。**12球団本拠地以外はすべて「地方球場」**（空のみ「未設定」）。Phase0 保存・日程 map 読込・Phase13 集計・打者/投手 UI の dataKeys が同一マスタから派生。変更後は `npm run phase13:build:context` |
@@ -114,7 +117,7 @@ Windows タスク スケジューラ例: `powershell -File scripts/invoke_watch_
 | 時刻 | コマンド | 内容 |
 |------|----------|------|
 | **20:30** | `npm run daily:npb-pipeline:prefetch`（`--fetch-only`） | Phase0〜Phase2b まで。過去分・当日の**既に終わった試合**の raw/canonical を進める。試合中は未充足のまま（正常） |
-| **全試合終了後** | `npm run watch:daily-pipeline` → 内部で `daily:npb-pipeline:finalize` | 当日の stats/text 再取得・Phase4・検証・派生・ランキング |
+| **全試合終了後** | `npm run watch:daily-pipeline` → 内部で `daily:npb-pipeline:finalize` | 当日の stats/text 再取得・Phase4・検証・派生・ランキング・**順位表** |
 
 手動で続きだけ実行する場合: `npm run daily:npb-pipeline:finalize`（`--finalize-only`）。
 
@@ -138,13 +141,20 @@ Windows タスク スケジューラ例: `powershell -File scripts/invoke_watch_
 | シーズン打撃通算 | `_data/derived/player_season_batting/{年}/yahoo_*.json`（**Phase11**、canonical から日次再生成） | `_data/yahoo_games_pilot/batting_stats.csv` ほか **aggregate_phase3 系 CSV** |
 | 対チーム・球場・ホーム/ビジター | `_data/derived/player_season_batting_context/{年}/yahoo_*.json`（**Phase13**。**Phase11 と同一 SSOT**・試合×打者で加算） | Phase13 の PA 単位ループ（廃止） |
 | 対左右・巡目・状況など | `_data/derived/player_season_batting_splits/{年}/`（**Phase15** ほか） | — |
+| 対戦成績（選手×相手選手） | `_data/derived/player_matchup_batting/{年}/npb_*.json`、`_data/derived/player_matchup_pitching/{年}/npb_*.json`（**Phase30**・打席 1 回ずつ `(打者,投手)` に加算） | PA 二重加算 |
+| 野手球団別カウント配球 | `_data/derived/player_batter_vs_team_count_pitch_types/{年}/yahoo_*.json`（**Phase33**・一球 `countBeforePitchAtIndex` 帰属） | Phase14 通算投球数を超えない（`validate:phase34-batter-vs-team-pitch-vs-phase14:fail`） |
+| 状況別 `base_sit`（Phase15） | 塁=`resultBallClass`、打点=`resultBallRbi`（一球速報「＋N点」）、結果=出場成績 zip。再生成 `npm run phase15:rebuild:batting-splits` | 打席開始塁での状況分類・塁+結果の打点近似 |
 | ランキング | `public/data/rankings/`（Phase12/19 通算、Phase28 週間） | 同上 CSV |
+| **チーム順位表** | `_data/derived/team_standings/{年}/{CL\|PL}.json`（工場）→ `public/data/standings/{年}/{CL\|PL}.json`（**Phase29**） | マスタ CSV 由来の順位表 |
 | トップ TOP タブ（指標名・数値・リンク先） | `public/data/top-leaders/{年}/{CL\|PL}/{batting\|pitching}.json`（**top-leaders:build**） | ランキング JSON を手編集しない |
 | トップ「今週」タブ | `public/data/top-leaders/weekly/...` + `public/data/rankings/weekly/{年}/current-week.json`（**phase28 → top-weekly-leaders**） | 通算 `top-leaders` だけ更新して週間を忘れない |
+| **トップ「順位表」タブ** | `public/data/standings/{年}/{CL\|PL}.json`（**phase29:build:standings**） | ランキング JSON を流用しない |
 | 一球・球種・ゾーン（試合単位） | canonical + Phase10/14、必要時 `_data/yahoo_games_pilot/` の JSON/HTML | `pitch_details.csv` は参照用に残っていても **本番の打撃通算には使わない** |
+| 投手今季 PoC（巡目別・**カウント別球種**・状況別ほか） | `_data/derived/player_season_pitching_poc/{年}/npb_*.json`（**phase:pitcher-poc1**。**Phase 32** `splits.byCountPitchTypes` = 0-0〜3-2 球種 MIX）。再生成 `npm run phase:pitcher-poc1` | — |
+| 投手シーズン球種表（Whiff% 等） | `_data/derived/pitcher_season_pitch_types/{年}/`（**phase25**、登板試合数は poc1 と同期） | — |
 | 個人ページ派生 JSON（今季・通算・分割ほか） | **R2** `data/derived/...`（`npm run display:r2:upload:derived:2026`） | **Git** の `_data/derived/`（`.gitignore`・ローカル工場出力のみ） |
 
-- **表示データの本番反映**: 派生・ランキング・トップは **`npm run display:publish:2026`**（または日次 `pipeline:sync:2026`）で R2 に上げる。**コード変更時のみ** `git push`（`_data/derived` は載せない）。
+- **表示データの本番反映**: 派生・ランキング・**順位表**・トップは **`npm run display:publish:2026`**（または日次 `pipeline:sync:2026` / 表示だけ `display:refresh:2026`）で R2 に上げる。**`daily:npb-pipeline` だけでは R2 は更新されない**（ローカル `public/data/` のみ）。**コード変更時のみ** `git push`（`_data/derived` は載せない）。
 - **日次・本番ビルドで CSV を更新・検証しない**（`validate:batting-stats` は削除済み）。
 - 個人ページ API（`mergePilotSeasonStatsWithDerived`）は **Phase11 がある選手は CSV を読まない**（ファイルが無ければ空配列）。
 - 3月パイロット用に `aggregate_phase3.py` で CSV を作る運用は **再開しない**。
@@ -155,7 +165,7 @@ Windows タスク スケジューラ例: `powershell -File scripts/invoke_watch_
 
 | 順 | 用途 | コマンド |
 |----|------|----------|
-| 1 | 日次一括（推奨） | `npm run daily:npb-pipeline`（Phase0〜2a-b → **Phase2b canonical → Phase4 一球** → ゲート → Phase11 派生 → Phase12/19/28 ランキング → **top-leaders / top-weekly-leaders**（トップの指標名・数値）。§「依存順序・完了定義」参照。**pilot CSV は使わない**） |
+| 1 | 日次一括（推奨） | `npm run daily:npb-pipeline`（Phase0〜2a-b → **Phase2b canonical → Phase4 一球** → ゲート → Phase11 派生 → Phase12/19/28/**29** ランキング・順位表 → **top-leaders / top-weekly-leaders**（トップの指標名・数値）。§「依存順序・完了定義」参照。**pilot CSV は使わない**） |
 | 2 | 出場表が薄い・空の試合の再取得 | `npm run appearance:stats-refetch-incomplete` |
 | 3 | 指定試合の raw 再取得 → canonical 再生成 | `npm run appearance:replay-plate-canonical -- --year 2026 --game-ids <id>` |
 | 4 | 品質ゲート（派生前） | `npm run validate:phase2-canonical-nonempty`（NG なら 2 を繰り返す） |
@@ -247,7 +257,7 @@ npm run merge:sportsnavi-score-runner-events
 | 1 | 本番一括（退避・検証付き） | `npm run appearance-slots:phase5:rebuild-2026` |
 | 2 | 最小コア（退避なし） | `npm run rebuild:batting-profile-and-rankings-2026` |
 | 3 | 広い派生（野手以外含む） | `npm run phase3:derived:2026` → 必要なら `npm run rankings:rebuild` |
-| 4 | ランキング＋トップだけ再生成 | `npm run rankings:rebuild`（Phase12/19/28 → top-leaders → top-weekly-leaders） |
+| 4 | ランキング＋順位表＋トップだけ再生成 | `npm run rankings:rebuild`（Phase12/19/28/**29** → top-leaders → top-weekly-leaders） |
 | 5 | Phase11 とランキングの一致確認 | `npm run validate:batting-phase11-vs-phase12` |
 
 いずれも **A のあと**に実行する。生成 JSON の `battingSeasonAggSource` は **`appearance_slots`**、`plateResultAppearanceOnly` は **true** であること。
@@ -258,12 +268,15 @@ npm run merge:sportsnavi-score-runner-events
 
 | タブ | 入力（SSOT） | ビルド | 出力 |
 |------|--------------|--------|------|
+| 順位表 | canonical（出場成績「計」列＋打撃/投手合算） | `npm run phase29:build:standings` | `public/data/standings/{年}/{CL\|PL}.json` |
 | TOP（通算） | `public/data/rankings/{年}/{CL\|PL}/` | `npm run top-leaders:build:2026` | `public/data/top-leaders/{年}/{CL\|PL}/batting.json`, `pitching.json` |
 | 今週 | Phase17/7 派生 + `public/data/rankings/weekly/` | `npm run phase28:build:weekly-rankings` → `npm run top-weekly-leaders:build:2026` | `public/data/top-leaders/weekly/{年}/{weekKey}/...` |
 
-**日次**: `npm run daily:npb-pipeline` の派生ブロック末尾で **11〜13（Phase12/19/28 → top-leaders → top-weekly-leaders）** を `rankings:rebuild` と同順で実行する。`--derive-only` でも同ブロックが走る。
+**日次**: `npm run daily:npb-pipeline` の派生ブロック末尾で **11〜13（Phase12/19/28/29 → top-leaders → top-weekly-leaders）** を `rankings:rebuild` と同順で実行する。`--derive-only` / `--finalize-only` でも同ブロックが走る。
 
-**手動（ランキングだけ直したあと）**: `npm run rankings:rebuild` 1 本で通算・週間・トップをまとめて更新できる。
+**本番反映**: ローカル JSON 更新後、**`npm run pipeline:sync:2026`** または **`npm run display:refresh:2026`** で R2 に standings / rankings / top-leaders を反映する。
+
+**手動（ランキング・順位表だけ直したあと）**: `npm run rankings:rebuild` 1 本で通算・週間・順位表・トップをまとめて更新できる。R2 反映は別途 `display:r2:upload:2026`。
 
 詳細: `docs/plan_top_weekly_tab_and_rankings_phases.md`。
 
@@ -320,7 +333,7 @@ npm run merge:sportsnavi-score-runner-events
 
 **本番一括の最小コア（野手 Phase11 → 検算 → コンテキスト → 派生スプリット → ランキング）**  
 `npm run rebuild:batting-profile-and-rankings-2026`  
-（中身は `phase11:build:batting` → `validate:appearance-slots-vs-line-ab:fail` → **`phase13:build:context`** → **`validate:phase13-context-vs-phase11:fail`** → `phase15:build:batting-splits` → `phase12:build:rankings`。Phase11/12/13 は **既定で appearance_slots**。）
+（中身は `phase11:build:batting` → `validate:appearance-slots-vs-line-ab:fail` → **`verify:cs-runner-events-appearance-slots`** → **`phase13:build:context`** → **`validate:phase13-context-vs-phase11:fail`** → `phase15:build:batting-splits` → `phase12:build:rankings`。Phase11/12/13 は **既定で appearance_slots**。）
 
 **Phase13（対チーム・球場・ホーム/ビジター）の SSOT**  
 - 通算（Phase11）と同じ `aggregateBattingForBatterInGameForProfiles`（`lib/yahooGame/canonicalBattingSeasonAgg.ts`）。  
@@ -339,7 +352,7 @@ npm run merge:sportsnavi-score-runner-events
 
 派生 JSON を直したあとは **Phase11 → Phase13 → Phase15**（または `rebuild:batting-profile-and-rankings-2026`）を再実行する。API の `enrichSeasonStatsRowSabermetrics` も同関数で OPS を上書きするため、**phase13/15 だけ**では OPS 行が古いまま残る場合がある。
 
-**日次パイプライン**（`scripts/run_daily_npb_pipeline.mjs`）の派生ブロックでは、上記に加え先頭で `validate:sportsnavi-stats-data-detail` を実行する。Phase11 直後の打数整合は `rebuild` / `appearance-slots:phase5:rebuild-2026` と同じ。末尾は Phase12/19 → Phase28 → top-leaders → top-weekly-leaders（§ C）。
+**日次パイプライン**（`scripts/run_daily_npb_pipeline.mjs`）の派生ブロックでは、上記に加え先頭で `validate:sportsnavi-stats-data-detail` を実行する。Phase11 直後の打数整合は `rebuild` / `appearance-slots:phase5:rebuild-2026` と同じ。末尾は Phase12/19 → Phase28 → **Phase29** → top-leaders → top-weekly-leaders（§ C）。
 
 #### appearance_slots 集計（ランキング・個人ページの通算）
 
@@ -374,8 +387,8 @@ npm run merge:sportsnavi-score-runner-events
 |------|------|
 | **正** | 一球速報 `score?index=` HTML の記録文 → `runnerEventsFromSportsnaviScoreSnapshots` → `domain.runnerEvents`（**`sourceTier: "score"` のみ**） |
 | **使わない** | スポナビ `textPlayByPlay` 行パース、Yahoo `/text` DOM 由来の runnerEvents（canonical マージ時も載せない） |
-| **盗塁成功（SB）** | 出場成績 `battingLines.sb`（従来どおり） |
-| **Phase11** | `csCountForBatterFromRunnerEvents`（score tier の CS のみ加算） |
+| **盗塁成功（SB）** | 出場成績 `battingLines.sb`。`appearance_slots` でも **末尾スロットが無い代走のみ試合** の SB を加算（2026-06 修正。例: 辰見の15盗塁） |
+| **Phase11** | `csCountForBatterFromRunnerEvents`（score tier の CS のみ加算）。SB は上記 `battingLines` 補完 |
 | **canonical 更新** | **軽量**: `npm run pipeline:runner-events-from-score-only`（`raw_sportsnavi_score` 取得のみ → runnerEvents を上書き、**Phase10 不要**）／ **従来**: Phase4（`phase4:yahoo:pitch-by-pitch` + `phase4:merge`、球種・打席ログも更新） |
 
 **再生成（2026・CS を score に揃える）**

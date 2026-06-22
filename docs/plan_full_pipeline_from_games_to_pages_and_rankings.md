@@ -173,6 +173,7 @@
 ### 内容
 - 個人ページで必要なAPIを呼び、未生成時のメッセージ/誘導を整備
 - タブ表示条件（捕手/投手/野手）を派生に連動
+- **捕手成績タブ全員展開**: `docs/plan_catcher_tab_all_roster_players.md`（名簿捕手 83 名に「捕手成績」タブ常時表示・`PlayerPageCatcherSeasonBody`・`useCatcherSeasonDerived`）
 
 ---
 
@@ -229,6 +230,7 @@
 ### 出力（提案）
 - `public/data/rankings/2026/{CL|PL}/*.json`（打撃）
 - `public/data/rankings/pitching/2026/{CL|PL}/*.json`（投手: 現行パスに合わせる）
+- **`public/data/standings/2026/{CL|PL}.json`**（**Phase 29** — トップ順位表タブ。`rankings:rebuild` / 日次一括の Phase28 直後に生成）
 - 検算レポート（チーム別の試合数・打席数・投球回の整合）
 
 ### スコープ（段階）
@@ -273,6 +275,10 @@
 5. **Phase5（必要時）**: Raw/パーサ/別ソースマージで **canonical に実データが載る状態**を維持・修復する
 6. Phase3: 派生再生成（Phase11/12 は **出場末尾列集計**＋**CS は Phase4 の score runnerEvents**）。打数整合・CS 検証は `data_operation_rules.md` §出場成績 HTML / §盗塁死
 7. **Phase7**（必要時）: その日更新された試合を反映し **チーム試合数・規定到達**を再計算（ランキングや規定順位をその日出す場合は Phase8 の前に実行）
+8. Phase8: ランキング JSON（Phase12/19/28）
+9. **Phase29**: チーム順位表 JSON（`public/data/standings/` — トップ「順位表」タブ）
+10. top-leaders / top-weekly-leaders（トップ表示スナップショット）
+11. **本番 R2 反映**（日次締め）: `pipeline:sync:2026` または `display:refresh:2026`
 
 ### 週次（週1、9月以降は週2）
 1. Phase0: 未来(D..D+30)の総なめ→差分抽出

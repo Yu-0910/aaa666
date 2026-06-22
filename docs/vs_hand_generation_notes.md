@@ -46,6 +46,14 @@
   - 四球/死球/犠打/犠飛/三振/本塁打/二塁打/三塁打/安打/アウト
 - sportsnavi 省略表記（例: `左２`, `右本`）も hit 判定に含める。
 
+### D. 対左右別（vs_hand）だけの打席結果フォールバック（2026-06 追加）
+- Phase 11 通算は `plateAppearanceResolvedResultText`（appearance_only 厳格）のまま変更しない。
+- vs_hand 集計のみ `plateAppearanceResultTextForVsHand` を使う:
+  1. 出場成績 zip
+  2. 実況補完済み `resultSummaryJa`
+  3. テキスト実況行
+- 要約／一球は使わない（幽霊 PA 過剰計上防止）。膨らんだ分は Phase 26 負 Δ で吸収するが、通算超過を避けるため除外。
+
 ## 自動チェック（DoD）
 - `vs_hand` について、少なくとも次の整合性を満たすこと。
   - `PA == AB + BB + HBP + SH + SF`（※このプロジェクトの打席定義に合わせて調整）
