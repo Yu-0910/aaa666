@@ -10,7 +10,15 @@
  * 派生計算（打席・球種・ゾーン・カウント等）に必要な plateAppearances / pitchEvents は Yahoo 一球速報由来のため、
  *   **既定で Phase4 一球パイプラインを実行する**（Phase2b のあと。空 pitchRows の derived は再解析）。
  *   詳細: `docs/data_operation_rules.md` §「一括取得：依存順序・完了定義・再発防止」。速さ優先なら --skip-yahoo-phase10。
- * 派生ブロック末尾: Phase12/19 → Phase28（週間）→ top-leaders / top-weekly-leaders（トップの指標名・上位選手・数値）。`rankings:rebuild` と同順。
+ *   Phase4 直後の diag:pitch-by-pitch-coverage:fail は strictQuality 既定で **失敗時にパイプライン停止**（日付範囲付き）。
+ * 派生ブロック: phase7 直後に pitcher season pitch types（個人ページ「投球データ」表）。
+ * 派生ブロック末尾: Phase12/19 → Phase28（週間）→ Phase29（順位表）→ top-leaders / top-weekly-leaders（トップの指標名・上位選手・数値）。`rankings:rebuild` と同順。
+ * 投手 PoC（phase:pitcher-poc1）: カウント別は phase16 と同じ最終球直前 B-S、球種は巡目別/カウント別とも by*PitchTypes ＋対左右 VsL/VsR、球場別は Phase0 日程、巡目別 ER は一球テキスト、
+ *   ホーム/ビジター別は scoreboard 先攻/後攻（空なら試合前情報補完）、
+ *   デー/ナイター別は raw_sportsnavi 開始時刻（yahoo_game_meta 補完）、
+ *   対チーム別は scoreboard 補完済み canonical の対戦相手名 × pitchingLines、
+ *   捕手別は phase6（poc1 直後・実守備捕手で打席振分・pitchingLines は BF 最大の実守備捕手に ip/er 合算）。
+ *   捕手の先発/勝敗/QS（phase25）・巡目別球種（phase26）・防御率等（phase23）はいずれも実守備捕手帰属。
  * Phase10 マージ直後、**実況テキストから resultSummaryJa を再補完**する（新しい実況表記は `inferResultSummaryJaFromSportsnaviPlayLineText` で拾う）。
  *
  * 注意: phase0 は **--merge** で season_YYYY.json を累積（狭い from/to でも gameId 一覧を消さない）。
@@ -31,13 +39,30 @@
  *   - Phase2b が出場成績 HTML の括弧付き「位置」行から `game.teams[].startingLineup` を載せる（`sportsnaviStatsStartingLineup.mjs`）。
  *   - 古い canonical は派生読込時に `injectTeamsFromSportsnaviStatsIfMissing` で raw stats から補完。詳細: `docs/plan_sportsnavi_stats_starting_lineup.md`。
  *
- * 盗塁死（CS）:
- *   - Phase4 マージで canonical の `domain.runnerEvents` は **一球 score 記録文のみ**（`sourceTier: score`）。
- *   - Phase11（appearance_slots）は score 由来 CS のみ通算に加算（`docs/data_operation_rules.md` §盗塁死）。
+ * 状況別打撃成績（Phase15 `base_sit`）:
+ *   - 塁分類: 一球速報 score の打撃確定スナップ `resultBallClass`（スポナビ準拠）。
+ *   - 打点: 同一スナップ `#result` の「＋N点」`resultBallRbi`。
+ *   - 打席結果: 出場成績末尾列（`appearance_only`）。再生成: `npm run phase15:rebuild:batting-splits`。
+ *
+ * 盗塁（SB）・盗塁死（CS）:
+ *   - Phase11（appearance_slots）の SB は出場成績 `battingLines.sb`。末尾スロットが無い代走のみ試合でも加算する。
+ *   - CS は Phase4 マージ後の `domain.runnerEvents`（**一球 score 記録文のみ**・`sourceTier: score`）のみ。
+ *   - Phase11 直後に `verify:cs-runner-events-appearance-slots`（CS=score / 代走のみ SB 退行検証）。
+ *   詳細: `docs/data_operation_rules.md` §盗塁死
+ *
+ * 所要時間短縮・復旧（2026-06）:
+ *   - Phase2a-b（score raw）完了後に Phase4 前ゲート（未完了なら停止・ネット取得地獄を防ぐ）。
+ *   - ゲート NG 時は未完了試合だけ score raw を **1回自動再取得**して再ゲート（`TOPPAGE_SCORE_RAW_GATE_NO_RETRY=1` で無効化）。
+ *   - phase19 前に `roster:fetch-npb-en` を実行。romanName 不足で失敗したら名簿再取得＋phase19 を1回再試行。
+ *   - `--derive-only` 開始時に Phase4 スキップの警告を表示（ゲート通過後の誤用防止）。
+ *   - Phase10 restore はキャッシュ命中時 sleep しない（score-raw と同規則）。
+ *   - Phase2a-repair は `--from`/`--to` の日付範囲内だけスキャン（シーズン全体の再取得を避ける）。
+ *   - 各ステップの所要時間を `pipeline_bulk.log` に記録。
+ *   - Phase4: 試合中止/ノーゲームは restore・merge をスキップ（score raw ゲートと同様。打席 0 でパイプライン停止しない）。
  *
  * 運用メモ（取得・一括生成の目安）:
  *   1. Phase0 後: `by_date` の試合数は **1日 0〜6 件**が通常。それ以外は異常の可能性（Phase0 は >6 件で前回スナップショット維持＋ `pipeline_bulk.log`）。
- *   2. Phase2a-repair（`--only-incomplete`）は日次で必ず実行（CSR 空テーブル対策）。
+ *   2. Phase2a-repair（`--only-incomplete`）は日次で必ず実行（CSR 空テーブル対策）。日次は from/to 付きで範囲限定。
  *   3. Phase2b 後: `pipeline_bulk.log` とコンソールの `thinOrIncomplete` を確認（中止以外で canonical が薄い試合）。
  *   4. Phase1 / Phase2 fetch で失敗・不完全再試行があれば `pipeline_bulk.log` に記録。Phase2b の薄い canonical は phase2_build が試合単位で記録。strict 検証 NG で自動リカバリに入ったときも日次側が記録。
  *
@@ -67,6 +92,8 @@
  *     … Phase4 に --force（一球 phase10 の再準備・再取得寄り。マージ漏れ・古いキャッシュ対策。時間がかかる）
  *   node scripts/run_daily_npb_pipeline.mjs --complete
  *     … --force-canonical + --yahoo-force（raw 更新後の canonical 再生成＋一球の取り直しまで一括。初回復旧・月次メンテ向け）
+ *   node scripts/run_daily_npb_pipeline.mjs --skip-score-raw-gate
+ *     … Phase4 前の score raw 完了ゲートをスキップ（非推奨）
  *
  * npm:
  *   npm run daily:npb-pipeline        … データ〜派生（末尾 `npm run build:clean` は `--build` で有効化）
@@ -108,8 +135,13 @@ const childEnv = {
   PYTHONUNBUFFERED: "1",
   TOPPAGE_PLATE_RESULT_SOURCE: process.env.TOPPAGE_PLATE_RESULT_SOURCE ?? "appearance_only",
   TOPPAGE_BATTING_SEASON_AGG: process.env.TOPPAGE_BATTING_SEASON_AGG ?? "appearance_slots",
+  /** phase2_fetch 内 canonical 再生成失敗時に日次パイプラインを止める（fetch_and_display_day も継承） */
+  TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD:
+    process.env.TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD ?? "1",
 }
 
+/** @type {string} run() 直前のステップ名（異常終了時の pipeline_bulk.log 用） */
+let lastPipelineStepLabel = ""
 
 let pipelineStepNo = 0
 
@@ -166,6 +198,8 @@ function parseArgs(argv) {
     yahooForce: false,
     /** validate:vs-hand-vs-phase11 をスキップ（AB 等の既知不一致でビルドまで進めたいとき） */
     skipVsHandValidate: false,
+    /** Phase4 前の score raw 完了ゲートをスキップ（非推奨・遅いルートに入り得る） */
+    skipScoreRawGate: false,
   }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
@@ -206,6 +240,8 @@ function parseArgs(argv) {
       out.yahooForce = true
     } else if (a === "--skip-vs-hand-validate") {
       out.skipVsHandValidate = true
+    } else if (a === "--skip-score-raw-gate") {
+      out.skipScoreRawGate = true
     }
   }
   if (!out.from) out.from = defaultSeasonStart(out.year)
@@ -214,14 +250,27 @@ function parseArgs(argv) {
 }
 
 function run(label, command) {
+  lastPipelineStepLabel = label
   const startedAt = Date.now()
   logProgress(`→ 開始: ${label}`)
   console.log(`\n========== ${label} ==========\n${command}\n`)
   try {
     execSync(command, { stdio: "inherit", cwd: root, shell: true, env: childEnv })
-  } finally {
     const elapsed = Date.now() - startedAt
-    logProgress(`← 終了: ${label}（所要 ${formatMs(elapsed)}）`)
+    const elapsedLabel = formatMs(elapsed)
+    logProgress(`← 終了: ${label}（所要 ${elapsedLabel}）`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline", `ステップ完了: ${label} 所要=${elapsedLabel}`)
+  } catch (e) {
+    const elapsed = Date.now() - startedAt
+    const code = e && typeof e.status === "number" ? e.status : 1
+    const elapsedLabel = formatMs(elapsed)
+    logProgress(`← 失敗: ${label}（所要 ${elapsedLabel}） exit=${code}`)
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline",
+      `ステップ失敗: ${label} 所要=${elapsedLabel} exit=${code}`,
+    )
+    throw e
   }
 }
 
@@ -233,12 +282,20 @@ function runTry(label, command) {
   try {
     execSync(command, { stdio: "inherit", cwd: root, shell: true, env: childEnv })
     const elapsed = Date.now() - startedAt
-    logProgress(`← 終了: ${label}（所要 ${formatMs(elapsed)}）`)
+    const elapsedLabel = formatMs(elapsed)
+    logProgress(`← 終了: ${label}（所要 ${elapsedLabel}）`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline", `ステップ完了(try): ${label} 所要=${elapsedLabel}`)
     return true
   } catch (e) {
     const elapsed = Date.now() - startedAt
     const code = e && typeof e.status === "number" ? e.status : 1
-    logProgress(`← 失敗: ${label}（所要 ${formatMs(elapsed)}） exit=${code}`)
+    const elapsedLabel = formatMs(elapsed)
+    logProgress(`← 失敗: ${label}（所要 ${elapsedLabel}） exit=${code}`)
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline",
+      `ステップ失敗(try): ${label} 所要=${elapsedLabel} exit=${code}`,
+    )
     return false
   }
 }
@@ -249,10 +306,18 @@ function runDerivedAndRankings({ build, skipVsHandValidate }) {
   // ここで分解して「どこが長いか」をターミナル上で追えるようにする。
   run("派生: enrich:text-play-headlines", "npm run enrich:text-play-headlines")
   run("派生: phase:pitcher-poc1", "npm run phase:pitcher-poc1")
+  run(
+    "派生: phase6 pitcher-catcher splits（実守備捕手で byCatcher 付与）",
+    "npm run phase6:build:pitcher-catcher-splits",
+  )
   run("派生: phase11 batting", "npm run phase11:build:batting")
   run(
     "検証: 出場成績 打数列 vs 末尾スロット（不一致ならここで停止）",
     "npm run validate:appearance-slots-vs-line-ab:fail",
+  )
+  run(
+    "検証: appearance_slots の CS（score のみ）と代走のみ SB",
+    "npm run verify:cs-runner-events-appearance-slots",
   )
   run("派生: phase13 context", "npm run phase13:build:context")
   run(
@@ -260,22 +325,66 @@ function runDerivedAndRankings({ build, skipVsHandValidate }) {
     "npm run validate:phase13-context-vs-phase11:fail",
   )
   run("派生: phase14 pitch", "npm run phase14:build:pitch")
-  run("派生: phase15 batting splits", "npm run phase15:build:batting-splits")
+  run(
+    "派生: phase15 batting splits（base_sit=resultBallClass/resultBallRbi）",
+    "npm run phase15:build:batting-splits",
+  )
   run("派生: phase16 batting count", "npm run phase16:build:batting-count")
   run("派生: phase17 period", "npm run phase17:build:period")
-  run("派生: phase6 pitcher-catcher splits", "npm run phase6:build:pitcher-catcher-splits")
   run("派生: phase7 pitcher period", "npm run phase7:build:pitcher-period")
+  run(
+    "派生: pitcher season pitch types（投球データ表・空振り率=空振り÷投球数・登板試合と同期）",
+    "npm run phase25:build:pitcher-season-pitch-types",
+  )
   run("派生: phase22 catcher appearances", "npm run phase22:build:catcher-appearances")
-  run("派生: phase23 catcher-pitcher splits", "npm run phase23:build:catcher-pitcher-splits")
-  run("派生: phase24 catcher defense basic", "npm run phase24:build:catcher-defense-basic")
-  run("派生: phase25 catcher starting summary", "npm run phase25:build:catcher-starting-summary")
-  run("派生: phase26 catcher pa round pitch types", "npm run phase26:build:catcher-pa-round-pitch-types")
+  run(
+    "派生: phase23 catcher-pitcher splits（phase6 実守備捕手ベース）",
+    "npm run phase23:build:catcher-pitcher-splits",
+  )
+  run(
+    "派生: phase24 catcher defense basic（CS・PB/9 分子・GO/AO 等・実守備捕手帰属）",
+    "npm run phase24:build:catcher-defense-basic",
+  )
+  run("検証: phase24 実守備捕手帰属", "npm run validate:catcher-defense-active:2026")
+  run(
+    "派生: phase25 catcher starting summary（BF 最大の実守備捕手）",
+    "npm run phase25:build:catcher-starting-summary",
+  )
+  run(
+    "派生: phase26 catcher pa round pitch types（打席ごと実守備捕手）",
+    "npm run phase26:build:catcher-pa-round-pitch-types",
+  )
   run("派生: phase20 pitcher zones", "npm run phase20:build:pitcher-zones")
+  run(
+    "派生: phase30 player matchup（対戦成績タブ・選手×相手選手）",
+    "npm run phase30:build:player-matchup",
+  )
+  run(
+    "検証: phase31 対戦成績 vs Phase11（不一致ならここで停止）",
+    "npm run validate:phase31-matchup-vs-phase11:fail",
+  )
+  run(
+    "トップ表示: 予想投手（三連戦カード + SN + 対戦成績 OPS top3）",
+    "npm run phase36:build:top-probables",
+  )
+  run(
+    "派生: phase33 batter vs team count pitch types（野手球団別配球タブ）",
+    "npm run phase33:build:batter-vs-team-count-pitch-types",
+  )
+  run(
+    "検証: phase34 球団別配球 vs Phase14（不一致ならここで停止）",
+    "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail",
+  )
   run("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index")
 
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings")
-  run("ランキング JSON: phase19 pitching rankings", "npm run phase19:build:pitching-rankings")
+  runPhase19PitchingRankingsWithRosterRefresh()
   run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings")
+  run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings")
+  run(
+    "検証: phase29 team standings（不一致ならここで停止）",
+    "npm run validate:team-standings:2026:fail",
+  )
   run(
     "トップ表示: 通算リーダー（指標名・数値）",
     "npm run top-leaders:build:2026",
@@ -310,9 +419,11 @@ function runPhase2FetchBlock({
       "Phase2a 出場成績・テキスト速報 raw",
       `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --from ${from} --to ${to}${phase1Extra}`,
     )
+    const repairDate =
+      from && to ? ` --from ${from} --to ${to}` : from ? ` --from ${from}` : to ? ` --to ${to}` : ""
     run(
-      "Phase2a-repair 不完全な stats/text のみ再取得（--only-incomplete・シーズン全体をスキャン）",
-      `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete${phase1Extra}`,
+      "Phase2a-repair 不完全な stats/text のみ再取得（--only-incomplete・日付範囲内）",
+      `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete${repairDate}${phase1Extra}`,
     )
     appendPipelineBulkLog(
       root,
@@ -349,6 +460,120 @@ function runPhase2bCanonical({
   )
 }
 
+function scoreRawGateDateArgs(from, to) {
+  if (from && to) return ` --from-date ${from} --to-date ${to}`
+  if (from) return ` --from-date ${from}`
+  if (to) return ` --to-date ${to}`
+  return ""
+}
+
+/** @returns {{ ok: boolean; incompleteIds: string[] }} */
+function checkScoreRawGate({ year, from, to }) {
+  const dateArgs = scoreRawGateDateArgs(from, to)
+  const cmd =
+    `python -u scripts/gate_score_raw_complete_for_pipeline.py --year ${year}${dateArgs}` +
+    " --fail --emit-incomplete-csv"
+  try {
+    const out = execSync(cmd, { cwd: root, encoding: "utf8", env: childEnv })
+    if (out) process.stdout.write(out)
+    return { ok: true, incompleteIds: [] }
+  } catch (e) {
+    const stdout = String(e.stdout || "")
+    const stderr = String(e.stderr || "")
+    if (stderr) process.stderr.write(stderr)
+    if (stdout) process.stdout.write(stdout)
+    const combined = `${stdout}\n${stderr}`
+    const m = combined.match(/SCORE_RAW_GATE_INCOMPLETE_CSV=([^\r\n]+)/)
+    const incompleteIds = m
+      ? m[1]
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+    return { ok: false, incompleteIds }
+  }
+}
+
+function runPhase19PitchingRankingsWithRosterRefresh() {
+  runTry("名簿: NPB 英字名更新（phase19 前）", "npm run roster:fetch-npb-en")
+  try {
+    run("ランキング JSON: phase19 pitching rankings", "npm run phase19:build:pitching-rankings")
+  } catch (e) {
+    console.warn(
+      "\n[daily:npb-pipeline] phase19 失敗（romanName 不足等）→ 名簿再取得後に phase19 を1回だけ再試行します。\n",
+    )
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline",
+      "phase19 失敗 → roster 再取得 + phase19 再試行",
+    )
+    runTry("名簿: NPB 英字名再取得", "npm run roster:fetch-npb-en")
+    run("ランキング JSON: phase19 pitching rankings（再試行）", "npm run phase19:build:pitching-rankings")
+  }
+}
+
+function runScoreRawGate({ year, from, to, noScoreRaw, skipScoreRawGate, yahooForce }) {
+  if (noScoreRaw || skipScoreRawGate || yahooForce) {
+    if (skipScoreRawGate || yahooForce) {
+      console.warn(
+        "\n[daily:npb-pipeline] Phase4 前の score raw ゲートをスキップします（Phase4 がネット取得中心になり得ます）。\n",
+      )
+    }
+    return
+  }
+
+  const label = "ゲート: score raw 完了確認（未完了なら Phase4 前に停止）"
+  const retryDisabled = process.env.TOPPAGE_SCORE_RAW_GATE_NO_RETRY === "1"
+  const maxAutoRetries = retryDisabled ? 0 : 1
+  let autoRetryCount = 0
+
+  while (true) {
+    lastPipelineStepLabel = label
+    const startedAt = Date.now()
+    logProgress(`→ 開始: ${label}${autoRetryCount > 0 ? "（再確認）" : ""}`)
+    const result = checkScoreRawGate({ year, from, to })
+    const elapsedLabel = formatMs(Date.now() - startedAt)
+
+    if (result.ok) {
+      logProgress(`← 終了: ${label}（所要 ${elapsedLabel}）`)
+      appendPipelineBulkLog(root, "daily:npb-pipeline", `ステップ完了: ${label} 所要=${elapsedLabel}`)
+      return
+    }
+
+    if (autoRetryCount >= maxAutoRetries || result.incompleteIds.length === 0) {
+      logProgress(`← 失敗: ${label}（所要 ${elapsedLabel}） exit=1`)
+      appendPipelineBulkLog(
+        root,
+        "daily:npb-pipeline",
+        `ステップ失敗: ${label} 所要=${elapsedLabel} exit=1 incomplete=${result.incompleteIds.join(",") || "?"}`,
+      )
+      const err = new Error("score raw gate failed")
+      err.status = 1
+      throw err
+    }
+
+    const gids = result.incompleteIds.join(",")
+    console.warn(
+      `\n[daily:npb-pipeline] score raw ゲート NG（${result.incompleteIds.length}試合）` +
+        ` → 未完了試合のみ再取得して再ゲートします: ${gids}\n`,
+    )
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline",
+      `score raw ゲート NG → 自動再取得 gameIds=${gids}`,
+    )
+
+    const fromDate = from || to
+    const toDate = to || from
+    run(
+      `score raw 自動再取得（ゲート NG・${result.incompleteIds.length}試合）`,
+      `python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year ${year}` +
+        ` --from-date ${fromDate} --to-date ${toDate} --game-ids ${gids} --sleep 1.2`,
+    )
+    autoRetryCount++
+  }
+}
+
 function runPhase4AndBackfill({
   year,
   from,
@@ -356,6 +581,8 @@ function runPhase4AndBackfill({
   withYahooPhase10,
   yahooForce,
   strictQuality,
+  noScoreRaw,
+  skipScoreRawGate,
 }) {
   if (!withYahooPhase10) {
     if (yahooForce) {
@@ -368,6 +595,7 @@ function runPhase4AndBackfill({
     )
     return
   }
+  runScoreRawGate({ year, from, to, noScoreRaw, skipScoreRawGate, yahooForce })
   const phase4Force = yahooForce ? " --force" : ""
   run(
     "Yahoo 一球速報ログ復元 + canonical マージ" +
@@ -379,15 +607,25 @@ function runPhase4AndBackfill({
     "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
   )
   if (strictQuality) {
-    runTry(
-      "検証: score HTML あり & pitchRows 空が残っていないこと（中止除く）",
-      "node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year " + year + " --fail",
+    const dateScope =
+      from && to
+        ? ` --from-date ${from} --to-date ${to}`
+        : from
+          ? ` --from-date ${from}`
+          : to
+            ? ` --to-date ${to}`
+            : ""
+    run(
+      "検証: score HTML あり & pitchRows 空 / derived 未マージが残っていないこと（中止除く・NG ならパイプライン停止）",
+      "node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year " + year + dateScope + " --fail",
     )
   }
 }
 
 function runStrictCanonicalValidation({
   year,
+  from,
+  to,
   noStatsText,
   phase1Extra,
   withYahooPhase10,
@@ -414,9 +652,11 @@ function runStrictCanonicalValidation({
       `validate_phase2_canonical_nonempty が NG のため自動リカバリ（incomplete 再取得 → Phase2b --force）を開始しました year=${year}`,
     )
     if (!noStatsText) {
+      const repairDate =
+        from && to ? ` --from ${from} --to ${to}` : from ? ` --from ${from}` : to ? ` --to ${to}` : ""
       run(
         "Phase2a-repair（自動リカバリ）不完全な stats/text のみ再取得",
-        `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete${phase1Extra}`,
+        `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete${repairDate}${phase1Extra}`,
       )
     } else {
       console.warn(
@@ -458,6 +698,7 @@ function main() {
     forceCanonical,
     yahooForce,
     skipVsHandValidate,
+    skipScoreRawGate,
   } = args
 
   if (deriveOnly && (fetchOnly || finalizeOnly)) {
@@ -471,8 +712,25 @@ function main() {
 
   if (deriveOnly) {
     logProgress("derive-only モード（取得フェーズをスキップ）")
-    runDerivedAndRankings({ build, skipVsHandValidate })
-    console.log("\n[daily:npb-pipeline] done (derive-only).\n")
+    console.warn(
+      "\n[daily:npb-pipeline] 注意: --derive-only は Phase4（一球マージ）を実行しません。" +
+        "当日試合の表示 OK や phase10=restored_phase10 には Phase4 完了が必要です。" +
+        "ゲート通過後・取得済みの復旧は `npm run daily:npb-pipeline:finalize` を使い、derive-only は Phase4 完了後の派生やり直し専用です。\n",
+    )
+    appendPipelineBulkLog(root, "daily:npb-pipeline", "derive-only 開始")
+    try {
+      runDerivedAndRankings({ build, skipVsHandValidate })
+      appendPipelineBulkLog(root, "daily:npb-pipeline", "derive-only 完了 exit=0")
+      console.log("\n[daily:npb-pipeline] done (derive-only).\n")
+    } catch (e) {
+      const code = e && typeof e.status === "number" ? e.status : 1
+      appendPipelineBulkLog(
+        root,
+        "daily:npb-pipeline",
+        `derive-only 異常終了 exit=${code} lastStep=${lastPipelineStepLabel || "?"}`,
+      )
+      throw e
+    }
     return
   }
 
@@ -481,8 +739,14 @@ function main() {
   const finalizeFrom = today
   const finalizeTo = today
 
+  const modeLabel = fetchOnly ? "fetch-only" : finalizeOnly ? "finalize-only" : "full"
   logProgress(
-    `本番フロー開始 year=${year} from=${from} to=${to} mode=${fetchOnly ? "fetch-only" : finalizeOnly ? "finalize-only" : "full"} yahooPhase10=${withYahooPhase10} build=${build} forceCanonical=${forceCanonical}`,
+    `本番フロー開始 year=${year} from=${from} to=${to} mode=${modeLabel} yahooPhase10=${withYahooPhase10} build=${build} forceCanonical=${forceCanonical}`,
+  )
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline",
+    `開始 year=${year} from=${from} to=${to} mode=${modeLabel}`,
   )
 
   if (!finalizeOnly && (from !== defaultSeasonStart(year) || to !== today)) {
@@ -516,6 +780,11 @@ function main() {
     )
     logProgress("Phase0 後チェック: by_date の試合数は 0〜6 が通常（詳細は _data/scraped_games/_meta/pipeline_bulk.log）")
 
+    run(
+      "Phase0 未来日程（今日+14日・三連戦検出用）",
+      `npx tsx scripts/phase0_fetch_schedule_ahead.ts --year ${year}`,
+    )
+
     run("Phase1 試合ページ raw（トップ）", `node scripts/phase1_fetch_sportsnavi_games.mjs --year ${year}${phase1Extra}`)
     runPhase2FetchBlock({ year, from, to, noStatsText, noScoreRaw, phase1Limit, phase1Extra })
     runPhase2bCanonical({ year, from, to, forceCanonical })
@@ -524,6 +793,10 @@ function main() {
     run(
       "Phase0 当日日程のみ（--merge）",
       `npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year ${year} --from ${finalizeFrom} --to ${finalizeTo} --merge`,
+    )
+    run(
+      "Phase0 未来日程（今日+14日・三連戦検出用）",
+      `npx tsx scripts/phase0_fetch_schedule_ahead.ts --year ${year}`,
     )
     runPhase2FetchBlock({
       year,
@@ -543,9 +816,20 @@ function main() {
   }
 
   if (!fetchOnly) {
-    runPhase4AndBackfill({ year, from: finalizeOnly ? finalizeFrom : from, to: finalizeOnly ? finalizeTo : to, withYahooPhase10, yahooForce, strictQuality })
+    runPhase4AndBackfill({
+      year,
+      from: finalizeOnly ? finalizeFrom : from,
+      to: finalizeOnly ? finalizeTo : to,
+      withYahooPhase10,
+      yahooForce,
+      strictQuality,
+      noScoreRaw,
+      skipScoreRawGate,
+    })
     runStrictCanonicalValidation({
       year,
+      from: finalizeOnly ? finalizeFrom : from,
+      to: finalizeOnly ? finalizeTo : to,
       noStatsText,
       phase1Extra,
       withYahooPhase10,
@@ -569,7 +853,22 @@ function main() {
   }
 
   logProgress("全ステップ完了")
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline",
+    `完了 exit=0 (from=${from} to=${to} mode=${modeLabel})`,
+  )
   console.log("[daily:npb-pipeline] 完了。\n")
 }
 
-main()
+try {
+  main()
+} catch (e) {
+  const code = e && typeof e.status === "number" ? e.status : 1
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline",
+    `異常終了 exit=${code} lastStep=${lastPipelineStepLabel || "?"}`,
+  )
+  process.exit(code)
+}

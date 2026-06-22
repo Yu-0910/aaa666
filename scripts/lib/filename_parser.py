@@ -1,10 +1,13 @@
 """
-ファイル名パース関数（batting CSV用）
+ファイル名パース関数（batting / pitching CSV用）
 
-3つのファイル名パターンに対応：
+batting — 3つのファイル名パターンに対応：
 1) batting_YYYY_PL_from_master.csv / batting_YYYY_CL_from_master.csv / batting_YYYY_PRE_from_master.csv
 2) batting_1936_spring_PRE.csv / batting_1936_fall_PRE.csv（生CSV）
 3) batting_YYYY_PRE_spring_from_master.csv / batting_YYYY_PRE_fall_from_master.csv（計算済み）
+
+pitching（v1）— CL/PL の from_master のみ：
+  pitching_YYYY_(CL|PL)_from_master.csv
 """
 import re
 from typing import Optional, Dict, Any
@@ -102,13 +105,47 @@ def build_calculated_filename(parsed: Dict[str, Any]) -> str:
 
 def build_rankings_output_path(year: int, league_key: str) -> str:
     """
-    ランキングJSONの出力パス（相対パス）を生成
+    打撃ランキングJSONの出力パス（相対パス）を生成
     
     @param year: 年度
     @param league_key: リーグキー（"PL"|"CL"|"PRE"|"PRE_spring"|"PRE_fall"）
     @returns: 出力パス（例: "1936/PRE_spring"）
     """
     return f"{year}/{league_key}"
+
+
+def parse_pitching_filename(filename: str) -> Optional[Dict[str, Any]]:
+    """
+    pitching CSVファイル名をパース（v1: CL/PL の from_master のみ）
+
+    @returns: {
+        "year": int,
+        "league": str,           # "CL" | "PL"
+        "season_tag": None,
+        "league_key": str,       # "CL" | "PL"
+    }
+    """
+    pattern = r'^pitching_(\d{4})_(CL|PL)_from_master\.csv$'
+    match = re.match(pattern, filename)
+    if not match:
+        return None
+    year = int(match.group(1))
+    league = match.group(2)
+    return {
+        "year": year,
+        "league": league,
+        "season_tag": None,
+        "league_key": league,
+    }
+
+
+def build_pitching_rankings_output_path(year: int, league_key: str) -> str:
+    """
+    投手ランキングJSONの出力パス（相対パス）を生成
+
+    @returns: 例 "pitching/1958/CL"
+    """
+    return f"pitching/{year}/{league_key}"
 
 
 
