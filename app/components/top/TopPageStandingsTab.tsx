@@ -51,7 +51,7 @@ function standingsMetricColWidth(key: StandingsMetricKey, scale = 1): number {
 const ROW_BG_EVEN = "#292929"
 const ROW_BG_ODD = "#1f1f1f"
 /** 順位・指標セルの数値フォント倍率 */
-const STANDINGS_NUM_SIZE_SCALE = 1.1
+const STANDINGS_NUM_SIZE_SCALE = 1.1 * 0.85
 /** 指標ヘッダー行の高さ（2行ラベル・順・球団で共通） */
 const STANDINGS_HEADER_ROW_HEIGHT = 38
 /** thead 固定時: 左ブロック（順・球団） */
@@ -60,8 +60,8 @@ const STANDINGS_HEAD_LEFT_Z = 3
 const STANDINGS_HEAD_METRIC_Z = 2
 /** tbody 左ブロック（横スクロール固定・ヘッダーより下） */
 const STANDINGS_BODY_LEFT_Z = 1
-/** パ順位表の bebas 数値（今週タブより字間をやや広く） */
-const STANDINGS_PL_BEBAS_NUMERIC_CLASS = "bebas tabular-nums font-normal tracking-[0.02em]"
+/** 順位表の数値（個人ページの表セルと同じ Inter + tabular-nums） */
+const STANDINGS_NUMERIC_CLASS = "latin font-black tabular-nums"
 
 function rowBackgroundColor(idx: number): string {
   return idx % 2 === 0 ? ROW_BG_EVEN : ROW_BG_ODD
@@ -107,7 +107,6 @@ function TeamStandingsTable({
   metricFontScale = 1,
   metricColScale = 1,
   showMetricLeagueRanks = true,
-  weeklyNumericStyle = false,
 }: {
   rows: TeamStandingRow[]
   layout: TopPageLayoutMode
@@ -123,8 +122,6 @@ function TeamStandingsTable({
   /** 指標列の横幅スケール（セ・リーグUIテスト） */
   metricColScale?: number
   showMetricLeagueRanks?: boolean
-  /** 今週タブと同じ bebas 数値の細さ（tracking 含む） */
-  weeklyNumericStyle?: boolean
 }) {
   const teamPageLinksEnabled = teamPageNavEnabledForYear(year)
   const isMobile = layout === "mobile"
@@ -154,10 +151,8 @@ function TeamStandingsTable({
   const teamRomanFontSize = `${Math.round(10 * teamScale)}px`
   const metricCellPy = Math.max(2, Math.round(6 * metricScale))
   const teamNameOffsetY = Math.round(TEAM_NAME_OFFSET_Y * teamScale)
-  const rankNumericClass = weeklyNumericStyle ? STANDINGS_PL_BEBAS_NUMERIC_CLASS : "bebas tabular-nums"
-  const metricNumericClass = weeklyNumericStyle
-    ? STANDINGS_PL_BEBAS_NUMERIC_CLASS
-    : "bebas tabular-nums font-normal"
+  const rankNumericClass = STANDINGS_NUMERIC_CLASS
+  const metricNumericClass = STANDINGS_NUMERIC_CLASS
 
   return (
     <div
@@ -393,7 +388,6 @@ function StandingsLeagueSection({
         metricFontScale={isPl ? 0.89 : 0.85}
         metricColScale={1.15}
         showMetricLeagueRanks
-        weeklyNumericStyle={isPl}
       />
     </section>
   )

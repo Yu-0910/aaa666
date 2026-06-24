@@ -73,6 +73,7 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from fetch_game_pitch_types import parse_plate_appearances_from_html  # noqa: E402
+from fetch_sportsnavi_score_raw_snapshot import load_text_html  # noqa: E402
 from scrape_yahoo_pitch_details import (  # noqa: E402
     build_index,
     fetch_html,
@@ -232,17 +233,7 @@ def synthetic_intentional_walk_pitch_row(
     }
 
 
-def _main_html_cancelled(html: str | None) -> bool:
-    """Sportsnavi 試合トップの bb-head01__title が試合中止/ノーゲームか（lib/yahooGame/sportsnaviStatsTextParse.mjs と同義）。"""
-    if not html:
-        return False
-    return bool(
-        re.search(
-            r'<h2[^>]*\bbb-head01__title\b[^>]*>\s*(試合中止|ノーゲーム)\s*</h2>',
-            html,
-            re.I,
-        )
-    )
+from yahoo_game_main_cancelled import main_html_cancelled  # noqa: E402
 
 
 def _load_main_html_cancelled(root: Path, game_id: str) -> bool:
@@ -250,7 +241,7 @@ def _load_main_html_cancelled(root: Path, game_id: str) -> bool:
     if not main_path.is_file():
         return False
     try:
-        return _main_html_cancelled(main_path.read_text(encoding="utf-8"))
+        return main_html_cancelled(main_path.read_text(encoding="utf-8"), game_id)
     except OSError:
         return False
 
@@ -262,7 +253,7 @@ def main() -> None:
     ap.add_argument(
         "--text-from-raw",
         action="store_true",
-        help="テキストHTMLは _data/scraped_games/raw/{game_id}/text.html を使う（無ければ取得）",
+        help="ローカル text を優先（raw_sportsnavi_text → raw/{game_id}/text.html、無ければ取得）",
     )
     ap.add_argument("--limit", type=int, default=0, help="打席数上限（0=全件）")
     ap.add_argument(
@@ -280,13 +271,17 @@ def main() -> None:
         safe_print(f"[phase10] skip {game_id}: game cancelled — no pitch-by-pitch to restore")
         sys.exit(0)
     score_cache_dir = root / "_data" / "scraped_games" / "raw_sportsnavi_score" / game_id
-    raw_text = root / "_data" / "scraped_games" / "raw" / game_id / "text.html"
     text_url = f"{BASE_URL}/npb/game/{game_id}/text"
 
-    if args.text_from_raw and raw_text.is_file():
-        html_text = raw_text.read_text(encoding="utf-8")
-        safe_print(f"テキスト: ローカル {raw_text}")
-    else:
+    html_text: str | None = None
+    if args.text_from_raw:
+        html_text = load_text_html(root, game_id)
+        if html_text and html_text.strip().startswith("FETCH_FAILED"):
+            html_text = None
+        elif html_text:
+            safe_print("テキスト: ローカル (raw_sportsnavi_text → raw/text)")
+
+    if not html_text:
         safe_print(f"テキスト取得: {text_url}")
         html_text = fetch_html(text_url)
         if not html_text:

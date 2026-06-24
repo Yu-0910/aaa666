@@ -31,7 +31,7 @@ import { fetchPitchingThresholdsClient } from "@/lib/ranking/qualifyingThreshold
 
 import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
 
-import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
+import { mergeRomanNamesFromCsv, normalizeRankingRow } from "@/lib/ranking/normalizeRankingRow"
 
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
@@ -50,110 +50,6 @@ interface WeeklyPitchingRankingPageClientProps {
   weekLabel: string
 
   availableWeekKeys: string[]
-
-}
-
-
-
-function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
-
-  const romanNameRaw = (
-
-    raw["romanName"] ??
-
-    raw["roman_name"] ??
-
-    raw["RomanName"] ??
-
-    raw["name_en"] ??
-
-    raw["player_name_en"] ??
-
-    ""
-
-  ) as string
-
-  const romanName =
-
-    typeof romanNameRaw === "string" && romanNameRaw.trim() !== "" ? romanNameRaw.trim() : undefined
-
-  const name = String(
-
-    raw["name"] ??
-
-      raw["player"] ??
-
-      raw["player_name_ja"] ??
-
-      raw["選手名"] ??
-
-      raw["名前"] ??
-
-      raw["Name"] ??
-
-      ""
-
-  ).trim()
-
-  return {
-
-    ...raw,
-
-    rank: raw["rank"] as number,
-
-    playerId: String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? ""),
-
-    name: name || "不明",
-
-    romanName,
-
-    team: String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? ""),
-
-  } as RankingRow
-
-}
-
-
-
-async function mergeRomanNamesFromCsv(
-
-  rows: RankingRow[],
-
-  season: string,
-
-  league: string
-
-): Promise<RankingRow[]> {
-
-  const baseUrl = typeof window === "undefined" ? "" : window.location.origin
-
-  const url = `${baseUrl}/api/roman-names/${season}/${league}`
-
-  let map: Record<string, string> = {}
-
-  try {
-
-    const res = await fetch(url, { cache: "no-store" })
-
-    if (res.ok) map = (await res.json()) as Record<string, string>
-
-  } catch {
-
-    return rows
-
-  }
-
-  return rows.map((row) => {
-
-    if (row.romanName && row.romanName.trim()) return row
-
-    const en = lookupRomanInMap(map, row.name, row.team)
-
-    if (!en) return row
-
-    return { ...row, romanName: en }
-
-  })
 
 }
 

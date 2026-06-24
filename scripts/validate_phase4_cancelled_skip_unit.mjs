@@ -34,11 +34,11 @@ const cancelledCanon = path.join(root, "_data", "scraped_games", "canonical", `$
 const playedCanon = path.join(root, "_data", "scraped_games", "canonical", `${playedId}.json`)
 
 if (fs.existsSync(cancelledMain)) {
-  assert.equal(isSportsnaviMainGameCancelled(fs.readFileSync(cancelledMain, "utf8")), true)
+  assert.equal(isSportsnaviMainGameCancelled(fs.readFileSync(cancelledMain, "utf8"), cancelledId), true)
   assert.equal(isCancelledGameLikePhase4(root, cancelledId, cancelledCanon), true)
 }
 if (fs.existsSync(playedMain)) {
-  assert.equal(isSportsnaviMainGameCancelled(fs.readFileSync(playedMain, "utf8")), false)
+  assert.equal(isSportsnaviMainGameCancelled(fs.readFileSync(playedMain, "utf8"), playedId), false)
   assert.equal(isCancelledGameLikePhase4(root, playedId, playedCanon), false)
 }
 

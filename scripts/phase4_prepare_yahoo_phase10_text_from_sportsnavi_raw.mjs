@@ -70,8 +70,11 @@ function main() {
     const dstDir = path.join(root, "_data", "scraped_games", "raw", gameId)
     const dst = path.join(dstDir, "text.html")
     if (!force && fs.existsSync(dst)) {
-      skipped += 1
-      continue
+      const srcNewer = fs.statSync(src).mtimeMs > fs.statSync(dst).mtimeMs
+      if (!srcNewer) {
+        skipped += 1
+        continue
+      }
     }
     ensureDir(dstDir)
     fs.copyFileSync(src, dst)

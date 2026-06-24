@@ -6,6 +6,7 @@ import CareerBattingTableRankingStyle from "@/app/components/player/CareerBattin
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import { formatCareerHighBattingHeading } from "@/lib/playerCareerHighBatting"
 import { formatCareerHighPitchingHeading } from "@/lib/playerCareerHighPitching"
+import { CAREER_TABLE_SCALE_MULTIPLIER } from "@/lib/playerCareerPitchingTablePilot"
 import {
   PITCHING_STAT_COLUMNS,
   careerAgeAtYear,
@@ -24,6 +25,25 @@ import {
   pitchingColsRight,
   type ProfileMergedPayload,
 } from "./playerPageShared"
+
+function CareerTableScaleWrap({
+  scaleMultiplier,
+  children,
+  className,
+}: {
+  scaleMultiplier: number
+  children: React.ReactNode
+  className?: string
+}) {
+  if (scaleMultiplier === 1) {
+    return className ? <div className={className}>{children}</div> : <>{children}</>
+  }
+  return (
+    <div className={className} style={{ zoom: scaleMultiplier }}>
+      {children}
+    </div>
+  )
+}
 
 export type PlayerPageCareerSectionProps = {
   showSeasonCareerTabs: boolean
@@ -55,6 +75,10 @@ export type PlayerPageCareerSectionProps = {
   careerHighBattingYear: number | null
   tb: string
   sectionStripeColor: string
+  /** 2026名簿外は通算表の年俸列を非表示 */
+  showSalaryColumn?: boolean
+  /** 通算成績表の表・文字・数値スケール */
+  careerTableScaleMultiplier?: number
 }
 
 export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
@@ -87,6 +111,8 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
     careerHighBattingYear,
     tb,
     sectionStripeColor,
+    showSalaryColumn = true,
+    careerTableScaleMultiplier = CAREER_TABLE_SCALE_MULTIPLIER,
   } = props
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
@@ -162,6 +188,8 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                   birthRaw={mergedBirthRaw}
                   columns={PITCHING_STAT_COLUMNS}
                   rowKeyPrefix="career-pit"
+                  showSalaryColumn={showSalaryColumn}
+                  scaleMultiplier={careerTableScaleMultiplier}
                 />
               </>
             )}
@@ -202,9 +230,14 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           <CareerBattingTableRankingStyle
             rows={mergedBattingRowsForDisplay}
             birthRaw={mergedBirthRaw}
+            showSalaryColumn={showSalaryColumn}
+            scaleMultiplier={careerTableScaleMultiplier}
           />
         ) : (
-        <div className={isMobile ? "mb-4 grid grid-cols-1 gap-4" : "mb-4 grid grid-cols-2 gap-4"}>
+        <CareerTableScaleWrap
+          scaleMultiplier={careerTableScaleMultiplier}
+          className={isMobile ? "mb-4 grid grid-cols-1 gap-4" : "mb-4 grid grid-cols-2 gap-4"}
+        >
           <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
@@ -255,7 +288,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                       {col.label}
                     </th>
                   ))}
-                  <th className={careerTh}>年俸（万）</th>
+                  {showSalaryColumn ? <th className={careerTh}>年俸（万）</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -278,14 +311,16 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                         {formatCareerCell(col, stat)}
                       </td>
                     ))}
-                    <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                    {showSalaryColumn ? (
+                      <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                    ) : null}
                   </tr>
                   )
                 })}
               </tbody>
             </table>
           </div>
-        </div>
+        </CareerTableScaleWrap>
         )}
               </>
             )}
@@ -315,7 +350,10 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           通算の投手成績
         </h2>
 
-        <div className={isMobile ? "mb-12 grid grid-cols-1 gap-4" : "mb-12 grid grid-cols-2 gap-4"}>
+        <CareerTableScaleWrap
+          scaleMultiplier={careerTableScaleMultiplier}
+          className={isMobile ? "mb-12 grid grid-cols-1 gap-4" : "mb-12 grid grid-cols-2 gap-4"}
+        >
           <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
@@ -357,7 +395,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                       {col.label}
                     </th>
                   ))}
-                  <th className={careerTh}>年俸（万）</th>
+                  {showSalaryColumn ? <th className={careerTh}>年俸（万）</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -372,13 +410,15 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                         {formatCareerCell(col, stat)}
                       </td>
                     ))}
-                    <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                    {showSalaryColumn ? (
+                      <td className={careerTd}>{formatSalaryManFromRow(stat)}</td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </CareerTableScaleWrap>
           </>
         )}
     </>

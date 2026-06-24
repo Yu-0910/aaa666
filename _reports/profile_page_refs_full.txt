@@ -1,0 +1,43 @@
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:126: import { PlayerPageProfileTableBlock } from "./PlayerPageProfileTableBlock"
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1102: const mergedBirthRaw = String(profileMerged?.profile?.birth_date_raw ?? "").trim()
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1103: const mergedAge = mergedBirthRaw ? calcAgeFromJaBirth(mergedBirthRaw) : null
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1104: const mergedProDebut = String(profileMerged?.profile?.pro_debut_raw ?? "").trim()
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1105: const mergedCareer = String(profileMerged?.profile?.career_raw ?? "").trim()
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1381: mergedAge,
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1697: <PlayerPageProfileTableBlock {...profileTableProps} />
+C:\dev\TopPage\app\players\[playerId]\PlayerPageClient.tsx:1743: <PlayerPageProfileTableBlock {...profileTableProps} />
+C:\dev\TopPage\app\players\[playerId]\PlayerPageProfileTableBlock.tsx:5: mergedAge: number | null
+C:\dev\TopPage\app\players\[playerId]\PlayerPageProfileTableBlock.tsx:13: export function PlayerPageProfileTableBlock({
+C:\dev\TopPage\app\players\[playerId]\PlayerPageProfileTableBlock.tsx:15: mergedAge,
+C:\dev\TopPage\app\players\[playerId]\PlayerPageProfileTableBlock.tsx:40: {mergedAge !== null ? `（${mergedAge}歳）` : ""}
+C:\dev\TopPage\app\players\[playerId]\playerPageShared.ts:10: profile?: { birth_date_raw?: string; pro_debut_raw?: string; career_raw?: string }
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:8: - 既に profile_npb/{id}.json がある選手はスキップ（--force で再取得）
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:42: OUT_DIR = ROOT / "_data" / "derived" / "player_profile" / "profile_npb"
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:101: PROFILE_KEYS = ("birth_date_raw", "pro_debut_raw", "career_raw")
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:103: "birth_date_raw": ("生年月日",),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:104: "pro_debut_raw": ("ドラフト", "入団"),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:105: "career_raw": ("経歴",),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:307: "birth_date_raw": profile.get("birth_date_raw", ""),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:308: "pro_debut_raw": profile.get("pro_debut_raw", ""),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:309: "career_raw": profile.get("career_raw", ""),
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:336: "birth_date_raw",
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:337: "pro_debut_raw",
+C:\dev\TopPage\scripts\fetch_npb_player_profile.py:338: "career_raw",
+C:\dev\TopPage\scripts\fetch_player_salary.py:53: PROFILE_DIR = ROOT / "_data" / "derived" / "player_profile" / "profile_npb"
+C:\dev\TopPage\scripts\fetch_player_salary.py:194: raw = (data.get("profile") or {}).get("pro_debut_raw") or data.get("pro_debut_raw") or ""
+C:\dev\TopPage\scripts\investigate_career_missing_causes.py:26: PROFILE_DIR = ROOT / "_data" / "derived" / "player_profile" / "profile_npb"
+C:\dev\TopPage\scripts\investigate_career_missing_causes.py:115: "pro_debut_raw"
+C:\dev\TopPage\scripts\merge_player_profile.ts:5: * - profile_npb:        _data/derived/player_profile/profile_npb/{id}.json
+C:\dev\TopPage\scripts\merge_player_profile.ts:26: const DIR_PROFILE = join(ROOT, "_data", "derived", "player_profile", "profile_npb")
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:178: birth = profile.get("birth_date_raw") or ""
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:180: errors.append(f"{pid}: birth_date_raw に年齢が残っている: {birth}")
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:340: "birth_date_raw": prof.get("birth_date_raw") or "",
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:341: "pro_debut_raw": prof.get("pro_debut_raw") or "",
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:342: "career_raw": prof.get("career_raw") or "",
+C:\dev\TopPage\scripts\scrape_npb_player_unified.py:353: "birth_date_raw", "pro_debut_raw", "career_raw", "network",
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:81: PROFILE_KEYS = ("birth_date_raw", "pro_debut_raw", "career_raw")
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:83: "birth_date_raw": ("生年月日",),
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:84: "pro_debut_raw": ("ドラフト", "入団"),
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:85: "career_raw": ("経歴",),
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:163: if profile["birth_date_raw"]:
+C:\dev\TopPage\scripts\lib\npb_player_unified.py:164: profile["birth_date_raw"] = strip_age_from_birth(profile["birth_date_raw"])

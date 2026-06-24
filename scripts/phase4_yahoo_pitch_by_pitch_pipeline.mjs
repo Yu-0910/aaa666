@@ -111,13 +111,13 @@ function fileExists(p) {
 
 /**
  * 試合中止/ノーゲーム（Phase4 一球復元の対象外）。
- * main raw の bb-head01__title を優先。無ければ canonical の missingOrPartial / タイトル。
+ * main raw は score-raw ゲートと同じ中止判定。無ければ canonical の missingOrPartial / タイトル。
  */
 function isCancelledGame(root, gameId, canonPath) {
   const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
   if (fileExists(mainPath)) {
     try {
-      if (isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"))) return true
+      if (isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"), gameId)) return true
     } catch {
       // ignore
     }

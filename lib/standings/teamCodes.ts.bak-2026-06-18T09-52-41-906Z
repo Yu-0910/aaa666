@@ -1,0 +1,300 @@
+/** 順位表用: 球団コード ↔ 表示略称（RankingUI / topPageConstants と整合） */
+
+export const TEAM_CODE_TO_SHORT: Record<string, string> = {
+  H: "阪神",
+  G: "巨人",
+  DB: "DeNA",
+  C: "広島",
+  D: "中日",
+  S: "ヤクルト",
+  Bs: "オリックス",
+  M: "ロッテ",
+  F: "日本ハム",
+  E: "楽天",
+  L: "西武",
+  Hs: "ソフトバンク",
+}
+
+export const TEAM_SHORT_TO_CODE: Record<string, string> = {
+  阪神: "H",
+  阪神タイガース: "H",
+  巨人: "G",
+  読売ジャイアンツ: "G",
+  DeNA: "DB",
+  横浜DeNAベイスターズ: "DB",
+  広島: "C",
+  広島東洋カープ: "C",
+  中日: "D",
+  中日ドラゴンズ: "D",
+  ヤクルト: "S",
+  東京ヤクルトスワローズ: "S",
+  オリックス: "Bs",
+  "オリックス・バファローズ": "Bs",
+  ロッテ: "M",
+  千葉ロッテマリーンズ: "M",
+  日本ハム: "F",
+  北海道日本ハムファイターズ: "F",
+  楽天: "E",
+  東北楽天ゴールデンイーグルス: "E",
+  西武: "L",
+  埼玉西武ライオンズ: "L",
+  ソフトバンク: "Hs",
+  福岡ソフトバンクホークス: "Hs",
+  // --- NPB 年度別ページ 歴代表記（Phase 2）---
+  横浜大洋ホエールズ: "DB",
+  大洋ホエールズ: "DB",
+  横浜ベイスターズ: "DB",
+  横浜タイガース: "DB",
+  大洋松竹ロビンス: "DB",
+  松竹ロビンス: "DB",
+  ヤクルトスワローズ: "S",
+  ヤクルトアトムス: "S",
+  東京ヤクルトアトムス: "S",
+  サンケイスワローズ: "S",
+  サンケイアトムス: "S",
+  名古屋ドラゴンズ: "D",
+  広島カープ: "C",
+  南海ホークス: "Hs",
+  福岡ダイエーホークス: "Hs",
+  ダイエーホークス: "Hs",
+  西鉄ライオンズ: "L",
+  西武ライオンズ: "L",
+  近鉄バファローズ: "Bs",
+  大阪近鉄バファローズ: "Bs",
+  オリックスブルーウェーブ: "Bs",
+  オリックスブルーヴェーブ: "Bs",
+  東映フライヤーズ: "M",
+  毎日オリオンズ: "M",
+  毎日マリーンズ: "M",
+  東京オリオンズ: "M",
+  千葉マリーンズ: "M",
+  ロッテマリーンズ: "M",
+  東急フライヤーズ: "F",
+  東急アトムズ: "F",
+  トキーブレーブ: "F",
+  東京トヨタレッドサンダー: "F",
+  日本ハムファイターズ: "F",
+  北海道ニッポーハムファイターズ: "F",
+  北海道日本ハム: "F",
+  東北楽天イーグルス: "E",
+  東北楽天ゴールデンイーグルス: "E",
+  国鉄オリオンズ: "M",
+  大映スターズ: "DI",
+  大陽ロビンス: "DB",
+  大陽デイリーズ: "M",
+  金星スターズ: "VS",
+  トンボユニオンズ: "TU",
+  中部日本: "D",
+  名古屋金鯱: "D",
+  名古屋軍: "D",
+  名古屋クラウス: "D",
+  高橋ユニオンズ: "TU2",
+  急映フライヤーズ: "M",
+  近畿日本: "M",
+  阪急ブレーブス: "Bs",
+  阪急タイガース: "H",
+  大東京軍: "G",
+  東京セネタース: "TS",
+  日本ヒルマンズ: "JH",
+  黒鷲軍: "KU",
+  パシフィック: "PC",
+  サンチョークラウンライター: "SC",
+  ライオン軍: "L",
+  南海軍: "Hs",
+  西鉄軍: "L",
+  近鉄軍: "Bs",
+  ロッテ軍: "M",
+  日本ハム軍: "F",
+  読売軍: "G",
+  阪神軍: "H",
+  中日軍: "D",
+  広島軍: "C",
+  ヤクルト軍: "S",
+}
+
+/** NPB 年度別成績ページのチーム列原文 → 球団コード（Phase 2） */
+export const NPB_YEARLY_LABEL_TO_CODE: Record<string, string> = {
+  ...TEAM_SHORT_TO_CODE,
+}
+
+const NPB_NON_TEAM_LABEL_RE =
+  /^(最優秀|最多|首位|最高|順位|選\s*手|\d+)$|リーダー|表彰|達成/
+
+/** NPB 年度別ページの行がチーム行か（リーダーズ・個人成績行を除外） */
+export function isNpbYearlyTeamLabel(label: string): boolean {
+  const t = String(label ?? "").trim()
+  if (!t || t.length < 2) return false
+  if (NPB_NON_TEAM_LABEL_RE.test(t)) return false
+  if (/[（(][^)）]+[)）]/.test(t)) return false
+  return true
+}
+
+/** NPB 年度別ページのチーム原文 → 球団コード。未マップは null */
+export function resolveNpbYearlyTeamCode(npbLabel: string): string | null {
+  const t = String(npbLabel ?? "").trim()
+  if (!t) return null
+  if (NPB_YEARLY_LABEL_TO_CODE[t]) return NPB_YEARLY_LABEL_TO_CODE[t]
+  for (const [name, code] of Object.entries(NPB_YEARLY_LABEL_TO_CODE)) {
+    if (t === name || t.includes(name) || name.includes(t)) return code
+  }
+  return null
+}
+
+export type NpbYearlyTeamRef = {
+  team: string
+  teamName: string
+  npbLabel: string
+}
+
+/**
+ * NPB 年度別 raw JSON の team 原文を順位表用に正規化（Phase 2）。
+ * リーダーズ行など非チーム行は null。
+ */
+export function normalizeNpbYearlyTeam(npbLabel: string): NpbYearlyTeamRef | null {
+  const label = String(npbLabel ?? "").trim()
+  if (!isNpbYearlyTeamLabel(label)) return null
+  const team = resolveNpbYearlyTeamCode(label)
+  if (!team) return null
+  return {
+    team,
+    teamName: teamHistoricalDisplayName(label, team),
+    npbLabel: label,
+  }
+}
+
+/** 歴代公式名から順位表表示用の短い球団名 */
+function teamHistoricalDisplayName(npbLabel: string, code: string): string {
+  if (npbLabel.includes("大洋")) return "大洋"
+  if (npbLabel.includes("ベイスターズ") || npbLabel.includes("DeNA")) return "DeNA"
+  if (npbLabel.includes("南海") || npbLabel.includes("ダイエー") || npbLabel.includes("ソフトバンク"))
+    return "ソフトバンク"
+  if (npbLabel.includes("西鉄") || npbLabel.includes("西武")) return "西武"
+  if (npbLabel.includes("近鉄") || npbLabel.includes("オリックス")) return "オリックス"
+  if (npbLabel.includes("ロッテ") || npbLabel.includes("マリーン") || npbLabel.includes("オリオン"))
+    return "ロッテ"
+  if (npbLabel.includes("日本ハム") || npbLabel.includes("ハム") || npbLabel.includes("ブレーブ"))
+    return "日本ハム"
+  if (npbLabel.includes("楽天")) return "楽天"
+  if (npbLabel.includes("巨人") || npbLabel.includes("読売")) return "巨人"
+  if (npbLabel.includes("阪神") || npbLabel.includes("阪急タイガ")) return "阪神"
+  if (npbLabel.includes("中日") || npbLabel.includes("名古屋") || npbLabel.includes("ドラゴン"))
+    return "中日"
+  if (npbLabel.includes("広島") || npbLabel.includes("カープ")) return "広島"
+  if (npbLabel.includes("ヤクルト") || npbLabel.includes("スワロー") || npbLabel.includes("アトム"))
+    return "ヤクルト"
+  return teamDisplayNameFromCode(code)
+}
+
+/** raw JSON 走査用: 未マップの team 原文一覧 */
+export function auditNpbYearlyTeamLabels(labels: Iterable<string>): {
+  mapped: string[]
+  unmapped: string[]
+} {
+  const mapped = new Set<string>()
+  const unmapped = new Set<string>()
+  for (const raw of labels) {
+    const label = String(raw ?? "").trim()
+    if (!label) continue
+    if (!isNpbYearlyTeamLabel(label)) continue
+    if (resolveNpbYearlyTeamCode(label)) mapped.add(label)
+    else unmapped.add(label)
+  }
+  return {
+    mapped: [...mapped].sort(),
+    unmapped: [...unmapped].sort(),
+  }
+}
+
+export const CL_TEAM_SHORTS = ["巨人", "阪神", "中日", "広島", "DeNA", "ヤクルト"] as const
+export const PL_TEAM_SHORTS = ["オリックス", "ロッテ", "日本ハム", "楽天", "西武", "ソフトバンク"] as const
+
+const CL_TEAM_SHORT_SET = new Set<string>(CL_TEAM_SHORTS)
+const PL_TEAM_SHORT_SET = new Set<string>(PL_TEAM_SHORTS)
+
+/** canonical スコアボード表記 → 順位表集計用略称（巨人・DeNA 等） */
+export function teamRankingShortFromGameTeamName(teamName: string): string {
+  const t = String(teamName ?? "").trim()
+  if (!t) return ""
+  if (CL_TEAM_SHORT_SET.has(t) || PL_TEAM_SHORT_SET.has(t)) return t
+  const code = teamCodeFromShort(t)
+  return TEAM_CODE_TO_SHORT[code] ?? t
+}
+
+/** 集計用チーム略称からリーグ（CL/PL）を導出。クライアント安全。 */
+export function leagueFromTeamShort(short: string): "CL" | "PL" {
+  const t = String(short ?? "").trim()
+  if (!t) return "CL"
+  return CL_TEAM_SHORT_SET.has(t) ? "CL" : "PL"
+}
+
+export function teamCodeFromShort(short: string): string {
+  const t = String(short ?? "").trim()
+  if (TEAM_SHORT_TO_CODE[t]) return TEAM_SHORT_TO_CODE[t]
+  for (const [name, code] of Object.entries(TEAM_SHORT_TO_CODE)) {
+    if (t.includes(name) || name.includes(t)) return code
+  }
+  return t
+}
+
+export function teamShortFromCode(code: string): string {
+  return TEAM_CODE_TO_SHORT[code] ?? code
+}
+
+/**
+ * 個人ページ「チーム別の対戦成績」（SeasonStatsPilot TEAM_ORDER）と同じ表記。
+ * 内部略称 DeNA は表示「横浜」。
+ */
+export const TEAM_CODE_TO_DISPLAY: Record<string, string> = {
+  H: "阪神",
+  G: "巨人",
+  DB: "横浜",
+  C: "広島",
+  D: "中日",
+  S: "ヤクルト",
+  Bs: "オリックス",
+  M: "ロッテ",
+  F: "日本ハム",
+  E: "楽天",
+  L: "西武",
+  Hs: "ソフトバンク",
+}
+
+const TEAM_SHORT_TO_DISPLAY: Record<string, string> = {
+  DeNA: "横浜",
+}
+
+/** 順位表など狭い列向けの英字球団名（NPB 公式英字表記の愛称部分） */
+export const TEAM_CODE_TO_ROMAN: Record<string, string> = {
+  H: "Tigers",
+  G: "Giants",
+  DB: "BayStars",
+  C: "Carp",
+  D: "Dragons",
+  S: "Swallows",
+  Bs: "Buffaloes",
+  M: "Marines",
+  F: "Fighters",
+  E: "Eagles",
+  L: "Lions",
+  Hs: "Hawks",
+}
+
+/** 順位表 JSON の `team`（球団コード）から表示名 */
+export function teamDisplayNameFromCode(code: string): string {
+  const c = String(code ?? "").trim()
+  return TEAM_CODE_TO_DISPLAY[c] ?? c
+}
+
+/** 順位表 JSON の `team`（球団コード）から英字球団名 */
+export function teamRomanNameFromCode(code: string): string {
+  const c = String(code ?? "").trim()
+  return TEAM_CODE_TO_ROMAN[c] ?? c
+}
+
+/** 集計用内部略称から表示名 */
+export function teamDisplayNameFromShort(short: string): string {
+  const s = String(short ?? "").trim()
+  if (TEAM_SHORT_TO_DISPLAY[s]) return TEAM_SHORT_TO_DISPLAY[s]
+  const code = teamCodeFromShort(s)
+  return TEAM_CODE_TO_DISPLAY[code] ?? s
+}

@@ -20,8 +20,9 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   ).trim()
   const playerId = String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? "").trim()
   const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
+  const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "")
   const npbPlayerId =
-    explicitNpb || (/^\d{6,}$/.test(playerId) ? playerId : undefined)
+    explicitNpb || (/^\d{6,}$/.test(playerId) ? playerId : undefined) || undefined
   return {
     ...raw,
     rank: raw["rank"] as number,
@@ -29,7 +30,7 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
     npbPlayerId,
     name: name || "不明",
     romanName,
-    team: String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? ""),
+    team,
   } as RankingRow
 }
 

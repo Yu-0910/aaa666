@@ -7,6 +7,9 @@ type Props = {
   mergedSalaryTotalPlain: string
   mergedFaDisplay: string
   profileMerged: ProfileMergedPayload
+  tableClassName?: string
+  /** 2026名簿外は生涯年俸・FA取得を非表示 */
+  showFinancialFields?: boolean
 }
 
 export function PlayerPageProfileTableBlock({
@@ -16,9 +19,14 @@ export function PlayerPageProfileTableBlock({
   mergedSalaryTotalPlain,
   mergedFaDisplay,
   profileMerged,
+  tableClassName,
+  showFinancialFields = true,
 }: Props) {
   return (
-    <table className="w-full border-collapse" style={{ border: "1px solid #333333" }}>
+    <table
+      className={`w-full border-collapse${tableClassName ? ` ${tableClassName}` : ""}`}
+      style={{ border: "1px solid #333333" }}
+    >
       <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
         <tr>
           <td
@@ -69,47 +77,51 @@ export function PlayerPageProfileTableBlock({
             {mergedCareer || "—"}
           </td>
         </tr>
-        <tr>
-          <td
-            className="px-2 py-1.5"
-            style={{
-              backgroundColor: "#FFFF44",
-              color: "#000000",
-              border: "1px solid #333333",
-              fontWeight: 900,
-            }}
-          >
-            生涯年俸
-          </td>
-          <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-            {mergedSalaryTotalPlain || "—"}
-          </td>
-        </tr>
-        <tr>
-          <td
-            className="px-2 py-1.5"
-            style={{
-              backgroundColor: "#FFFF44",
-              color: "#000000",
-              border: "1px solid #333333",
-              fontWeight: 900,
-            }}
-            title="国内FA取得見込み。facounter.net または通算出場成績からの概算（参考値）"
-          >
-            FA取得（推定）
-          </td>
-          <td
-            className="px-2 py-1.5"
-            style={{ border: "1px solid #333333" }}
-            title={
-              profileMerged?.faEstimate?.domesticFa?.note
-                ? String(profileMerged.faEstimate.domesticFa.note)
-                : undefined
-            }
-          >
-            {mergedFaDisplay || "—"}
-          </td>
-        </tr>
+        {showFinancialFields ? (
+          <>
+            <tr>
+              <td
+                className="px-2 py-1.5"
+                style={{
+                  backgroundColor: "#FFFF44",
+                  color: "#000000",
+                  border: "1px solid #333333",
+                  fontWeight: 900,
+                }}
+              >
+                生涯年俸
+              </td>
+              <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
+                {mergedSalaryTotalPlain || "—"}
+              </td>
+            </tr>
+            <tr>
+              <td
+                className="px-2 py-1.5"
+                style={{
+                  backgroundColor: "#FFFF44",
+                  color: "#000000",
+                  border: "1px solid #333333",
+                  fontWeight: 900,
+                }}
+                title="国内FA取得見込み。facounter.net または通算出場成績からの概算（参考値）"
+              >
+                FA取得（推定）
+              </td>
+              <td
+                className="px-2 py-1.5"
+                style={{ border: "1px solid #333333" }}
+                title={
+                  profileMerged?.faEstimate?.domesticFa?.note
+                    ? String(profileMerged.faEstimate.domesticFa.note)
+                    : undefined
+                }
+              >
+                {mergedFaDisplay || "—"}
+              </td>
+            </tr>
+          </>
+        ) : null}
       </tbody>
     </table>
   )

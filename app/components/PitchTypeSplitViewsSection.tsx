@@ -239,6 +239,7 @@ export function PaRoundPitchTypeChart({
   revealGeneration,
   baseColorMap,
   renderRowLabel,
+  rowLabelClassName,
 }: {
   splits: PitcherSeasonPocPitchTypesSplitRow[] | null
   staggerRowReveal?: boolean
@@ -246,6 +247,7 @@ export function PaRoundPitchTypeChart({
   /** 対左右派生: ベース（巡目別）グラフの球種色 */
   baseColorMap?: PitchTypeColorMap | null
   renderRowLabel?: (row: PitcherSeasonPocPitchTypesSplitRow | null, key: string) => ReactNode
+  rowLabelClassName?: string
 }) {
   if (splits == null) {
     return <span className="text-sm text-gray-400">—</span>
@@ -259,6 +261,7 @@ export function PaRoundPitchTypeChart({
       revealGeneration={revealGeneration}
       colorByType={baseColorMap?.colorByType}
       typeOrder={baseColorMap?.typeOrder}
+      rowLabelClassName={rowLabelClassName}
     />
   )
 }

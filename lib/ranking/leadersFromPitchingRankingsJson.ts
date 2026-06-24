@@ -21,7 +21,7 @@ import {
   pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
 import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
-import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
+import { rankingTeamCodeFromLabel, resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshot2026"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 
@@ -72,12 +72,7 @@ function getTeamName(teamCode: string): string {
 }
 
 function getTeamCode(teamName: string): string {
-  const t = String(teamName ?? "").trim()
-  if (teamNameToCode[t]) return teamNameToCode[t]
-  for (const [name, code] of Object.entries(teamNameToCode)) {
-    if (t.includes(name) || name.includes(t)) return code
-  }
-  return t
+  return rankingTeamCodeFromLabel(teamName)
 }
 
 type RankingJsonRow = Record<string, unknown>
@@ -135,10 +130,12 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   ) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
   const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
-  const npbPlayerId =
-    explicitNpb ||
-    (/^\d{6,}$/.test(yahooPlayerId) ? yahooPlayerId : undefined) ||
-    (yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined)
+  const npbPlayerId = resolveRankingNpbPlayerId({
+    name: nameRaw,
+    team: teamRaw,
+    playerId: yahooPlayerId,
+    explicitNpb,
+  })
 
   return {
     rank,

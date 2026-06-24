@@ -8,7 +8,6 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } fr
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
-import PitchDetailsPilot from "@/app/components/PitchDetailsPilot"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import { useClientPathname, useClientSearchString, useViewportLayout } from "@/hooks/useIsDesktop"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
@@ -82,11 +81,10 @@ import {
 } from "@/lib/playerCareerHighPitching"
 import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327, resolvePitcherPocYahooGameId } from "@/lib/yahooGame/pitcherPocDefaults"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
-import { unwrapPitcherZoneStatsApiJson } from "@/lib/api/unwrapPlayerDerivedPayload"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
 import CareerBattingTableRankingStyle from "@/app/components/player/CareerBattingTableRankingStyle"
-import { usesPitcherCareerPitchingTableFromRosterMatch } from "@/lib/playerCareerPitchingTablePilot"
+import { CAREER_TABLE_SCALE_MULTIPLIER, usesPitcherCareerPitchingTableFromRosterMatch } from "@/lib/playerCareerPitchingTablePilot"
 import {
   appendCareerTotalRow,
   careerAgeAtYear,
@@ -116,6 +114,9 @@ import {
   playerIdSegmentFromPathname,
   playerRomanNames,
   PLAYER_SEASON_TAB_NUMERICS_CLASS,
+  PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS,
+  PITCHER_SEASON_NUMERICS_UI_CLASS,
+  ITO_DAIYA_PROFILE_UI_CLASS,
   stripQueryHash,
   teamColors,
   type ProfileMergedPayload,
@@ -126,6 +127,36 @@ import { PlayerPageCareerSection } from "./PlayerPageCareerSection"
 import { PlayerPageMatchupBody } from "./PlayerPageMatchupBody"
 import { PlayerPageFielderVsTeamPitchBody } from "./PlayerPageFielderVsTeamPitchBody"
 import { PlayerPageProfileTableBlock } from "./PlayerPageProfileTableBlock"
+
+/** 通算成績行から在籍年数が最多の球団キー（team / team_code）を返す */
+function primaryTeamStripeKeyFromCareer(profile: ProfileMergedPayload | null): string {
+  if (!profile) return ""
+  const yearsByTeam = new Map<string, Set<number>>()
+  const addRows = (rows: Array<Record<string, unknown>> | undefined) => {
+    for (const row of rows ?? []) {
+      const team = String(row.team_code ?? row.team ?? "").trim()
+      const year = Number(row.year)
+      if (!team || !Number.isFinite(year)) continue
+      let years = yearsByTeam.get(team)
+      if (!years) {
+        years = new Set()
+        yearsByTeam.set(team, years)
+      }
+      years.add(year)
+    }
+  }
+  addRows(profile.career_batting?.rows as Array<Record<string, unknown>> | undefined)
+  addRows(profile.career_pitching?.rows as Array<Record<string, unknown>> | undefined)
+  let bestTeam = ""
+  let bestCount = 0
+  for (const [team, years] of yearsByTeam) {
+    if (years.size > bestCount) {
+      bestCount = years.size
+      bestTeam = team
+    }
+  }
+  return bestTeam
+}
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
@@ -206,18 +237,6 @@ export function PlayerPageClient({
     useState<PitcherSeasonPitchTypesPayload | null>(null)
   const [pitcherSeasonPitchTypesLoading, setPitcherSeasonPitchTypesLoading] = useState(false)
   const [gamePitchTypes, setGamePitchTypes] = useState<GamePitchTypesData | null>(null)
-  type ZoneStat = {
-    zoneId: number
-    pitches: number
-    ab: number
-    h: number
-    hr: number
-    isop: string
-    avg: string
-  }
-  const [zoneStats, setZoneStats] = useState<{ vsRight: ZoneStat[]; vsLeft: ZoneStat[] } | null>(null)
-  /** zone-stats API が 404 等のとき。黙って「ー」だけだと空欄に見えるため明示する */
-  const [zoneStatsUnavailableReason, setZoneStatsUnavailableReason] = useState<string | null>(null)
   /** Phase 2: `_data/derived/player_season_pitching_poc` を API 経由で取得 */
   const [pitcherSeasonPocPayload, setPitcherSeasonPocPayload] =
     useState<PitcherSeasonPocPayload | null>(null)
@@ -544,6 +563,7 @@ export function PlayerPageClient({
     !(rosterMatchedPosition || "").trim() &&
     hasMergedBattingFromProfile &&
     !hasMergedPitchingFromProfile &&
+    pitcherSeasonPocApiSettled &&
     !pitcherSeasonPocPayload
   const rosterNpbForCareer =
     rosterMatchedNpbId.trim() || playerIdNormalized.trim()
@@ -850,19 +870,15 @@ export function PlayerPageClient({
   ])
 
   /**
-   * Phase 3: コース別は `pitcher-zone-stats`（canonical 横断・phase20）を主系。200 かつ hasData:false や形式不正時は
-   * 従来の `/api/games/.../zone-stats` にフォールバック。球種別は引き続き試合 API のみ。
+   * 試合単位の球種別（gamePitchTypes）。コース別ゾーン表示は廃止。
    */
   useEffect(() => {
     if (!showPitcherSeasonSuganoUi) {
       setGamePitchTypes(null)
-      setZoneStats(null)
-      setZoneStatsUnavailableReason(null)
       return
     }
     const gid = pitcherPocYahooGameId
     const npb = rosterMatchedNpbId.trim() || (isAoyagiPage ? AOYAGI_NPB_ID : "")
-    const zoneQueryId = seasonPilotPlayerId.trim() || playerIdNormalized.trim()
     let cancelled = false
     const base =
       gid && npb
@@ -870,124 +886,17 @@ export function PlayerPageClient({
         : ""
 
     setGamePitchTypes(null)
-    setZoneStats(null)
-    setZoneStatsUnavailableReason(null)
+    if (!base) return
 
-    const fetchGameZoneStats = async (): Promise<
-      | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
-      | { ok: false; error: string }
-    > => {
-      if (!base) {
-        return { ok: false, error: "試合・名簿が確定しておらず、試合単位のゾーン成績も取得できません。" }
-      }
-      const r = await fetch(`${base}/zone-stats`, { cache: "no-store" })
-      if (r.ok) {
-        try {
-          return { ok: true, body: await r.json() }
-        } catch {
-          return { ok: false, error: "ゾーン成績の JSON が読み取れませんでした。" }
-        }
-      }
-      let detail = `HTTP ${r.status}`
-      try {
-        const j = (await r.json()) as { error?: string }
-        if (typeof j.error === "string" && j.error.trim()) detail = j.error.trim()
-      } catch {
-        /* ignore */
-      }
-      return { ok: false, error: detail }
-    }
+    fetch(`${base}/pitch-types`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((pt) => {
+        if (!cancelled) setGamePitchTypes(pt as GamePitchTypesData | null)
+      })
+      .catch(() => {
+        if (!cancelled) setGamePitchTypes(null)
+      })
 
-    const fetchSeasonZoneStats = async (): Promise<
-      | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
-      | { ok: false; error: string }
-    > => {
-      if (!zoneQueryId) {
-        return {
-          ok: false,
-          error: "名簿照合前のためシーズン横断のゾーン成績を取得できません。",
-        }
-      }
-      const r = await fetch(
-        `/api/players/${encodeURIComponent(zoneQueryId)}/pitcher-zone-stats?year=${encodeURIComponent(DERIVED_SEASON_YEAR_DEFAULT)}`,
-        { cache: "no-store" }
-      )
-      let raw: unknown = null
-      try {
-        raw = await r.json()
-      } catch {
-        return {
-          ok: false,
-          error: "シーズンゾーン成績の JSON が読み取れませんでした。",
-        }
-      }
-      const unwrapped = unwrapPitcherZoneStatsApiJson(raw, r.ok)
-      if (unwrapped.ok) {
-        return { ok: true, body: unwrapped.body }
-      }
-      let detail = unwrapped.error
-      if (unwrapped.code === "NO_DERIVED_DATA") {
-        detail += "（`npm run phase20:build:pitcher-zones` で派生を生成できます）"
-      }
-      return { ok: false, error: detail }
-    }
-
-    const run = async () => {
-      const ptPromise = base
-        ? fetch(`${base}/pitch-types`, { cache: "no-store" }).then((r) =>
-            r.ok ? r.json() : null
-          )
-        : Promise.resolve(null)
-
-      const season = await fetchSeasonZoneStats()
-      let zoneRes:
-        | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
-        | { ok: false; error: string }
-      if (season.ok) {
-        zoneRes = season
-      } else {
-        const game = await fetchGameZoneStats()
-        if (game.ok) {
-          zoneRes = game
-        } else {
-          zoneRes = {
-            ok: false,
-            error:
-              season.error && game.error
-                ? `${season.error} 試合単位: ${game.error}`
-                : season.error || game.error,
-          }
-        }
-      }
-
-      const pt = await ptPromise
-      if (cancelled) return
-      setGamePitchTypes(pt as GamePitchTypesData | null)
-      if (zoneRes.ok) {
-        const zs = zoneRes.body as { vsRight: ZoneStat[]; vsLeft: ZoneStat[] }
-        setZoneStats(
-          Array.isArray(zs.vsRight) && Array.isArray(zs.vsLeft) ? zs : null
-        )
-        setZoneStatsUnavailableReason(
-          Array.isArray(zs.vsRight) && Array.isArray(zs.vsLeft)
-            ? null
-            : "ゾーン成績の形式が不正です。"
-        )
-      } else {
-        setZoneStats(null)
-        setZoneStatsUnavailableReason(zoneRes.error)
-      }
-    }
-
-    run().catch(() => {
-      if (!cancelled) {
-        setGamePitchTypes(null)
-        setZoneStats(null)
-        setZoneStatsUnavailableReason(
-          "試合データの取得に失敗しました。しばらくしてから再度お試しください。"
-        )
-      }
-    })
     return () => {
       cancelled = true
     }
@@ -996,8 +905,6 @@ export function PlayerPageClient({
     pitcherPocYahooGameId,
     isAoyagiPage,
     rosterMatchedNpbId,
-    seasonPilotPlayerId,
-    playerIdNormalized,
   ])
 
   /** Phase 2/6: `_data/derived/player_season_pitching_poc` を API 経由で取得（捕手別含む） */
@@ -1129,13 +1036,16 @@ export function PlayerPageClient({
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
   const rankingHref = `/ranking/${selectedYear}/PL`
   /** 見出し左帯・ヘッダー縦帯と同じ所属色 */
-  const sectionStripeColor = useMemo(
-    () =>
-      isRosterPlayer && rosterStripeKey
-        ? rankingTeamStripeColor(rosterStripeKey)
-        : "#666",
-    [isRosterPlayer, rosterStripeKey]
-  )
+  const sectionStripeColor = useMemo(() => {
+    if (isRosterPlayer && rosterStripeKey) {
+      return rankingTeamStripeColor(rosterStripeKey)
+    }
+    if (!isRosterPlayer && profileMerged) {
+      const careerTeam = primaryTeamStripeKeyFromCareer(profileMerged)
+      if (careerTeam) return rankingTeamStripeColor(careerTeam)
+    }
+    return "#666"
+  }, [isRosterPlayer, rosterStripeKey, profileMerged])
   /** 対左右別と同じ見出し文字・左帯（scale 0.7 後）。通算タブ先頭は上余白なし */
   const careerUsesRankingCareerHeading =
     showFielderSeasonPilotUi || pitcherCareerPitchingTablePilot || showCareerOnlyShell
@@ -1276,6 +1186,8 @@ export function PlayerPageClient({
 
   const pitcherInlineSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-3"
+  const careerInlineSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-10 mb-3"
   /** 通常フロー: プロフィール表との間隔は外側 mt-7 で確保 */
   const pitcherStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mb-3"
@@ -1283,7 +1195,7 @@ export function PlayerPageClient({
   const fielderStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mb-3"
   const pitcherCareerSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-1"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-1"
   const pitcherSubTabButtonClass =
     "relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
   const fielderCareerH2Class = careerUsesRankingCareerHeading ? "mb-3 mt-0" : `${tb} mb-4 pl-4`
@@ -1299,10 +1211,10 @@ export function PlayerPageClient({
       className={
         shellClass ??
         (inlineInProfileShell
-          ? pitcherInlineSubTabBarShellClass
+          ? careerInlineSubTabBarShellClass
           : isMobile
-            ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
-            : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
+            ? "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
+            : "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
       }
       style={{
         border: "1px solid #555",
@@ -1449,18 +1361,22 @@ export function PlayerPageClient({
     mergedSalaryTotalPlain,
     mergedFaDisplay,
     profileMerged,
+    tableClassName: isItoDaiyaPage ? "player-page-profile-table" : undefined,
+    showFinancialFields: isRosterPlayer,
   }
 
   const renderPitcherSeasonMatchupBody = () => (
     <div className={PLAYER_SEASON_TAB_NUMERICS_CLASS}>
-      <PlayerPageMatchupBody
-        tb={tb}
-        sectionStripeColor={sectionStripeColor}
-        role="pitcher"
-        loading={playerMatchupDerivedPitcher.loading}
-        settled={playerMatchupDerivedPitcher.settled}
-        payload={playerMatchupDerivedPitcher.payload}
-      />
+      <div className={PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS}>
+        <PlayerPageMatchupBody
+          tb={tb}
+          sectionStripeColor={sectionStripeColor}
+          role="pitcher"
+          loading={playerMatchupDerivedPitcher.loading}
+          settled={playerMatchupDerivedPitcher.settled}
+          payload={playerMatchupDerivedPitcher.payload}
+        />
+      </div>
     </div>
   )
 
@@ -1476,8 +1392,6 @@ export function PlayerPageClient({
         pitcherSeasonPitchTypesPayload={pitcherSeasonPitchTypesPayload}
         pitcherSeasonPitchTypesLoading={pitcherSeasonPitchTypesLoading}
         gamePitchTypes={gamePitchTypes}
-        zoneStats={zoneStats}
-        zoneStatsUnavailableReason={zoneStatsUnavailableReason}
         pitcherSeasonPitchingPeriodPayload={pitcherSeasonPitchingPeriodPayload}
         pitcherPeriodMonthRows={pitcherPeriodMonthRows}
         pitcherPeriodWeekRows={pitcherPeriodWeekRows}
@@ -1491,11 +1405,11 @@ export function PlayerPageClient({
         catcherPaRoundPitchTypes={catcherSeasonDerived.paRoundPitchTypes}
         showFielderSeasonPilotUi={showFielderSeasonPilotUi}
         kikuchiSeasonDetailTab={kikuchiSeasonDetailTab}
-        useCareerHighSeasonNumericFont={isItoDaiyaPage}
         pitchTypeSidePanelPilot={hasPitchTypeVsHandSidePanelData(pitcherSeasonPocPayload)}
         pitchTypeVsHandPanels={pitchTypeVsHandPanels}
         onPitchTypeVsHandPanelToggle={togglePitchTypeVsHandPanel}
         animatePitchCharts={animatePitchCharts}
+        isItoDaiyaPage={isItoDaiyaPage}
       />
     </div>
   )
@@ -1539,13 +1453,6 @@ export function PlayerPageClient({
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
           />
-          {kikuchiSeasonDetailTab === "pitch" && (
-            <PitchDetailsPilot
-              playerId={seasonPilotPlayerId}
-              layout={layout}
-              headingStripeColor={sectionStripeColor}
-            />
-          )}
         </>
       )}
     </div>
@@ -1553,7 +1460,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className="player-page-fonts min-h-screen text-white"
+      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}`}
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}
@@ -1663,7 +1570,7 @@ export function PlayerPageClient({
             {/* Player Info */}
             <div className="flex flex-col">
               <h1
-                className={`${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
+                className={`player-page-display-name ${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
                 style={{
                   textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
                   fontWeight: 900,
@@ -1676,10 +1583,14 @@ export function PlayerPageClient({
                 const romanFull =
                   mergedRoman[displayName] ?? mergedRoman[compactPlayerName(displayName)] ?? ""
                 const fromRoster = romanFull.trim()
-                /** ランキング等の ?roman= は略式のため、名簿にフル英字があるときはそちらを優先 */
-                const romanToShow =
-                  fromRoster ||
-                  (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
+                const nonRosterRomanFull = String(
+                  (profileMerged as { name_en_full?: string } | null)?.name_en_full ?? "",
+                ).trim()
+                /** 名簿外: フル英字（meta）優先。?roman= の略式は使わない */
+                const romanToShow = isRosterPlayer
+                  ? fromRoster ||
+                    (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
+                  : nonRosterRomanFull || fromRoster || null
                 return romanToShow ? (
                   <span className="latin text-sm text-gray-400 leading-tight mt-0.5">
                     {romanToShow}
@@ -1817,7 +1728,8 @@ export function PlayerPageClient({
                 statsTab === "season" &&
                 showPitcherSeasonSuganoUi &&
                 renderPitcherSeasonSubTabBar(true)}
-              {((showSeasonCareerTabs && statsTab === "career") || showCareerOnlyShell) &&
+              {showSeasonCareerTabs &&
+                statsTab === "career" &&
                 showPitcherSeasonSuganoUi &&
                 showCareerPitchingRankingTable &&
                 !pitcherCareerPitchingTightLayout &&
@@ -1895,6 +1807,8 @@ export function PlayerPageClient({
             careerHighBattingYear={careerHighBattingYear}
             tb={tb}
             sectionStripeColor={sectionStripeColor}
+            showSalaryColumn={isRosterPlayer}
+            careerTableScaleMultiplier={CAREER_TABLE_SCALE_MULTIPLIER}
           />
         )}
           </>

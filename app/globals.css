@@ -167,12 +167,62 @@
 @layer components {
   .player-page-fonts {
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif;
-    font-weight: 600;
+    /* 順位表タブの球団名（font-black・Noto）に合わせる */
+    font-weight: 900;
   }
 
   .player-page-fonts .latin {
     font-family: var(--font-inter), "Inter", sans-serif;
     font-feature-settings: "tnum" 1;
+    /* 順位表の英字球団名（latin・通常ウェイト） */
+    font-weight: 600;
+  }
+
+  /* 数値以外: 表ヘッダー・左固定ラベル列は Noto Black（latin 指定を上書き） */
+  .player-page-fonts th.latin,
+  .player-page-fonts td.text-left.latin.font-black,
+  .player-page-fonts .player-season-tab-numerics th.sticky.left-0.latin,
+  .player-page-fonts .player-season-tab-numerics td.sticky.left-0.latin.font-black {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: normal !important;
+  }
+
+  /* 今季タブ: 左固定ラベル列（対右/月/週/球種/条件/巡目 等）を 1.15 倍 */
+  .player-page-fonts .player-season-tab-numerics td.sticky.left-0.latin.font-black {
+    font-size: calc(13px * 1.15) !important;
+  }
+
+  .player-page-fonts .player-season-tab-numerics td.sticky.left-0.latin.font-black.text-\[14px\] {
+    font-size: calc(14px * 1.15) !important;
+  }
+
+  /* 伊藤大海ページ: 名前・プロフィール表は Noto / 英字は Inter */
+  .player-page-fonts.ito-daiya-profile-ui .player-page-display-name,
+  .player-page-fonts.ito-daiya-profile-ui .player-page-profile-table {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-weight: 900 !important;
+  }
+
+  .player-page-fonts.ito-daiya-profile-ui .player-page-display-name .latin {
+    font-family: var(--font-inter), "Inter", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
+  .player-page-fonts .pa-round-pitch-row-label {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: normal !important;
+    font-size: calc(12px * 0.8) !important;
+  }
+
+  /* 伊藤大海: 巡目別・カウント別球種一覧の左ラベル（12px の 1.15 倍） */
+  .player-page-fonts.ito-daiya-profile-ui .pitch-type-split-row-label {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: normal !important;
+    font-size: calc(12px * 1.15) !important;
   }
 
   .player-page-fonts .bebas {
@@ -187,23 +237,37 @@
     letter-spacing: -0.01em !important;
   }
 
-  /* 今季の成績タブ: 表の数値セルを 1.3 倍 */
-  .player-page-fonts .player-season-tab-numerics td.latin.font-black.tabular-nums,
-  .player-page-fonts .player-season-tab-numerics td.align-middle.font-black.tabular-nums:not(.text-left),
-  .player-page-fonts .player-season-tab-numerics span.latin.font-black.tabular-nums,
-  .player-page-fonts .player-season-tab-numerics div.font-black.tabular-nums {
+  /* 今季の成績タブ: 表の数値セルを 1.3 倍（左固定ラベル列は除外） */
+  .player-page-fonts .player-season-tab-numerics td.latin.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts .player-season-tab-numerics td.align-middle.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts .player-season-tab-numerics span.latin.font-black.tabular-nums {
     font-size: 1.3em !important;
   }
 
-  /* 伊藤大海の今季タブ数値: Bebas Neue・細め・各セルの指定サイズの 1.3 倍 */
-  .player-page-fonts .pitcher-season-career-high-numerics td.text-center.font-black,
-  .player-page-fonts .pitcher-season-career-high-numerics td.align-middle.font-black:not(.text-left),
-  .player-page-fonts .pitcher-season-career-high-numerics span.font-black.tabular-nums,
-  .player-page-fonts .pitcher-season-career-high-numerics div.font-black.tabular-nums {
+  /* 投手今季タブ: Bebas 数値（左固定ラベル列は除外） */
+  .player-page-fonts .player-season-tab-numerics .pitcher-season-career-high-numerics td.latin.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts .player-season-tab-numerics .pitcher-season-career-high-numerics td.align-middle.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts .player-season-tab-numerics .pitcher-season-career-high-numerics span.latin.font-black.tabular-nums {
     font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
     letter-spacing: 0.032em;
     font-weight: 400 !important;
     font-size: 1.3em !important;
+  }
+
+  /* 投手今季タブ: 数値を 1.3em の 1.15 倍 */
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics td.latin.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics td.align-middle.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics span.latin.font-black.tabular-nums {
+    font-size: calc(1.3em * 1.15) !important;
+  }
+
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics .pitcher-season-career-high-numerics td.latin.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics .pitcher-season-career-high-numerics td.align-middle.font-black.tabular-nums:not(.sticky),
+  .player-page-fonts.pitcher-season-numerics-ui .player-season-tab-numerics .pitcher-season-career-high-numerics span.latin.font-black.tabular-nums {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif;
+    letter-spacing: 0.032em;
+    font-weight: 400 !important;
+    font-size: calc(1.3em * 1.15) !important;
   }
 
   /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 狭い幅でも縮むよう下限を抑え、親より狭いときは横スクロール */

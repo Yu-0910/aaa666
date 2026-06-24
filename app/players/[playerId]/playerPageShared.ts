@@ -139,6 +139,10 @@ export const MURAKAMI_SHOKI_NPB_ID = "13315153"
 export const MURAKAMI_SHOKI_YAHOO_PITCHER_ID = "2000055"
 /** キャリアハイ投手成績と同じ Bebas 数値フォントを今季タブに適用するラッパー class */
 export const PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS = "pitcher-season-career-high-numerics"
+/** 投手今季タブ: 数値 1.15 倍など（ルートに付与） */
+export const PITCHER_SEASON_NUMERICS_UI_CLASS = "pitcher-season-numerics-ui"
+/** 伊藤大海ページ: 名前・プロフィール表の Noto/Inter */
+export const ITO_DAIYA_PROFILE_UI_CLASS = "ito-daiya-profile-ui"
 /** 今季の成績タブ: 表の数値セルを 1.3 倍にするラッパー class */
 export const PLAYER_SEASON_TAB_NUMERICS_CLASS = "player-season-tab-numerics"
 

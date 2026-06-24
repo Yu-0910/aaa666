@@ -132,7 +132,7 @@ export function PitchTypeSplitStackedBarSection({
   revealGeneration = 0,
   colorByType: colorByTypeProp,
   typeOrder: typeOrderProp,
-  rowLabelClassName = "text-[12px] text-gray-200 font-black tabular-nums leading-tight",
+  rowLabelClassName = "pitch-type-split-row-label text-[12px] text-gray-200 font-black tabular-nums leading-tight",
 }: PitchTypeSplitStackedBarSectionProps) {
   if (splits.length === 0) return null
 

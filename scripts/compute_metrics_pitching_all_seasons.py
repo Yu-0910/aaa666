@@ -27,6 +27,14 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.pitching_historical_metrics import (  # noqa: E402
+    ip_baseball_to_decimal,
+    pick_row_cell,
+    resolve_hits_allowed_raw,
+    resolve_ip_raw,
+)
+
 
 def normalize_column_name(col_name: str) -> str:
     """列名を正規化（BOM除去、全角スペース除去、前後空白strip）"""
@@ -131,55 +139,40 @@ def find_pitching_csv_files(data_dir: Path, year: Optional[int] = None, league: 
 CALCULATED = {'ERA', 'K-BB%', 'WHIP', 'K%', 'BB%', 'WPCT'}
 
 
-def ip_baseball_to_decimal(ip: float) -> float:
-    """野球表記の投球回（.1=1/3, .2=2/3）を十進数に変換。ERA/WHIP 計算用"""
-    if ip <= 0:
-        return ip
-    whole = int(ip)
-    frac = ip - whole
-    if abs(frac - 0.1) < 0.05:  # .1 = 1アウト = 1/3
-        return whole + 1/3
-    if abs(frac - 0.2) < 0.05:  # .2 = 2アウト = 2/3
-        return whole + 2/3
-    return ip
+def _metric_float(v: Any) -> float:
+    x = safe_float(v)
+    return x if x is not None else 0.0
 
 
 def compute_pitching_metrics(row: Dict[str, Any]) -> Dict[str, Any]:
     """派生指標を計算して row に追加。計算値は常に優先（上書き）"""
     out = row.copy()
-    ip_raw = get_val(row, ['IP', '投球回'], 0)
-    ip = ip_baseball_to_decimal(ip_raw)  # 野球表記 .1/.2 を十進に変換
-    bf = get_val(row, ['BF', '打者'], 0)
-    er = get_val(row, ['ER', '自責点'], 0)
-    h = get_val(row, ['H', '安打'], 0)
-    bb = get_val(row, ['BB', '与四球', '四球'], 0)
-    so = get_val(row, ['SO', '奪三振', '三振'], 0)
-    w = get_val(row, ['W', '勝利'], 0)
-    l_val = get_val(row, ['L', '敗北'], 0)
 
-    # ERA = (ER×9)/IP
+    ip_raw = resolve_ip_raw(row)
+    ip = ip_baseball_to_decimal(ip_raw) if ip_raw is not None else 0.0
+    bf = _metric_float(pick_row_cell(row, "被打者"))
+    er = _metric_float(pick_row_cell(row, "自責"))
+    h_raw = resolve_hits_allowed_raw(row)
+    h = _metric_float(h_raw)
+    bb = _metric_float(pick_row_cell(row, "四球"))
+    so = _metric_float(pick_row_cell(row, "三振"))
+    w = _metric_float(pick_row_cell(row, "勝利"))
+    l_val = _metric_float(pick_row_cell(row, "敗戦"))
+
+    if h_raw is not None:
+        out["H"] = h_raw
+        if "被安" in out:
+            out["被安"] = h_raw
+
     if ip > 0:
-        out['ERA'] = round((er * 9) / ip, 2)
-
-    # WHIP = (BB+H)/IP
-    if ip > 0:
-        out['WHIP'] = round((bb + h) / ip, 2)
-
-    # K% = SO/BF×100
+        out["ERA"] = round((er * 9) / ip, 2)
+        out["WHIP"] = round((bb + h) / ip, 2)
     if bf > 0:
-        out['K%'] = round((so / bf) * 100, 1)
-
-    # BB% = BB/BF×100
-    if bf > 0:
-        out['BB%'] = round((bb / bf) * 100, 1)
-
-    # K-BB% = (SO−BB)/BF×100
-    if bf > 0:
-        out['K-BB%'] = round(((so - bb) / bf) * 100, 1)
-
-    # WPCT = W/(W+L)
+        out["K%"] = round((so / bf) * 100, 1)
+        out["BB%"] = round((bb / bf) * 100, 1)
+        out["K-BB%"] = round(((so - bb) / bf) * 100, 1)
     if (w + l_val) > 0:
-        out['WPCT'] = round(w / (w + l_val), 3)
+        out["WPCT"] = round(w / (w + l_val), 3)
 
     return out
 
@@ -247,7 +240,7 @@ def main():
     parser.add_argument('--league', choices=['PL', 'CL'], help='リーグでフィルタ')
     parser.add_argument('--dry-run', action='store_true', help='書き込みなし')
     parser.add_argument('--overwrite', action='store_true', help='既存を上書き')
-    parser.add_argument('--input-dir', type=str, default='_data/master_csv__import_1950_2024', help='入力ディレクトリ')
+    parser.add_argument('--input-dir', type=str, default='_data/master_csv', help='入力ディレクトリ（SSOT: master_csv）')
     args = parser.parse_args()
 
     script_dir = Path(__file__).resolve().parent

@@ -507,17 +507,38 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
         candidates.extend([c.upper() for c in candidates] + [c.lower() for c in candidates])
         return any(c in available_columns for c in candidates)
     
+    def count(english_name: str, japanese_name: str = None) -> float:
+        return get_value(english_name, japanese_name) or 0.0
+
+    def resolve_obp() -> float:
+        obp = get_value('OBP', '出塁率')
+        if obp is not None:
+            return obp
+        h = count('H', '安打')
+        bb = count('BB', '四球')
+        hbp = count('HBP', '死球')
+        ab = count('AB', '打数')
+        sf = count('SF', '犠飛')
+        den = ab + bb + hbp + sf
+        return (h + bb + hbp) / den if den > 0 else float('nan')
+
+    def resolve_slg() -> float:
+        slg = get_value('SLG', '長打率')
+        if slg is not None:
+            return slg
+        tb = count('TB', '塁打')
+        ab = count('AB', '打数')
+        return tb / ab if ab > 0 else float('nan')
+    
     # 派生指標の計算
     if 'OPS' in calculated_metrics:
         # 必要な列が存在するかチェック
         if not (has_column('OBP', '出塁率') and has_column('SLG', '長打率')):
             skipped_metrics.append(('OPS', '出塁率(OBP)または長打率(SLG)の列が存在しない'))
         else:
-            obp = get_value('OBP', '出塁率')
-            slg = get_value('SLG', '長打率')
-            # 分母が0でもNaNで埋める（スキップしない）
-            ops = obp + slg
-            result['OPS'] = ops
+            obp = resolve_obp()
+            slg = resolve_slg()
+            result['OPS'] = obp + slg if not (math.isnan(obp) or math.isnan(slg)) else float('nan')
             added_metrics.append('OPS')
     
     # 派生指標の計算
@@ -588,8 +609,8 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
         if not (has_column('BB', '四球') and has_column('PA', '打席')):
             skipped_metrics.append(('BB%', '四球(BB)または打席(PA)の列が存在しない'))
         else:
-            bb = get_value('BB', '四球')
-            pa = get_value('PA', '打席')
+            bb = count('BB', '四球')
+            pa = count('PA', '打席')
             # 分母が0でもNaNで埋める
             bb_pct = (bb / pa) * 100 if pa > 0 else float('nan')
             result['BB%'] = bb_pct
@@ -600,9 +621,10 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
             skipped_metrics.append(('K%', '三振(SO)または打席(PA)の列が存在しない'))
         else:
             so = get_value('SO', '三振')
-            if so == 0:
+            if so is None or so == 0:
                 so = get_value('K', '三振')
-            pa = get_value('PA', '打席')
+            so = so if so is not None else 0.0
+            pa = count('PA', '打席')
             k_pct = (so / pa) * 100 if pa > 0 else float('nan')
             result['K%'] = k_pct
             added_metrics.append('K%')
@@ -611,10 +633,11 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
         if not (has_column('BB', '四球') and (has_column('SO', '三振') or has_column('K', '三振'))):
             skipped_metrics.append(('BB/K', '四球(BB)または三振(SO/K)の列が存在しない'))
         else:
-            bb = get_value('BB', '四球')
+            bb = count('BB', '四球')
             so = get_value('SO', '三振')
-            if so == 0:
+            if so is None or so == 0:
                 so = get_value('K', '三振')
+            so = so if so is not None else 0.0
             bbk = bb / so if so > 0 else float('nan')
             result['BB/K'] = bbk
             added_metrics.append('BB/K')
@@ -624,13 +647,14 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
                 (has_column('SO', '三振') or has_column('K', '三振')) and has_column('SF', '犠飛')):
             skipped_metrics.append(('BABIP', '必要な列が存在しない'))
         else:
-            h = get_value('H', '安打')
-            hr = get_value('HR', '本塁打')
-            ab = get_value('AB', '打数')
+            h = count('H', '安打')
+            hr = count('HR', '本塁打')
+            ab = count('AB', '打数')
             so = get_value('SO', '三振')
-            if so == 0:
+            if so is None or so == 0:
                 so = get_value('K', '三振')
-            sf = get_value('SF', '犠飛')
+            so = so if so is not None else 0.0
+            sf = count('SF', '犠飛')
             denominator = ab - so - hr + sf
             babip = (h - hr) / denominator if denominator > 0 else float('nan')
             result['BABIP'] = babip
@@ -641,12 +665,12 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
                 has_column('SB', '盗塁') and has_column('CS', '盗塁死') and has_column('AB', '打数')):
             skipped_metrics.append(('SecA', '必要な列が存在しない'))
         else:
-            bb = get_value('BB', '四球')
-            tb = get_value('TB', '塁打')
-            h = get_value('H', '安打')
-            sb = get_value('SB', '盗塁')
-            cs = get_value('CS', '盗塁死')
-            ab = get_value('AB', '打数')
+            bb = count('BB', '四球')
+            tb = count('TB', '塁打')
+            h = count('H', '安打')
+            sb = count('SB', '盗塁')
+            cs = count('CS', '盗塁死')
+            ab = count('AB', '打数')
             seca = (bb + (tb - h) + (sb - cs)) / ab if ab > 0 else float('nan')
             result['SecA'] = seca
             added_metrics.append('SecA')
@@ -657,16 +681,16 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
                 has_column('CS', '盗塁死') and (has_column('GDP', '併殺打') or has_column('GIDP', '併殺打'))):
             skipped_metrics.append(('TA', '必要な列が存在しない'))
         else:
-            tb = get_value('TB', '塁打')
-            hbp = get_value('HBP', '死球')
-            bb = get_value('BB', '四球')
-            sb = get_value('SB', '盗塁')
-            ab = get_value('AB', '打数')
-            h = get_value('H', '安打')
-            cs = get_value('CS', '盗塁死')
+            tb = get_value('TB', '塁打') or 0.0
+            hbp = get_value('HBP', '死球') or 0.0
+            bb = get_value('BB', '四球') or 0.0
+            sb = get_value('SB', '盗塁') or 0.0
+            ab = get_value('AB', '打数') or 0.0
+            h = get_value('H', '安打') or 0.0
+            cs = get_value('CS', '盗塁死') or 0.0
             gdp = get_value('GDP', '併殺打')
-            if gdp == 0:
-                gdp = get_value('GIDP', '併殺打')
+            if gdp is None or gdp == 0:
+                gdp = get_value('GIDP', '併殺打') or 0.0
             denominator = ab - h + cs + gdp
             ta = (tb + hbp + bb + sb) / denominator if denominator > 0 else float('nan')
             result['TA'] = ta
@@ -676,20 +700,18 @@ def calculate_metrics(row: Dict[str, Any], target_metrics: List[str], available_
         if not (has_column('OBP', '出塁率') and has_column('SLG', '長打率')):
             skipped_metrics.append(('NOI', '出塁率(OBP)または長打率(SLG)の列が存在しない'))
         else:
-            obp = get_value('OBP', '出塁率')
-            slg = get_value('SLG', '長打率')
-            noi = (obp + (slg / 3)) * 1000
-            result['NOI'] = noi
+            obp = resolve_obp()
+            slg = resolve_slg()
+            result['NOI'] = (obp + (slg / 3)) * 1000 if not (math.isnan(obp) or math.isnan(slg)) else float('nan')
             added_metrics.append('NOI')
     
     if 'GPA' in calculated_metrics:
         if not (has_column('OBP', '出塁率') and has_column('SLG', '長打率')):
             skipped_metrics.append(('GPA', '出塁率(OBP)または長打率(SLG)の列が存在しない'))
         else:
-            obp = get_value('OBP', '出塁率')
-            slg = get_value('SLG', '長打率')
-            gpa = (1.8 * obp + slg) / 4
-            result['GPA'] = gpa
+            obp = resolve_obp()
+            slg = resolve_slg()
+            result['GPA'] = (1.8 * obp + slg) / 4 if not (math.isnan(obp) or math.isnan(slg)) else float('nan')
             added_metrics.append('GPA')
     
     if 'RC' in calculated_metrics:

@@ -7,7 +7,7 @@
  *
  *   node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year 2026
  *   node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year 2026 --json
- *   node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year 2026 --fail
+ *   node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year 2026 --from-date 2026-05-31 --to-date 2026-05-31 --fail
  */
 
 import fs from "node:fs"
@@ -24,15 +24,42 @@ function parseArgs(argv) {
   let jsonOnly = false
   let fail = false
   let limitWorst = 15
+  let fromDate = ""
+  let toDate = ""
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === "--year" && argv[i + 1]) year = String(argv[++i]).trim() || year
     if (a?.startsWith("--year=")) year = a.slice("--year=".length).trim() || year
+    if (a === "--from-date" && argv[i + 1]) fromDate = String(argv[++i]).trim()
+    if (a?.startsWith("--from-date=")) fromDate = a.slice("--from-date=".length).trim()
+    if (a === "--to-date" && argv[i + 1]) toDate = String(argv[++i]).trim()
+    if (a?.startsWith("--to-date=")) toDate = a.slice("--to-date=".length).trim()
     if (a === "--json") jsonOnly = true
     if (a === "--fail") fail = true
     if (a === "--worst" && argv[i + 1]) limitWorst = Number(argv[++i]) || limitWorst
   }
-  return { year, jsonOnly, fail, limitWorst }
+  return { year, jsonOnly, fail, limitWorst, fromDate, toDate }
+}
+
+/** season index の byDate で fromDate〜toDate に絞る（phase4 と同じ考え方）。 */
+function filterGameIdsByDateRange(idx, gameIdsAll, fromDate, toDate) {
+  const byDate = idx?.byDate
+  if ((!fromDate && !toDate) || !byDate || typeof byDate !== "object") {
+    return gameIdsAll
+  }
+  const allowed = new Set()
+  for (const [day, ids] of Object.entries(byDate)) {
+    if (!day) continue
+    if (fromDate && day < fromDate) continue
+    if (toDate && day > toDate) continue
+    if (!Array.isArray(ids)) continue
+    for (const id of ids) {
+      const s = String(id ?? "").trim()
+      if (s) allowed.add(s)
+    }
+  }
+  if (allowed.size === 0) return gameIdsAll
+  return gameIdsAll.filter((id) => allowed.has(String(id).trim()))
 }
 
 function readJson(p) {
@@ -118,16 +145,30 @@ async function loadMergeFn() {
 }
 
 function main() {
-  const { year, jsonOnly, fail, limitWorst } = parseArgs(process.argv.slice(2))
+  const { year, jsonOnly, fail, limitWorst, fromDate, toDate } = parseArgs(process.argv.slice(2))
   const indexPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
   const canonDir = path.join(root, "_data", "scraped_games", "canonical")
   const scoreRoot = path.join(root, "_data", "scraped_games", "raw_sportsnavi_score")
 
   /** @type {string[]} */
   let gameIds = []
+  let idx = null
   if (fs.existsSync(indexPath)) {
-    const idx = readJson(indexPath)
+    idx = readJson(indexPath)
     gameIds = (idx.gameIds ?? []).map((x) => String(x).trim()).filter(Boolean)
+    if (fromDate || toDate) {
+      const before = gameIds.length
+      gameIds = filterGameIdsByDateRange(idx, gameIds, fromDate, toDate)
+      if (gameIds.length === 0) {
+        console.error(
+          "[diag pitch-by-pitch] 日付範囲により gameIds が空です。--from-date / --to-date を確認してください。",
+        )
+        process.exit(1)
+      }
+      console.log(
+        `[diag pitch-by-pitch] 日付範囲 ${fromDate || "…"} … ${toDate || "…"}: ${before} → ${gameIds.length} 試合`,
+      )
+    }
   } else {
     gameIds = fs
       .readdirSync(canonDir)
@@ -325,11 +366,16 @@ function main() {
   }
   console.log("")
 
-  const gapCount = scoreButNoEvents.length
+  const gapCount = scoreButNoEvents.length + derivedButNotMerged.length
   if (fail && gapCount > 0) {
-    console.error(
-      `[diag pitch-by-pitch] FAIL: score HTML あり & pitchRows 空（canonical events なし）が ${gapCount} 試合あります。`,
-    )
+    const parts = []
+    if (scoreButNoEvents.length) {
+      parts.push(`score HTML あり & canonical events なし: ${scoreButNoEvents.length} 試合`)
+    }
+    if (derivedButNotMerged.length) {
+      parts.push(`phase10 derived ありだが canonical 未マージ: ${derivedButNotMerged.length} 試合`)
+    }
+    console.error(`[diag pitch-by-pitch] FAIL: ${parts.join(" / ")}`)
     process.exit(2)
   }
 }

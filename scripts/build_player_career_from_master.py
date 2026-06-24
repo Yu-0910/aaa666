@@ -37,6 +37,10 @@ from lib.pitching_historical_metrics import (  # noqa: E402
     resolve_pitching_float,
     resolve_pitching_int,
 )
+from lib.player_name_match import (  # noqa: E402
+    normalize_name_key,
+    normalize_name_team_keys,
+)
 DEFAULT_ROSTER = ROOT / "_data" / "npb_roster_2026.csv"
 DEFAULT_MASTER_DIRS = [
     ROOT / "_data" / "master_csv_calculated",
@@ -62,51 +66,6 @@ def normalize_npb_id(raw: str) -> str:
     if not digits:
         return ""
     return digits.lstrip("0") or "0"
-
-
-def normalize_name_key(name: str, team: str = "") -> str:
-    n = re.sub(r"[\s\u3000]+", "", (name or ""))
-    t = re.sub(r"[\s\u3000]+", "", (team or ""))
-    return f"{n}|{t}" if t else n
-
-
-def name_keys_for_matching(name: str) -> List[str]:
-    """
-    名簿側の外国人略称（例: Ｓ．ファビアン）と、マスタ側の単独表記（例: ファビアン）を突合するためのキー集合。
-    - 空白除去
-    - 先頭の英字略称「X．」を除いたキー
-    - 「・」区切りの末尾（例: ブライアン・マタ → マタ）
-    """
-    raw = (name or "").strip()
-    if not raw:
-        return []
-    base = re.sub(r"[\s\u3000]+", "", raw)
-    keys: List[str] = []
-    for k in (base,):
-        if k and k not in keys:
-            keys.append(k)
-    # Ｓ．ファビアン → ファビアン
-    m = re.match(r"^[Ａ-ＺA-Z][．.](.+)$", base)
-    if m:
-        k = m.group(1)
-        if k and k not in keys:
-            keys.append(k)
-    # ブライアン・マタ → マタ
-    if "・" in base:
-        k = base.split("・")[-1]
-        if k and k not in keys:
-            keys.append(k)
-    return keys
-
-
-def normalize_name_team_keys(name: str, team: str) -> List[str]:
-    t = re.sub(r"[\s\u3000]+", "", (team or ""))
-    out: List[str] = []
-    for nk in name_keys_for_matching(name):
-        key = f"{nk}|{t}" if t else nk
-        if key and key not in out:
-            out.append(key)
-    return out
 
 
 def safe_int(v: Any) -> Optional[int]:

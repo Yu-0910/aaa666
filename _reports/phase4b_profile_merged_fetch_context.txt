@@ -1,0 +1,2551 @@
+
+==========================================================================================
+PATTERN: profile-merged
+==========================================================================================
+hits: 1
+
+----- around line 412 -----
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+
+==========================================================================================
+PATTERN: setProfileMerged
+==========================================================================================
+hits: 9
+
+----- around line 162 -----
+  148:   const [pitchTypeVsHandPanels, setPitchTypeVsHandPanels] =
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+
+----- around line 163 -----
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+  187:     ops?: string
+
+----- around line 396 -----
+  382:       })
+  383:       .finally(() => {
+  384:         window.clearTimeout(timeoutId)
+  385:         if (!cancelled) setRosterMainReady(true)
+  386:       })
+  387:     return () => {
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+
+----- around line 397 -----
+  383:       .finally(() => {
+  384:         window.clearTimeout(timeoutId)
+  385:         if (!cancelled) setRosterMainReady(true)
+  386:       })
+  387:     return () => {
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+
+----- around line 402 -----
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+
+----- around line 418 -----
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+
+----- around line 419 -----
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+
+----- around line 426 -----
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+  444:     const params = new URLSearchParams(window.location.search)
+  445:     const nameFromQuery = params.get("name")
+  446:     const romanFromQuery = params.get("roman")
+  447:     if (nameFromQuery) {
+  448:       try {
+  449:         setDisplayName(decodeURIComponent(nameFromQuery))
+  450:       } catch {
+
+----- around line 427 -----
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+  444:     const params = new URLSearchParams(window.location.search)
+  445:     const nameFromQuery = params.get("name")
+  446:     const romanFromQuery = params.get("roman")
+  447:     if (nameFromQuery) {
+  448:       try {
+  449:         setDisplayName(decodeURIComponent(nameFromQuery))
+  450:       } catch {
+  451:         setDisplayName(nameFromQuery)
+
+==========================================================================================
+PATTERN: setProfileMergedSettled
+==========================================================================================
+hits: 5
+
+----- around line 163 -----
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+  187:     ops?: string
+
+----- around line 396 -----
+  382:       })
+  383:       .finally(() => {
+  384:         window.clearTimeout(timeoutId)
+  385:         if (!cancelled) setRosterMainReady(true)
+  386:       })
+  387:     return () => {
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+
+----- around line 402 -----
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+
+----- around line 419 -----
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+
+----- around line 427 -----
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+  444:     const params = new URLSearchParams(window.location.search)
+  445:     const nameFromQuery = params.get("name")
+  446:     const romanFromQuery = params.get("roman")
+  447:     if (nameFromQuery) {
+  448:       try {
+  449:         setDisplayName(decodeURIComponent(nameFromQuery))
+  450:       } catch {
+  451:         setDisplayName(nameFromQuery)
+
+==========================================================================================
+PATTERN: ProfileMergedPayload
+==========================================================================================
+hits: 3
+
+----- around line 118 -----
+  104:   careerTh,
+  105:   careerYearTd,
+  106:   FIELDER_PILOT_HEADING_SCALE,
+  107:   FIELDER_PILOT_SECTION_STRIPE_PX,
+  108:   isItoDaiyaPlayerPage,
+  109:   kMinusBbPctOfBf,
+  110:   parseBirthDateJa,
+  111:   pctOfBf,
+  112:   pitchingColsLeft,
+  113:   pitchingColsRight,
+  114:   playerIdSegmentFromPathname,
+  115:   playerRomanNames,
+  116:   stripQueryHash,
+  117:   teamColors,
+  118:   type ProfileMergedPayload,
+  119: } from "./playerPageShared"
+  120: import { PlayerPagePitcherSeasonBody } from "./PlayerPagePitcherSeasonBody"
+  121: import { PlayerPageCatcherSeasonBody } from "./PlayerPageCatcherSeasonBody"
+  122: import { PlayerPageCareerSection } from "./PlayerPageCareerSection"
+  123: import { PlayerPageMatchupBody } from "./PlayerPageMatchupBody"
+  124: import { PlayerPageFielderVsTeamPitchBody } from "./PlayerPageFielderVsTeamPitchBody"
+  125: import { PlayerPageProfileTableBlock } from "./PlayerPageProfileTableBlock"
+  126: 
+  127: const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
+  128: 
+  129: export function PlayerPageClient({
+  130:   layout,
+  131:   forceMobile,
+  132: }: {
+  133:   layout: ViewportLayout
+  134:   forceMobile?: boolean
+  135: }) {
+  136:   const isMobile = layout === "mobile"
+  137:   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
+  138:   const BUILD_MARKER = "phase7-career-bat-all-players-20260528"
+  139:   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  140:   const [selectedYear, setSelectedYear] = useState(2025)
+  141:   /** 既定は今季。名簿照合前は showSeasonCareerTabs が偽でも通算は (!showSeasonCareerTabs || …) で出るため、career 固定より安全 */
+  142:   const [statsTab, setStatsTab] = useState<"season" | "career">("season")
+
+----- around line 162 -----
+  148:   const [pitchTypeVsHandPanels, setPitchTypeVsHandPanels] =
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+
+----- around line 416 -----
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+
+==========================================================================================
+PATTERN: const [profileMerged
+==========================================================================================
+hits: 2
+
+----- around line 162 -----
+  148:   const [pitchTypeVsHandPanels, setPitchTypeVsHandPanels] =
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+
+----- around line 163 -----
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+  187:     ops?: string
+
+==========================================================================================
+PATTERN: profileMergedSettled
+==========================================================================================
+hits: 4
+
+----- around line 163 -----
+  149:     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  150:   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
+  151:   const [pitcherCareerSubTab, setPitcherCareerSubTab] = useState<"total" | "high">("total")
+  152:   /** 野手通算タブ: 通算成績 / キャリアハイ */
+  153:   const [fielderCareerSubTab, setFielderCareerSubTab] = useState<"total" | "high">("total")
+  154:   // 今季サブタブは SeasonStatsPilot の seasonDetailTab でブロックを出し分け。対左右・チーム別は基本成績タブ。状況別は球場・得点圏など。
+  155:   // 初期 pitch だと showPilotTab("situation") が偽になり状況別の表が DOM に無い（タップするまで見えない）。既定は基本成績。球種は「球種情報」タブへ。
+  156:   const [kikuchiSeasonDetailTab, setKikuchiSeasonDetailTab] =
+  157:     useState<FielderSeasonDetailTab>("basic")
+  158:   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
+  159:   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
+  160:   const [displayName, setDisplayName] = useState("")
+  161:   const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  162:   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
+  163:   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
+  164:   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
+  165:   const [rosterRomanExtra, setRosterRomanExtra] = useState<Record<string, string>>({})
+  166:   const [isRosterPlayer, setIsRosterPlayer] = useState(false)
+  167:   /** 名簿照合時の支配下公示ポジション（投手UI判定用） */
+  168:   const [rosterMatchedPosition, setRosterMatchedPosition] = useState("")
+  169:   /** 名簿照合で確定した npb_player_id（空欄ポジションの投手推定から菊池を除外する） */
+  170:   const [rosterMatchedNpbId, setRosterMatchedNpbId] = useState("")
+  171:   /** 名簿照合時の所属（帯色用。team_code 優先、無ければ CSV の team 正式名） */
+  172:   const [rosterStripeKey, setRosterStripeKey] = useState("")
+  173:   /** 名簿 API が現在の URL 向けに完了するまで本文を出さず、中間フレーム（帯・縮小・通算の不整合）を見せない */
+  174:   const [rosterMainReady, setRosterMainReady] = useState(false)
+  175:   type GamePitchTypeRow = {
+  176:     pitch_type: string
+  177:     pitches: number
+  178:     pct: number
+  179:     avg_speed_kmh: number | null
+  180:     swing_miss: number
+  181:     taken: number
+  182:     foul: number
+  183:     balls: number
+  184:     strike_pct: string
+  185:     whiff_pct: string
+  186:     avg: string
+  187:     ops?: string
+
+----- around line 652 -----
+  638:         rosterMainReady &&
+  639:         pitcherSeasonPocApiSettled &&
+  640:         !pitcherSeasonPocPayload &&
+  641:         !hasMergedPitchingFromProfile))
+  642:   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
+  643:   const showSeasonCareerTabs =
+  644:     isRosterPlayer ||
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+  656:         String(p.pro_debut_raw ?? "").trim() ||
+  657:         String(p.career_raw ?? "").trim(),
+  658:     )
+  659:   }, [isRosterPlayer, profileMergedSettled, profileMerged])
+  660: 
+  661:   /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+  662:   const lastStatsTabInitForPlayerRef = useRef("")
+  663:   useEffect(() => {
+  664:     const id = playerIdNormalized.trim()
+  665:     if (!id || id === lastStatsTabInitForPlayerRef.current) return
+  666:     lastStatsTabInitForPlayerRef.current = id
+  667:     if (typeof window === "undefined") return
+  668:     const tab = new URLSearchParams(window.location.search).get("tab")
+  669:     if (tab === "career") {
+  670:       setStatsTab("career")
+  671:       return
+  672:     }
+  673:     if (tab === "season") {
+  674:       setStatsTab("season")
+  675:       return
+  676:     }
+
+----- around line 659 -----
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+  656:         String(p.pro_debut_raw ?? "").trim() ||
+  657:         String(p.career_raw ?? "").trim(),
+  658:     )
+  659:   }, [isRosterPlayer, profileMergedSettled, profileMerged])
+  660: 
+  661:   /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+  662:   const lastStatsTabInitForPlayerRef = useRef("")
+  663:   useEffect(() => {
+  664:     const id = playerIdNormalized.trim()
+  665:     if (!id || id === lastStatsTabInitForPlayerRef.current) return
+  666:     lastStatsTabInitForPlayerRef.current = id
+  667:     if (typeof window === "undefined") return
+  668:     const tab = new URLSearchParams(window.location.search).get("tab")
+  669:     if (tab === "career") {
+  670:       setStatsTab("career")
+  671:       return
+  672:     }
+  673:     if (tab === "season") {
+  674:       setStatsTab("season")
+  675:       return
+  676:     }
+  677:     setStatsTab("season")
+  678:     setPitcherCareerSubTab("total")
+  679:     setFielderCareerSubTab("total")
+  680:   }, [playerIdNormalized])
+  681: 
+  682:   const leaveCatcherTabIfActive = useCallback(() => {
+  683:     setKikuchiSeasonDetailTab((t) => (t === "catcher" ? "basic" : t))
+
+----- around line 1860 -----
+ 1846:         </div>
+ 1847: 
+ 1848:         {pitcherCareerPitchingTightLayout && (
+ 1849:           <div style={{ ...pitcherProfileScaleStyle, marginBottom: "-0.75rem" }}>
+ 1850:             {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
+ 1851:           </div>
+ 1852:         )}
+ 1853: 
+ 1854:         <PlayerPageCareerSection
+ 1855:           showSeasonCareerTabs={showSeasonCareerTabs}
+ 1856:           statsTab={statsTab}
+ 1857:           pitcherCareerPitchingTightLayout={pitcherCareerPitchingTightLayout}
+ 1858:           pitcherCareerPitchingTablePilot={pitcherCareerPitchingTablePilot}
+ 1859:           showCareerBattingSection={showCareerBattingSection}
+ 1860:           profileMergedSettled={profileMergedSettled}
+ 1861:           profileMerged={profileMerged}
+ 1862:           showCareerPitchingRankingTable={showCareerPitchingRankingTable}
+ 1863:           showLegacyPitchingCareerSection={showLegacyPitchingCareerSection}
+ 1864:           pitcherCareerSubTab={pitcherCareerSubTab}
+ 1865:           fielderCareerSubTab={fielderCareerSubTab}
+ 1866:           careerHighSectionH2Class={careerHighSectionH2Class}
+ 1867:           careerBattingSectionH2Style={careerBattingSectionH2Style}
+ 1868:           careerHighBattingCards={careerHighBattingCards}
+ 1869:           isMobile={isMobile}
+ 1870:           renderPitcherCareerSubTabBar={renderPitcherCareerSubTabBar}
+ 1871:           renderFielderCareerSubTabBar={renderFielderCareerSubTabBar}
+ 1872:           pitcherCareerH2Class={pitcherCareerH2Class}
+ 1873:           careerBattingTotalSectionH2Class={careerBattingTotalSectionH2Class}
+ 1874:           mergedPitchingRowsForDisplay={mergedPitchingRowsForDisplay}
+ 1875:           mergedBirthRaw={mergedBirthRaw}
+ 1876:           careerHighPitching={careerHighPitching}
+ 1877:           fielderCareerH2Class={fielderCareerH2Class}
+ 1878:           useRankingStyleCareerBattingTable={useRankingStyleCareerBattingTable}
+ 1879:           mergedBattingRowsForDisplay={mergedBattingRowsForDisplay}
+ 1880:           careerHighBattingYear={careerHighBattingYear}
+ 1881:           tb={tb}
+ 1882:           sectionStripeColor={sectionStripeColor}
+ 1883:         />
+ 1884:           </>
+
+==========================================================================================
+PATTERN: fetch(
+==========================================================================================
+hits: 8
+
+----- around line 278 -----
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+  291:           }>
+  292:           matchedPlayer?: {
+  293:             npb_player_id: string
+  294:             name_ja: string
+  295:             name_en: string
+  296:             name_en_full?: string
+  297:             name_en_short?: string
+  298:             team?: string
+  299:             team_code?: string
+  300:             position?: string
+  301:           } | null
+  302:         }) => {
+
+----- around line 411 -----
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+  423:           if (attempt < 1) {
+  424:             return loadMerged(attempt + 1)
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+
+----- around line 828 -----
+  814:         ? `/api/games/${encodeURIComponent(gid)}/pitchers/npb/${encodeURIComponent(npb)}`
+  815:         : ""
+  816: 
+  817:     setGamePitchTypes(null)
+  818:     setZoneStats(null)
+  819:     setZoneStatsUnavailableReason(null)
+  820: 
+  821:     const fetchGameZoneStats = async (): Promise<
+  822:       | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+  823:       | { ok: false; error: string }
+  824:     > => {
+  825:       if (!base) {
+  826:         return { ok: false, error: "試合・名簿が確定しておらず、試合単位のゾーン成績も取得できません。" }
+  827:       }
+  828:       const r = await fetch(`${base}/zone-stats`, { cache: "no-store" })
+  829:       if (r.ok) {
+  830:         try {
+  831:           return { ok: true, body: await r.json() }
+  832:         } catch {
+  833:           return { ok: false, error: "ゾーン成績の JSON が読み取れませんでした。" }
+  834:         }
+  835:       }
+  836:       let detail = `HTTP ${r.status}`
+  837:       try {
+  838:         const j = (await r.json()) as { error?: string }
+  839:         if (typeof j.error === "string" && j.error.trim()) detail = j.error.trim()
+  840:       } catch {
+  841:         /* ignore */
+  842:       }
+  843:       return { ok: false, error: detail }
+  844:     }
+  845: 
+  846:     const fetchSeasonZoneStats = async (): Promise<
+  847:       | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+  848:       | { ok: false; error: string }
+  849:     > => {
+  850:       if (!zoneQueryId) {
+  851:         return {
+  852:           ok: false,
+
+----- around line 856 -----
+  842:       }
+  843:       return { ok: false, error: detail }
+  844:     }
+  845: 
+  846:     const fetchSeasonZoneStats = async (): Promise<
+  847:       | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+  848:       | { ok: false; error: string }
+  849:     > => {
+  850:       if (!zoneQueryId) {
+  851:         return {
+  852:           ok: false,
+  853:           error: "名簿照合前のためシーズン横断のゾーン成績を取得できません。",
+  854:         }
+  855:       }
+  856:       const r = await fetch(
+  857:         `/api/players/${encodeURIComponent(zoneQueryId)}/pitcher-zone-stats?year=${encodeURIComponent(DERIVED_SEASON_YEAR_DEFAULT)}`,
+  858:         { cache: "no-store" }
+  859:       )
+  860:       let raw: unknown = null
+  861:       try {
+  862:         raw = await r.json()
+  863:       } catch {
+  864:         return {
+  865:           ok: false,
+  866:           error: "シーズンゾーン成績の JSON が読み取れませんでした。",
+  867:         }
+  868:       }
+  869:       const unwrapped = unwrapPitcherZoneStatsApiJson(raw, r.ok)
+  870:       if (unwrapped.ok) {
+  871:         return { ok: true, body: unwrapped.body }
+  872:       }
+  873:       let detail = unwrapped.error
+  874:       if (unwrapped.code === "NO_DERIVED_DATA") {
+  875:         detail += "（`npm run phase20:build:pitcher-zones` で派生を生成できます）"
+  876:       }
+  877:       return { ok: false, error: detail }
+  878:     }
+  879: 
+  880:     const run = async () => {
+
+----- around line 882 -----
+  868:       }
+  869:       const unwrapped = unwrapPitcherZoneStatsApiJson(raw, r.ok)
+  870:       if (unwrapped.ok) {
+  871:         return { ok: true, body: unwrapped.body }
+  872:       }
+  873:       let detail = unwrapped.error
+  874:       if (unwrapped.code === "NO_DERIVED_DATA") {
+  875:         detail += "（`npm run phase20:build:pitcher-zones` で派生を生成できます）"
+  876:       }
+  877:       return { ok: false, error: detail }
+  878:     }
+  879: 
+  880:     const run = async () => {
+  881:       const ptPromise = base
+  882:         ? fetch(`${base}/pitch-types`, { cache: "no-store" }).then((r) =>
+  883:             r.ok ? r.json() : null
+  884:           )
+  885:         : Promise.resolve(null)
+  886: 
+  887:       const season = await fetchSeasonZoneStats()
+  888:       let zoneRes:
+  889:         | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+  890:         | { ok: false; error: string }
+  891:       if (season.ok) {
+  892:         zoneRes = season
+  893:       } else {
+  894:         const game = await fetchGameZoneStats()
+  895:         if (game.ok) {
+  896:           zoneRes = game
+  897:         } else {
+  898:           zoneRes = {
+  899:             ok: false,
+  900:             error:
+  901:               season.error && game.error
+  902:                 ? `${season.error} 試合単位: ${game.error}`
+  903:                 : season.error || game.error,
+  904:           }
+  905:         }
+  906:       }
+
+----- around line 964 -----
+  950:     if (!shouldProbePitcherSeasonData) {
+  951:       setPitcherSeasonPocPayload(null)
+  952:       setPitcherSeasonPocApiSettled(false)
+  953:       return
+  954:     }
+  955:     const id = playerIdNormalized.trim()
+  956:     if (!id) {
+  957:       setPitcherSeasonPocPayload(null)
+  958:       setPitcherSeasonPocApiSettled(false)
+  959:       return
+  960:     }
+  961:     let cancelled = false
+  962:     setPitcherSeasonPocApiSettled(false)
+  963:     const y = DERIVED_SEASON_YEAR_DEFAULT
+  964:     fetch(
+  965:       `/api/players/${encodeURIComponent(id)}/season-pitching?year=${encodeURIComponent(y)}`,
+  966:       { cache: "no-store" }
+  967:     )
+  968:       .then((r) => (r.ok ? r.json() : null))
+  969:       .then((data: PitcherSeasonPitchingApiResponse | null) => {
+  970:         if (cancelled || !data) return
+  971:         setPitcherSeasonPocPayload(data.hasData && data.payload ? data.payload : null)
+  972:       })
+  973:       .catch(() => {
+  974:         if (!cancelled) setPitcherSeasonPocPayload(null)
+  975:       })
+  976:       .finally(() => {
+  977:         if (!cancelled) setPitcherSeasonPocApiSettled(true)
+  978:       })
+  979:     return () => {
+  980:       cancelled = true
+  981:     }
+  982:   }, [shouldProbePitcherSeasonData, playerIdNormalized])
+  983: 
+  984:   /** シーズン通算・球種別（投球データ表） */
+  985:   useEffect(() => {
+  986:     if (!showPitcherSeasonSuganoUi) {
+  987:       setPitcherSeasonPitchTypesPayload(null)
+  988:       setPitcherSeasonPitchTypesLoading(false)
+
+----- around line 1000 -----
+  986:     if (!showPitcherSeasonSuganoUi) {
+  987:       setPitcherSeasonPitchTypesPayload(null)
+  988:       setPitcherSeasonPitchTypesLoading(false)
+  989:       return
+  990:     }
+  991:     const id = playerIdNormalized.trim()
+  992:     if (!id) {
+  993:       setPitcherSeasonPitchTypesPayload(null)
+  994:       setPitcherSeasonPitchTypesLoading(false)
+  995:       return
+  996:     }
+  997:     let cancelled = false
+  998:     setPitcherSeasonPitchTypesLoading(true)
+  999:     const y = DERIVED_SEASON_YEAR_DEFAULT
+ 1000:     fetch(
+ 1001:       `/api/players/${encodeURIComponent(id)}/season-pitch-types?year=${encodeURIComponent(y)}`,
+ 1002:       { cache: "no-store" },
+ 1003:     )
+ 1004:       .then((r) => (r.ok ? r.json() : null))
+ 1005:       .then((data: PitcherSeasonPitchTypesApiResponse | null) => {
+ 1006:         if (cancelled || !data) return
+ 1007:         setPitcherSeasonPitchTypesPayload(data.hasData && data.payload ? data.payload : null)
+ 1008:       })
+ 1009:       .catch(() => {
+ 1010:         if (!cancelled) setPitcherSeasonPitchTypesPayload(null)
+ 1011:       })
+ 1012:       .finally(() => {
+ 1013:         if (!cancelled) setPitcherSeasonPitchTypesLoading(false)
+ 1014:       })
+ 1015:     return () => {
+ 1016:       cancelled = true
+ 1017:     }
+ 1018:   }, [showPitcherSeasonSuganoUi, playerIdNormalized])
+ 1019: 
+ 1020:   /** Phase 7: 期間別（月・週）派生 JSON */
+ 1021:   useEffect(() => {
+ 1022:     if (!showPitcherSeasonSuganoUi) {
+ 1023:       setPitcherSeasonPitchingPeriodPayload(null)
+ 1024:       return
+
+----- around line 1033 -----
+ 1019: 
+ 1020:   /** Phase 7: 期間別（月・週）派生 JSON */
+ 1021:   useEffect(() => {
+ 1022:     if (!showPitcherSeasonSuganoUi) {
+ 1023:       setPitcherSeasonPitchingPeriodPayload(null)
+ 1024:       return
+ 1025:     }
+ 1026:     const id = playerIdNormalized.trim()
+ 1027:     if (!id) {
+ 1028:       setPitcherSeasonPitchingPeriodPayload(null)
+ 1029:       return
+ 1030:     }
+ 1031:     let cancelled = false
+ 1032:     const y = DERIVED_SEASON_YEAR_DEFAULT
+ 1033:     fetch(
+ 1034:       `/api/players/${encodeURIComponent(id)}/season-pitching-period?year=${encodeURIComponent(y)}`,
+ 1035:       { cache: "no-store" }
+ 1036:     )
+ 1037:       .then((r) => (r.ok ? r.json() : null))
+ 1038:       .then((data: PitcherSeasonPitchingPeriodApiResponse | null) => {
+ 1039:         if (cancelled || !data) return
+ 1040:         setPitcherSeasonPitchingPeriodPayload(
+ 1041:           data.hasData && data.payload ? data.payload : null
+ 1042:         )
+ 1043:       })
+ 1044:       .catch(() => {
+ 1045:         if (!cancelled) setPitcherSeasonPitchingPeriodPayload(null)
+ 1046:       })
+ 1047:     return () => {
+ 1048:       cancelled = true
+ 1049:     }
+ 1050:   }, [showPitcherSeasonSuganoUi, playerIdNormalized])
+ 1051: 
+ 1052:   const pitcherPeriodMonthRows = useMemo(
+ 1053:     () =>
+ 1054:       pitcherSeasonPitchingPeriodPayload?.rows.filter((r) => r.split_type === "calendar_month") ??
+ 1055:       [],
+ 1056:     [pitcherSeasonPitchingPeriodPayload]
+ 1057:   )
+
+==========================================================================================
+PATTERN: playerIdNormalized
+==========================================================================================
+hits: 34
+
+----- around line 240 -----
+  226:   const clientSearch = useClientSearchString()
+  227:   const playerIdFromPath = playerIdSegmentFromPathname(pathname)
+  228:   const lastSegmentFromPathname = pathname.split("/").filter(Boolean).pop() || ""
+  229:   /**
+  230:    * pathname から取れない場合のフォールバック（末尾セグメント）。
+  231:    * 青柳はパスが 2103788（Yahoo 投手ID）でも一致するため、同条件で本番でも表示されやすい。
+  232:    */
+  233:   const playerSegment =
+  234:     playerIdFromPath ||
+  235:     (lastSegmentFromPathname && lastSegmentFromPathname !== "players" ? lastSegmentFromPathname : "")
+  236:   const playerSegmentClean = stripQueryHash(playerSegment)
+  237:   const playerSegmentCore = playerSegmentClean.replace(/^player-/, "")
+  238: 
+  239:   /** 本番のエンコード済みパスや NFC/NFD 差で === 比較が外れるのを防ぐ */
+  240:   const playerIdNormalized = (() => {
+  241:     if (!playerSegmentCore) return ""
+  242:     try {
+  243:       return decodeURIComponent(playerSegmentCore).normalize("NFC")
+  244:     } catch {
+  245:       return playerSegmentCore.normalize("NFC")
+  246:     }
+  247:   })()
+  248: 
+  249:   useEffect(() => {
+  250:     pitchTabChartsSeenRef.current = false
+  251:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  252:     // playerIdNormalized のみ: サブタブ切替では「既に球種タブを見た」フラグを維持する
+  253:   }, [playerIdNormalized])
+  254:   useEffect(() => {
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+
+----- around line 252 -----
+  238: 
+  239:   /** 本番のエンコード済みパスや NFC/NFD 差で === 比較が外れるのを防ぐ */
+  240:   const playerIdNormalized = (() => {
+  241:     if (!playerSegmentCore) return ""
+  242:     try {
+  243:       return decodeURIComponent(playerSegmentCore).normalize("NFC")
+  244:     } catch {
+  245:       return playerSegmentCore.normalize("NFC")
+  246:     }
+  247:   })()
+  248: 
+  249:   useEffect(() => {
+  250:     pitchTabChartsSeenRef.current = false
+  251:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  252:     // playerIdNormalized のみ: サブタブ切替では「既に球種タブを見た」フラグを維持する
+  253:   }, [playerIdNormalized])
+  254:   useEffect(() => {
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+
+----- around line 253 -----
+  239:   /** 本番のエンコード済みパスや NFC/NFD 差で === 比較が外れるのを防ぐ */
+  240:   const playerIdNormalized = (() => {
+  241:     if (!playerSegmentCore) return ""
+  242:     try {
+  243:       return decodeURIComponent(playerSegmentCore).normalize("NFC")
+  244:     } catch {
+  245:       return playerSegmentCore.normalize("NFC")
+  246:     }
+  247:   })()
+  248: 
+  249:   useEffect(() => {
+  250:     pitchTabChartsSeenRef.current = false
+  251:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  252:     // playerIdNormalized のみ: サブタブ切替では「既に球種タブを見た」フラグを維持する
+  253:   }, [playerIdNormalized])
+  254:   useEffect(() => {
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+
+----- around line 266 -----
+  252:     // playerIdNormalized のみ: サブタブ切替では「既に球種タブを見た」フラグを維持する
+  253:   }, [playerIdNormalized])
+  254:   useEffect(() => {
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+
+----- around line 267 -----
+  253:   }, [playerIdNormalized])
+  254:   useEffect(() => {
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+  291:           }>
+
+----- around line 269 -----
+  255:     const prev = prevPitcherSeasonSubTabRef.current
+  256:     if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
+  257:       pitchTabChartsSeenRef.current = true
+  258:     }
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+  291:           }>
+  292:           matchedPlayer?: {
+  293:             npb_player_id: string
+
+----- around line 273 -----
+  259:     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
+  260:   }, [pitcherSeasonSubTab])
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+  291:           }>
+  292:           matchedPlayer?: {
+  293:             npb_player_id: string
+  294:             name_ja: string
+  295:             name_en: string
+  296:             name_en_full?: string
+  297:             name_en_short?: string
+
+----- around line 275 -----
+  261:   const animatePitchCharts =
+  262:     pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  263: 
+  264:   useLayoutEffect(() => {
+  265:     setRosterMainReady(false)
+  266:     if (playerIdNormalized) {
+  267:       setDisplayName((prev) => prev || playerIdNormalized)
+  268:     }
+  269:   }, [playerIdNormalized])
+  270: 
+  271:   useEffect(() => {
+  272:     let cancelled = false
+  273:     const id = playerIdNormalized.trim()
+  274:     const qs =
+  275:       id.length > 0 ? `?publicId=${encodeURIComponent(playerIdNormalized)}` : ""
+  276:     const controller = new AbortController()
+  277:     const timeoutId = window.setTimeout(() => controller.abort(), 15000)
+  278:     fetch(`/api/roster/2026${qs}`, { signal: controller.signal })
+  279:       .then((r) => r.json())
+  280:       .then(
+  281:         (data: {
+  282:           players?: Array<{
+  283:             npb_player_id: string
+  284:             name_ja: string
+  285:             name_en: string
+  286:             name_en_full?: string
+  287:             name_en_short?: string
+  288:             team?: string
+  289:             team_code?: string
+  290:             position?: string
+  291:           }>
+  292:           matchedPlayer?: {
+  293:             npb_player_id: string
+  294:             name_ja: string
+  295:             name_en: string
+  296:             name_en_full?: string
+  297:             name_en_short?: string
+  298:             team?: string
+  299:             team_code?: string
+
+----- around line 310 -----
+  296:             name_en_full?: string
+  297:             name_en_short?: string
+  298:             team?: string
+  299:             team_code?: string
+  300:             position?: string
+  301:           } | null
+  302:         }) => {
+  303:           if (cancelled) return
+  304:           const players = data.players || []
+  305:           /** 表示名は初期値が近本などプレースホルダのままのフレームがある。URL セグメント（日本語名）を先に名簿照合する */
+  306:           const byId =
+  307:             id && /^\d+$/.test(id)
+  308:               ? players.find((p) => String(p.npb_player_id) === id)
+  309:               : undefined
+  310:           const pathNameKey = id && !/^\d+$/.test(id) ? rosterNameMatchKey(playerIdNormalized) : ""
+  311:           const byPathSegment =
+  312:             pathNameKey.length > 0
+  313:               ? players.find((p) => rosterNameMatchKey(p.name_ja) === pathNameKey)
+  314:               : undefined
+  315:           const c = rosterNameMatchKey(displayName)
+  316:           /** 初回 fetch が state 初期値（近本プレースホルダ）のまま走るのを防ぐ。ランキング等の ?name= 付き URL 向け */
+  317:           let nameKeyFromUrl = ""
+  318:           if (typeof window !== "undefined") {
+  319:             try {
+  320:               const qn = new URLSearchParams(window.location.search).get("name")?.trim() ?? ""
+  321:               if (qn) {
+  322:                 try {
+  323:                   nameKeyFromUrl = rosterNameMatchKey(decodeURIComponent(qn).normalize("NFC"))
+  324:                 } catch {
+  325:                   nameKeyFromUrl = rosterNameMatchKey(qn)
+  326:                 }
+  327:               }
+  328:             } catch {
+  329:               nameKeyFromUrl = ""
+  330:             }
+  331:           }
+  332:           const nameKeyFromUrlNorm = nameKeyFromUrl ? rosterNameMatchKey(nameKeyFromUrl) : ""
+  333:           const byName = players.find(
+  334:             (p) =>
+
+----- around line 392 -----
+  378:         setIsRosterPlayer(false)
+  379:         setRosterMatchedPosition("")
+  380:         setRosterMatchedNpbId("")
+  381:         setRosterStripeKey("")
+  382:       })
+  383:       .finally(() => {
+  384:         window.clearTimeout(timeoutId)
+  385:         if (!cancelled) setRosterMainReady(true)
+  386:       })
+  387:     return () => {
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+
+----- around line 398 -----
+  384:         window.clearTimeout(timeoutId)
+  385:         if (!cancelled) setRosterMainReady(true)
+  386:       })
+  387:     return () => {
+  388:       cancelled = true
+  389:       controller.abort()
+  390:       window.clearTimeout(timeoutId)
+  391:     }
+  392:   }, [displayName, playerIdNormalized])
+  393: 
+  394:   useEffect(() => {
+  395:     let cancelled = false
+  396:     setProfileMergedSettled(false)
+  397:     setProfileMerged(null)
+  398:     const pathId = playerIdNormalized.trim()
+  399:     const npbFromRoster = rosterMatchedNpbId.trim()
+  400:     const fetchId = npbFromRoster || pathId
+  401:     if (!fetchId) {
+  402:       setProfileMergedSettled(true)
+  403:       return
+  404:     }
+  405: 
+  406:     const PROFILE_MERGED_TIMEOUT_MS = 120_000
+  407: 
+  408:     const loadMerged = (attempt: number) => {
+  409:       const controller = new AbortController()
+  410:       const timeoutId = window.setTimeout(() => controller.abort(), PROFILE_MERGED_TIMEOUT_MS)
+  411:       return fetch(
+  412:         `/api/players/${encodeURIComponent(fetchId)}/profile-merged?year=${DERIVED_SEASON_YEAR_DEFAULT}`,
+  413:         { signal: controller.signal },
+  414:       )
+  415:         .then((r) => r.json())
+  416:         .then((data: { hasData?: boolean; payload?: ProfileMergedPayload }) => {
+  417:           if (cancelled) return
+  418:           setProfileMerged(data?.hasData ? (data.payload ?? null) : null)
+  419:           setProfileMergedSettled(true)
+  420:         })
+  421:         .catch(() => {
+  422:           if (cancelled) return
+
+----- around line 439 -----
+  425:           }
+  426:           setProfileMerged(null)
+  427:           setProfileMergedSettled(true)
+  428:         })
+  429:         .finally(() => {
+  430:           window.clearTimeout(timeoutId)
+  431:         })
+  432:     }
+  433: 
+  434:     void loadMerged(0)
+  435: 
+  436:     return () => {
+  437:       cancelled = true
+  438:     }
+  439:   }, [playerIdNormalized, rosterMatchedNpbId])
+  440: 
+  441:   // URLから表示名・英字名を取得（useSearchParamsは初回レンダーで空になるため window.location を使用）
+  442:   useEffect(() => {
+  443:     if (typeof window === "undefined") return
+  444:     const params = new URLSearchParams(window.location.search)
+  445:     const nameFromQuery = params.get("name")
+  446:     const romanFromQuery = params.get("roman")
+  447:     if (nameFromQuery) {
+  448:       try {
+  449:         setDisplayName(decodeURIComponent(nameFromQuery))
+  450:       } catch {
+  451:         setDisplayName(nameFromQuery)
+  452:       }
+  453:     } else {
+  454:       const pathParts = window.location.pathname.split("/").filter(Boolean)
+  455:       const playerIdFromPath = pathParts[pathParts.length - 1]
+  456:       if (playerIdFromPath && playerIdFromPath !== "players") {
+  457:         try {
+  458:           setDisplayName(decodeURIComponent(playerIdFromPath))
+  459:         } catch {
+  460:           setDisplayName(playerIdFromPath)
+  461:         }
+  462:       }
+  463:     }
+
+==========================================================================================
+PATTERN: seasonPilotPlayerId
+==========================================================================================
+hits: 12
+
+----- around line 600 -----
+  586:     [
+  587:       pitcherPocYahooGameIdExplicit,
+  588:       isAoyagiPage,
+  589:       pitcherSeasonPocPayload?.source?.canonicalGames,
+  590:     ]
+  591:   )
+  592:   /**
+  593:    * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
+  594:    * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
+  595:    * 数値 ID（NPB/Yahoo）は名簿・投手派生の判定後に野手 UI を出す（投手を打撃 UI にしない）。
+  596:    */
+  597:   const numericPilotIdFromPath = /^\d+$/.test(
+  598:     String(playerIdNormalized || playerSegmentCore || "").trim()
+  599:   )
+  600:   const seasonPilotPlayerId = useMemo(() => {
+  601:     const resolved = resolveSeasonStatsPilotQueryId({
+  602:       pathname,
+  603:       playerIdNormalized,
+  604:       playerSegmentCore,
+  605:       playerSegmentClean,
+  606:       displayName,
+  607:       displayRomanName,
+  608:     })
+  609:     if (isKikuchiPage || isFabianPage) return resolved
+  610:     const npb = rosterMatchedNpbId.trim()
+  611:     if (npb) return npb
+  612:     return resolved
+  613:   }, [
+  614:     pathname,
+  615:     playerIdNormalized,
+  616:     playerSegmentCore,
+  617:     playerSegmentClean,
+  618:     displayName,
+  619:     displayRomanName,
+  620:     isKikuchiPage,
+  621:     isFabianPage,
+  622:     rosterMatchedNpbId,
+  623:   ])
+  624:   /** 名簿未確定の数値 ID 向けに season-pitching を先読みして投手か判定する */
+
+----- around line 649 -----
+  635:       isKikuchiPage ||
+  636:       rosterKnownFielder ||
+  637:       (numericPilotIdFromPath &&
+  638:         rosterMainReady &&
+  639:         pitcherSeasonPocApiSettled &&
+  640:         !pitcherSeasonPocPayload &&
+  641:         !hasMergedPitchingFromProfile))
+  642:   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
+  643:   const showSeasonCareerTabs =
+  644:     isRosterPlayer ||
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+  656:         String(p.pro_debut_raw ?? "").trim() ||
+  657:         String(p.career_raw ?? "").trim(),
+  658:     )
+  659:   }, [isRosterPlayer, profileMergedSettled, profileMerged])
+  660: 
+  661:   /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+  662:   const lastStatsTabInitForPlayerRef = useRef("")
+  663:   useEffect(() => {
+  664:     const id = playerIdNormalized.trim()
+  665:     if (!id || id === lastStatsTabInitForPlayerRef.current) return
+  666:     lastStatsTabInitForPlayerRef.current = id
+  667:     if (typeof window === "undefined") return
+  668:     const tab = new URLSearchParams(window.location.search).get("tab")
+  669:     if (tab === "career") {
+  670:       setStatsTab("career")
+  671:       return
+  672:     }
+  673:     if (tab === "season") {
+
+----- around line 691 -----
+  677:     setStatsTab("season")
+  678:     setPitcherCareerSubTab("total")
+  679:     setFielderCareerSubTab("total")
+  680:   }, [playerIdNormalized])
+  681: 
+  682:   const leaveCatcherTabIfActive = useCallback(() => {
+  683:     setKikuchiSeasonDetailTab((t) => (t === "catcher" ? "basic" : t))
+  684:   }, [])
+  685: 
+  686:   const catcherDerivedEnabled =
+  687:     showSeasonCareerTabs && statsTab === "season" && showFielderSeasonPilotUi
+  688: 
+  689:   const catcherSeasonDerived = useCatcherSeasonDerived({
+  690:     enabled: catcherDerivedEnabled,
+  691:     playerId: seasonPilotPlayerId,
+  692:     rosterKnownCatcher,
+  693:     onLeaveCatcherTab: leaveCatcherTabIfActive,
+  694:   })
+  695: 
+  696:   const showCatcherSeasonTab = useMemo(
+  697:     () =>
+  698:       resolveShowCatcherSeasonTab({
+  699:         rosterPosition: rosterMatchedPosition,
+  700:         isRosterPlayer,
+  701:         catcherAppearances: catcherSeasonDerived.appearances,
+  702:       }),
+  703:     [isRosterPlayer, rosterMatchedPosition, catcherSeasonDerived.appearances]
+  704:   )
+  705: 
+  706:   const fielderSeasonSubTabs = useMemo(
+  707:     () => buildFielderSeasonSubTabs(showCatcherSeasonTab),
+  708:     [showCatcherSeasonTab],
+  709:   )
+  710:   const pitcherSeasonSubTabs = useMemo(() => buildPitcherSeasonSubTabs(), [])
+  711: 
+  712:   const playerMatchupDerivedFielder = usePlayerMatchupDerived({
+  713:     enabled:
+  714:       showSeasonCareerTabs &&
+  715:       statsTab === "season" &&
+
+----- around line 719 -----
+  705: 
+  706:   const fielderSeasonSubTabs = useMemo(
+  707:     () => buildFielderSeasonSubTabs(showCatcherSeasonTab),
+  708:     [showCatcherSeasonTab],
+  709:   )
+  710:   const pitcherSeasonSubTabs = useMemo(() => buildPitcherSeasonSubTabs(), [])
+  711: 
+  712:   const playerMatchupDerivedFielder = usePlayerMatchupDerived({
+  713:     enabled:
+  714:       showSeasonCareerTabs &&
+  715:       statsTab === "season" &&
+  716:       showFielderSeasonPilotUi &&
+  717:       !showPitcherSeasonSuganoUi &&
+  718:       kikuchiSeasonDetailTab === "matchup",
+  719:     playerId: seasonPilotPlayerId,
+  720:     role: "batter",
+  721:   })
+  722: 
+  723:   const batterVsTeamPitchDerived = useBatterVsTeamCountPitchTypesDerived({
+  724:     enabled:
+  725:       showSeasonCareerTabs &&
+  726:       statsTab === "season" &&
+  727:       showFielderSeasonPilotUi &&
+  728:       !showPitcherSeasonSuganoUi &&
+  729:       kikuchiSeasonDetailTab === "vs_team_pitch",
+  730:     playerId: seasonPilotPlayerId,
+  731:   })
+  732: 
+  733:   const playerMatchupDerivedPitcher = usePlayerMatchupDerived({
+  734:     enabled:
+  735:       showSeasonCareerTabs &&
+  736:       statsTab === "season" &&
+  737:       showPitcherSeasonSuganoUi &&
+  738:       pitcherSeasonSubTab === "matchup",
+  739:     playerId: seasonPilotPlayerId,
+  740:     role: "pitcher",
+  741:   })
+  742: 
+  743:   useEffect(() => {
+
+----- around line 730 -----
+  716:       showFielderSeasonPilotUi &&
+  717:       !showPitcherSeasonSuganoUi &&
+  718:       kikuchiSeasonDetailTab === "matchup",
+  719:     playerId: seasonPilotPlayerId,
+  720:     role: "batter",
+  721:   })
+  722: 
+  723:   const batterVsTeamPitchDerived = useBatterVsTeamCountPitchTypesDerived({
+  724:     enabled:
+  725:       showSeasonCareerTabs &&
+  726:       statsTab === "season" &&
+  727:       showFielderSeasonPilotUi &&
+  728:       !showPitcherSeasonSuganoUi &&
+  729:       kikuchiSeasonDetailTab === "vs_team_pitch",
+  730:     playerId: seasonPilotPlayerId,
+  731:   })
+  732: 
+  733:   const playerMatchupDerivedPitcher = usePlayerMatchupDerived({
+  734:     enabled:
+  735:       showSeasonCareerTabs &&
+  736:       statsTab === "season" &&
+  737:       showPitcherSeasonSuganoUi &&
+  738:       pitcherSeasonSubTab === "matchup",
+  739:     playerId: seasonPilotPlayerId,
+  740:     role: "pitcher",
+  741:   })
+  742: 
+  743:   useEffect(() => {
+  744:     setPitchTypeVsHandPanels(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  745:   }, [pitcherSeasonPocPayload?.npbPlayerId])
+  746: 
+  747:   const togglePitchTypeVsHandPanel = useCallback(
+  748:     (section: "paRound" | "count", side: "left" | "right") => {
+  749:       setPitchTypeVsHandPanels((prev) => {
+  750:         const key = side === "left" ? "leftOpen" : "rightOpen"
+  751:         return {
+  752:           ...prev,
+  753:           [section]: { ...prev[section], [key]: !prev[section][key] },
+  754:         }
+
+----- around line 739 -----
+  725:       showSeasonCareerTabs &&
+  726:       statsTab === "season" &&
+  727:       showFielderSeasonPilotUi &&
+  728:       !showPitcherSeasonSuganoUi &&
+  729:       kikuchiSeasonDetailTab === "vs_team_pitch",
+  730:     playerId: seasonPilotPlayerId,
+  731:   })
+  732: 
+  733:   const playerMatchupDerivedPitcher = usePlayerMatchupDerived({
+  734:     enabled:
+  735:       showSeasonCareerTabs &&
+  736:       statsTab === "season" &&
+  737:       showPitcherSeasonSuganoUi &&
+  738:       pitcherSeasonSubTab === "matchup",
+  739:     playerId: seasonPilotPlayerId,
+  740:     role: "pitcher",
+  741:   })
+  742: 
+  743:   useEffect(() => {
+  744:     setPitchTypeVsHandPanels(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
+  745:   }, [pitcherSeasonPocPayload?.npbPlayerId])
+  746: 
+  747:   const togglePitchTypeVsHandPanel = useCallback(
+  748:     (section: "paRound" | "count", side: "left" | "right") => {
+  749:       setPitchTypeVsHandPanels((prev) => {
+  750:         const key = side === "left" ? "leftOpen" : "rightOpen"
+  751:         return {
+  752:           ...prev,
+  753:           [section]: { ...prev[section], [key]: !prev[section][key] },
+  754:         }
+  755:       })
+  756:     },
+  757:     [],
+  758:   )
+  759: 
+  760:   /**
+  761:    * 既定の試合 ID を URL に書き込む。?yahooGameId= が無いとき（または旧 PoC 既定のみのとき）
+  762:    * 実効 ID と表示がずれないよう共有・手動変更しやすいクエリに同期する。
+  763:    */
+
+----- around line 810 -----
+  796: 
+  797:   /**
+  798:    * Phase 3: コース別は `pitcher-zone-stats`（canonical 横断・phase20）を主系。200 かつ hasData:false や形式不正時は
+  799:    * 従来の `/api/games/.../zone-stats` にフォールバック。球種別は引き続き試合 API のみ。
+  800:    */
+  801:   useEffect(() => {
+  802:     if (!showPitcherSeasonSuganoUi) {
+  803:       setGamePitchTypes(null)
+  804:       setZoneStats(null)
+  805:       setZoneStatsUnavailableReason(null)
+  806:       return
+  807:     }
+  808:     const gid = pitcherPocYahooGameId
+  809:     const npb = rosterMatchedNpbId.trim() || (isAoyagiPage ? AOYAGI_NPB_ID : "")
+  810:     const zoneQueryId = seasonPilotPlayerId.trim() || playerIdNormalized.trim()
+  811:     let cancelled = false
+  812:     const base =
+  813:       gid && npb
+  814:         ? `/api/games/${encodeURIComponent(gid)}/pitchers/npb/${encodeURIComponent(npb)}`
+  815:         : ""
+  816: 
+  817:     setGamePitchTypes(null)
+  818:     setZoneStats(null)
+  819:     setZoneStatsUnavailableReason(null)
+  820: 
+  821:     const fetchGameZoneStats = async (): Promise<
+  822:       | { ok: true; body: { vsRight: unknown; vsLeft: unknown } }
+  823:       | { ok: false; error: string }
+  824:     > => {
+  825:       if (!base) {
+  826:         return { ok: false, error: "試合・名簿が確定しておらず、試合単位のゾーン成績も取得できません。" }
+  827:       }
+  828:       const r = await fetch(`${base}/zone-stats`, { cache: "no-store" })
+  829:       if (r.ok) {
+  830:         try {
+  831:           return { ok: true, body: await r.json() }
+  832:         } catch {
+  833:           return { ok: false, error: "ゾーン成績の JSON が読み取れませんでした。" }
+  834:         }
+
+----- around line 944 -----
+  930:         setZoneStats(null)
+  931:         setZoneStatsUnavailableReason(
+  932:           "試合データの取得に失敗しました。しばらくしてから再度お試しください。"
+  933:         )
+  934:       }
+  935:     })
+  936:     return () => {
+  937:       cancelled = true
+  938:     }
+  939:   }, [
+  940:     showPitcherSeasonSuganoUi,
+  941:     pitcherPocYahooGameId,
+  942:     isAoyagiPage,
+  943:     rosterMatchedNpbId,
+  944:     seasonPilotPlayerId,
+  945:     playerIdNormalized,
+  946:   ])
+  947: 
+  948:   /** Phase 2/6: `_data/derived/player_season_pitching_poc` を API 経由で取得（捕手別含む） */
+  949:   useEffect(() => {
+  950:     if (!shouldProbePitcherSeasonData) {
+  951:       setPitcherSeasonPocPayload(null)
+  952:       setPitcherSeasonPocApiSettled(false)
+  953:       return
+  954:     }
+  955:     const id = playerIdNormalized.trim()
+  956:     if (!id) {
+  957:       setPitcherSeasonPocPayload(null)
+  958:       setPitcherSeasonPocApiSettled(false)
+  959:       return
+  960:     }
+  961:     let cancelled = false
+  962:     setPitcherSeasonPocApiSettled(false)
+  963:     const y = DERIVED_SEASON_YEAR_DEFAULT
+  964:     fetch(
+  965:       `/api/players/${encodeURIComponent(id)}/season-pitching?year=${encodeURIComponent(y)}`,
+  966:       { cache: "no-store" }
+  967:     )
+  968:       .then((r) => (r.ok ? r.json() : null))
+
+----- around line 1425 -----
+ 1411:       pitcherSeasonSubTab={pitcherSeasonSubTab}
+ 1412:       pitcherSeasonPocApiSettled={pitcherSeasonPocApiSettled}
+ 1413:       pitcherSeasonPocPayload={pitcherSeasonPocPayload}
+ 1414:       rosterMainReady={rosterMainReady}
+ 1415:       pitcherSeasonPitchTypesPayload={pitcherSeasonPitchTypesPayload}
+ 1416:       pitcherSeasonPitchTypesLoading={pitcherSeasonPitchTypesLoading}
+ 1417:       gamePitchTypes={gamePitchTypes}
+ 1418:       zoneStats={zoneStats}
+ 1419:       zoneStatsUnavailableReason={zoneStatsUnavailableReason}
+ 1420:       pitcherSeasonPitchingPeriodPayload={pitcherSeasonPitchingPeriodPayload}
+ 1421:       pitcherPeriodMonthRows={pitcherPeriodMonthRows}
+ 1422:       pitcherPeriodWeekRows={pitcherPeriodWeekRows}
+ 1423:       layout={layout}
+ 1424:       isMobile={isMobile}
+ 1425:       seasonPilotPlayerId={seasonPilotPlayerId}
+ 1426:       catcherAppearances={catcherSeasonDerived.appearances}
+ 1427:       catcherPitchers={catcherSeasonDerived.pitchers}
+ 1428:       catcherDefenseBasic={catcherSeasonDerived.defenseBasic}
+ 1429:       catcherStartingSummary={catcherSeasonDerived.startingSummary}
+ 1430:       catcherPaRoundPitchTypes={catcherSeasonDerived.paRoundPitchTypes}
+ 1431:       showFielderSeasonPilotUi={showFielderSeasonPilotUi}
+ 1432:       kikuchiSeasonDetailTab={kikuchiSeasonDetailTab}
+ 1433:       useCareerHighSeasonNumericFont={isItoDaiyaPage}
+ 1434:       pitchTypeSidePanelPilot={hasPitchTypeVsHandSidePanelData(pitcherSeasonPocPayload)}
+ 1435:       pitchTypeVsHandPanels={pitchTypeVsHandPanels}
+ 1436:       onPitchTypeVsHandPanelToggle={togglePitchTypeVsHandPanel}
+ 1437:       animatePitchCharts={animatePitchCharts}
+ 1438:     />
+ 1439:   )
+ 1440: 
+ 1441:   const renderFielderSeasonBody = () => (
+ 1442:     <>
+ 1443:       {kikuchiSeasonDetailTab === "catcher" ? (
+ 1444:         <PlayerPageCatcherSeasonBody
+ 1445:           tb={tb}
+ 1446:           sectionStripeColor={sectionStripeColor}
+ 1447:           derived={catcherSeasonDerived}
+ 1448:           gamePitchTypes={gamePitchTypes}
+ 1449:         />
+
+----- around line 1454 -----
+ 1440: 
+ 1441:   const renderFielderSeasonBody = () => (
+ 1442:     <>
+ 1443:       {kikuchiSeasonDetailTab === "catcher" ? (
+ 1444:         <PlayerPageCatcherSeasonBody
+ 1445:           tb={tb}
+ 1446:           sectionStripeColor={sectionStripeColor}
+ 1447:           derived={catcherSeasonDerived}
+ 1448:           gamePitchTypes={gamePitchTypes}
+ 1449:         />
+ 1450:       ) : kikuchiSeasonDetailTab === "vs_team_pitch" ? (
+ 1451:         <PlayerPageFielderVsTeamPitchBody
+ 1452:           tb={tb}
+ 1453:           sectionStripeColor={sectionStripeColor}
+ 1454:           playerId={seasonPilotPlayerId}
+ 1455:           loading={batterVsTeamPitchDerived.loading}
+ 1456:           settled={batterVsTeamPitchDerived.settled}
+ 1457:           payload={batterVsTeamPitchDerived.payload}
+ 1458:         />
+ 1459:       ) : kikuchiSeasonDetailTab === "matchup" ? (
+ 1460:         <PlayerPageMatchupBody
+ 1461:           tb={tb}
+ 1462:           sectionStripeColor={sectionStripeColor}
+ 1463:           role="batter"
+ 1464:           loading={playerMatchupDerivedFielder.loading}
+ 1465:           settled={playerMatchupDerivedFielder.settled}
+ 1466:           payload={playerMatchupDerivedFielder.payload}
+ 1467:         />
+ 1468:       ) : (
+ 1469:         <>
+ 1470:           {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
+ 1471:           <SeasonStatsPilot
+ 1472:             playerId={seasonPilotPlayerId}
+ 1473:             seasonDetailTab={kikuchiSeasonDetailTab as any}
+ 1474:             layout={layout}
+ 1475:             looseSpacing
+ 1476:             pinLayoutShell={showSeasonSubTabPinLayout}
+ 1477:             rosterFielderShell={showFielderSeasonPilotUi}
+ 1478:             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+
+----- around line 1472 -----
+ 1458:         />
+ 1459:       ) : kikuchiSeasonDetailTab === "matchup" ? (
+ 1460:         <PlayerPageMatchupBody
+ 1461:           tb={tb}
+ 1462:           sectionStripeColor={sectionStripeColor}
+ 1463:           role="batter"
+ 1464:           loading={playerMatchupDerivedFielder.loading}
+ 1465:           settled={playerMatchupDerivedFielder.settled}
+ 1466:           payload={playerMatchupDerivedFielder.payload}
+ 1467:         />
+ 1468:       ) : (
+ 1469:         <>
+ 1470:           {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
+ 1471:           <SeasonStatsPilot
+ 1472:             playerId={seasonPilotPlayerId}
+ 1473:             seasonDetailTab={kikuchiSeasonDetailTab as any}
+ 1474:             layout={layout}
+ 1475:             looseSpacing
+ 1476:             pinLayoutShell={showSeasonSubTabPinLayout}
+ 1477:             rosterFielderShell={showFielderSeasonPilotUi}
+ 1478:             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+ 1479:             headingStripeColor={sectionStripeColor}
+ 1480:           />
+ 1481:           {kikuchiSeasonDetailTab === "pitch" && (
+ 1482:             <PitchDetailsPilot
+ 1483:               playerId={seasonPilotPlayerId}
+ 1484:               layout={layout}
+ 1485:               headingStripeColor={sectionStripeColor}
+ 1486:             />
+ 1487:           )}
+ 1488:         </>
+ 1489:       )}
+ 1490:     </>
+ 1491:   )
+ 1492: 
+ 1493:   return (
+ 1494:     <div
+ 1495:       className="player-page-fonts min-h-screen text-white"
+ 1496:       style={{
+
+----- around line 1483 -----
+ 1469:         <>
+ 1470:           {showFielderSeasonPilotUi ? <DerivedPipelineFielderHint /> : null}
+ 1471:           <SeasonStatsPilot
+ 1472:             playerId={seasonPilotPlayerId}
+ 1473:             seasonDetailTab={kikuchiSeasonDetailTab as any}
+ 1474:             layout={layout}
+ 1475:             looseSpacing
+ 1476:             pinLayoutShell={showSeasonSubTabPinLayout}
+ 1477:             rosterFielderShell={showFielderSeasonPilotUi}
+ 1478:             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
+ 1479:             headingStripeColor={sectionStripeColor}
+ 1480:           />
+ 1481:           {kikuchiSeasonDetailTab === "pitch" && (
+ 1482:             <PitchDetailsPilot
+ 1483:               playerId={seasonPilotPlayerId}
+ 1484:               layout={layout}
+ 1485:               headingStripeColor={sectionStripeColor}
+ 1486:             />
+ 1487:           )}
+ 1488:         </>
+ 1489:       )}
+ 1490:     </>
+ 1491:   )
+ 1492: 
+ 1493:   return (
+ 1494:     <div
+ 1495:       className="player-page-fonts min-h-screen text-white"
+ 1496:       style={{
+ 1497:         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+ 1498:       }}
+ 1499:     >
+ 1500:       <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
+ 1501:       {/* Header */}
+ 1502:       {isMobile ? (
+ 1503:         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
+ 1504:           <div className="flex items-center justify-between relative">
+ 1505:             <button
+ 1506:               type="button"
+ 1507:               onClick={() => setIsMenuOpen(true)}
+
+==========================================================================================
+PATTERN: numericPilotIdFromPath
+==========================================================================================
+hits: 5
+
+----- around line 597 -----
+  583:         isAoyagiPage,
+  584:         canonicalGames: pitcherSeasonPocPayload?.source?.canonicalGames,
+  585:       }),
+  586:     [
+  587:       pitcherPocYahooGameIdExplicit,
+  588:       isAoyagiPage,
+  589:       pitcherSeasonPocPayload?.source?.canonicalGames,
+  590:     ]
+  591:   )
+  592:   /**
+  593:    * 2026 名簿の野手：菊池と同じ今季成績（見出し・表）。投手ページは対象外。
+  594:    * 名簿 API 応答前でもファビアン・菊池パイロット（パス判定）では今季ブロックを出す。
+  595:    * 数値 ID（NPB/Yahoo）は名簿・投手派生の判定後に野手 UI を出す（投手を打撃 UI にしない）。
+  596:    */
+  597:   const numericPilotIdFromPath = /^\d+$/.test(
+  598:     String(playerIdNormalized || playerSegmentCore || "").trim()
+  599:   )
+  600:   const seasonPilotPlayerId = useMemo(() => {
+  601:     const resolved = resolveSeasonStatsPilotQueryId({
+  602:       pathname,
+  603:       playerIdNormalized,
+  604:       playerSegmentCore,
+  605:       playerSegmentClean,
+  606:       displayName,
+  607:       displayRomanName,
+  608:     })
+  609:     if (isKikuchiPage || isFabianPage) return resolved
+  610:     const npb = rosterMatchedNpbId.trim()
+  611:     if (npb) return npb
+  612:     return resolved
+  613:   }, [
+  614:     pathname,
+  615:     playerIdNormalized,
+  616:     playerSegmentCore,
+  617:     playerSegmentClean,
+  618:     displayName,
+  619:     displayRomanName,
+  620:     isKikuchiPage,
+  621:     isFabianPage,
+
+----- around line 631 -----
+  617:     playerSegmentClean,
+  618:     displayName,
+  619:     displayRomanName,
+  620:     isKikuchiPage,
+  621:     isFabianPage,
+  622:     rosterMatchedNpbId,
+  623:   ])
+  624:   /** 名簿未確定の数値 ID 向けに season-pitching を先読みして投手か判定する */
+  625:   const shouldProbePitcherSeasonData =
+  626:     !isKikuchiPage &&
+  627:     !pathMatchesKikuchiPilot(pathname) &&
+  628:     !isFabianPage &&
+  629:     (isAoyagiPage ||
+  630:       rosterKnownPitcher ||
+  631:       (numericPilotIdFromPath && rosterMainReady && !rosterKnownFielder))
+  632:   const showFielderSeasonPilotUi =
+  633:     !showPitcherSeasonSuganoUi &&
+  634:     (isFabianPage ||
+  635:       isKikuchiPage ||
+  636:       rosterKnownFielder ||
+  637:       (numericPilotIdFromPath &&
+  638:         rosterMainReady &&
+  639:         pitcherSeasonPocApiSettled &&
+  640:         !pitcherSeasonPocPayload &&
+  641:         !hasMergedPitchingFromProfile))
+  642:   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
+  643:   const showSeasonCareerTabs =
+  644:     isRosterPlayer ||
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+
+----- around line 637 -----
+  623:   ])
+  624:   /** 名簿未確定の数値 ID 向けに season-pitching を先読みして投手か判定する */
+  625:   const shouldProbePitcherSeasonData =
+  626:     !isKikuchiPage &&
+  627:     !pathMatchesKikuchiPilot(pathname) &&
+  628:     !isFabianPage &&
+  629:     (isAoyagiPage ||
+  630:       rosterKnownPitcher ||
+  631:       (numericPilotIdFromPath && rosterMainReady && !rosterKnownFielder))
+  632:   const showFielderSeasonPilotUi =
+  633:     !showPitcherSeasonSuganoUi &&
+  634:     (isFabianPage ||
+  635:       isKikuchiPage ||
+  636:       rosterKnownFielder ||
+  637:       (numericPilotIdFromPath &&
+  638:         rosterMainReady &&
+  639:         pitcherSeasonPocApiSettled &&
+  640:         !pitcherSeasonPocPayload &&
+  641:         !hasMergedPitchingFromProfile))
+  642:   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
+  643:   const showSeasonCareerTabs =
+  644:     isRosterPlayer ||
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+  656:         String(p.pro_debut_raw ?? "").trim() ||
+  657:         String(p.career_raw ?? "").trim(),
+  658:     )
+  659:   }, [isRosterPlayer, profileMergedSettled, profileMerged])
+  660: 
+  661:   /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+
+----- around line 648 -----
+  634:     (isFabianPage ||
+  635:       isKikuchiPage ||
+  636:       rosterKnownFielder ||
+  637:       (numericPilotIdFromPath &&
+  638:         rosterMainReady &&
+  639:         pitcherSeasonPocApiSettled &&
+  640:         !pitcherSeasonPocPayload &&
+  641:         !hasMergedPitchingFromProfile))
+  642:   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
+  643:   const showSeasonCareerTabs =
+  644:     isRosterPlayer ||
+  645:     isAoyagiPage ||
+  646:     isKikuchiPage ||
+  647:     isFabianPage ||
+  648:     numericPilotIdFromPath ||
+  649:     /^\d+$/.test(String(seasonPilotPlayerId || "").trim())
+  650: 
+  651:   const hasProfileOnly = useMemo(() => {
+  652:     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+  653:     const p = profileMerged.profile
+  654:     return Boolean(
+  655:       String(p.birth_date_raw ?? "").trim() ||
+  656:         String(p.pro_debut_raw ?? "").trim() ||
+  657:         String(p.career_raw ?? "").trim(),
+  658:     )
+  659:   }, [isRosterPlayer, profileMergedSettled, profileMerged])
+  660: 
+  661:   /** 選手切替時のみタブを初期化（名簿照合後に通算タブへ戻さない） */
+  662:   const lastStatsTabInitForPlayerRef = useRef("")
+  663:   useEffect(() => {
+  664:     const id = playerIdNormalized.trim()
+  665:     if (!id || id === lastStatsTabInitForPlayerRef.current) return
+  666:     lastStatsTabInitForPlayerRef.current = id
+  667:     if (typeof window === "undefined") return
+  668:     const tab = new URLSearchParams(window.location.search).get("tab")
+  669:     if (tab === "career") {
+  670:       setStatsTab("career")
+  671:       return
+  672:     }
+
+----- around line 1109 -----
+ 1095:         borderLeft: `${FIELDER_PILOT_SECTION_STRIPE_PX}px solid ${sectionStripeColor}`,
+ 1096:         fontWeight: 900 as const,
+ 1097:         fontSize: isMobile
+ 1098:           ? `${1.625 * FIELDER_PILOT_HEADING_SCALE}rem`
+ 1099:           : `${1.125 * FIELDER_PILOT_HEADING_SCALE}rem`,
+ 1100:         paddingLeft: `${1 * FIELDER_PILOT_HEADING_SCALE}rem`,
+ 1101:       }
+ 1102:     : {
+ 1103:         borderLeft: `6px solid ${sectionStripeColor}`,
+ 1104:         fontWeight: 900 as const,
+ 1105:       }
+ 1106: 
+ 1107:   /** 数値 ID URL は名簿 API 待ちで全画面スピナーにしない */
+ 1108:   const pageShellReady =
+ 1109:     rosterMainReady || numericPilotIdFromPath || Boolean(playerIdNormalized.trim())
+ 1110: 
+ 1111:   const mergedBirthRaw = String(profileMerged?.profile?.birth_date_raw ?? "").trim()
+ 1112:   const mergedProDebut = String(profileMerged?.profile?.pro_debut_raw ?? "").trim()
+ 1113:   const mergedCareer = String(profileMerged?.profile?.career_raw ?? "").trim()
+ 1114:   const mergedSalaryTotal = String(profileMerged?.career_total_salary_display ?? "").trim()
+ 1115:   const mergedSalaryTotalPlain = mergedSalaryTotal
+ 1116:     ? mergedSalaryTotal.split("（")[0]?.trim() || mergedSalaryTotal
+ 1117:     : ""
+ 1118:   const mergedFaDisplay = String(profileMerged?.faEstimate?.domesticFa?.displayValue ?? "").trim()
+ 1119: 
+ 1120:   const mergedBattingRowsForDisplay = useMemo(() => {
+ 1121:     const rows = (profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]
+ 1122:     const total = (profileMerged?.career_batting?.total ?? null) as CareerDisplayRow | null
+ 1123:     return appendCareerTotalRow(rows, total)
+ 1124:   }, [profileMerged])
+ 1125: 
+ 1126:   const mergedPitchingRowsForDisplay = useMemo(() => {
+ 1127:     const rows = enrichCareerPitchingRows(
+ 1128:       (profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[],
+ 1129:     )
+ 1130:     const totalRaw = (profileMerged?.career_pitching?.total ?? null) as CareerDisplayRow | null
+ 1131:     const total =
+ 1132:       totalRaw && Object.keys(totalRaw).length > 0 ? enrichCareerPitchingRow(totalRaw) : null
+ 1133:     return appendCareerTotalRow(rows, total)

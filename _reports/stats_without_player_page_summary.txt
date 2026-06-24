@@ -1,0 +1,12 @@
+=== stats vs player page audit ===
+master players (with player_id): 6987
+merged npb_*.json: 7175
+roster 2026: 804
+
+with_id + has merged: 6987
+with_id + missing merged (total): 0
+  - historical (non-roster): 0
+  - roster 2026: 0
+stats rows with empty player_id (unique name|team): 1842
+
+report: C:\dev\TopPage\_reports\stats_without_player_page.csv

@@ -16,6 +16,18 @@ export type RosterPitcherCareerTableMatch = Pick<
  * 2026 名簿に名前があり、投手として登録されている選手か（通算投手表・キャリアハイ UI 対象）。
  * 矢澤・柴田は打撃表を優先するため除外。
  */
+/** 通算成績表の表・文字・数値スケール（全選手共通） */
+export const CAREER_TABLE_SCALE_MULTIPLIER = 1.2
+
+export function careerTableScaleMultiplier(
+  _npbPlayerId?: string | null | undefined,
+): number {
+  return CAREER_TABLE_SCALE_MULTIPLIER
+}
+
+/** @deprecated careerTableScaleMultiplier を使用 */
+export const careerPitchingTableScaleMultiplier = careerTableScaleMultiplier
+
 export function usesPitcherCareerPitchingTableFromRosterMatch(
   matched: RosterPitcherCareerTableMatch | null | undefined,
 ): boolean {

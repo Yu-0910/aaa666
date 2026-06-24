@@ -1,0 +1,31 @@
+# ===== Cursorに読ませなくていい重いフォルダ =====
+node_modules
+.next
+dist
+build
+out
+coverage
+.cache
+.vercel
+
+# ===== ログ・一時ファイル =====
+*.log
+*.tmp
+
+# ===== 大量データ系 =====
+*.csv
+*.tsv
+
+# JSONは必要な場合もあるので、まずは巨大JSONだけ除外推奨
+_data/npb_rescrape/*.json
+_data/master_csv/*.json
+
+# ===== 画像・生成物 =====
+public/**/*.png
+public/**/*.jpg
+public/**/*.jpeg
+public/**/*.webp
+public/**/*.gif
+
+# ===== 生成済みHTMLが多い場合 =====
+*.html

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
-import PitchDetailsPilot from "@/app/components/PitchDetailsPilot"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import type { PitcherSeasonPocPayload, PitcherSeasonPitchingPeriodPayload } from "@/lib/pitcherSeasonPocTypes"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
@@ -58,8 +57,6 @@ export type PlayerPagePitcherSeasonBodyProps = {
     rows: unknown[]
     total_row?: unknown
   } | null
-  zoneStats: { vsRight: Array<{ zoneId: string; pct?: number; avg?: string; ops?: string }>; vsLeft: Array<{ zoneId: string; pct?: number; avg?: string; ops?: string }> } | null
-  zoneStatsUnavailableReason: string | null
   pitcherSeasonPitchingPeriodPayload: PitcherSeasonPitchingPeriodPayload | null
   pitcherPeriodMonthRows: Array<Record<string, unknown>>
   pitcherPeriodWeekRows: Array<Record<string, unknown>>
@@ -82,14 +79,20 @@ export type PlayerPagePitcherSeasonBodyProps = {
   }>
   showFielderSeasonPilotUi: boolean
   kikuchiSeasonDetailTab: "basic" | "pitch" | "situation" | "matchup" | "catcher"
-  /** キャリアハイ投手成績と同じ Bebas 数値フォント（伊藤大海ページ限定） */
-  useCareerHighSeasonNumericFont?: boolean
   /** 対左右球種データあり: 巡目別・カウント別の [左][右] 折りたたみ UI */
   pitchTypeSidePanelPilot?: boolean
   pitchTypeVsHandPanels?: PitchTypeVsHandPanelsOpenState
   onPitchTypeVsHandPanelToggle?: (section: "paRound" | "count", side: "left" | "right") => void
   /** 球種情報タブ初回表示時のみグラフアニメーションを再生 */
   animatePitchCharts?: boolean
+  /** 伊藤大海: カウント別投球成績の打数・被安打列レイアウト */
+  isItoDaiyaPage?: boolean
+}
+
+/** カウント別投球成績: 打数・被安打セルの表示順（伊藤は打数→被安打） */
+function orderCountPitchAbCells(cells: string[], abBeforeH: boolean): string[] {
+  if (!abBeforeH || cells.length < 2) return cells
+  return [cells[1], cells[0], ...cells.slice(2)]
 }
 
 export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyProps) {
@@ -103,8 +106,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     pitcherSeasonPitchTypesPayload,
     pitcherSeasonPitchTypesLoading,
     gamePitchTypes,
-    zoneStats,
-    zoneStatsUnavailableReason,
     pitcherSeasonPitchingPeriodPayload,
     pitcherPeriodMonthRows,
     pitcherPeriodWeekRows,
@@ -118,17 +119,15 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     catcherPaRoundPitchTypes,
     showFielderSeasonPilotUi,
     kikuchiSeasonDetailTab,
-    useCareerHighSeasonNumericFont = false,
     pitchTypeSidePanelPilot = false,
     pitchTypeVsHandPanels,
     onPitchTypeVsHandPanelToggle,
     animatePitchCharts = true,
+    isItoDaiyaPage = false,
   } = props
 
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
-  const seasonNumericFontClass = useCareerHighSeasonNumericFont
-    ? PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
-    : undefined
+  const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
 
   const pitcherPocTeamTable = useMemo(
     () =>
@@ -369,7 +368,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           }}
                         >
                           <colgroup>
-                            <col style={{ width: "95px" }} />
+                            <col style={{ width: "102.6px" }} />
                             <col style={{ width: "50px" }} />
                             <col style={{ width: "45px" }} />
                             <col style={{ width: "45px" }} />
@@ -401,8 +400,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 >
                                   <div className="flex items-center gap-1 min-h-[1.25rem]">
                                     <div
-                                      className="w-1 h-4 flex-shrink-0"
+                                      className="flex-shrink-0"
                                       style={{
+                                        width: "4.32px",
+                                        height: "17.28px",
                                         backgroundColor:
                                           row.team === "巨人"
                                             ? "#ff6600"
@@ -659,159 +660,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         </tbody>
                       </table>
                     </div>
-
-                    <h2
-                      className={`${tb} mb-4 pl-4 mt-8`}
-                      style={{
-                        borderLeft: `6px solid ${sectionStripeColor}`,
-                        fontWeight: 900,
-                      }}
-                    >
-                      コース別の投球成績（対右打者）
-                    </h2>
-                    {zoneStatsUnavailableReason ? (
-                      <div
-                        className="mb-4 rounded border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-100/95 leading-relaxed"
-                        role="status"
-                      >
-                        <p className="font-bold text-amber-200 mb-1">コース別データを表示できません</p>
-                        <p className="text-[11px] text-gray-300 mb-2 whitespace-pre-wrap break-words">
-                          {zoneStatsUnavailableReason}
-                        </p>
-                        <ul className="list-disc pl-4 text-[11px] text-gray-400 space-y-1">
-                          <li>
-                            表示対象の投手が<strong className="text-gray-300">この試合に登板しているか</strong>
-                            確認してください。既定試合（PoC）に出ていない投手は、名簿照合で Yahoo
-                            投手IDが取れず 404 になります。
-                          </li>
-                          <li>
-                            URL に{" "}
-                            <code className="text-gray-200 font-mono tabular-nums">
-                              ?yahooGameId=（Yahooの試合ID）
-                            </code>{" "}
-                            を付け、<strong className="text-gray-300">その試合に出た投手</strong>
-                            と組み合わせてください。
-                          </li>
-                          <li>
-                            事前に{" "}
-                            <code className="text-gray-200 font-mono text-[10px]">
-                              python scripts/fetch_pitcher_zone_stats.py --game-id … --pitcher-id …
-                            </code>{" "}
-                            で{" "}
-                            <code className="text-gray-200 font-mono text-[10px]">
-                              _data/yahoo_games_pilot/zone_stats_*.json
-                            </code>{" "}
-                            を置くと、canonical に pitchEvents が無くても表示できます。
-                          </li>
-                        </ul>
-                      </div>
-                    ) : null}
-                    <div className="overflow-x-auto flex justify-center mb-4">
-                      <div
-                        className="inline-grid grid-cols-5 gap-0"
-                        style={{
-                          border: "0.5px solid #888888",
-                          background: "#000000",
-                          minWidth: "min(95vw, 380px)",
-                        }}
-                      >
-                        {[1, 2, 3, 4, 5].map((row) =>
-                          [1, 2, 3, 4, 5].map((col) => {
-                            const z = (row - 1) * 5 + col
-                            const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
-                            const stat = zoneStats?.vsRight?.find((s) => s.zoneId === z)
-                            const isopVal = stat?.isop ?? "ー"
-                            const avgVal = stat?.avg ?? "ー"
-                            const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
-                            return (
-                              <div
-                                key={z}
-                                className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
-                                style={{
-                                  border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
-                                  backgroundColor: "#000000",
-                                  color: "#e5e5e5",
-                                }}
-                              >
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被ISOP</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{isopVal}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被打率</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被本</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
-                                </div>
-                              </div>
-                            )
-                          })
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 latin">
-                      5×5グリッド（投手目線）。主に canonical 横断のシーズン集計（派生未生成時は URL の試合 ID に基づく単試合）。被ISOP・被打率・被本は決着球のゾーン別。
-                    </p>
-
-                    <h2
-                      className={`${tb} mb-4 pl-4 mt-8`}
-                      style={{
-                        borderLeft: `6px solid ${sectionStripeColor}`,
-                        fontWeight: 900,
-                      }}
-                    >
-                      コース別の投球成績（対左打者）
-                    </h2>
-                    <div className="overflow-x-auto flex justify-center mb-4">
-                      <div
-                        className="inline-grid grid-cols-5 gap-0"
-                        style={{
-                          border: "0.5px solid #888888",
-                          background: "#000000",
-                          minWidth: "min(95vw, 380px)",
-                        }}
-                      >
-                        {[1, 2, 3, 4, 5].map((row) =>
-                          [1, 2, 3, 4, 5].map((col) => {
-                            const z = (row - 1) * 5 + col
-                            const isStrikeZone = [7, 8, 9, 12, 13, 14, 17, 18, 19].includes(z)
-                            const stat = zoneStats?.vsLeft?.find((s) => s.zoneId === z)
-                            const isopVal = stat?.isop ?? "ー"
-                            const avgVal = stat?.avg ?? "ー"
-                            const hrVal = stat?.hr != null ? String(stat.hr) : "ー"
-                            return (
-                              <div
-                                key={z}
-                                className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[60px]"
-                                style={{
-                                  border: isStrikeZone ? "1.5px solid #FFFF44" : "0.5px solid #888888",
-                                  backgroundColor: "#000000",
-                                  color: "#e5e5e5",
-                                }}
-                              >
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被ISOP</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{isopVal}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被打率</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{avgVal}</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-[10px] latin">
-                                  <span className="opacity-70">被本</span>
-                                  <span className="latin font-black tabular-nums text-[12px]">{hrVal}</span>
-                                </div>
-                              </div>
-                            )
-                          })
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 latin">
-                      5×5グリッド（投手目線）。主に canonical 横断のシーズン集計（派生未生成時は URL の試合 ID に基づく単試合）。被ISOP・被打率・被本は決着球のゾーン別。
-                    </p>
 
                     <div
                       style={{
@@ -1105,113 +953,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       loading={pitcherSeasonPitchTypesLoading}
                     />
 
-                    {gamePitchTypes?.rows?.length ? (
-                      <>
-                        <h2
-                          className={`${tb} mb-4 pl-4 mt-8`}
-                          style={{
-                            borderLeft: `6px solid ${sectionStripeColor}`,
-                            fontWeight: 900,
-                          }}
-                        >
-                          試合別球種一覧
-                        </h2>
-                        <p className="text-sm text-gray-400 mb-4">
-                          試合{" "}
-                          <span className="text-gray-200 font-mono tabular-nums">
-                            {gamePitchTypes.game_id}
-                          </span>
-                          （URL に <code className="text-gray-300">?yahooGameId=</code> で切替）
-                        </p>
-                        <div className="overflow-x-auto overflow-y-hidden mb-12">
-                          <table
-                            className="text-xs"
-                            style={{
-                              fontVariantNumeric: "tabular-nums",
-                              borderCollapse: "separate",
-                              borderSpacing: 0,
-                              border: "1px solid #555",
-                              width: "100%",
-                              minWidth: "473px",
-                              tableLayout: "fixed",
-                            }}
-                          >
-                            <colgroup>
-                              <col style={{ width: "102px" }} />
-                              <col style={{ width: "95px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "57px" }} />
-                              <col style={{ width: "48px" }} />
-                              <col style={{ width: "57px" }} />
-                            </colgroup>
-                            <thead>
-                              <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                                <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                                  球種
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  平均球速
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  割合
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  Strike％
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  Whiff％
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  被打率
-                                </th>
-                                <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                  被OPS
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {gamePitchTypes.rows.map((row) => (
-                                <tr key={row.pitch_type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                  <td
-                                    className="px-1 py-1 text-left latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                    style={{ backgroundColor: "#1a1a1a" }}
-                                  >
-                                    {row.pitch_type}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 whitespace-nowrap">
-                                    {row.avg_speed_kmh != null ? (
-                                      <>
-                                        <span className="latin">{row.avg_speed_kmh.toFixed(1)}</span>
-                                        <span className="latin text-[11px] opacity-90"> km/h</span>
-                                      </>
-                                    ) : (
-                                      "—"
-                                    )}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {row.pct.toFixed(1)}%
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {row.strike_pct}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {row.whiff_pct}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {formatSlashStatDisplay(row.avg)}
-                                  </td>
-                                  <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                    {formatSlashStatDisplay(row.ops ?? "—")}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    ) : null}
-
                     <PitchTypeSplitViewsSection
                       key={`pitch-type-splits-${pitcherSeasonPocPayload?.npbPlayerId ?? "none"}-${pitchTypeSidePanelPilot ? "pilot" : "std"}`}
                       tb={tb}
@@ -1256,8 +997,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <colgroup>
                             <col style={{ width: "54px" }} />
-                            <col style={{ width: "50px" }} />
-                            <col style={{ width: "60px" }} />
+                            {isItoDaiyaPage ? (
+                              <>
+                                <col style={{ width: "54px" }} />
+                                <col style={{ width: "54px" }} />
+                              </>
+                            ) : (
+                              <>
+                                <col style={{ width: "50px" }} />
+                                <col style={{ width: "60px" }} />
+                              </>
+                            )}
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
@@ -1269,8 +1019,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                              {isItoDaiyaPage ? (
+                                <>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
+                                </>
+                              ) : (
+                                <>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                                </>
+                              )}
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
@@ -1293,7 +1052,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 >
                                   {row.label}
                                 </td>
-                                {row.cells.map((cell, i) => (
+                                {orderCountPitchAbCells(row.cells, isItoDaiyaPage).map((cell, i) => (
                                   <td
                                     key={i}
                                     className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
@@ -1334,8 +1093,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <colgroup>
                             <col style={{ width: "52px" }} />
-                            <col style={{ width: "50px" }} />
-                            <col style={{ width: "60px" }} />
+                            {isItoDaiyaPage ? (
+                              <>
+                                <col style={{ width: "54px" }} />
+                                <col style={{ width: "54px" }} />
+                              </>
+                            ) : (
+                              <>
+                                <col style={{ width: "50px" }} />
+                                <col style={{ width: "60px" }} />
+                              </>
+                            )}
                             {/* K-BB％ / K％ を BB％と同じ横幅に揃える */}
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
@@ -1348,8 +1116,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                              {isItoDaiyaPage ? (
+                                <>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
+                                </>
+                              ) : (
+                                <>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
+                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                                </>
+                              )}
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
@@ -1383,7 +1160,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 >
                                   {row.label}
                                 </td>
-                                {row.cells.map((cell, i) => (
+                                {orderCountPitchAbCells(row.cells, isItoDaiyaPage).map((cell, i) => (
                                   <td
                                     key={i}
                                     className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"

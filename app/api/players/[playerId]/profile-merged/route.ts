@@ -8,6 +8,7 @@ import { fetchDerivedJsonServer } from "@/lib/derived/fetchDerivedJsonServer"
 import type { FaEstimateDomestic } from "@/lib/faEstimate"
 import { loadDomesticFaEstimateForPlayer } from "@/lib/loadPlayerFaEstimate"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
+import { resolveNonRosterNameEnFull } from "@/lib/playerRomanFromKana"
 
 export const dynamic = "force-dynamic"
 
@@ -26,6 +27,19 @@ export type PlayerProfileMergedApiResponse = {
   payload: PlayerProfileMergedApiPayload | null
   code?: string
   message?: string
+}
+
+async function readMetaForRoman(npbPlayerId: string) {
+  const id = (npbPlayerId || "").trim()
+  if (!/^\d+$/.test(id)) return null
+  for (const fileName of [`${id}.json`, `npb_${id}.json`]) {
+    const meta = await fetchDerivedJsonServer<{
+      name_kana?: string
+      roman?: { name_en_full?: string; name_en_short?: string }
+    }>("npb_player_meta", fileName)
+    if (meta) return meta
+  }
+  return null
 }
 
 async function readMergedByNpbId(
@@ -76,8 +90,11 @@ export async function GET(
       } satisfies PlayerProfileMergedApiResponse)
     }
     const domesticFa = await loadDomesticFaEstimateForPlayer(npbId, faSeasonYear)
+    const meta = rosterPlayer ? null : await readMetaForRoman(npbId)
+    const nameEnFull = rosterPlayer ? "" : resolveNonRosterNameEnFull(meta)
     const enriched: PlayerProfileMergedApiPayload = {
       ...payload,
+      ...(nameEnFull ? { name_en_full: nameEnFull } : {}),
       faEstimate: { seasonYear: faSeasonYear, domesticFa },
     }
     return jsonDerivedResponse<PlayerProfileMergedApiPayload>({

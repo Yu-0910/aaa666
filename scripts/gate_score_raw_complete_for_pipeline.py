@@ -38,23 +38,10 @@ from fetch_sportsnavi_score_raw_snapshot import (  # noqa: E402
 )
 
 
-def _main_html_cancelled(html: str | None) -> bool:
-    if not html:
-        return False
-    return any(
-        x in html
-        for x in (
-            "試合中止",
-            "ノーゲーム",
-            "コールドゲーム",
-            "コールド",
-            "試合は中止",
-        )
-    )
+from yahoo_game_main_cancelled import main_html_cancelled as _main_html_cancelled  # noqa: E402
 
 
 def collect_incomplete_game_ids(
-    root: Path,
     year: str,
     from_date: str,
     to_date: str,
@@ -87,7 +74,7 @@ def collect_incomplete_game_ids(
                 main_html = main_path.read_text(encoding="utf-8")
             except OSError:
                 main_html = None
-        if _main_html_cancelled(main_html):
+        if _main_html_cancelled(main_html, game_id):
             skipped_cancelled += 1
             continue
 

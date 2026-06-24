@@ -49,6 +49,10 @@ function CatcherPaRoundRowLabel({ keyName }: { keyName: string }) {
   return <>{`${keyName}巡目`}</>
 }
 
+/** 巡目別球種一覧の左ラベル（12px の 8 割） */
+const CATCHER_PA_ROUND_ROW_LABEL_CLASS =
+  "pa-round-pitch-row-label text-gray-200 font-black tabular-nums leading-tight"
+
 export type PlayerPageCatcherSeasonBodyProps = {
   tb: string
   sectionStripeColor: string
@@ -534,6 +538,7 @@ export function PlayerPageCatcherSeasonBody({
                                   renderBaseChart={() => (
                                     <PaRoundPitchTypeChart
                                       splits={paRoundSplits}
+                                      rowLabelClassName={CATCHER_PA_ROUND_ROW_LABEL_CLASS}
                                       renderRowLabel={(_, key) => (
                                         <CatcherPaRoundRowLabel keyName={key} />
                                       )}
@@ -545,6 +550,7 @@ export function PlayerPageCatcherSeasonBody({
                                       staggerRowReveal={stagger}
                                       revealGeneration={generation}
                                       baseColorMap={paRoundColorMap}
+                                      rowLabelClassName={CATCHER_PA_ROUND_ROW_LABEL_CLASS}
                                       renderRowLabel={(_, key) => (
                                         <CatcherPaRoundRowLabel keyName={key} />
                                       )}
@@ -556,6 +562,7 @@ export function PlayerPageCatcherSeasonBody({
                                       staggerRowReveal={stagger}
                                       revealGeneration={generation}
                                       baseColorMap={paRoundColorMap}
+                                      rowLabelClassName={CATCHER_PA_ROUND_ROW_LABEL_CLASS}
                                       renderRowLabel={(_, key) => (
                                         <CatcherPaRoundRowLabel keyName={key} />
                                       )}

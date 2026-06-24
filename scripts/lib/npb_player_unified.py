@@ -223,6 +223,140 @@ def find_roman_name(html: str) -> Optional[str]:
     return None
 
 
+def find_kana_name(html: str) -> Optional[str]:
+    if not html:
+        return None
+    try:
+        soup = BeautifulSoup(html, "html.parser")
+        pc_v_kana_li = soup.find("li", id="pc_v_kana")
+        if not pc_v_kana_li:
+            return None
+        kana_text = pc_v_kana_li.get_text().strip()
+        if "(" in kana_text or "（" in kana_text:
+            m = re.search(r"^([^(（]+)", kana_text)
+            kana_text = (m.group(1) if m else kana_text).strip()
+        if re.search(r"[あ-んア-ン]", kana_text) and not re.search(r"[一-龠A-Za-z]", kana_text):
+            if 2 <= len(kana_text) <= 30:
+                return kana_text
+    except Exception:
+        pass
+    return None
+
+
+_HEPBURN_TABLE = {
+    "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
+    "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
+    "が": "ga", "ぎ": "gi", "ぐ": "gu", "げ": "ge", "ご": "go",
+    "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
+    "ざ": "za", "じ": "ji", "ず": "zu", "ぜ": "ze", "ぞ": "zo",
+    "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "と": "to",
+    "だ": "da", "ぢ": "ji", "づ": "zu", "で": "de", "ど": "do",
+    "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
+    "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
+    "ば": "ba", "び": "bi", "ぶ": "bu", "べ": "be", "ぼ": "bo",
+    "ぱ": "pa", "ぴ": "pi", "ぷ": "pu", "ぺ": "pe", "ぽ": "po",
+    "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
+    "や": "ya", "ゆ": "yu", "よ": "yo",
+    "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
+    "わ": "wa", "を": "wo", "ん": "n",
+    "きゃ": "kya", "きゅ": "kyu", "きょ": "kyo",
+    "ぎゃ": "gya", "ぎゅ": "gyu", "ぎょ": "gyo",
+    "しゃ": "sha", "しゅ": "shu", "しょ": "sho",
+    "じゃ": "ja", "じゅ": "ju", "じょ": "jo",
+    "ちゃ": "cha", "ちゅ": "chu", "ちょ": "cho",
+    "にゃ": "nya", "にゅ": "nyu", "にょ": "nyo",
+    "ひゃ": "hya", "ひゅ": "hyu", "ひょ": "hyo",
+    "びゃ": "bya", "びゅ": "byu", "びょ": "byo",
+    "ぴゃ": "pya", "ぴゅ": "pyu", "ぴょ": "pyo",
+    "みゃ": "mya", "みゅ": "myu", "みょ": "myo",
+    "りゃ": "rya", "りゅ": "ryu", "りょ": "ryo",
+    "っ": "",
+}
+_KATAKANA_TO_HIRAGANA = str.maketrans(
+    "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポキャキュキョギャギュギョシャシュショジャジュジョチャチュチョニャニュニョヒャヒュヒョビャビュビョピャピュピョミャミュミョリャリュリョッー・",
+    "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽきゃきゅきょぎゃぎゅぎょしゃしゅしょじゃじゅじょちゃちゅちょにゃにゅにょひゃひゅひょびゃびゅびょぴゃぴゅぴょみゃみゅみょりゃりゅりょっー・",
+)
+
+
+def kana_to_romaji(kana: str) -> str:
+    if not kana:
+        return ""
+    kana = kana.translate(_KATAKANA_TO_HIRAGANA)
+    result: List[str] = []
+    i = 0
+    while i < len(kana):
+        char = kana[i]
+        if char in (" ", "・", "　"):
+            result.append(char)
+            i += 1
+            continue
+        if char == "ー" and result:
+            last = result[-1] if result else ""
+            if last in ("a", "i", "u", "e", "o"):
+                result.append(last)
+            else:
+                result.append("")
+            i += 1
+            continue
+        if char == "っ" and i + 1 < len(kana):
+            next_char = kana[i + 1]
+            if next_char in _HEPBURN_TABLE:
+                nr = _HEPBURN_TABLE[next_char]
+                if nr and nr[0] in "kstp":
+                    result.append(nr[0])
+            i += 1
+            continue
+        if i + 1 < len(kana):
+            two_char = kana[i : i + 2]
+            if two_char in _HEPBURN_TABLE:
+                result.append(_HEPBURN_TABLE[two_char])
+                i += 2
+                continue
+        result.append(_HEPBURN_TABLE.get(char, char))
+        i += 1
+    romaji = "".join(result)
+    romaji = re.sub(r"\s+", " ", romaji)
+    romaji = re.sub(r"・+", " ", romaji)
+    return romaji.strip()
+
+
+def convert_kana_to_romaji(name_kana: str) -> str:
+    if not name_kana:
+        return ""
+    parts = [p.strip() for p in name_kana.split("・") if p.strip()]
+    romaji_parts = []
+    for part in parts:
+        r = kana_to_romaji(part)
+        if r:
+            romaji_parts.append(r[0].upper() + r[1:].lower() if len(r) > 1 else r.upper())
+    return " ".join(romaji_parts)
+
+
+def _is_abbreviated_roman(s: str) -> bool:
+    t = (s or "").strip()
+    return bool(t) and bool(re.match(r"^[A-Z]\.[A-Za-z][A-Za-z'.-]*$", t))
+
+
+def _enrich_roman_from_kana(html: str, roman: Dict[str, Any], name_ja: str) -> Dict[str, Any]:
+    kana = find_kana_name(html) or ""
+    if not kana:
+        return roman
+    full = (roman.get("name_en_full") or "").strip()
+    if full and not _is_abbreviated_roman(full):
+        return roman
+    from_kana = convert_kana_to_romaji(kana)
+    if not from_kana:
+        return roman
+    out = dict(roman)
+    out["name_en_full"] = from_kana
+    short = (out.get("name_en_short") or "").strip()
+    if not short or short == full:
+        out["name_en_short"] = to_initial_lastname(from_kana, is_japanese_listed_name(name_ja))
+    src = (out.get("source") or "").strip()
+    out["source"] = f"{src}+kana_romaji" if src else "kana_romaji"
+    return out
+
+
 def find_team_on_page(html: str) -> str:
     soup = BeautifulSoup(html, "lxml")
     el = soup.find("li", id="pc_v_team")
@@ -557,12 +691,16 @@ def build_roman_block(
 ) -> Dict[str, Any]:
     skipped, reason, ex_full, ex_short = skip_index.check(player_id, meta_path)
     if skipped and not force_roman:
-        return {
-            "name_en_full": ex_full,
-            "name_en_short": ex_short or (to_initial_lastname(ex_full, is_japanese_listed_name(name_ja)) if ex_full else ""),
-            "source": reason,
-            "skipped": True,
-        }
+        return _enrich_roman_from_kana(
+            html,
+            {
+                "name_en_full": ex_full,
+                "name_en_short": ex_short or (to_initial_lastname(ex_full, is_japanese_listed_name(name_ja)) if ex_full else ""),
+                "source": reason,
+                "skipped": True,
+            },
+            name_ja,
+        )
 
     raw = find_roman_name(html) or ""
     is_ja = is_japanese_listed_name(name_ja)
@@ -572,12 +710,16 @@ def build_roman_block(
         if len(parts) == 2:
             name_full = f"{parts[0]} {parts[1]}"
     short = to_initial_lastname(name_full, is_japanese=is_ja) if name_full else ""
-    return {
-        "name_en_full": name_full,
-        "name_en_short": short,
-        "source": "npb_official" if name_full else "",
-        "skipped": False,
-    }
+    return _enrich_roman_from_kana(
+        html,
+        {
+            "name_en_full": name_full,
+            "name_en_short": short,
+            "source": "npb_official" if name_full else "",
+            "skipped": False,
+        },
+        name_ja,
+    )
 
 
 def parse_unified(
@@ -601,6 +743,7 @@ def parse_unified(
     return {
         "player_id": player_id,
         "name_ja": name_ja,
+        "name_kana": find_kana_name(html) or "",
         "profile": profile,
         "roman": roman,
         "pitching_rows_by_year": pitching,

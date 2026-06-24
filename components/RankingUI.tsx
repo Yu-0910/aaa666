@@ -9,7 +9,7 @@
 
 "use client"
 
-import { Fragment } from "react"
+import { Fragment, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
@@ -177,7 +177,7 @@ function RankingTableHeaderRow({
                 onSortChange(metric.key)
               }}
               title={metric.label}
-              className="flex h-full w-full cursor-pointer items-center justify-center gap-0.5 whitespace-nowrap px-0.5 hover:underline"
+              className="relative flex h-full w-full cursor-pointer items-center justify-center whitespace-nowrap px-0.5"
               style={{
                 height: HEADER_ROW_HEIGHT,
                 textAlign: 'center',
@@ -188,7 +188,23 @@ function RankingTableHeaderRow({
                 margin: 0,
               }}
             >
-              <span className="underline">{metric.label}</span>
+              <span className="leading-tight">{metric.label}</span>
+              {isActive ? (
+                <span
+                  className="pointer-events-none absolute inset-x-0 bottom-1 flex justify-center leading-none"
+                  aria-hidden
+                >
+                  <span
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderLeft: '4px solid transparent',
+                      borderRight: '4px solid transparent',
+                      borderBottom: `5px solid ${isPrimary ? '#000000' : '#ffffff'}`,
+                    }}
+                  />
+                </span>
+              ) : null}
             </button>
           </th>
         )
@@ -248,6 +264,23 @@ export default function RankingUI({
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
   const tableMinWidthPx = rankingTableMinWidthPx(leftBlockWidth, metricColMinWidth, metrics.length)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const bottomScrollRef = useRef<HTMLDivElement>(null)
+  const scrollSyncLock = useRef(false)
+
+  const syncRankingTableScroll = (source: "table" | "bottom") => {
+    if (scrollSyncLock.current) return
+    const table = tableScrollRef.current
+    const bottom = bottomScrollRef.current
+    if (!table || !bottom) return
+    scrollSyncLock.current = true
+    if (source === "table") {
+      bottom.scrollLeft = table.scrollLeft
+    } else {
+      table.scrollLeft = bottom.scrollLeft
+    }
+    scrollSyncLock.current = false
+  }
 
   const handleYearChange = (newYear: number) => {
     if (onYearChange) {
@@ -276,6 +309,8 @@ export default function RankingUI({
         {/* ランキングテーブル */}
         <div className="bg-[#1a1a1a] border border-[#333]">
           <div
+            ref={tableScrollRef}
+            onScroll={() => syncRankingTableScroll("table")}
             className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
@@ -465,6 +500,15 @@ export default function RankingUI({
                 })}
               </tbody>
             </table>
+          </div>
+          <div
+            ref={bottomScrollRef}
+            onScroll={() => syncRankingTableScroll("bottom")}
+            className="overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full border-t border-[#444] bg-[#141414]"
+            style={{ WebkitOverflowScrolling: "touch", height: 22 }}
+            aria-label="表の横スクロール"
+          >
+            <div style={{ width: `${tableMinWidthPx}px`, height: 1 }} aria-hidden />
           </div>
         </div>
     </>

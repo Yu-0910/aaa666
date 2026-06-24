@@ -94,7 +94,8 @@ function readGameIdsFromSnapshot(date) {
   }
   const okV1 = snap?.schemaVersion === "sportsnavi-schedule-day-v1"
   const okV2 = snap?.schemaVersion === "sportsnavi-schedule-day-v2"
-  if ((!okV1 && !okV2) || !Array.isArray(snap.gameIds)) {
+  const okV3 = snap?.schemaVersion === "sportsnavi-schedule-day-v3"
+  if ((!okV1 && !okV2 && !okV3) || !Array.isArray(snap.gameIds)) {
     console.error("[repaint] スナップショット形式が不正です:", snapPath)
     return null
   }

@@ -1,0 +1,28 @@
+NPB rescrape Phase 3-1 DONE
+generated_at: 2026-06-19T04:13:14
+
+Scope:
+- pitching 1950-2004 staging
+- files: 110
+- rows: 10871
+
+Validation:
+- staging vs HTML column validation: ng rows 0 in sampled 1100 rows
+- ERA missing: 0
+- invalid ERA: 34 official ---- rows
+- HTML cache missing: 0
+
+Fixed patterns:
+- tail R/ER/ERA shift
+- split-IP rows, e.g. 13 .2
+- integer-IP duplicate rows, e.g. 85 / 85 / blank
+- plus-IP rows, e.g. + / blank / +
+
+Latest relevant reports:
+- _reports/debug_era_missing/staging_vs_html_column_validation.csv
+- _reports/debug_era_missing/era_csv_summary.csv
+- _reports/debug_era_missing/fix_plus_ip_rows_report_20260619_040414.csv
+
+Note:
+- _data/master_csv is still old until Phase 4 apply/rebuild.
+- _data/master_csv__rescrape_staging is the corrected Phase 3-1 output.

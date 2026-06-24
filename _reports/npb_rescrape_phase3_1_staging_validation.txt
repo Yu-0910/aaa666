@@ -1,0 +1,77 @@
+NPB rescrape Phase 3-1 staging validation
+============================================================
+
+staging files: 110
+total rows: 10871
+missing ERA: 0
+invalid ERA values: {'----': 34}
+ERA calc mismatch: 2714
+ERA >= 20: 191
+latest backup: _data\master_csv__rescrape_staging__backup_safetail_20260619_003550
+
+Egawa 1984
+------------------------------------------------------------
+year: 1984
+league: CL
+team: 読売ジャイアンツ
+player_id: 91193848
+player_name_ja: 江川　卓
+G: 28
+W: 15
+L: 5
+BF: 782
+IP: 186.0
+H: 186
+R: 80
+ER: 72
+ERA: 3.48
+
+Invalid ERA values
+------------------------------------------------------------
+----: 34
+
+Sample ERA >= 20
+------------------------------------------------------------
+('pitching_1950_CL_from_master.csv', '31533898', '竹本\u3000卓', '1.0', '3', '27.0')
+('pitching_1950_CL_from_master.csv', '21323898', '島本\u3000和夫', '3.0', '9', '27.0')
+('pitching_1950_CL_from_master.csv', '83183801', '玉川\u3000郁', '1.1', '7', '31.5')
+('pitching_1950_PL_from_master.csv', '31233801', '木村\u3000富雄', '1.2', '7', '31.5')
+('pitching_1950_PL_from_master.csv', '23123801', '武内\u3000和男', '0.2', '3', '27.0')
+('pitching_1951_PL_from_master.csv', '21323803', '金城\u3000政夫', '4.0', '10', '22.5')
+('pitching_1953_CL_from_master.csv', '61763807', '小塚\u3000弘司', '2.0', '7', '31.5')
+('pitching_1953_PL_from_master.csv', '21223807', '永田\u3000和弘', '1.0', '3', '27.0')
+('pitching_1954_CL_from_master.csv', '31633809', '長尾\u3000旬', '0.2', '3', '27.0')
+('pitching_1954_CL_from_master.csv', '11713805', '北川\u3000久治', '2.0', '6', '27.0')
+('pitching_1954_CL_from_master.csv', '51753803', '中西\u3000由行', '0.2', '5', '45.0')
+('pitching_1954_PL_from_master.csv', '91293809', '田村\u3000満', '1.2', '7', '31.5')
+('pitching_1954_PL_from_master.csv', '83183809', '村田\u3000博秀', '2.0', '6', '27.0')
+('pitching_1955_PL_from_master.csv', '71273809', '田原\u3000康行', '1.0', '3', '27.0')
+('pitching_1955_PL_from_master.csv', '11213800', '重村\u3000武男', '3.0', '8', '24.0')
+('pitching_1956_CL_from_master.csv', '91993802', '佐藤\u3000敬典', '0.2', '4', '36.0')
+('pitching_1956_CL_from_master.csv', '81283800', '田頭\u3000光男', '1.0', '4', '36.0')
+('pitching_1956_PL_from_master.csv', '91193807', '秋山\u3000武司', '0.2', '3', '27.0')
+('pitching_1956_PL_from_master.csv', '21123800', '有吉\u3000洋雅', '1.0', '4', '36.0')
+('pitching_1956_PL_from_master.csv', '51453802', '西原\u3000恭治', '1.0', '3', '27.0')
+
+Sample calc mismatch
+------------------------------------------------------------
+('pitching_1964_CL_from_master.csv', '71373823', '大熊\u3000伸行', '25.1', '15', '5.4', 5.19)
+('pitching_1964_CL_from_master.csv', '41643829', '渡辺\u3000秀武', '61.1', '35', '5.16', 5.08)
+('pitching_1964_CL_from_master.csv', '51153829', '安仁屋\u3000宗八', '92.1', '36', '3.52', 3.48)
+('pitching_1964_CL_from_master.csv', '51653825', '西村\u3000宏', '0.2', '3', '40.5', 27.0)
+('pitching_1964_CL_from_master.csv', '41043829', '西川\u3000克弘', '86.1', '32', '3.35', 3.31)
+('pitching_1964_CL_from_master.csv', '01803809', '弘瀬\u3000昌彦', '68.1', '28', '3.71', 3.65)
+('pitching_1964_CL_from_master.csv', '31433821', '竜\u3000憲一', '138.1', '64', '4.17', 4.14)
+('pitching_1964_CL_from_master.csv', '91093825', '鈴木\u3000皖武', '28.1', '11', '3.54', 3.41)
+('pitching_1964_CL_from_master.csv', '91393829', '小川\u3000健太郎', '24.1', '12', '4.5', 4.32)
+('pitching_1964_CL_from_master.csv', '81583808', '河村\u3000保彦', '141.1', '60', '3.83', 3.8)
+('pitching_1964_CL_from_master.csv', '51353827', '加藤\u3000斌', '69.1', '38', '4.96', 4.89)
+('pitching_1964_CL_from_master.csv', '41543821', '近藤\u3000光郎', '63.1', '32', '4.57', 4.5)
+('pitching_1964_CL_from_master.csv', '31733823', '権藤\u3000博', '105.1', '49', '4.2', 4.16)
+('pitching_1964_CL_from_master.csv', '11013829', '千原\u3000陽三郎', '20.1', '14', '6.3', 6.0)
+('pitching_1964_CL_from_master.csv', '11013821', '波山\u3000次郎', '1.1', '1', '9.0', 4.5)
+('pitching_1964_CL_from_master.csv', '61663825', '平山\u3000佳宏', '2.1', '4', '18.0', 12.0)
+('pitching_1964_CL_from_master.csv', '31433808', '峰\u3000国安', '97.1', '38', '3.53', 3.49)
+('pitching_1964_CL_from_master.csv', '21323823', '太田\u3000紘一', '45.1', '15', '3.0', 2.93)
+('pitching_1964_CL_from_master.csv', '51453823', '牧\u3000勝彦', '20.1', '7', '3.15', 3.0)
+('pitching_1964_PL_from_master.csv', '51553829', '金本\u3000秀夫', '24.1', '9', '3.38', 3.24)

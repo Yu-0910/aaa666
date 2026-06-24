@@ -1,0 +1,27 @@
+NPB rescrape Phase 3-2 DONE
+generated_at: 2026-06-19T04:52:17
+
+Scope:
+- profile / roman / player meta audit
+- targets: 3020
+
+Validation:
+- missing targets: 0
+- missing_cache: 0
+- missing_roman: 0
+
+Manual / exception handling:
+- 01005153 Sasaki Takeru manually patched
+- 31735150 Kawaguchi Toya manually patched
+- 2103847 大竹 風雅: NPB player page 404 but meta OK, cache missing allowed
+- 2112130 藤原 大翔: NPB player page 404 but meta OK, cache missing allowed
+
+Reports:
+- _reports/npb_rescrape_phase3_2_targets_audit.csv
+- _reports/npb_rescrape_phase3_2_profile_roman.csv
+- _reports/npb_rescrape_phase3_2_force_roman2.csv
+- _reports/npb_rescrape_phase3_2_missing2_force.csv
+
+Note:
+- Phase 3 is now complete.
+- _data/master_csv is still old until Phase 4 apply/rebuild.

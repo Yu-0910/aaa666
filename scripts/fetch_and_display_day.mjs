@@ -34,7 +34,7 @@ function isCancelledGameFromRaw(gameId) {
   const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
   if (!fs.existsSync(mainPath)) return false
   try {
-    return isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"))
+    return isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"), gameId)
   } catch {
     return false
   }
@@ -352,7 +352,10 @@ function displayDay(date, year) {
 
     const miss = (gm.missingOrPartial || []).filter((s) => !String(s).includes("hint:"))
     const cancelled =
-      miss.some((s) => String(s).includes("cancelled")) || /試合中止|ノーゲーム|コールド/.test(title)
+      isCancelledGameFromRaw(gid) ||
+      miss.some((s) => String(s).includes("game cancelled")) ||
+      miss.some((s) => String(s).includes("cancelled")) ||
+      /試合中止|ノーゲーム|コールド/.test(title)
     const bad = !cancelled && (!bl || !pas.length || !pe || pitch.status !== "restored_phase10")
 
     if (miss.length) {

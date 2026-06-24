@@ -74,7 +74,7 @@ function isCancelledGameMainRaw(root, gameId) {
   const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
   try {
     if (!fs.existsSync(mainPath)) return false
-    return isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"))
+    return isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"), gameId)
   } catch {
     return false
   }

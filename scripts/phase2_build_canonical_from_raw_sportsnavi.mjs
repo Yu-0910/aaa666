@@ -188,7 +188,7 @@ function main() {
     const htmlMain = fs.readFileSync(rawPath, "utf8")
     const htmlStats = readIfExists(statsPath)
     const htmlText = readIfExists(textPath)
-    const gameCancelled = isSportsnaviMainGameCancelled(htmlMain)
+    const gameCancelled = isSportsnaviMainGameCancelled(htmlMain, gameId)
 
     const statsPlayerLinkedRows = parseSportsnaviStatsHtml(htmlStats ?? "")
     const lineupFromStats =
