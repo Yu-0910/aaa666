@@ -21,6 +21,8 @@ const PitchTypeChartLegend = dynamic(
 
 /** デスクトップ向け円グラフ縮小（モバイルでは CSS zoom を使わない） */
 const PROBABLES_PITCH_CHART_ZOOM = 0.7 * 0.7 * 1.2 * 0.9
+const PROBABLES_PITCH_CHART_SIZE_SCALE = 0.8
+const PROBABLES_PITCH_LABEL_SCALE = 0.8 * 1.05
 /** 凡例スケールの基準幅（11rem×2 + gap-8） */
 const PROBABLES_CHARTS_ROW_REF_PX = 11 * 16 * 2 + 32
 /** モバイルは全幅、sm 以上は基準最大幅 */
@@ -164,31 +166,39 @@ export function ProbablesPitchDataOverlay({
           </div>
         ) : showCharts ? (
           <div className="w-full">
-            <div className="mx-auto w-fit origin-top-left" style={chartZoomStyle}>
+            <div className="mx-auto w-full origin-top" style={chartZoomStyle}>
               <div
                 ref={chartsRowRef}
-                className="flex w-full flex-row flex-nowrap items-start justify-center gap-2 sm:w-fit sm:gap-8"
+                className={
+                  leftRows.length > 0 && rightRows.length > 0
+                    ? "grid w-full grid-cols-2 justify-items-center gap-x-2 sm:gap-x-8"
+                    : "flex w-full justify-center"
+                }
               >
                 {leftRows.length > 0 ? (
-                  <div className="min-w-0 max-w-[9rem] flex-1 shrink sm:w-[11rem] sm:flex-none">
+                  <div className="w-[11rem] max-w-full shrink-0">
                     <PitchTypePieChart
                       title="対左"
                       rows={leftRows}
                       centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
                       pitchTypeColorOrder={colorOrder}
                       compact
+                      sizeScale={PROBABLES_PITCH_CHART_SIZE_SCALE}
+                      labelScale={PROBABLES_PITCH_LABEL_SCALE}
                       isAnimationActive={open}
                     />
                   </div>
                 ) : null}
                 {rightRows.length > 0 ? (
-                  <div className="min-w-0 max-w-[9rem] flex-1 shrink sm:w-[11rem] sm:flex-none">
+                  <div className="w-[11rem] max-w-full shrink-0">
                     <PitchTypePieChart
                       title="対右"
                       rows={rightRows}
                       centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
                       pitchTypeColorOrder={colorOrder}
                       compact
+                      sizeScale={PROBABLES_PITCH_CHART_SIZE_SCALE}
+                      labelScale={PROBABLES_PITCH_LABEL_SCALE}
                       isAnimationActive={open}
                     />
                   </div>
@@ -197,7 +207,7 @@ export function ProbablesPitchDataOverlay({
               <PitchTypeChartLegend
                 pitchTypes={colorOrder}
                 pitchTypeColorOrder={colorOrder}
-                scale={legendScale}
+                scale={legendScale * PROBABLES_PITCH_LABEL_SCALE}
               />
             </div>
           </div>

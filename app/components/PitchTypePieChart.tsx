@@ -1,5 +1,6 @@
 "use client"
 
+import { useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -23,6 +24,10 @@ type Props = {
   pitchTypeColorOrder?: string[]
   /** 横並び用のコンパクト表示 */
   compact?: boolean
+  /** 表示倍率（1＝基準）。球ツールチップ等で全体を縮小 */
+  sizeScale?: number
+  /** 被打率・K-BB% ラベル／数値の表示倍率（1＝基準） */
+  labelScale?: number
   /** Recharts の描画アニメーション */
   isAnimationActive?: boolean
 }
@@ -72,11 +77,11 @@ const PIE_END_ANGLE = PIE_START_ANGLE - 360
 const TITLE_FONT_PX = { compact: 11, full: 13 } as const
 const TITLE_SCALE = 1.6
 
-function donutTitleStyle(compact: boolean): React.CSSProperties {
+function donutTitleStyle(compact: boolean, sizeScale = 1): React.CSSProperties {
   const baseFont = compact ? TITLE_FONT_PX.compact : TITLE_FONT_PX.full
-  const fontSize = Math.round(baseFont * TITLE_SCALE)
-  const padY = Math.max(1, Math.round(2 * TITLE_SCALE))
-  const padX = Math.max(4, Math.round(8 * TITLE_SCALE))
+  const fontSize = Math.round(baseFont * TITLE_SCALE * sizeScale)
+  const padY = Math.max(1, Math.round(2 * TITLE_SCALE * sizeScale))
+  const padX = Math.max(4, Math.round(8 * TITLE_SCALE * sizeScale))
   return {
     fontSize: `${fontSize}px`,
     padding: `${padY}px ${padX}px`,
@@ -136,10 +141,10 @@ function renderDonutPctLabel(compact: boolean) {
   }
 }
 
-function donutCenterValueStyle(compact: boolean): React.CSSProperties {
+function donutCenterValueStyle(compact: boolean, labelScale = 1): React.CSSProperties {
   return {
-    marginTop: chartPx(compact, 2, 3),
-    fontSize: `${chartPx(compact, 15, 17)}px`,
+    marginTop: Math.round(chartPx(compact, 2, 3) * labelScale),
+    fontSize: `${Math.round(chartPx(compact, 15, 17) * labelScale)}px`,
     fontFamily: BEBAS,
     letterSpacing: "0.03em",
   }
@@ -149,15 +154,19 @@ function DonutCenterPanel({
   centerStats,
   innerRadius,
   compact,
+  labelScale = 1,
 }: {
   centerStats?: PitchTypeDonutCenterStats
   innerRadius: number
   compact: boolean
+  labelScale?: number
 }) {
   const hasStats = Boolean(centerStats?.avgAgainst || centerStats?.kBbPct)
   if (!hasStats) return null
 
-  const valueStyle = donutCenterValueStyle(compact)
+  const valueStyle = donutCenterValueStyle(compact, labelScale)
+  const labelFontPx = Math.max(6, Math.round(chartPx(compact, 7, 8) * labelScale))
+  const avgAgainstNudgePx = Math.round(chartPx(compact, 2, 3) * labelScale)
   const discSize = Math.round(innerRadius * (compact ? 1.75 : 1.85))
 
   return (
@@ -182,10 +191,10 @@ function DonutCenterPanel({
             }}
           >
             {centerStats?.avgAgainst ? (
-              <div className="text-center">
+              <div className="text-center" style={{ marginTop: avgAgainstNudgePx }}>
                 <div
                   className="font-noto text-[#9ca3af] leading-none"
-                  style={{ fontSize: `${chartPx(compact, 7, 8)}px`, fontWeight: 700 }}
+                  style={{ fontSize: `${labelFontPx}px`, fontWeight: 700 }}
                 >
                   被打率
                 </div>
@@ -210,7 +219,7 @@ function DonutCenterPanel({
               <div className="text-center">
                 <div
                   className="font-noto text-[#9ca3af] leading-none"
-                  style={{ fontSize: `${chartPx(compact, 7, 8)}px`, fontWeight: 700 }}
+                  style={{ fontSize: `${labelFontPx}px`, fontWeight: 700 }}
                 >
                   K-BB%
                 </div>
@@ -316,14 +325,37 @@ export default function PitchTypePieChart({
   centerStats,
   pitchTypeColorOrder,
   compact = false,
+  sizeScale = 1,
+  labelScale = 1,
   isAnimationActive = true,
 }: Props) {
+  const chartBoxRef = useRef<HTMLDivElement>(null)
+  const [boxWidth, setBoxWidth] = useState(0)
+
+  useLayoutEffect(() => {
+    if (!compact) return
+    const el = chartBoxRef.current
+    if (!el) return
+    const update = () => setBoxWidth(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [compact])
+
   const chartRows = [...rows].sort((a, b) => b.pct - a.pct)
   const data = chartRows.map((r) => ({ name: r.pitch_type, value: r.pct }))
   const colorOrder =
     pitchTypeColorOrder ?? rows.map((r) => r.pitch_type)
-  const chartHeight = chartPx(compact, 200, 260)
-  const outerRadius = chartPx(compact, 72, 96)
+  const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
+  const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
+  const chartSide =
+    compact && boxWidth > 0 ? boxWidth : designHeight
+  const chartHeight = compact ? chartSide : designHeight
+  const outerRadius =
+    compact && chartSide > 0
+      ? Math.min(designOuter, Math.floor(chartSide * 0.4))
+      : designOuter
   const innerRadius = Math.round(outerRadius * (centerStats ? 0.54 : 0.48))
 
   if (!data.length) return null
@@ -336,12 +368,16 @@ export default function PitchTypePieChart({
       {title ? (
         <div
           className="mb-1 text-center font-black leading-none text-black"
-          style={donutTitleStyle(compact)}
+          style={donutTitleStyle(compact, sizeScale)}
         >
           {title}
         </div>
       ) : null}
-      <div className="relative w-full flex justify-center" style={{ height: chartHeight }}>
+      <div
+        ref={chartBoxRef}
+        className="relative flex w-full justify-center"
+        style={{ height: chartHeight, aspectRatio: compact ? "1 / 1" : undefined }}
+      >
       <ResponsiveContainer width="100%" height={chartHeight}>
         <PieChart>
           <Pie
@@ -396,6 +432,7 @@ export default function PitchTypePieChart({
         centerStats={centerStats}
         innerRadius={innerRadius}
         compact={compact}
+        labelScale={labelScale}
       />
       </div>
     </div>
