@@ -240,19 +240,27 @@ const LEGEND_FIRST_ROW_MAX = 5
 function PitchTypeChartLegendItem({
   pitchType,
   colorOrder,
+  scale = 1,
 }: {
   pitchType: string
   colorOrder: string[]
+  scale?: number
 }) {
   const ci = colorIndexForPitchType(pitchType, colorOrder)
+  const fontPx = Math.max(8, Math.round(11.2 * scale))
+  const swatchPx = Math.max(8, Math.round(12 * scale))
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-gray-300"
-      style={{ fontSize: "0.7rem" }}
+      className="inline-flex items-center text-gray-300"
+      style={{ fontSize: `${fontPx}px`, gap: `${Math.round(6 * scale)}px` }}
     >
       <span
-        className="inline-block h-3 w-3 shrink-0 border border-[#1a1a1a]"
-        style={{ backgroundColor: COLORS[ci % COLORS.length] }}
+        className="inline-block shrink-0 border border-[#1a1a1a]"
+        style={{
+          width: swatchPx,
+          height: swatchPx,
+          backgroundColor: COLORS[ci % COLORS.length],
+        }}
         aria-hidden
       />
       {pitchType}
@@ -265,30 +273,36 @@ export function PitchTypeChartLegend({
   pitchTypes,
   pitchTypeColorOrder,
   className = "mb-4",
+  scale = 1,
 }: {
   pitchTypes: string[]
   pitchTypeColorOrder?: string[]
   className?: string
+  /** 親コンテナ幅に応じた表示倍率（1＝基準） */
+  scale?: number
 }) {
   const colorOrder = pitchTypeColorOrder ?? pitchTypes
   if (!pitchTypes.length) return null
   const firstRow = pitchTypes.slice(0, LEGEND_FIRST_ROW_MAX)
   const secondRow = pitchTypes.slice(LEGEND_FIRST_ROW_MAX)
-  const rowClass = "flex flex-wrap justify-center gap-x-4 gap-y-2"
+  const rowGapX = Math.round(16 * scale)
+  const rowGapY = Math.round(8 * scale)
+  const rowStyle = { gap: `${rowGapY}px ${rowGapX}px` }
+  const sectionGap = Math.round(8 * scale)
   return (
     <div
-      className={`flex flex-col items-center gap-y-2 latin ${className}`}
-      style={{ fontFamily: FONT_FAMILY }}
+      className={`flex flex-col items-center latin ${className}`}
+      style={{ fontFamily: FONT_FAMILY, gap: `${sectionGap}px` }}
     >
-      <div className={rowClass}>
+      <div className="flex flex-wrap justify-center" style={rowStyle}>
         {firstRow.map((pt) => (
-          <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} />
+          <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} scale={scale} />
         ))}
       </div>
       {secondRow.length > 0 ? (
-        <div className={rowClass}>
+        <div className="flex flex-wrap justify-center" style={rowStyle}>
           {secondRow.map((pt) => (
-            <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} />
+            <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} scale={scale} />
           ))}
         </div>
       ) : null}

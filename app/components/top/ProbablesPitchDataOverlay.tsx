@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useCallback, useLayoutEffect, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import type { PitcherSeasonPitchTypesApiResponse } from "@/app/api/players/[playerId]/season-pitch-types/route"
@@ -21,9 +21,11 @@ const PitchTypeChartLegend = dynamic(
 
 /** デスクトップ向け円グラフ縮小（モバイルでは CSS zoom を使わない） */
 const PROBABLES_PITCH_CHART_ZOOM = 0.7 * 0.7 * 1.2 * 0.9
-/** モバイルは全幅、sm 以上は横 7 割 */
+/** 凡例スケールの基準幅（11rem×2 + gap-8） */
+const PROBABLES_CHARTS_ROW_REF_PX = 11 * 16 * 2 + 32
+/** モバイルは全幅、sm 以上は基準最大幅 */
 const PROBABLES_PITCH_DIALOG_CLASS =
-  "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(67.2vw,39.2rem)]"
+  "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -39,6 +41,38 @@ function useMinWidthSm(): boolean {
     return () => mq.removeEventListener("change", update)
   }, [])
   return matches
+}
+
+/** モバイル: グラフ行の実幅に合わせて凡例などを縮小 */
+function useOverlayLegendScale(
+  chartsRowRef: React.RefObject<HTMLDivElement | null>,
+  active: boolean,
+  isDesktop: boolean,
+): number {
+  const [scale, setScale] = useState(1)
+
+  useLayoutEffect(() => {
+    if (!active || isDesktop) {
+      setScale(1)
+      return
+    }
+    const row = chartsRowRef.current
+    if (!row) return
+
+    const update = () => {
+      const width = row.clientWidth
+      if (width <= 0) return
+      const next = Math.min(1, width / PROBABLES_CHARTS_ROW_REF_PX)
+      setScale((prev) => (Math.abs(prev - next) < 0.01 ? prev : next))
+    }
+
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(row)
+    return () => ro.disconnect()
+  }, [active, isDesktop, chartsRowRef])
+
+  return scale
 }
 
 function donutCenterStats(agg: PitcherSeasonPocPaAgg | undefined) {
@@ -111,6 +145,8 @@ export function ProbablesPitchDataOverlay({
   const vsHand = pocPayload?.splits?.vsHand
   const showCharts = seasonRows.length > 0 && (leftRows.length > 0 || rightRows.length > 0)
   const isDesktop = useMinWidthSm()
+  const chartsRowRef = useRef<HTMLDivElement>(null)
+  const legendScale = useOverlayLegendScale(chartsRowRef, open && showCharts && !loading, isDesktop)
   const chartZoomStyle = isDesktop ? { zoom: PROBABLES_PITCH_CHART_ZOOM } : undefined
 
   return (
@@ -129,7 +165,10 @@ export function ProbablesPitchDataOverlay({
         ) : showCharts ? (
           <div className="w-full">
             <div className="mx-auto w-fit origin-top-left" style={chartZoomStyle}>
-              <div className="flex w-full flex-row flex-nowrap items-start justify-center gap-2 sm:w-fit sm:gap-8">
+              <div
+                ref={chartsRowRef}
+                className="flex w-full flex-row flex-nowrap items-start justify-center gap-2 sm:w-fit sm:gap-8"
+              >
                 {leftRows.length > 0 ? (
                   <div className="min-w-0 max-w-[9rem] flex-1 shrink sm:w-[11rem] sm:flex-none">
                     <PitchTypePieChart
@@ -155,7 +194,11 @@ export function ProbablesPitchDataOverlay({
                   </div>
                 ) : null}
               </div>
-              <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} />
+              <PitchTypeChartLegend
+                pitchTypes={colorOrder}
+                pitchTypeColorOrder={colorOrder}
+                scale={legendScale}
+              />
             </div>
           </div>
         ) : null}
