@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useCallback, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import type { PitcherSeasonPitchTypesApiResponse } from "@/app/api/players/[playerId]/season-pitch-types/route"
@@ -24,7 +24,48 @@ const PitchTypeChartLegend = dynamic(
 const PROBABLES_PITCH_CHART_ZOOM = 0.7 * 0.7 * 1.2 * 0.9
 const PROBABLES_PITCH_TABLE_ZOOM = 0.8 * 0.7 * 1.2 * 0.9
 const PROBABLES_PITCH_DIALOG_CLASS =
-  "w-fit max-w-[min(96vw,56rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
+  "w-full max-w-[min(96vw,56rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-hidden sm:max-w-[min(96vw,56rem)]"
+
+/** ダイアログ幅に収まるよう、ベース zoom に掛ける追加倍率を算出 */
+function useContainerFitZoom(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  contentRef: React.RefObject<HTMLDivElement | null>,
+  active: boolean,
+) {
+  const [fitFactor, setFitFactor] = useState(1)
+  const fitFactorRef = useRef(1)
+  fitFactorRef.current = fitFactor
+
+  useLayoutEffect(() => {
+    if (!active) {
+      fitFactorRef.current = 1
+      setFitFactor(1)
+      return
+    }
+    const container = containerRef.current
+    const content = contentRef.current
+    if (!container || !content) return
+
+    const update = () => {
+      const available = container.clientWidth
+      const scaled = content.scrollWidth
+      const unscaled = scaled / fitFactorRef.current
+      if (available <= 0 || unscaled <= 0) return
+      const next = Math.min(1, available / unscaled)
+      if (Math.abs(fitFactorRef.current - next) < 0.005) return
+      fitFactorRef.current = next
+      setFitFactor(next)
+    }
+
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(container)
+    ro.observe(content)
+    return () => ro.disconnect()
+  }, [active, containerRef, contentRef])
+
+  return fitFactor
+}
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -99,6 +140,10 @@ export function ProbablesPitchDataOverlay({
   const rightRows = toChart("pct_vs_right")
   const vsHand = pocPayload?.splits?.vsHand
   const showCharts = seasonRows.length > 0 && (leftRows.length > 0 || rightRows.length > 0)
+  const hasContent = showCharts || seasonRows.length > 0
+  const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const fitFactor = useContainerFitZoom(containerRef, contentRef, open && hasContent && !loading)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,46 +159,52 @@ export function ProbablesPitchDataOverlay({
             <Spinner className="size-6 text-[#FFFF44]" />
           </div>
         ) : (
-          <div className="flex w-fit max-w-full flex-col items-center gap-3 sm:flex-row sm:flex-nowrap sm:items-start">
-            {showCharts ? (
-              <div
-                className="mx-auto shrink-0 origin-top-left sm:mx-0"
-                style={{ zoom: PROBABLES_PITCH_CHART_ZOOM }}
-              >
-                <div className="flex flex-row flex-nowrap items-start justify-center gap-8">
-                  {leftRows.length > 0 ? (
-                    <div className="w-[11rem] shrink-0">
-                      <PitchTypePieChart
-                        title="対左"
-                        rows={leftRows}
-                        centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
-                        pitchTypeColorOrder={colorOrder}
-                        compact
-                        isAnimationActive={open}
-                      />
-                    </div>
-                  ) : null}
-                  {rightRows.length > 0 ? (
-                    <div className="w-[11rem] shrink-0">
-                      <PitchTypePieChart
-                        title="対右"
-                        rows={rightRows}
-                        centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
-                        pitchTypeColorOrder={colorOrder}
-                        compact
-                        isAnimationActive={open}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-                <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} />
-              </div>
-            ) : null}
+          <div ref={containerRef} className="w-full max-w-full overflow-hidden">
             <div
-              className="relative z-0 flex shrink-0 justify-center origin-top"
-              style={{ zoom: PROBABLES_PITCH_TABLE_ZOOM }}
+              ref={contentRef}
+              className="flex w-fit max-w-none flex-col items-center gap-3 origin-top sm:flex-row sm:flex-nowrap sm:items-start"
+              style={{ zoom: fitFactor }}
             >
-              <PitcherSeasonPitchTypesTable rows={seasonRows} loading={false} compactOverlay />
+              {showCharts ? (
+                <div
+                  className="mx-auto shrink-0 origin-top-left sm:mx-0"
+                  style={{ zoom: PROBABLES_PITCH_CHART_ZOOM }}
+                >
+                  <div className="flex flex-row flex-nowrap items-start justify-center gap-8">
+                    {leftRows.length > 0 ? (
+                      <div className="w-[11rem] shrink-0">
+                        <PitchTypePieChart
+                          title="対左"
+                          rows={leftRows}
+                          centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
+                          pitchTypeColorOrder={colorOrder}
+                          compact
+                          isAnimationActive={open}
+                        />
+                      </div>
+                    ) : null}
+                    {rightRows.length > 0 ? (
+                      <div className="w-[11rem] shrink-0">
+                        <PitchTypePieChart
+                          title="対右"
+                          rows={rightRows}
+                          centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
+                          pitchTypeColorOrder={colorOrder}
+                          compact
+                          isAnimationActive={open}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} />
+                </div>
+              ) : null}
+              <div
+                className="relative z-0 flex shrink-0 justify-center origin-top"
+                style={{ zoom: PROBABLES_PITCH_TABLE_ZOOM }}
+              >
+                <PitcherSeasonPitchTypesTable rows={seasonRows} loading={false} compactOverlay />
+              </div>
             </div>
           </div>
         )}
