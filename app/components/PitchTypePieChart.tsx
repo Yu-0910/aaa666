@@ -92,8 +92,8 @@ function donutTitleStyle(compact: boolean, sizeScale = 1): React.CSSProperties {
 }
 
 /** 球種％ラベル（ドーナツ・巡目別横棒など共通） */
-export function pitchTypePctLabelStyle(compact = true): React.CSSProperties {
-  const fontSize = Math.round(chartPx(compact, 12, 13.5) * PCT_LABEL_SCALE)
+export function pitchTypePctLabelStyle(compact = true, textScale = 1): React.CSSProperties {
+  const fontSize = Math.round(chartPx(compact, 12, 13.5) * PCT_LABEL_SCALE * textScale)
   return {
     fontFamily: BEBAS,
     fontVariantNumeric: "tabular-nums",
@@ -105,8 +105,8 @@ export function pitchTypePctLabelStyle(compact = true): React.CSSProperties {
 }
 
 /** ドーナツ各セクション内の％（従来 text-xs より小さく） */
-function renderDonutPctLabel(compact: boolean) {
-  const labelStyle = pitchTypePctLabelStyle(compact)
+function renderDonutPctLabel(compact: boolean, textScale = 1) {
+  const labelStyle = pitchTypePctLabelStyle(compact, textScale)
   return function render(props: {
     cx?: number
     cy?: number
@@ -186,8 +186,10 @@ function DonutCenterPanel({
           <div
             className="flex w-full flex-col items-stretch"
             style={{
-              padding: compact ? `0 ${chartPx(true, 6, 8)}px` : `0 ${chartPx(false, 6, 8)}px`,
-              gap: chartPx(compact, 3, 4),
+              padding: compact
+                ? `0 ${Math.round(chartPx(true, 6, 8) * labelScale)}px`
+                : `0 ${Math.round(chartPx(false, 6, 8) * labelScale)}px`,
+              gap: Math.round(chartPx(compact, 3, 4) * labelScale),
             }}
           >
             {centerStats?.avgAgainst ? (
@@ -357,6 +359,9 @@ export default function PitchTypePieChart({
       ? Math.min(designOuter, Math.floor(chartSide * 0.4))
       : designOuter
   const innerRadius = Math.round(outerRadius * (centerStats ? 0.54 : 0.48))
+  const chartFitScale =
+    compact && designHeight > 0 && chartSide > 0 ? chartSide / designHeight : 1
+  const insideTextScale = labelScale * chartFitScale
 
   if (!data.length) return null
 
@@ -391,7 +396,7 @@ export default function PitchTypePieChart({
             outerRadius={outerRadius}
             paddingAngle={2}
             dataKey="value"
-            label={renderDonutPctLabel(compact)}
+            label={renderDonutPctLabel(compact, insideTextScale)}
             labelLine={false}
             isAnimationActive={isAnimationActive}
           >
@@ -432,7 +437,7 @@ export default function PitchTypePieChart({
         centerStats={centerStats}
         innerRadius={innerRadius}
         compact={compact}
-        labelScale={labelScale}
+        labelScale={insideTextScale}
       />
       </div>
     </div>
