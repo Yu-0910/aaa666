@@ -2,7 +2,7 @@ import fs from "fs"
 import { NextResponse } from "next/server"
 import { yearFromRequest } from "@/lib/api/derivedPlayerApiShared"
 import { topProbablesOutputPath } from "@/lib/probables/buildTopProbablesSnapshot"
-import { enrichProbablesSnapshot } from "@/lib/probables/enrichProbablesCard"
+import { enrichProbablesSnapshotAsync } from "@/lib/probables/enrichProbablesCard"
 import type { TopProbablesSnapshot } from "@/lib/probables/types"
 import { getProjectRoot } from "@/lib/projectRoot"
 
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     }
 
     const snapshot = JSON.parse(fs.readFileSync(jsonPath, "utf8")) as TopProbablesSnapshot
-    const enriched = enrichProbablesSnapshot(projectRoot, snapshot)
+    const enriched = await enrichProbablesSnapshotAsync(projectRoot, snapshot)
     return NextResponse.json(enriched)
   } catch (e) {
     console.error("[top-probables/enrich]", e)

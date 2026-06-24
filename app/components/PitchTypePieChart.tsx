@@ -234,6 +234,32 @@ export function colorIndexForPitchType(
   return i >= 0 ? i : order.length
 }
 
+/** 凡例1行目の最大球種数（6球種目以降は2行目） */
+const LEGEND_FIRST_ROW_MAX = 5
+
+function PitchTypeChartLegendItem({
+  pitchType,
+  colorOrder,
+}: {
+  pitchType: string
+  colorOrder: string[]
+}) {
+  const ci = colorIndexForPitchType(pitchType, colorOrder)
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-gray-300"
+      style={{ fontSize: "0.7rem" }}
+    >
+      <span
+        className="inline-block h-3 w-3 shrink-0 border border-[#1a1a1a]"
+        style={{ backgroundColor: COLORS[ci % COLORS.length] }}
+        aria-hidden
+      />
+      {pitchType}
+    </span>
+  )
+}
+
 /** 球種と色の対応（投球データの対左右グラフ下など） */
 export function PitchTypeChartLegend({
   pitchTypes,
@@ -246,28 +272,26 @@ export function PitchTypeChartLegend({
 }) {
   const colorOrder = pitchTypeColorOrder ?? pitchTypes
   if (!pitchTypes.length) return null
+  const firstRow = pitchTypes.slice(0, LEGEND_FIRST_ROW_MAX)
+  const secondRow = pitchTypes.slice(LEGEND_FIRST_ROW_MAX)
+  const rowClass = "flex flex-wrap justify-center gap-x-4 gap-y-2"
   return (
     <div
-      className={`flex flex-wrap justify-center gap-x-4 gap-y-2 latin ${className}`}
+      className={`flex flex-col items-center gap-y-2 latin ${className}`}
       style={{ fontFamily: FONT_FAMILY }}
     >
-      {pitchTypes.map((pt) => {
-        const ci = colorIndexForPitchType(pt, colorOrder)
-        return (
-          <span
-            key={pt}
-            className="inline-flex items-center gap-1.5 text-gray-300"
-            style={{ fontSize: "0.7rem" }}
-          >
-            <span
-              className="inline-block h-3 w-3 shrink-0 rounded-sm border border-[#1a1a1a]"
-              style={{ backgroundColor: COLORS[ci % COLORS.length] }}
-              aria-hidden
-            />
-            {pt}
-          </span>
-        )
-      })}
+      <div className={rowClass}>
+        {firstRow.map((pt) => (
+          <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} />
+        ))}
+      </div>
+      {secondRow.length > 0 ? (
+        <div className={rowClass}>
+          {secondRow.map((pt) => (
+            <PitchTypeChartLegendItem key={pt} pitchType={pt} colorOrder={colorOrder} />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

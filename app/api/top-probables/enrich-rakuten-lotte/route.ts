@@ -1,7 +1,7 @@
 import fs from "fs"
 import { NextResponse } from "next/server"
 import { yearFromRequest } from "@/lib/api/derivedPlayerApiShared"
-import { enrichRakutenLotteProbablesCard } from "@/lib/probables/enrichRakutenLotteProbablesCard"
+import { enrichProbablesCardAsync } from "@/lib/probables/enrichProbablesCard"
 import { isRakutenLotteCard } from "@/lib/probables/isRakutenLotteCard"
 import { topProbablesOutputPath } from "@/lib/probables/buildTopProbablesSnapshot"
 import type { TopProbablesSnapshot } from "@/lib/probables/types"
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Rakuten vs Lotte card not found" }, { status: 404 })
     }
 
-    const enriched = enrichRakutenLotteProbablesCard(projectRoot, year, card)
+    const enriched = await enrichProbablesCardAsync(projectRoot, year, card)
     return NextResponse.json(enriched)
   } catch (e) {
     console.error("[enrich-rakuten-lotte]", e)

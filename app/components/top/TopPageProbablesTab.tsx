@@ -26,6 +26,7 @@ import type {
   TopProbablesPitcherSlot,
   TopProbablesSnapshot,
 } from "@/lib/probables/types"
+import { ProbablesPitchDataOverlay } from "@/app/components/top/ProbablesPitchDataOverlay"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX } from "@/lib/playerMatchupSeasonTab"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
@@ -50,8 +51,8 @@ const RAKUTEN_LOTTE_NAME_STATS_NUDGE_CLASS = "pt-1"
 
 function rakutenLottePitcherNameTextClass(isMobile: boolean): string {
   return isMobile
-    ? "text-[24px] font-bold text-white"
-    : "text-[27px] font-bold text-white"
+    ? "text-[20.4px] font-bold text-white"
+    : "text-[22.95px] font-bold text-white"
 }
 
 function rakutenLottePlayerBlockHeight(isMobile: boolean): number {
@@ -65,7 +66,7 @@ function rakutenLotteRomanTextClass(isMobile: boolean): string {
 /** 楽天 vs ロッテ・今季成績（選手名とは別サイズ。グレー背景・黒文字） */
 const RAKUTEN_LOTTE_SEASON_STATS_TEXT_MOBILE = "text-[8px]"
 const RAKUTEN_LOTTE_SEASON_STATS_TEXT_DESKTOP = "text-[9px]"
-const RAKUTEN_LOTTE_SEASON_STATS_OFFSET_CLASS = "mt-1"
+const RAKUTEN_LOTTE_SEASON_STATS_OFFSET_CLASS = "mt-1.5"
 
 function rakutenLotteSeasonStatsTextClass(isMobile: boolean): string {
   const size = isMobile ? RAKUTEN_LOTTE_SEASON_STATS_TEXT_MOBILE : RAKUTEN_LOTTE_SEASON_STATS_TEXT_DESKTOP
@@ -195,7 +196,7 @@ function opponentOverlayContentStyle(textScale = 1): CSSProperties | undefined {
 }
 
 /** 左列は右へ、右列は左へポップオーバーをわずかに寄せる（px） */
-const OPPONENT_OVERLAY_HORIZONTAL_NUDGE_PX = 12
+const OPPONENT_OVERLAY_HORIZONTAL_NUDGE_PX = 16
 
 function opponentOverlayAlignOffset(opponentStripeSide: "left" | "right" | undefined): number {
   if (opponentStripeSide === "left") return OPPONENT_OVERLAY_HORIZONTAL_NUDGE_PX
@@ -204,30 +205,62 @@ function opponentOverlayAlignOffset(opponentStripeSide: "left" | "right" | undef
 }
 
 function rakutenLotteKuTooltipTriggerClass(): string {
-  return "flex h-[14px] min-w-[14px] items-center justify-center border border-white px-0.5 text-[9px] font-semibold text-white hover:bg-white hover:text-black transition-colors leading-none shrink-0"
+  return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
 }
 
 function rakutenLotteRomanRowHeight(isMobile: boolean): number {
   return isMobile ? 14 : 16
 }
 
-/** 球団帯(4px)+「苦」ボタン分。左右列でローマ名の中心を揃える */
+function rakutenLotteSideButtonPositionClass(opponentStripeSide: "left" | "right"): string {
+  return opponentStripeSide === "left" ? "left-2" : "right-2"
+}
+
+function RakutenLotteSideTooltipButtons({
+  opponentStripeSide,
+  batters,
+  pitcherPublicId,
+  season,
+  isMobile,
+}: {
+  opponentStripeSide: "left" | "right"
+  batters: TopProbablesOpponentBatter[]
+  pitcherPublicId: string | null
+  season: number
+  isMobile: boolean
+}) {
+  const sideClass = rakutenLotteSideButtonPositionClass(opponentStripeSide)
+  return (
+    <>
+      <div className={`absolute top-0 z-10 ${sideClass}`}>
+        <ProbablesPitchDataOverlay
+          pitcherPublicId={pitcherPublicId}
+          season={season}
+          opponentStripeSide={opponentStripeSide}
+        />
+      </div>
+      <div className={`absolute top-1/2 z-10 -translate-y-1/2 ${sideClass}`}>
+        <RakutenLotteKuOverlay
+          batters={batters}
+          isMobile={isMobile}
+          opponentStripeSide={opponentStripeSide}
+        />
+      </div>
+    </>
+  )
+}
+
+/** 球団帯(4px)+ツールチップボタン分。左右列でローマ名の中心を揃える */
 const RAKUTEN_LOTTE_ROMAN_SIDE_INSET_CLASS = "px-[22px]"
 
 function RakutenLotteRomanRow({
   romanDisplay,
   hasRomanName,
   isMobile,
-  opponentStripeSide,
-  hasOpponentMatchup,
-  batters,
 }: {
   romanDisplay: string
   hasRomanName: boolean
   isMobile: boolean
-  opponentStripeSide: "left" | "right"
-  hasOpponentMatchup: boolean
-  batters: TopProbablesOpponentBatter[]
 }) {
   const rakutenLotteRomanClass = rakutenLotteRomanTextClass(isMobile)
   const rowHeight = rakutenLotteRomanRowHeight(isMobile)
@@ -240,7 +273,6 @@ function RakutenLotteRomanRow({
       —
     </span>
   )
-  const kuPositionClass = opponentStripeSide === "left" ? "left-1" : "right-1"
 
   return (
     <div className="relative w-full min-w-0" style={{ height: rowHeight }}>
@@ -249,15 +281,6 @@ function RakutenLotteRomanRow({
       >
         {romanNode}
       </div>
-      {hasOpponentMatchup ? (
-        <div className={`absolute top-1/2 z-10 -translate-y-1/2 ${kuPositionClass}`}>
-          <RakutenLotteKuOverlay
-            batters={batters}
-            isMobile={isMobile}
-            opponentStripeSide={opponentStripeSide}
-          />
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -563,22 +586,20 @@ async function fetchMergedRomanNameMap(season: number): Promise<Record<string, s
   return Object.assign({}, ...maps)
 }
 
-function hasOpponentMatchupData(slot: TopProbablesPitcherSlot | null | undefined): boolean {
-  return (slot?.topOpponentBatters?.length ?? 0) > 0
-}
-
 function PitcherBlock({
   slot,
   teamCode,
   isMobile,
   romanMap = {},
   opponentStripeSide,
+  season,
 }: {
   slot: TopProbablesPitcherSlot | null
   teamCode: string
   isMobile: boolean
   romanMap?: Record<string, string>
   opponentStripeSide?: "left" | "right"
+  season: number
 }) {
   const stripeColor = rankingTeamStripeColor(teamShortFromCode(teamCode))
   const nameTextClass = rakutenLottePitcherNameTextClass(isMobile)
@@ -606,6 +627,15 @@ function PitcherBlock({
       <div className={`flex w-full min-w-0 flex-col ${columnAlign}`}>
         <div className="relative w-full" style={{ height: blockHeight }}>
           {teamStripeOnNameBlock()}
+          {opponentStripeSide != null ? (
+            <RakutenLotteSideTooltipButtons
+              opponentStripeSide={opponentStripeSide}
+              batters={[]}
+              pitcherPublicId={null}
+              season={season}
+              isMobile={isMobile}
+            />
+          ) : null}
           {nameStripeRow(undecided)}
         </div>
       </div>
@@ -654,19 +684,23 @@ function PitcherBlock({
     </div>
   )
 
-  const hasOpponentMatchup = hasOpponentMatchupData(slot)
-
   return (
     <div className={`flex w-full min-w-0 flex-col ${columnAlign}`}>
       <div className="relative w-full" style={{ height: blockHeight }}>
         {teamStripeOnNameBlock()}
+        {opponentStripeSide != null ? (
+          <RakutenLotteSideTooltipButtons
+            opponentStripeSide={opponentStripeSide}
+            batters={slot.topOpponentBatters ?? []}
+            pitcherPublicId={slot.pitcherPublicId}
+            season={season}
+            isMobile={isMobile}
+          />
+        ) : null}
         <RakutenLotteRomanRow
           romanDisplay={romanDisplay}
           hasRomanName={hasRomanName}
           isMobile={isMobile}
-          opponentStripeSide={opponentStripeSide ?? "left"}
-          hasOpponentMatchup={hasOpponentMatchup}
-          batters={slot.topOpponentBatters}
         />
         {nameStripeRow(nameWithStats)}
       </div>
@@ -680,12 +714,14 @@ function TeamPitcherColumn({
   isMobile,
   romanMap = {},
   opponentStripeSide,
+  season,
 }: {
   teamCode: string
   slot: TopProbablesPitcherSlot | null
   isMobile: boolean
   romanMap?: Record<string, string>
   opponentStripeSide?: "left" | "right"
+  season: number
 }) {
   return (
     <div className="min-w-0">
@@ -695,6 +731,7 @@ function TeamPitcherColumn({
         isMobile={isMobile}
         romanMap={romanMap}
         opponentStripeSide={opponentStripeSide}
+        season={season}
       />
     </div>
   )
@@ -705,11 +742,13 @@ function GameRow({
   isMobile,
   idx,
   romanMap = {},
+  season,
 }: {
   game: TopProbablesGame
   isMobile: boolean
   idx: number
   romanMap?: Record<string, string>
+  season: number
 }) {
   const rowBg = rowBackgroundColor(idx)
   const rowHoverClass = "hover:bg-[#2a2a2a]"
@@ -726,6 +765,7 @@ function GameRow({
           isMobile={isMobile}
           romanMap={romanMap}
           opponentStripeSide="left"
+          season={season}
         />
       </div>
       <div className="flex shrink-0 items-center justify-center">
@@ -738,6 +778,7 @@ function GameRow({
           isMobile={isMobile}
           romanMap={romanMap}
           opponentStripeSide="right"
+          season={season}
         />
       </div>
     </div>
@@ -762,10 +803,12 @@ function ProbablesCard({
   card,
   isMobile,
   romanMap = {},
+  season,
 }: {
   card: TopProbablesCard
   isMobile: boolean
   romanMap?: Record<string, string>
+  season: number
 }) {
   const displayCard = withRakutenHanshinProbablesSample(card)
   const [a, b] = displayCard.teamNames
@@ -798,6 +841,7 @@ function ProbablesCard({
             isMobile={isMobile}
             idx={idx}
             romanMap={romanMap}
+            season={season}
           />
         ))}
       </div>
@@ -893,6 +937,7 @@ export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) 
           card={card}
           isMobile={isMobile}
           romanMap={romanMap}
+          season={year}
         />
       ))}
     </div>
