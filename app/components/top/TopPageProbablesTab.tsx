@@ -252,6 +252,18 @@ function RakutenLotteSideTooltipButtons({
 
 /** 球団帯(4px)+ツールチップボタン分。左右列でローマ名の中心を揃える */
 const RAKUTEN_LOTTE_ROMAN_SIDE_INSET_CLASS = "px-[22px]"
+/** ローマ名・選手名・今季成績を VS 側へ同量だけ寄せる（px） */
+const RAKUTEN_LOTTE_VS_CENTER_NUDGE_PX = 10
+
+function rakutenLotteVsCenterNudgeStyle(opponentStripeSide: "left" | "right" | undefined): CSSProperties | undefined {
+  if (opponentStripeSide === "left") {
+    return { transform: `translateX(${RAKUTEN_LOTTE_VS_CENTER_NUDGE_PX}px)` }
+  }
+  if (opponentStripeSide === "right") {
+    return { transform: `translateX(-${RAKUTEN_LOTTE_VS_CENTER_NUDGE_PX}px)` }
+  }
+  return undefined
+}
 
 function RakutenLotteRomanRow({
   romanDisplay,
@@ -636,7 +648,9 @@ function PitcherBlock({
               isMobile={isMobile}
             />
           ) : null}
-          {nameStripeRow(undecided)}
+          <div className="w-full" style={rakutenLotteVsCenterNudgeStyle(opponentStripeSide)}>
+            {nameStripeRow(undecided)}
+          </div>
         </div>
       </div>
     )
@@ -697,12 +711,14 @@ function PitcherBlock({
             isMobile={isMobile}
           />
         ) : null}
-        <RakutenLotteRomanRow
-          romanDisplay={romanDisplay}
-          hasRomanName={hasRomanName}
-          isMobile={isMobile}
-        />
-        {nameStripeRow(nameWithStats)}
+        <div className="w-full" style={rakutenLotteVsCenterNudgeStyle(opponentStripeSide)}>
+          <RakutenLotteRomanRow
+            romanDisplay={romanDisplay}
+            hasRomanName={hasRomanName}
+            isMobile={isMobile}
+          />
+          {nameStripeRow(nameWithStats)}
+        </div>
       </div>
     </div>
   )

@@ -5,7 +5,6 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import type { PitcherSeasonPitchTypesApiResponse } from "@/app/api/players/[playerId]/season-pitch-types/route"
-import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 import type {
   PitcherSeasonPocPaAgg,
@@ -20,11 +19,11 @@ const PitchTypeChartLegend = dynamic(
   { ssr: false },
 )
 
-/** 円グラフ・表の表示倍率（基準から積み上げ。直近は1.2倍、全体は9割） */
+/** 円グラフの表示倍率（基準から積み上げ。直近は1.2倍、全体は9割） */
 const PROBABLES_PITCH_CHART_ZOOM = 0.7 * 0.7 * 1.2 * 0.9
-const PROBABLES_PITCH_TABLE_ZOOM = 0.8 * 0.7 * 1.2 * 0.9
+/** ダイアログ横の最大幅（96vw / 56rem 基準の7割） */
 const PROBABLES_PITCH_DIALOG_CLASS =
-  "w-full max-w-[min(96vw,56rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-hidden sm:max-w-[min(96vw,56rem)]"
+  "w-full max-w-[min(67.2vw,39.2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-hidden sm:max-w-[min(67.2vw,39.2rem)]"
 
 /** ダイアログ幅に収まるよう、ベース zoom に掛ける追加倍率を算出 */
 function useContainerFitZoom(
@@ -140,7 +139,7 @@ export function ProbablesPitchDataOverlay({
   const rightRows = toChart("pct_vs_right")
   const vsHand = pocPayload?.splits?.vsHand
   const showCharts = seasonRows.length > 0 && (leftRows.length > 0 || rightRows.length > 0)
-  const hasContent = showCharts || seasonRows.length > 0
+  const hasContent = showCharts
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const fitFactor = useContainerFitZoom(containerRef, contentRef, open && hasContent && !loading)
@@ -162,12 +161,12 @@ export function ProbablesPitchDataOverlay({
           <div ref={containerRef} className="w-full max-w-full overflow-hidden">
             <div
               ref={contentRef}
-              className="flex w-fit max-w-none flex-col items-center gap-3 origin-top sm:flex-row sm:flex-nowrap sm:items-start"
+              className="flex w-fit max-w-none flex-col items-center gap-3 origin-top"
               style={{ zoom: fitFactor }}
             >
               {showCharts ? (
                 <div
-                  className="mx-auto shrink-0 origin-top-left sm:mx-0"
+                  className="mx-auto shrink-0 origin-top-left"
                   style={{ zoom: PROBABLES_PITCH_CHART_ZOOM }}
                 >
                   <div className="flex flex-row flex-nowrap items-start justify-center gap-8">
@@ -199,12 +198,6 @@ export function ProbablesPitchDataOverlay({
                   <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} />
                 </div>
               ) : null}
-              <div
-                className="relative z-0 flex shrink-0 justify-center origin-top"
-                style={{ zoom: PROBABLES_PITCH_TABLE_ZOOM }}
-              >
-                <PitcherSeasonPitchTypesTable rows={seasonRows} loading={false} compactOverlay />
-              </div>
             </div>
           </div>
         )}
