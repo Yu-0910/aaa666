@@ -284,15 +284,23 @@ export function PlayerPageClient({
     }
   }, [playerSegmentClean, clientSearch, router])
 
-  /** Yahoo 等の公開 ID → 名簿照合で確定した NPB player_id の URL へ統一 */
+  /** 個人ページ URL 正規化用 NPB ID（名簿照合 → profile-merged） */
+  const canonicalPlayerNpbId = useMemo(() => {
+    const fromRoster = rosterMatchedNpbId.trim()
+    if (fromRoster) return fromRoster
+    if (!profileMergedSettled) return ""
+    return String(profileMerged?.npb_player_id ?? "").trim()
+  }, [rosterMatchedNpbId, profileMergedSettled, profileMerged?.npb_player_id])
+
+  /** Yahoo 等の公開 ID → 確定した NPB player_id の URL へ統一（名簿・名簿外） */
   useEffect(() => {
-    const npb = rosterMatchedNpbId.trim()
+    const npb = canonicalPlayerNpbId
     const pathId = playerIdNormalized.trim()
     if (!npb || !pathId || npb === pathId) return
     if (!/^\d+$/.test(pathId)) return
     const qs = clientSearch.startsWith("?") ? clientSearch : clientSearch ? `?${clientSearch}` : ""
     router.replace(`/players/${npb}${qs}`)
-  }, [rosterMatchedNpbId, playerIdNormalized, clientSearch, router])
+  }, [canonicalPlayerNpbId, playerIdNormalized, clientSearch, router])
 
   useEffect(() => {
     pitchTabChartsSeenRef.current = false
