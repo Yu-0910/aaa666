@@ -284,6 +284,16 @@ export function PlayerPageClient({
     }
   }, [playerSegmentClean, clientSearch, router])
 
+  /** Yahoo 等の公開 ID → 名簿照合で確定した NPB player_id の URL へ統一 */
+  useEffect(() => {
+    const npb = rosterMatchedNpbId.trim()
+    const pathId = playerIdNormalized.trim()
+    if (!npb || !pathId || npb === pathId) return
+    if (!/^\d+$/.test(pathId)) return
+    const qs = clientSearch.startsWith("?") ? clientSearch : clientSearch ? `?${clientSearch}` : ""
+    router.replace(`/players/${npb}${qs}`)
+  }, [rosterMatchedNpbId, playerIdNormalized, clientSearch, router])
+
   useEffect(() => {
     pitchTabChartsSeenRef.current = false
     prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab

@@ -99,9 +99,10 @@ function resolveTeamCode(yahooId: string): string {
 }
 
 function publicIdForOpponent(yahooId: string, npbId: string): string {
+  const n = (npbId || "").trim()
+  if (n) return n
   const roster = findRosterPlayerByPublicId(yahooId)
   if (roster?.npb_player_id?.trim()) return roster.npb_player_id.trim()
-  if (npbId && npbId !== yahooId) return npbId
   return yahooId
 }
 
