@@ -1,7 +1,9 @@
 /**
  * Record_pitching.csv（1行目＝指標の並び）から投手ランキング用 MetricDefinition[] を取得。
  * 優先: _data/master_csv/Record_pitching.csv（計画書 §2 の日本語ラベル順）
- * フォールバック: リポジトリ直下 Record_pitching.csv（既存 Python パイプライン用の英語ヘッダー）
+ * 2026: _data/master_csv/Record_pitching.csv（日本語ラベル）を優先し、無ければ日本語デフォルトを使う。
+ *       Vercel では _data/master_csv/ が除外されるため、リポジトリ直下の英語 Record_pitching.csv は使わない。
+ * 歴史年度: _data/master_csv/Record_pitching_historical.csv を優先し、無ければ従来フォールバックを使う。
  */
 
 import fs from 'fs'
@@ -76,6 +78,11 @@ function findRecordPitchingCsv(): string | null {
   return findRecordPitchingCsvPath('Record_pitching.csv')
 }
 
+function findRecordPitchingMasterCsv(): string | null {
+  const csvPath = path.join(process.cwd(), '_data', 'master_csv', 'Record_pitching.csv')
+  return fs.existsSync(csvPath) ? csvPath : null
+}
+
 function findRecordPitchingHistoricalCsv(): string | null {
   return findRecordPitchingCsvPath('Record_pitching_historical.csv')
 }
@@ -146,7 +153,11 @@ export function loadMetricsFromRecordPitchingForYear(year: number): MetricDefini
   const base =
     Number.isFinite(year) && year <= HISTORICAL_PITCHING_YEAR_MAX
       ? loadMetricsFromRecordPitchingHistorical()
-      : loadMetricsFromRecordPitching()
+      : loadMetricsFromRecordFile(
+          findRecordPitchingMasterCsv,
+          getDefaultPitchingMetrics,
+          'Record_pitching.csv',
+        )
   return filterPitchingMetricsForYear(base, year)
 }
 
