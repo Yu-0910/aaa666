@@ -284,28 +284,28 @@ def index_master_files(
                 if kind == "batting"
                 else pitching_row_to_career(row, year, league)
             )
+            name = (row.get("player_name_ja") or row.get("name") or "").strip()
+            team = (row.get("team") or "").strip()
+            indexed = False
             pid = normalize_npb_id(row.get("player_id") or "")
             if pid:
                 if kind == "batting":
                     batting_index[pid].append(career)
                 else:
                     pitching_index[pid].append(career)
-                n += 1
-                continue
-            name = (row.get("player_name_ja") or row.get("name") or "").strip()
-            team = (row.get("team") or "").strip()
-            if not name:
-                continue
-            # 投手 CSV は player_id 空欄が多い → 名前+球団で補助索引（既存）
-            if kind == "pitching":
-                for key in candidate_name_keys(name, team, include_team=True):
-                    pitching_name_index[key].append(career)
-                n += 1
-                continue
-            # 打撃 CSV の player_id 空欄も存在（特に 2025）→ 名前+球団で補助索引
-            if kind == "batting":
-                for key in candidate_name_keys(name, team, include_team=True):
-                    batting_name_index[key].append(career)
+                indexed = True
+            if name:
+                # 移籍・復帰などで NPB ID が変わった選手も現行IDのページへ通算統合する。
+                # 重複年度は後段で (year, league, team) 単位に除外される。
+                if kind == "pitching":
+                    for key in candidate_name_keys(name, team, include_team=True):
+                        pitching_name_index[key].append(career)
+                    indexed = True
+                elif kind == "batting":
+                    for key in candidate_name_keys(name, team, include_team=True):
+                        batting_name_index[key].append(career)
+                    indexed = True
+            if indexed:
                 n += 1
         rows_indexed += n
         log(f"       -> {n} rows indexed")
