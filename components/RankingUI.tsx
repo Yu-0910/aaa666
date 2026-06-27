@@ -344,7 +344,7 @@ export default function RankingUI({
           <div
             ref={tableScrollRef}
             onScroll={() => syncRankingTableScroll("table")}
-            className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full"
+            className="overflow-x-auto overscroll-x-contain max-w-full"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             <table
@@ -537,7 +537,7 @@ export default function RankingUI({
           <div
             ref={bottomScrollRef}
             onScroll={() => syncRankingTableScroll("bottom")}
-            className="overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full border-t border-[#444] bg-[#141414]"
+            className="overflow-x-auto overflow-y-hidden overscroll-x-contain max-w-full border-t border-[#444] bg-[#141414]"
             style={{ WebkitOverflowScrolling: "touch", height: 22 }}
             aria-label="表の横スクロール"
           >
