@@ -20,6 +20,7 @@ import { formatStat } from '@/lib/formatStat'
 import { playerPageHref } from '@/lib/playerPageHref'
 import { usesRanking2025CompactTableUi } from '@/lib/ranking/rankingUiVariant'
 import { withOfficialRomanOverride } from '@/lib/playerOfficialRomanOverrides'
+import { dedupeRankingRowsForDisplay } from '@/lib/ranking/dedupeRankingRows'
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -247,6 +248,7 @@ export default function RankingUI({
   const metricValueTextClass = compactTableUi ? 'text-[16.83px]' : 'text-lg'
   const gpaMetricIdx = metrics.findIndex((m) => m.key === 'gpa' || m.label === 'GPA')
   const metricBgMaxIdx = gpaMetricIdx >= 0 ? gpaMetricIdx : metrics.length - 1
+  const displayRows = dedupeRankingRowsForDisplay(sortedRows)
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
   const activeMetric = metrics.find(m => m.key === sortKey)
@@ -374,7 +376,7 @@ export default function RankingUI({
                 />
               </thead>
               <tbody>
-                {(sortedRows ?? []).map((row, idx) => {
+                {displayRows.map((row, idx) => {
                   const romanName = withOfficialRomanOverride({
                     romanName: row.romanName,
                     npbPlayerId: row.npbPlayerId,
