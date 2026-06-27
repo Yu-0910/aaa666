@@ -312,14 +312,18 @@ export default function RankingUI({
 
   const headerNavBlock =
     headerNavGroups && headerNavGroups.length > 0 ? (
-      <div className="mb-2 flex flex-col gap-1.5" aria-label="関連ページ">
+      <div className="mb-2 flex flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap" aria-label="関連ページ">
         {headerNavGroups.map((group) => (
-          <nav key={group.ariaLabel} className="flex flex-wrap gap-1.5 text-[11px]" aria-label={group.ariaLabel}>
+          <nav
+            key={group.ariaLabel}
+            className="flex flex-nowrap gap-1.5 text-[11px] shrink-0"
+            aria-label={group.ariaLabel}
+          >
             {group.links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`inline-flex items-center whitespace-nowrap rounded border px-2 py-0.5 transition-colors ${
+                className={`inline-flex shrink-0 items-center whitespace-nowrap rounded border px-2 py-0.5 transition-colors ${
                   link.active
                     ? "border-[#ffff44] bg-[#1f1f1f] text-[#ffff44]"
                     : "border-[#444] bg-[#141414] text-gray-400 hover:border-[#666] hover:text-[#ffff44]"
