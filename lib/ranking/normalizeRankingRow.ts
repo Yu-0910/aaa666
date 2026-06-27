@@ -50,6 +50,9 @@ export async function mergeRomanNamesFromCsv(
   }
   return rows.map((row) => {
     if (row.romanName && row.romanName.trim()) return row
+    const npbId = String(row.npbPlayerId ?? "").replace(/\D/g, "").replace(/^0+/, "")
+    const byNpbId = npbId ? map[`npb:${npbId}`]?.trim() : ""
+    if (byNpbId) return { ...row, romanName: byNpbId }
     const en = lookupRomanInMap(map, row.name, row.team)
     if (!en) return row
     return { ...row, romanName: en }

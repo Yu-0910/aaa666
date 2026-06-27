@@ -74,6 +74,42 @@ function registerRomanAliases(map: Record<string, string>, nameRaw: string, team
   }
 }
 
+function normalizeNpbId(id: string | undefined): string {
+  return String(id ?? '').replace(/\D/g, '').replace(/^0+/, '') || ''
+}
+
+function registerNpbRomanAlias(map: Record<string, string>, npbPlayerId: string | undefined, en: string) {
+  const id = normalizeNpbId(npbPlayerId)
+  const enTrim = en.trim()
+  if (!id || !enTrim) return
+  map[`npb:${id}`] = enTrim
+}
+
+function readNpbMetaRomanName(npbPlayerId: string | undefined): string {
+  const normalized = normalizeNpbId(npbPlayerId)
+  if (!normalized) return ''
+  const candidates = [
+    normalized,
+    normalized.padStart(8, '0'),
+  ]
+  for (const id of candidates) {
+    const metaPath = path.join(process.cwd(), '_data', 'derived', 'npb_player_meta', `${id}.json`)
+    if (!fs.existsSync(metaPath)) continue
+    try {
+      const data = JSON.parse(fs.readFileSync(metaPath, 'utf8')) as {
+        roman?: { name_en_full?: string; name_en_short?: string }
+      }
+      const full = data.roman?.name_en_full?.trim()
+      if (full) return full
+      const short = data.roman?.name_en_short?.trim()
+      if (short) return short
+    } catch {
+      /* ignore malformed metadata */
+    }
+  }
+  return ''
+}
+
 /**
  * 打撃CSVのパスを探索（from_master 優先、なければ qualifying）
  */
@@ -82,6 +118,25 @@ function findBattingCsvForRoman(year: string, league: string): string | null {
   const baseNames = [
     `batting_${year}_${upperLeague}_from_master.csv`,
     `batting_${year}_${upperLeague}_qualifying.csv`,
+  ]
+  const dirs = [
+    path.join(process.cwd(), '_data', 'master_csv_calculated'),
+    path.join(process.cwd(), '_data', 'master_csv'),
+    process.cwd(),
+  ]
+  for (const base of baseNames) {
+    for (const dir of dirs) {
+      const csvPath = path.join(dir, base)
+      if (fs.existsSync(csvPath)) return csvPath
+    }
+  }
+  return null
+}
+
+function findPitchingCsvForRoman(year: string, league: string): string | null {
+  const upperLeague = league.toUpperCase()
+  const baseNames = [
+    `pitching_${year}_${upperLeague}_from_master.csv`,
   ]
   const dirs = [
     path.join(process.cwd(), '_data', 'master_csv_calculated'),
@@ -156,8 +211,31 @@ export function getRomanNameMap(year: string, league: string): Record<string, st
       for (const row of rows) {
         const name = (row['player_name_ja'] ?? row['name'] ?? row['player'] ?? '').trim()
         const team = (row['team'] ?? row['Team'] ?? row['チーム'] ?? '').trim()
-        const en = (row['player_name_en'] ?? row['romanName'] ?? row['name_en'] ?? '').trim()
+        const npbPlayerId = (row['player_id'] ?? row['npbPlayerId'] ?? row['npb_player_id'] ?? '').trim()
+        const en =
+          (row['player_name_en'] ?? row['romanName'] ?? row['name_en'] ?? '').trim() ||
+          readNpbMetaRomanName(npbPlayerId)
         if (!en) continue
+        registerNpbRomanAlias(map, npbPlayerId, en)
+        registerRomanAliases(map, name, team, en)
+      }
+    }
+  }
+
+  const pitchingCsvPath = findPitchingCsvForRoman(dataYear, upperLeague)
+  if (pitchingCsvPath) {
+    const content = readFsTextWithLegacyEncodings(pitchingCsvPath)
+    if (content) {
+      const rows = parseCsvSimple(content)
+      for (const row of rows) {
+        const name = (row['player_name_ja'] ?? row['name'] ?? row['player'] ?? '').trim()
+        const team = (row['team'] ?? row['Team'] ?? row['チーム'] ?? '').trim()
+        const npbPlayerId = (row['player_id'] ?? row['npbPlayerId'] ?? row['npb_player_id'] ?? '').trim()
+        const en =
+          (row['player_name_en'] ?? row['romanName'] ?? row['name_en'] ?? '').trim() ||
+          readNpbMetaRomanName(npbPlayerId)
+        if (!en) continue
+        registerNpbRomanAlias(map, npbPlayerId, en)
         registerRomanAliases(map, name, team, en)
       }
     }
