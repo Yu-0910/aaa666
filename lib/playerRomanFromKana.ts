@@ -1,4 +1,5 @@
 import { convertKanaToRomaji } from "@/lib/kanaToRomaji"
+import { resolveOfficialRomanOverride } from "@/lib/playerOfficialRomanOverrides"
 
 /** `M.Ikenaga` など略式 */
 export function isAbbreviatedRomanName(s: string): boolean {
@@ -8,6 +9,9 @@ export function isAbbreviatedRomanName(s: string): boolean {
 }
 
 type NpbPlayerMetaRoman = {
+  player_id?: string
+  npb_player_id?: string
+  name_ja?: string
   name_kana?: string
   roman?: {
     name_en_full?: string
@@ -17,6 +21,12 @@ type NpbPlayerMetaRoman = {
 
 /** 名簿外選手の表示用フル英字を決定 */
 export function resolveNonRosterNameEnFull(meta: NpbPlayerMetaRoman | null | undefined): string {
+  const official = resolveOfficialRomanOverride({
+    npbPlayerId: meta?.npb_player_id ?? meta?.player_id,
+    name: meta?.name_ja,
+  })
+  if (official) return official
+
   const kana = (meta?.name_kana ?? "").trim()
   const fromKana = kana ? convertKanaToRomaji(kana) : ""
 
