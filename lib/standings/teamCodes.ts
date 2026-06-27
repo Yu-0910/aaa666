@@ -338,6 +338,19 @@ export function teamDisplayNameFromCode(code: string): string {
   return TEAM_CODE_TO_DISPLAY[c] ?? c
 }
 
+/** 順位表行の表示名。NPB 年度別では当時の `npbLabel` を優先する。 */
+export function teamDisplayNameFromStandingRow(row: {
+  team: string
+  teamName?: string | null
+  npbLabel?: string | null
+}): string {
+  const historical = String(row.npbLabel ?? "").trim()
+  if (historical) return historical
+  const fallback = String(row.teamName ?? "").trim()
+  if (fallback) return fallback
+  return teamDisplayNameFromCode(row.team)
+}
+
 /** 順位表 JSON の `team`（球団コード）から英字球団名 */
 export function teamRomanNameFromCode(code: string): string {
   const c = String(code ?? "").trim()

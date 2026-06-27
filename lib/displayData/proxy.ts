@@ -64,7 +64,7 @@ export async function handleDisplayDataGet(
   let pathForFetch = relativePath
   const preferLocal = String(process.env.RANKINGS_PREFER_LOCAL || '').trim() === '1'
 
-  if (preferLocal) {
+  if (preferLocal || kind === 'standings') {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)
   }
@@ -82,7 +82,7 @@ export async function handleDisplayDataGet(
   }
 
   const scope = process.env.RANKINGS_EXTERNALIZE_SCOPE || ''
-  if (scope) {
+  if (scope && kind !== 'standings') {
     const scopes = scope.split(',').map((s) => s.trim().toLowerCase())
     const pathLower = pathForFetch.toLowerCase()
     const isInScope = scopes.some((s) => pathLower.includes(s))

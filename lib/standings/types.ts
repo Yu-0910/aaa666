@@ -14,6 +14,8 @@ export type TeamStandingRow = {
   rank: number
   team: string
   teamName: string
+  /** NPB 年度別順位表では当時のチーム名を残す */
+  npbLabel?: string
   g: number
   w: number
   l: number

@@ -8,7 +8,10 @@ import { teamColors } from "@/app/components/top/topPageConstants"
 import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
 import { fetchStandingsJson } from "@/lib/standings/fetchStandingsJson"
 import { formatStandingsCell } from "@/lib/standings/formatStandingsCell"
-import { teamDisplayNameFromCode, teamRomanNameFromCode } from "@/lib/standings/teamCodes"
+import {
+  teamDisplayNameFromStandingRow,
+  teamRomanNameFromCode,
+} from "@/lib/standings/teamCodes"
 import { standingsMetricColumnsForSource } from "@/lib/standings/metricColumns"
 import type { StandingsMetricKey } from "@/lib/standings/metricColumns"
 import {
@@ -296,7 +299,7 @@ function TeamStandingsTable({
                               className="text-white hover:text-[#ffff44] font-black tabular-nums truncate transition-colors"
                               style={{ fontSize: teamNameFontSize }}
                             >
-                              {teamDisplayNameFromCode(row.team)}
+                              {teamDisplayNameFromStandingRow(row)}
                             </span>
                           </Link>
                         ) : (
@@ -304,7 +307,7 @@ function TeamStandingsTable({
                             className="block truncate text-white font-black tabular-nums"
                             style={{ fontSize: teamNameFontSize }}
                           >
-                            {teamDisplayNameFromCode(row.team)}
+                            {teamDisplayNameFromStandingRow(row)}
                           </span>
                         )}
                         <span
