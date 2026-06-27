@@ -34,6 +34,11 @@ interface RankingUIProps {
   yearOptions?: number[]
   /** メイン見出し直下の補足（例: 投手規定の説明） */
   titleSubNote?: string
+  /** 見出しの上に出す関連リンク群 */
+  headerNavGroups?: Array<{
+    ariaLabel: string
+    links: Array<{ href: string; label: string; active?: boolean }>
+  }>
   /** 週間ランキング: ヘッダー右の週セレクト（年度セレクトの代わり） */
   weekSelector?: {
     weekKey: string
@@ -223,6 +228,7 @@ export default function RankingUI({
   metricLabelFallback = '打撃成績',
   yearOptions,
   titleSubNote,
+  headerNavGroups,
   weekSelector,
   weekLabelInTitle,
   embedInShell = false,
@@ -303,6 +309,29 @@ export default function RankingUI({
       ) : null}
     </>
   )
+
+  const headerNavBlock =
+    headerNavGroups && headerNavGroups.length > 0 ? (
+      <div className="mb-2 flex flex-col gap-1.5" aria-label="関連ページ">
+        {headerNavGroups.map((group) => (
+          <nav key={group.ariaLabel} className="flex flex-wrap gap-1.5 text-[11px]" aria-label={group.ariaLabel}>
+            {group.links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`inline-flex items-center rounded border px-2 py-0.5 transition-colors ${
+                  link.active
+                    ? "border-[#ffff44] bg-[#1f1f1f] text-[#ffff44]"
+                    : "border-[#444] bg-[#141414] text-gray-400 hover:border-[#666] hover:text-[#ffff44]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ))}
+      </div>
+    ) : null
 
   const tableBlock = (
     <>
@@ -587,6 +616,7 @@ export default function RankingUI({
       </div>
 
       <main className="max-w-[1400px] mx-auto px-2 py-3">
+        {headerNavBlock}
         {titleBlock}
         {tableBlock}
       </main>

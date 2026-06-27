@@ -10,6 +10,7 @@ import type { RankingViewModel } from "@/lib/ranking/types"
 import { shouldRequireQualifyingPitching } from "@/lib/ranking/qualifyingPitching"
 import { season2026PitchingQualifyingNote } from "@/lib/ranking/qualifyingUiNotes"
 import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
+import { buildRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 import { usePitchingRankingTable } from "@/hooks/usePitchingRankingTable"
 import { FullPageLoading } from "@/components/ui/spinner"
 
@@ -64,6 +65,10 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
   const missingJsonHint = is2026Season
     ? "npm run phase19:build:pitching-rankings を実行してください。"
     : "npm run pitching-rankings:build:historical を実行してください。"
+  const headerNavGroups =
+    initialViewModel.league === "CL" || initialViewModel.league === "PL"
+      ? buildRankingTopNavGroups(initialViewModel.season, initialViewModel.league, "pitching")
+      : undefined
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -87,6 +92,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
         rankingPathBase="/ranking/pitching"
         metricLabelFallback="投球成績"
         titleSubNote={titleSubNote}
+        headerNavGroups={headerNavGroups}
       />
     </div>
   )
