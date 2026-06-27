@@ -15,17 +15,18 @@ type RankingPageKind = "batting" | "pitching"
 
 function buildLeagueNavRow(year: string, league: "CL" | "PL", activeKind: RankingPageKind, activeLeague: "CL" | "PL"): RankingNavGroup {
   const leagueName = leagueLabel(league)
+  const shortLeague = league === "CL" ? "セ" : "パ"
   return {
     ariaLabel: `${leagueName}のランキング`,
     links: [
       {
         href: `/ranking/${year}/${league}`,
-        label: `${leagueName} 野手`,
+        label: `${shortLeague}打`,
         active: activeKind === "batting" && league === activeLeague,
       },
       {
         href: `/ranking/pitching/${year}/${league}`,
-        label: `${leagueName} 投手`,
+        label: `${shortLeague}投`,
         active: activeKind === "pitching" && league === activeLeague,
       },
     ],

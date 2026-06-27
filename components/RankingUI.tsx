@@ -319,7 +319,7 @@ export default function RankingUI({
               <Link
                 key={link.href}
                 href={link.href}
-                className={`inline-flex items-center rounded border px-2 py-0.5 transition-colors ${
+                className={`inline-flex items-center whitespace-nowrap rounded border px-2 py-0.5 transition-colors ${
                   link.active
                     ? "border-[#ffff44] bg-[#1f1f1f] text-[#ffff44]"
                     : "border-[#444] bg-[#141414] text-gray-400 hover:border-[#666] hover:text-[#ffff44]"
