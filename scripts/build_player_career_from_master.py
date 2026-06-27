@@ -38,7 +38,7 @@ from lib.pitching_historical_metrics import (  # noqa: E402
     resolve_pitching_int,
 )
 from lib.player_name_match import (  # noqa: E402
-    normalize_name_key,
+    name_keys_for_matching,
     normalize_name_team_keys,
 )
 DEFAULT_ROSTER = ROOT / "_data" / "npb_roster_2026.csv"
@@ -123,6 +123,19 @@ def load_csv_rows(path: Path) -> List[Dict[str, str]]:
             continue
     with path.open(encoding="utf-8", errors="replace", newline="") as f:
         return list(csv.DictReader(f))
+
+
+def candidate_name_keys(name: str, team: str, *, include_team: bool) -> List[str]:
+    """同一選手の移籍前後を拾うため、名前のみと名前+球団の両方を候補にする。"""
+    keys: List[str] = []
+    for key in name_keys_for_matching(name):
+        if key and key not in keys:
+            keys.append(key)
+    if include_team:
+        for key in normalize_name_team_keys(name, team):
+            if key and key not in keys:
+                keys.append(key)
+    return keys
 
 
 def batting_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[str, Any]:
@@ -285,12 +298,13 @@ def index_master_files(
                 continue
             # 投手 CSV は player_id 空欄が多い → 名前+球団で補助索引（既存）
             if kind == "pitching":
-                pitching_name_index[normalize_name_key(name, team)].append(career)
+                for key in candidate_name_keys(name, team, include_team=True):
+                    pitching_name_index[key].append(career)
                 n += 1
                 continue
             # 打撃 CSV の player_id 空欄も存在（特に 2025）→ 名前+球団で補助索引
             if kind == "batting":
-                for key in normalize_name_team_keys(name, team):
+                for key in candidate_name_keys(name, team, include_team=True):
                     batting_name_index[key].append(career)
                 n += 1
         rows_indexed += n
@@ -313,7 +327,7 @@ def merge_career_rows_from_id_and_name(
     """player_id 索引と名前+球団索引を年度単位でユニオン（2025 の空 ID 行を落とさない）。"""
     merged = list(id_rows)
     seen = {career_row_dedupe_key(r) for r in merged}
-    keys = normalize_name_team_keys(name, team) if use_name_team_keys else [normalize_name_key(name, team)]
+    keys = candidate_name_keys(name, team, include_team=use_name_team_keys)
     for key in keys:
         if not key:
             continue
