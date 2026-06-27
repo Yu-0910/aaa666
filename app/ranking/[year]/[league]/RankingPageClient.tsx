@@ -11,6 +11,7 @@ import type { RankingViewModel } from "@/lib/ranking/types"
 import { getDefaultBattingSortOrder } from "@/lib/ranking/normalizeRankingRow"
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
 import { season2026BattingQualifyingNote } from "@/lib/ranking/qualifyingUiNotes"
+import { buildRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 import { useBattingRankingTable } from "@/hooks/useBattingRankingTable"
 import { FullPageLoading } from "@/components/ui/spinner"
 
@@ -56,6 +57,10 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
   }
 
   const titleSubNote = season2026BattingQualifyingNote(sortKey, initialViewModel.season)
+  const headerNavGroups =
+    initialViewModel.league === "CL" || initialViewModel.league === "PL"
+      ? buildRankingTopNavGroups(initialViewModel.season, initialViewModel.league, "batting")
+      : undefined
   const emptyAfterFilter =
     !loadError &&
     rowsFromJson.length > 0 &&
@@ -77,6 +82,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
         order={order}
         onSortChange={handleSortChange}
         titleSubNote={titleSubNote}
+        headerNavGroups={headerNavGroups}
       />
     </div>
   )
