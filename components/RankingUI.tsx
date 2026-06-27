@@ -19,6 +19,7 @@ import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
 import { playerPageHref } from '@/lib/playerPageHref'
 import { usesRanking2025CompactTableUi } from '@/lib/ranking/rankingUiVariant'
+import { withOfficialRomanOverride } from '@/lib/playerOfficialRomanOverrides'
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -374,7 +375,12 @@ export default function RankingUI({
               </thead>
               <tbody>
                 {(sortedRows ?? []).map((row, idx) => {
-                  const hasRomanName = row.romanName && row.romanName.trim()
+                  const romanName = withOfficialRomanOverride({
+                    romanName: row.romanName,
+                    npbPlayerId: row.npbPlayerId,
+                    name: row.name,
+                  })
+                  const hasRomanName = romanName.trim()
                   const shouldShowHeader = idx > 0 && idx % 15 === 0
                   
                   return (
@@ -456,8 +462,8 @@ export default function RankingUI({
                                     playerId: row.playerId,
                                     name: row.name,
                                     romanName:
-                                      hasRomanName && row.romanName
-                                        ? formatRomanNameForRanking(row.romanName)
+                                      hasRomanName
+                                        ? formatRomanNameForRanking(romanName, { nameJa: row.name })
                                         : undefined,
                                   })}
                                   className="block truncate"
@@ -466,9 +472,9 @@ export default function RankingUI({
                                     {row.name.replace(/\s+/g, '')}
                                   </span>
                                 </Link>
-                                {hasRomanName && row.romanName && (
+                                {hasRomanName && (
                                   <span className="text-[10px] text-gray-400 latin truncate line-clamp-1">
-                                    {formatRomanNameForRanking(row.romanName)}
+                                    {formatRomanNameForRanking(romanName, { nameJa: row.name })}
                                   </span>
                                 )}
                               </div>

@@ -14,7 +14,7 @@ export function formatRomanNameForRanking(romanName: string, opts?: FormatRomanN
   const trimmed = romanName.trim()
   if (!trimmed) return ""
 
-  const alreadyFormattedPattern = /^[A-Z]\.([A-Z][a-z]+|[A-Z]+)$/
+  const alreadyFormattedPattern = /^(?:[A-Z]\.)+(?:[A-Z][a-z]+|[A-Z]+|[A-Za-z][A-Za-z'.-]*)$/
   if (alreadyFormattedPattern.test(trimmed)) {
     return trimmed
   }
@@ -24,10 +24,7 @@ export function formatRomanNameForRanking(romanName: string, opts?: FormatRomanN
 
   if (parts.length === 1) {
     const name = parts[0]
-    if (name.length > 0) {
-      return `${name[0].toUpperCase()}.${name}`
-    }
-    return ""
+    return name.length > 0 ? name : ""
   }
 
   const ja = opts?.nameJa?.trim()

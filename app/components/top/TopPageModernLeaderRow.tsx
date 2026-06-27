@@ -7,6 +7,7 @@ import type { TopLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
 import { playerPageHref } from "@/lib/playerPageHref"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 import { teamColors } from "@/app/components/top/topPageConstants"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 
 type TopPageModernLeaderRowProps = {
   leader: Record<string, unknown>
@@ -62,7 +63,7 @@ export function TopPageModernLeaderRow({
       </div>
       <div
         className={`${typography.teamBarWidth ?? "w-1"} ${typography.teamBarInset ?? ""} mr-0.5 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${teamBarHeight}` : "h-6 self-center"}`}
-        style={{ backgroundColor: teamColors[teamKey] || "#666" }}
+        style={{ backgroundColor: teamColors[teamKey] || rankingTeamStripeColor(teamKey) }}
       />
       <Link
         href={playerPageHref({
