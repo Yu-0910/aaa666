@@ -28,6 +28,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
 import {
   computePhase2RawFingerprint,
   isHtmlFetchFailed,
@@ -188,7 +189,13 @@ function main() {
     const htmlMain = fs.readFileSync(rawPath, "utf8")
     const htmlStats = readIfExists(statsPath)
     const htmlText = readIfExists(textPath)
-    const gameCancelled = isSportsnaviMainGameCancelled(htmlMain, gameId)
+    const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+    const gameCancelled =
+      scheduleCancelled === true
+        ? true
+        : scheduleCancelled === false
+          ? false
+          : isSportsnaviMainGameCancelled(htmlMain, gameId)
 
     const statsPlayerLinkedRows = parseSportsnaviStatsHtml(htmlStats ?? "")
     const lineupFromStats =

@@ -39,9 +39,11 @@ from fetch_sportsnavi_score_raw_snapshot import (  # noqa: E402
 
 
 from yahoo_game_main_cancelled import main_html_cancelled as _main_html_cancelled  # noqa: E402
+from sportsnavi_schedule_status import is_schedule_cancelled_game  # noqa: E402
 
 
 def collect_incomplete_game_ids(
+    root: Path,
     year: str,
     from_date: str,
     to_date: str,
@@ -67,6 +69,11 @@ def collect_incomplete_game_ids(
     skipped_cancelled = 0
 
     for game_id in game_ids:
+        schedule_cancelled = is_schedule_cancelled_game(root, year, game_id)
+        if schedule_cancelled is True:
+            skipped_cancelled += 1
+            continue
+
         main_path = root / "_data" / "scraped_games" / "raw_sportsnavi" / f"{game_id}.html"
         main_html = None
         if main_path.is_file():
@@ -74,7 +81,7 @@ def collect_incomplete_game_ids(
                 main_html = main_path.read_text(encoding="utf-8")
             except OSError:
                 main_html = None
-        if _main_html_cancelled(main_html, game_id):
+        if schedule_cancelled is None and _main_html_cancelled(main_html, game_id):
             skipped_cancelled += 1
             continue
 
@@ -83,9 +90,16 @@ def collect_incomplete_game_ids(
             incomplete.append((game_id, "missing_text_raw"))
             continue
 
+        if schedule_cancelled is None and _main_html_cancelled(html_text, game_id):
+            skipped_cancelled += 1
+            continue
+
         pas = parse_plate_appearances_from_html(html_text, game_id)
         if not pas:
-            incomplete.append((game_id, "no_plate_appearances"))
+            if 'id="async-inning"' in html_text or 'id="async-text"' in html_text:
+                incomplete.append((game_id, "async_shell_no_live_text"))
+            else:
+                incomplete.append((game_id, "no_plate_appearances"))
             continue
 
         gdir = out_root / game_id
@@ -145,21 +159,36 @@ def main() -> None:
     )
     for gid, reason in incomplete:
         print(f"  - {gid}: {reason}", file=sys.stderr)
+    stats_text_retryable = [
+        gid for gid, reason in incomplete if reason in {"no_plate_appearances", "missing_text_raw"}
+    ]
+    score_raw_retryable = [gid for gid, reason in incomplete if reason == "score_raw_incomplete"]
     if args.emit_incomplete_csv:
         print(
             "SCORE_RAW_GATE_INCOMPLETE_CSV="
             + ",".join(gid for gid, _ in incomplete),
             flush=True,
         )
+    print("\n[score-raw-gate] 対処:", file=sys.stderr)
+    print("  1. 全試合終了後に実行する（試合中は prefetch のみ）", file=sys.stderr)
+    print("  2. npm run daily:npb-pipeline:prefetch のあと npm run daily:npb-pipeline:finalize", file=sys.stderr)
+    if stats_text_retryable:
+        print("  3. stats/text が空の試合を再取得する:", file=sys.stderr)
+        print(
+            f"     node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year {year}"
+            f" --only-incomplete --game-ids {','.join(stats_text_retryable)}",
+            file=sys.stderr,
+        )
+    if score_raw_retryable:
+        print("  4. score raw が未完了の試合だけ再取得する:", file=sys.stderr)
+        print(
+            f"     python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year {year}"
+            f" --from-date {from_date or to_date} --to-date {to_date or from_date}"
+            f" --game-ids {','.join(score_raw_retryable)} --sleep 1.2",
+            file=sys.stderr,
+        )
+    print("  ※ derive-only は Phase4 をスキップするため、ゲート通過後の復旧には使わない", file=sys.stderr)
     print(
-        "\n[score-raw-gate] 対処:\n"
-        "  1. 全試合終了後に実行する（試合中は prefetch のみ）\n"
-        "  2. npm run daily:npb-pipeline:prefetch のあと npm run daily:npb-pipeline:finalize\n"
-        "  3. 未完了試合だけ再取得（日次パイプラインは自動で1回試行）:\n"
-        f"     python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year {year}"
-        f" --from-date {from_date or to_date} --to-date {to_date or from_date}"
-        f" --game-ids {','.join(gid for gid, _ in incomplete)} --sleep 1.2\n"
-        "  ※ derive-only は Phase4 をスキップするため、ゲート通過後の復旧には使わない\n"
         "  意図的に Phase4 からネット取得する場合は --skip-score-raw-gate または --yahoo-force",
         file=sys.stderr,
     )

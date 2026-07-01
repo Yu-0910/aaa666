@@ -55,13 +55,26 @@ function main() {
     const j = JSON.parse(fs.readFileSync(mochimaruDerived, "utf8")) as {
       sb?: number
       cs?: number
+      sbAttempts?: number
       csPct?: number | null
     }
+    const sb = j.sb ?? 0
+    const cs = j.cs ?? 0
+    const attempts = j.sbAttempts ?? sb + cs
+    if (cs < 1) {
+      errors.push(`持丸 season cs expected >=1, got ${cs}`)
+    }
+    if (attempts !== sb + cs) {
+      errors.push(`持丸 sbAttempts expected ${sb + cs}, got ${attempts} (SB=${sb} CS=${cs})`)
+    }
     const csPct = j.csPct ?? null
-    if (csPct != null && Math.abs(csPct - 12.9) > 0.15) {
-      errors.push(
-        `持丸 season CS% expected ~12.9% (NPB), got ${csPct.toFixed(1)}% (SB=${j.sb} CS=${j.cs})`,
-      )
+    if (csPct != null && attempts > 0) {
+      const expectedPct = (cs / attempts) * 100
+      if (Math.abs(csPct - expectedPct) > 0.05) {
+        errors.push(
+          `持丸 csPct inconsistent: stored=${csPct.toFixed(2)}% expected=${expectedPct.toFixed(2)}% (SB=${sb} CS=${cs})`,
+        )
+      }
     }
   }
 

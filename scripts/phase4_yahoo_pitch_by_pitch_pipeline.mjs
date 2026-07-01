@@ -25,6 +25,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
+import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
 
 const MERGE_STAMP_SCHEMA = "phase4-yahoo-phase10-merge-stamp-v1"
 // merge ロジックを変えたら bump（stamp を無効化して再マージさせる）
@@ -113,11 +114,23 @@ function fileExists(p) {
  * 試合中止/ノーゲーム（Phase4 一球復元の対象外）。
  * main raw は score-raw ゲートと同じ中止判定。無ければ canonical の missingOrPartial / タイトル。
  */
-function isCancelledGame(root, gameId, canonPath) {
+function isCancelledGame(root, year, gameId, canonPath) {
+  const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+  if (scheduleCancelled === true) return true
+  if (scheduleCancelled === false) return false
+
   const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
   if (fileExists(mainPath)) {
     try {
       if (isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"), gameId)) return true
+    } catch {
+      // ignore
+    }
+  }
+  const textPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi_text", `${gameId}.html`)
+  if (fileExists(textPath)) {
+    try {
+      if (isSportsnaviMainGameCancelled(fs.readFileSync(textPath, "utf8"), gameId)) return true
     } catch {
       // ignore
     }
@@ -294,7 +307,7 @@ async function main() {
       continue
     }
 
-    if (isCancelledGame(root, gameId, canonPath)) {
+    if (isCancelledGame(root, year, gameId, canonPath)) {
       skippedCancelled += 1
       console.log(`[phase4] skip ${gameId}: game cancelled (試合中止/ノーゲーム) — phase10 対象外`)
       if (fileExists(phase10Path) && phase10PitchRowCount(phase10Path) === 0) {
@@ -334,6 +347,8 @@ async function main() {
             path.join("scripts", "run_yahoo_phase10_restore.py"),
             "--game-id",
             gameId,
+            "--year",
+            year,
             "--text-from-raw",
             "--sleep",
             String(sleepSec),
@@ -436,4 +451,3 @@ main().catch((e) => {
   console.error(String(e?.stack ?? e))
   process.exit(1)
 })
-

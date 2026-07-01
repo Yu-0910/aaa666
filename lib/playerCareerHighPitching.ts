@@ -46,6 +46,16 @@ function rowGames(row: CareerDisplayRow): number {
   return Number.isFinite(g) ? g : 0
 }
 
+function rowIpOuts(row: CareerDisplayRow): number {
+  const outs = ipToOuts(row.ip)
+  return outs ?? 0
+}
+
+function qualifyingPitchingRows(rows: CareerDisplayRow[]): CareerDisplayRow[] {
+  const qualified = rows.filter((row) => rowIpOuts(row) >= 390 || rowGames(row) >= 30)
+  return qualified.length > 0 ? qualified : rows
+}
+
 function rowKbbPct(row: CareerDisplayRow): number {
   const enriched = enrichCareerPitchingRow(row)
   const k = Number(enriched.k_bb_pct ?? NaN)
@@ -74,11 +84,14 @@ function pickMaxKbbRow(candidates: CareerDisplayRow[]): CareerDisplayRow | null 
 }
 
 /**
- * キャリアハイの基準年度 = 階級①〜⑤の順で K-BB％ 最大の年。
- * いずれにも該当がなければ全年。同率は新しい年 → IP が長い年。
+ * キャリアハイの基準年度 = 130イニング以上 or 30登板以上の年が1つでもあれば、
+ * その年だけから階級①〜⑤の順で K-BB％ 最大の年を選ぶ。条件到達年が一度もない選手は全年度を対象にする。
+ * 同率は新しい年 → IP が長い年。
  */
 export function pickKbbBestCareerHighRow(rows: CareerDisplayRow[]): CareerDisplayRow | null {
-  const seasonRows = rows.filter(isSeasonRow).map((r) => enrichCareerPitchingRow(r))
+  const seasonRows = qualifyingPitchingRows(rows.filter(isSeasonRow)).map((r) =>
+    enrichCareerPitchingRow(r),
+  )
 
   for (const tier of KBB_CAREER_HIGH_TIERS) {
     const pool = seasonRows.filter((row) => tier.match(rowIpInnings(row), rowGames(row)))

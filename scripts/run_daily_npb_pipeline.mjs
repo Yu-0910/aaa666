@@ -80,7 +80,9 @@
  *   node scripts/run_daily_npb_pipeline.mjs --fetch-only
  *     … 20:30 先行取得（Phase0〜2b。Phase4・派生なし）
  *   node scripts/run_daily_npb_pipeline.mjs --finalize-only
- *     … 全試合終了後の続き（当日再取得・Phase4・派生）
+ *     … 全試合終了後の続き（既定は当日。過去日は --from/--to も指定）
+ *   node scripts/run_daily_npb_pipeline.mjs --finalize-only --from 2026-06-21 --to 2026-06-21
+ *     … 指定日の続き（Phase4・派生）
  *   node scripts/run_daily_npb_pipeline.mjs --no-score-raw
  *   node scripts/run_daily_npb_pipeline.mjs --no-strict-quality
  *     … canonical に打撃ゼロの試合検証をスキップして派生まで進める（非推奨）
@@ -468,6 +470,17 @@ function scoreRawGateDateArgs(from, to) {
 }
 
 /** @returns {{ ok: boolean; incompleteIds: string[] }} */
+/** @param {string} combined @returns {{ gameId: string; reason: string }[]} */
+function parseGateIncompleteDetails(combined) {
+  const details = []
+  for (const line of combined.split(/\r?\n/)) {
+    const m = line.match(/^\s*-\s*(\d+):\s*(\S+)\s*$/)
+    if (m) details.push({ gameId: m[1], reason: m[2] })
+  }
+  return details
+}
+
+/** @returns {{ ok: true } | { ok: false; incompleteIds: string[]; incompleteDetails: { gameId: string; reason: string }[]; scoreRawRetryableIds: string[]; statsTextRetryableIds: string[]; scriptError: boolean; gateNg: boolean }} */
 function checkScoreRawGate({ year, from, to }) {
   const dateArgs = scoreRawGateDateArgs(from, to)
   const cmd =
@@ -476,7 +489,7 @@ function checkScoreRawGate({ year, from, to }) {
   try {
     const out = execSync(cmd, { cwd: root, encoding: "utf8", env: childEnv })
     if (out) process.stdout.write(out)
-    return { ok: true, incompleteIds: [] }
+    return { ok: true }
   } catch (e) {
     const stdout = String(e.stdout || "")
     const stderr = String(e.stderr || "")
@@ -490,8 +503,70 @@ function checkScoreRawGate({ year, from, to }) {
           .map((s) => s.trim())
           .filter(Boolean)
       : []
-    return { ok: false, incompleteIds }
+    const scriptError =
+      /Traceback \(most recent call last\)|\b(Syntax|Type|Attribute|Name|Import)Error:/.test(combined)
+    const gateNg = /\[score-raw-gate\] NG:/.test(combined)
+    const incompleteDetails = parseGateIncompleteDetails(combined)
+    const scoreRawRetryableIds = incompleteDetails
+      .filter((d) => d.reason === "score_raw_incomplete")
+      .map((d) => d.gameId)
+    const statsTextRetryableIds = incompleteDetails
+      .filter((d) => d.reason === "no_plate_appearances" || d.reason === "missing_text_raw")
+      .map((d) => d.gameId)
+    const asyncShellIds = incompleteDetails
+      .filter((d) => d.reason === "async_shell_no_live_text")
+      .map((d) => d.gameId)
+    return {
+      ok: false,
+      incompleteIds,
+      incompleteDetails,
+      scoreRawRetryableIds,
+      statsTextRetryableIds,
+      asyncShellIds,
+      scriptError,
+      gateNg,
+    }
   }
+}
+
+function runRenderedTextRecovery({ year, gameIds }) {
+  const gids = gameIds.join(",")
+  console.warn(
+    `\n[daily:npb-pipeline] JS 空シェルの /text を描画後 HTML に差し替えます: ${gids}\n`,
+  )
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline",
+    `Playwright rendered text recovery gameIds=${gids}`,
+  )
+  run(
+    "Phase2a-repair rendered text（async shell 復旧）",
+    `python scripts/refetch_sportsnavi_text_rendered_playwright.py --year ${year} --game-ids ${gids}`,
+  )
+}
+
+function runPhase2StatsTextRepair({ year, from, to, gameIds }) {
+  const gids = gameIds.join(",")
+  const dateScope =
+    from && to
+      ? ` from=${from} to=${to}`
+      : from
+        ? ` from=${from}`
+        : to
+          ? ` to=${to}`
+          : ""
+  console.warn(
+    `\n[daily:npb-pipeline] Phase2 stats/text を再取得します（no_plate_appearances / missing_text_raw）: ${gids}${dateScope}\n`,
+  )
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline",
+    `Phase2 stats/text 再取得 gameIds=${gids}${dateScope}`,
+  )
+  run(
+    `Phase2a-repair stats/text（未完了試合のみ）`,
+    `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete --game-ids ${gids}`,
+  )
 }
 
 function runPhase19PitchingRankingsWithRosterRefresh() {
@@ -523,14 +598,16 @@ function runScoreRawGate({ year, from, to, noScoreRaw, skipScoreRawGate, yahooFo
   }
 
   const label = "ゲート: score raw 完了確認（未完了なら Phase4 前に停止）"
-  const retryDisabled = process.env.TOPPAGE_SCORE_RAW_GATE_NO_RETRY === "1"
-  const maxAutoRetries = retryDisabled ? 0 : 1
-  let autoRetryCount = 0
+  const scoreRawRetryDisabled = process.env.TOPPAGE_SCORE_RAW_GATE_NO_RETRY === "1"
+  let scoreRawRetryCount = 0
+  let statsTextRetryCount = 0
 
   while (true) {
     lastPipelineStepLabel = label
     const startedAt = Date.now()
-    logProgress(`→ 開始: ${label}${autoRetryCount > 0 ? "（再確認）" : ""}`)
+    logProgress(
+      `→ 開始: ${label}${statsTextRetryCount > 0 || scoreRawRetryCount > 0 ? "（再確認）" : ""}`,
+    )
     const result = checkScoreRawGate({ year, from, to })
     const elapsedLabel = formatMs(Date.now() - startedAt)
 
@@ -540,21 +617,79 @@ function runScoreRawGate({ year, from, to, noScoreRaw, skipScoreRawGate, yahooFo
       return
     }
 
-    if (autoRetryCount >= maxAutoRetries || result.incompleteIds.length === 0) {
+    if (result.scriptError) {
+      logProgress(`← 失敗: ${label}（所要 ${elapsedLabel}） exit=1 — ゲートスクリプト異常`)
+      appendPipelineBulkLog(
+        root,
+        "daily:npb-pipeline",
+        `ステップ失敗: ${label} 所要=${elapsedLabel} exit=1 reason=gate_script_error`,
+      )
+      console.error(
+        "\n[daily:npb-pipeline] score raw ゲートがデータ未完了ではなくスクリプト異常で停止しました。\n" +
+          "  → scripts/gate_score_raw_complete_for_pipeline.py の Traceback を確認してください。\n" +
+          `  → 修正後は node scripts/run_daily_npb_pipeline.mjs --year ${year} --from ${from} --to ${to} --finalize-only で Phase4 以降を続行できます。\n`,
+      )
+      const err = new Error("score raw gate script error")
+      err.status = 1
+      throw err
+    }
+
+    const canRetryStatsText =
+      statsTextRetryCount < 1 && result.statsTextRetryableIds.length > 0
+    const canRetryScoreRaw =
+      !scoreRawRetryDisabled && scoreRawRetryCount < 1 && result.scoreRawRetryableIds.length > 0
+
+    if (!canRetryStatsText && !canRetryScoreRaw) {
+      const incompleteLabel =
+        result.incompleteDetails.length > 0
+          ? result.incompleteDetails.map((d) => `${d.gameId}:${d.reason}`).join(",")
+          : result.incompleteIds.join(",") || (result.gateNg ? "unknown" : "?")
       logProgress(`← 失敗: ${label}（所要 ${elapsedLabel}） exit=1`)
       appendPipelineBulkLog(
         root,
         "daily:npb-pipeline",
-        `ステップ失敗: ${label} 所要=${elapsedLabel} exit=1 incomplete=${result.incompleteIds.join(",") || "?"}`,
+        `ステップ失敗: ${label} 所要=${elapsedLabel} exit=1 incomplete=${incompleteLabel}`,
       )
+      if (result.asyncShellIds && result.asyncShellIds.length > 0) {
+        console.error(
+          "\n[daily:npb-pipeline] score/text ページが JS 空シェルのため、Phase2a-repair では直りません。\n" +
+            "  → async-inning が描画される取得経路（ブラウザ描画 or 別 API）を追加してください。\n",
+        )
+      } else if (result.statsTextRetryableIds.length > 0) {
+        console.error(
+          "\n[daily:npb-pipeline] score raw ゲート NG ですが、原因は stats/text の空取得です。\n" +
+            "  → Phase2a-repair を再実行してから finalize を続けてください。\n",
+        )
+      } else if (result.incompleteIds.length > 0 && result.scoreRawRetryableIds.length === 0) {
+        console.error(
+          "\n[daily:npb-pipeline] score raw ゲート NG ですが、score ページの再取得では解消できません（テキスト未着・打席未解析）。\n" +
+            "  → 試合終了後に node scripts/run_daily_npb_pipeline.mjs --finalize-only --from ... --to ... を再実行してください。\n",
+        )
+      } else if (!result.gateNg && result.incompleteIds.length === 0) {
+        console.error(
+          "\n[daily:npb-pipeline] score raw ゲートが不明な理由で失敗しました（未完了試合 ID なし）。\n" +
+            "  → gate_score_raw_complete_for_pipeline.py の出力を確認してください。\n",
+        )
+      }
       const err = new Error("score raw gate failed")
       err.status = 1
       throw err
     }
 
-    const gids = result.incompleteIds.join(",")
+    if (result.asyncShellIds && result.asyncShellIds.length > 0) {
+      runRenderedTextRecovery({ year, gameIds: result.asyncShellIds })
+      continue
+    }
+
+    if (canRetryStatsText) {
+      runPhase2StatsTextRepair({ year, from, to, gameIds: result.statsTextRetryableIds })
+      statsTextRetryCount += 1
+      continue
+    }
+
+    const gids = result.scoreRawRetryableIds.join(",")
     console.warn(
-      `\n[daily:npb-pipeline] score raw ゲート NG（${result.incompleteIds.length}試合）` +
+      `\n[daily:npb-pipeline] score raw ゲート NG（score 未完了 ${result.scoreRawRetryableIds.length}試合）` +
         ` → 未完了試合のみ再取得して再ゲートします: ${gids}\n`,
     )
     appendPipelineBulkLog(
@@ -566,11 +701,11 @@ function runScoreRawGate({ year, from, to, noScoreRaw, skipScoreRawGate, yahooFo
     const fromDate = from || to
     const toDate = to || from
     run(
-      `score raw 自動再取得（ゲート NG・${result.incompleteIds.length}試合）`,
+      `score raw 自動再取得（ゲート NG・${result.scoreRawRetryableIds.length}試合）`,
       `python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year ${year}` +
         ` --from-date ${fromDate} --to-date ${toDate} --game-ids ${gids} --sleep 1.2`,
     )
-    autoRetryCount++
+    scoreRawRetryCount += 1
   }
 }
 
@@ -736,8 +871,11 @@ function main() {
 
   const phase1Extra = phase1Limit ? ` --limit ${phase1Limit}` : ""
   const today = todayJstYmd()
-  const finalizeFrom = today
-  const finalizeTo = today
+  // finalize-only 既定は当日のみ。--from/--to で狭い範囲が指定されていればその日付を使う。
+  const finalizeRangeExplicit =
+    finalizeOnly && (from !== defaultSeasonStart(year) || to !== today)
+  const finalizeFrom = finalizeOnly ? (finalizeRangeExplicit ? from : today) : from
+  const finalizeTo = finalizeOnly ? (finalizeRangeExplicit ? to : today) : to
 
   const modeLabel = fetchOnly ? "fetch-only" : finalizeOnly ? "finalize-only" : "full"
   logProgress(
@@ -789,9 +927,11 @@ function main() {
     runPhase2FetchBlock({ year, from, to, noStatsText, noScoreRaw, phase1Limit, phase1Extra })
     runPhase2bCanonical({ year, from, to, forceCanonical })
   } else {
-    logProgress("finalize-only: 当日の日程更新と再取得から開始")
+    logProgress(
+      `finalize-only: 日程更新と再取得から開始（from=${finalizeFrom} to=${finalizeTo}）`,
+    )
     run(
-      "Phase0 当日日程のみ（--merge）",
+      "Phase0 日程（--merge）",
       `npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year ${year} --from ${finalizeFrom} --to ${finalizeTo} --merge`,
     )
     run(

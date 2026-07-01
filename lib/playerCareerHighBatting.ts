@@ -32,15 +32,26 @@ function rowOps(row: CareerDisplayRow): number {
   return Number.isFinite(ops) ? ops : -Infinity
 }
 
+function rowPa(row: CareerDisplayRow): number {
+  const pa = Number(row.pa ?? NaN)
+  return Number.isFinite(pa) ? pa : 0
+}
+
+function qualifyingBattingRows(rows: CareerDisplayRow[]): CareerDisplayRow[] {
+  const qualified = rows.filter((row) => rowPa(row) >= 350)
+  return qualified.length > 0 ? qualified : rows
+}
+
 /**
- * キャリアハイの基準年度 = OPS が通算年度行の中で最高の年。
- * 同率の場合はより新しい年度を採用。
+ * キャリアハイの基準年度 = 350打席以上の年が1つでもあれば、その年だけから OPS 最大の年を選ぶ。
+ * 350打席到達年が一度もない選手は全年度を対象にする。同率の場合はより新しい年度を採用。
  */
 export function pickOpsBestCareerHighRow(rows: CareerDisplayRow[]): CareerDisplayRow | null {
+  const pool = qualifyingBattingRows(rows)
   let best: CareerDisplayRow | null = null
   let bestOps = -Infinity
 
-  for (const row of rows) {
+  for (const row of pool) {
     if (!isSeasonRow(row)) continue
     const ops = rowOps(row)
     const y = rowYearNumber(row)

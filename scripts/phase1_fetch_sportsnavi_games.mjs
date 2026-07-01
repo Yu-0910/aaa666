@@ -20,6 +20,8 @@
 import fs from "node:fs"
 import path from "node:path"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
+import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
 
 function parseArgs(argv) {
   const yearIdx = argv.indexOf("--year")
@@ -140,6 +142,7 @@ async function main() {
   const fetchedAt = new Date().toISOString()
   let done = 0
   let skipped = 0
+  let skippedCancelled = 0
   let failed = 0
 
   const targets = limit > 0 ? gameIds.slice(0, limit) : gameIds
@@ -152,15 +155,37 @@ async function main() {
     const gameId = targets[i]
     const htmlPath = path.join(outDir, `${gameId}.html`)
     const metaPath = path.join(metaDir, `${gameId}.json`)
-    if (!force && fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
-      skipped += 1
-      if (i === 0 || (i + 1) % skipLogStride === 0 || i + 1 === targets.length) {
-        console.log(
-          `[phase1] ${i + 1}/${targets.length} ${gameId} … skip (cached) cumulative: fetched=${done} skipped=${skipped} failed=${failed}`,
-        )
-      }
-      if (throttleMs > 0) await sleep(throttleMs)
+    const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+    if (scheduleCancelled === true) {
+      skippedCancelled += 1
+      console.log(
+        `[phase1] ${i + 1}/${targets.length} ${gameId} … skip (schedule: 試合中止/ノーゲーム)`,
+      )
       continue
+    }
+    let cachedRawContradictsSchedule = false
+    if (scheduleCancelled === false && fs.existsSync(htmlPath)) {
+      try {
+        cachedRawContradictsSchedule = isSportsnaviMainGameCancelled(fs.readFileSync(htmlPath, "utf8"), gameId)
+      } catch {
+        cachedRawContradictsSchedule = false
+      }
+    }
+    if (!force && fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
+      if (cachedRawContradictsSchedule) {
+        console.log(
+          `[phase1] ${i + 1}/${targets.length} ${gameId} … refetch (schedule=held, cached raw=cancelled/no-game)`,
+        )
+      } else {
+        skipped += 1
+        if (i === 0 || (i + 1) % skipLogStride === 0 || i + 1 === targets.length) {
+          console.log(
+            `[phase1] ${i + 1}/${targets.length} ${gameId} … skip (cached) cumulative: fetched=${done} skipped=${skipped} failed=${failed}`,
+          )
+        }
+        if (throttleMs > 0) await sleep(throttleMs)
+        continue
+      }
     }
 
     const url = `https://baseball.yahoo.co.jp/npb/game/${encodeURIComponent(gameId)}/index`
@@ -194,7 +219,7 @@ async function main() {
 
   writeJson(failuresPath, failures)
   console.log(
-    `[phase1] year=${year} targets=${targets.length} fetched=${done} skipped=${skipped} failed=${failed} out=${outDir}`,
+    `[phase1] year=${year} targets=${targets.length} fetched=${done} skipped=${skipped} skippedCancelled=${skippedCancelled} failed=${failed} out=${outDir}`,
   )
   if (failed > 0) {
     appendPipelineBulkLog(root, "phase1_fetch", `failed=${failed} fetched=${done} skipped=${skipped} targets=${targets.length}`)
@@ -205,4 +230,3 @@ main().catch((e) => {
   console.error("[phase1] failed:", e)
   process.exit(1)
 })
-

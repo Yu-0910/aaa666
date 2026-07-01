@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-07-11",
+  "fetchedAt": "2026-06-30T22:21:59.839Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-07-11",
+  "gameIds": [
+    "2021039121",
+    "2021039122",
+    "2021039123",
+    "2021039124",
+    "2021039125",
+    "2021039126"
+  ],
+  "games": [
+    {
+      "gameId": "2021039121",
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "巨人",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039122",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "広島",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "D",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039123",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "ヤクルト",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "H",
+      "awayTeamCode": "S"
+    },
+    {
+      "gameId": "2021039124",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "西武",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "F",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021039125",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "M",
+      "awayTeamCode": "Bs"
+    },
+    {
+      "gameId": "2021039126",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "楽天",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "E"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039121": "横浜スタジアム",
+    "2021039122": "バンテリンD",
+    "2021039123": "甲子園球場",
+    "2021039124": "エスコンＦ",
+    "2021039125": "ZOZOマリン",
+    "2021039126": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039121": "試合前",
+    "2021039122": "試合前",
+    "2021039123": "試合前",
+    "2021039124": "試合前",
+    "2021039125": "試合前",
+    "2021039126": "試合前"
+  }
+}

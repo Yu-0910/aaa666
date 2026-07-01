@@ -53,6 +53,8 @@ export function gamesFromDaySnapshot(
       awayTeamCode,
       homeTeamShort: g.homeTeamShort,
       awayTeamShort: g.awayTeamShort,
+      statusText: g.statusText,
+      gameState: g.gameState,
     })
   }
   return out

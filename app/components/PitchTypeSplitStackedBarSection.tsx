@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import type { PitcherSeasonPocPitchTypesSplitRow } from "@/lib/pitcherSeasonPocTypes"
 
-const PALETTE = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ef4444", "#06b6d4", "#eab308"] as const
+const PALETTE = ["#3575ef", "#1fad53", "#ea900c", "#a149f0", "#e53b3b", "#05a8c4", "#dfa707"] as const
 
 /** 左ラベル列 + gap-1（行レイアウトと一致） */
 export const PITCH_TYPE_BAR_AREA_LEFT = "calc(46px + 0.25rem)"

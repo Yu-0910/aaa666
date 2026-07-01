@@ -13,6 +13,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
+import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -30,14 +31,41 @@ const childEnv = {
 }
 
 /** @param {string} gameId */
-function isCancelledGameFromRaw(gameId) {
-  const mainPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`)
-  if (!fs.existsSync(mainPath)) return false
-  try {
-    return isSportsnaviMainGameCancelled(fs.readFileSync(mainPath, "utf8"), gameId)
-  } catch {
-    return false
+function isCancelledGame(gameId, year) {
+  const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+  if (scheduleCancelled === true) return true
+  if (scheduleCancelled === false) return false
+
+  const paths = [
+    path.join(root, "_data", "scraped_games", "raw_sportsnavi", `${gameId}.html`),
+    path.join(root, "_data", "scraped_games", "raw_sportsnavi_text", `${gameId}.html`),
+  ]
+  for (const p of paths) {
+    if (!fs.existsSync(p)) continue
+    try {
+      if (isSportsnaviMainGameCancelled(fs.readFileSync(p, "utf8"), gameId)) return true
+    } catch {
+      // keep checking the other raw source
+    }
   }
+  return false
+}
+
+function readCurrentWeeklyTopLeadersWeek(year) {
+  const p = path.join(root, "public", "data", "rankings", "weekly", year, "current-week.json")
+  if (!fs.existsSync(p)) return ""
+  try {
+    const j = JSON.parse(fs.readFileSync(p, "utf8"))
+    return String(j?.weekKey || "").trim()
+  } catch {
+    return ""
+  }
+}
+
+function currentWeeklyTopLeadersPath(year, league, category) {
+  const weekKey = readCurrentWeeklyTopLeadersWeek(year)
+  if (!weekKey) return ""
+  return path.join(root, "public", "data", "top-leaders", "weekly", year, weekKey, league, `${category}.json`)
 }
 
 /** @type {{ level: "ERROR" | "WARN"; where: string; message: string; hint?: string }[]} */
@@ -111,11 +139,16 @@ function parseArgs(argv) {
 
 /**
  * @param {string[]} logTail
- * @returns {"score_gate"|"phase19"|"derive_only"|"phase4_pending"|"generic"}
+ * @returns {"score_gate"|"score_gate_script_error"|"phase19"|"derive_only"|"phase4_pending"|"generic"}
  */
 function detectPipelineFailureKind(logTail) {
   const text = logTail.join("\n")
-  if (/ステップ失敗: ゲート: score raw/.test(text)) return "score_gate"
+  if (/ステップ失敗: ゲート: score raw/.test(text)) {
+    if (/reason=gate_script_error|ゲートスクリプト異常|incomplete=\?/.test(text)) {
+      return "score_gate_script_error"
+    }
+    return "score_gate"
+  }
   if (/ステップ失敗: ランキング JSON: phase19 pitching rankings/.test(text)) return "phase19"
   if (/derive-only 異常終了/.test(text)) return "derive_only"
   if (
@@ -128,16 +161,26 @@ function detectPipelineFailureKind(logTail) {
   return "generic"
 }
 
+function finalizeOnlyCommand(year, date) {
+  return `node scripts/run_daily_npb_pipeline.mjs --year ${year} --from ${date} --to ${date} --finalize-only`
+}
+
 function printNextSteps({ date, year, pipelineOk, displayResult, logTail }) {
   console.log("\n[次の一手]")
   if (!pipelineOk) {
     const kind = detectPipelineFailureKind(logTail)
     console.log("  1. pipeline_bulk.log の「ステップ失敗」「異常終了」行で止まった Phase を確認")
-    if (kind === "score_gate") {
+    if (kind === "score_gate_script_error") {
       console.log(
-        "  2. score raw ゲート NG → 日次パイプラインは未完了試合の再取得を1回自動試行します。手動なら:",
+        "  2. score raw ゲート **スクリプト異常**（データ未完了ではない）→ gate スクリプトを修正後:",
       )
-      console.log(`     npm run daily:npb-pipeline:finalize`)
+      console.log(`     ${finalizeOnlyCommand(year, date)}`)
+      console.log("     ※ score raw は取得済みのことが多い。全取得のやり直しは不要")
+    } else if (kind === "score_gate") {
+      console.log(
+        "  2. score raw ゲート NG（score 未完了）→ パイプラインは未完了試合の再取得を1回自動試行します。手動なら:",
+      )
+      console.log(`     ${finalizeOnlyCommand(year, date)}`)
       console.log("     ※ derive-only は Phase4 をスキップするため使わない")
     } else if (kind === "phase19") {
       console.log("  2. phase19（romanName 不足）→ 名簿更新後にランキング以降を再実行:")
@@ -147,14 +190,14 @@ function printNextSteps({ date, year, pipelineOk, displayResult, logTail }) {
       )
     } else if (kind === "derive_only") {
       console.log("  2. derive-only で止まった → Phase4 完了後の派生やり直し。当日試合は:")
-      console.log(`     npm run daily:npb-pipeline:finalize`)
+      console.log(`     ${finalizeOnlyCommand(year, date)}`)
       console.log("     または Phase4 済みなら: npm run daily:npb-pipeline:derive")
     } else if (kind === "phase4_pending") {
-      console.log(`  2. Phase4 前で停止 → npm run daily:npb-pipeline:finalize（当日の続き）`)
+      console.log(`  2. Phase4 前で停止 → ${finalizeOnlyCommand(year, date)}（続き）`)
       console.log("     ※ derive-only は Phase4 をスキップするため使わない")
     } else {
       console.log("  2. Phase4 済み・派生のみ未了: npm run daily:npb-pipeline:derive")
-      console.log(`  3. 当日の続き（推奨）: npm run daily:npb-pipeline:finalize`)
+      console.log(`  3. 当日の続き（推奨）: ${finalizeOnlyCommand(year, date)}`)
       console.log(`  4. 最初から: npm run day:fetch-display -- ${date}`)
     }
     console.log(`  5. 当日のみ塗り直し: npm run repaint:schedule:day -- --year ${year} --date ${date}`)
@@ -287,8 +330,8 @@ function displayDay(date, year) {
     console.log(`${gid} @ ${g.stadiumName || ""}`)
 
     if (!fs.existsSync(cpath)) {
-      if (isCancelledGameFromRaw(gid)) {
-        console.log("  [OK] 試合中止（canonical 未生成・次回 Phase2 で stub 化されます）")
+      if (isCancelledGame(gid, year)) {
+        console.log("  [OK] 試合中止/ノーゲーム（日程ページ判定・取得不要）")
         ok++
         continue
       }
@@ -352,7 +395,7 @@ function displayDay(date, year) {
 
     const miss = (gm.missingOrPartial || []).filter((s) => !String(s).includes("hint:"))
     const cancelled =
-      isCancelledGameFromRaw(gid) ||
+      isCancelledGame(gid, year) ||
       miss.some((s) => String(s).includes("game cancelled")) ||
       miss.some((s) => String(s).includes("cancelled")) ||
       /試合中止|ノーゲーム|コールド/.test(title)
@@ -389,10 +432,10 @@ function displayDay(date, year) {
   for (const lg of ["CL", "PL"]) {
     const bat = path.join(root, "public", "data", "top-leaders", year, lg, "batting.json")
     const pit = path.join(root, "public", "data", "top-leaders", year, lg, "pitching.json")
-    const wbat = path.join(root, "public", "data", "top-weekly-leaders", year, lg, "batting.json")
+    const wbat = currentWeeklyTopLeadersPath(year, lg, "batting")
     const batOk = fs.existsSync(bat)
     const pitOk = fs.existsSync(pit)
-    const wOk = fs.existsSync(wbat)
+    const wOk = Boolean(wbat) && fs.existsSync(wbat)
     const mark = batOk && pitOk && wOk ? "" : " ★"
     console.log(
       `  ${lg}${mark}: 通算打撃=${batOk ? "あり" : "なし"} 通算投手=${pitOk ? "あり" : "なし"} 今週打撃=${wOk ? "あり" : "なし"}`,

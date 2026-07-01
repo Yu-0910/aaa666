@@ -20,9 +20,20 @@ assert.equal(isNoGameScheduleDay(offDayScoped, "5月11日"), true)
 
 const gameDayScoped = `
 <tr><th class="bb-scheduleTable__head" scope="row">5月12日</th>
-<td>神宮</td><td><a href="/npb/game/2021038846/index">試合</a></td></tr>
+<td>神宮</td><td><a href="/npb/game/2021038846/index">試合</a><span class="bb-scoreList__state">試合終了</span></td></tr>
 `
 assert.equal(isNoGameScheduleDay(gameDayScoped, "5月12日"), false)
+const statusGame = extractGamesFromScheduleHtml(`<table><tbody>${gameDayScoped}</tbody></table>`, "2026-05-12")[0]
+assert.equal(statusGame?.statusText, "試合終了")
+assert.equal(statusGame?.gameState, "completed")
+
+const cancelledScoped = `
+<tr><th class="bb-scheduleTable__head" scope="row">6月27日</th>
+<td class="bb-scheduleTable__stadium">神宮</td><td><a href="/npb/game/2021039056/index">試合</a><span class="bb-scoreList__state">試合中止</span></td></tr>
+`
+const cancelledGame = extractGamesFromScheduleHtml(`<table><tbody>${cancelledScoped}</tbody></table>`, "2026-06-27")[0]
+assert.equal(cancelledGame?.statusText, "試合中止")
+assert.equal(cancelledGame?.gameState, "cancelled")
 
 /** 狭い rowspan=1 ブロックは1試合だけだが、rowspan=4 なら3試合 — 修正Aは和集合で3件 */
 const threeGamesNarrowRowspanBug = `

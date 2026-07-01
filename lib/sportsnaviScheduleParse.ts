@@ -13,6 +13,10 @@ export type ScheduleGameEntry = {
   awayTeamShort?: string
   homeTeamCode?: string
   awayTeamCode?: string
+  /** Yahoo日程ページ上の状態表示（例: 試合終了 / 試合中止 / ノーゲーム / 試合前） */
+  statusText?: string
+  /** 一括取得で使う正規化済み状態。cancelled/no_game は取得対象外。 */
+  gameState?: "completed" | "cancelled" | "no_game" | "scheduled" | "in_progress" | "unknown"
 }
 
 function attachTeamCodes(entry: ScheduleGameEntry): ScheduleGameEntry {
@@ -50,6 +54,30 @@ function extractTeamShortFromHtmlFragment(fragment: string, side: "home" | "away
     if (text) return text
   }
   return ""
+}
+
+export function normalizeScheduleGameState(statusText: string | undefined): ScheduleGameEntry["gameState"] {
+  const s = String(statusText ?? "").replace(/\s+/g, "")
+  if (!s) return "unknown"
+  if (s.includes("試合中止") || s === "中止") return "cancelled"
+  if (s.includes("ノーゲーム")) return "no_game"
+  if (s.includes("試合終了")) return "completed"
+  if (s.includes("試合前") || s.includes("予告先発")) return "scheduled"
+  if (s.includes("試合中") || s.includes("回")) return "in_progress"
+  return "unknown"
+}
+
+function extractStatusTextFromHtmlFragment(fragment: string): string {
+  const stateClassRe =
+    /<[^>]*\bclass="[^"]*(?:bb-scoreList__state|bb-score__status|bb-score__state|bb-scheduleTable__status|bb-scheduleTable__state)[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/gi
+  let m: RegExpExecArray | null
+  while ((m = stateClassRe.exec(fragment))) {
+    const text = stripHtmlToText(m[1] ?? "")
+    if (/試合終了|試合中止|ノーゲーム|試合前|中止/.test(text)) return text
+  }
+  const text = stripHtmlToText(fragment)
+  const plainM = text.match(/(試合終了|試合中止|ノーゲーム|試合前|中止)/)
+  return plainM?.[1] ?? ""
 }
 
 /** 1日あたりの通常セ・パ公式戦は最大6（休養日は0）。Phase0 と共有。 */
@@ -120,6 +148,8 @@ function enumerateScopedBlocksByThRegex(html: string, ymd: string): string[] {
   for (let i = 0; i < hits.length; i++) {
     const cur = hits[i]!
     const next = hits[i + 1]
+    const trStart = html.lastIndexOf("<tr", cur.start)
+    const blockStart = trStart >= 0 ? trStart : cur.start
     const afterStart = cur.start + Math.max(1, cur.len)
     const tbodyEnd = html.indexOf("</tbody>", afterStart)
     const endExclusive =
@@ -128,7 +158,7 @@ function enumerateScopedBlocksByThRegex(html: string, ymd: string): string[] {
         : tbodyEnd >= 0
           ? tbodyEnd
           : html.length
-    const scoped = sliceScheduleDayBlockAt(html, cur.start, endExclusive)
+    const scoped = sliceScheduleDayBlockAt(html, blockStart, endExclusive)
     if (scoped) blocks.push(scoped)
   }
   return blocks
@@ -155,14 +185,16 @@ export function enumerateScopedBlocksForDate(html: string, ymd: string): string[
     while (from < html.length) {
       const start = html.indexOf(needle, from)
       if (start < 0) break
-      if (!seenStarts.has(start)) {
-        seenStarts.add(start)
+      const trStart = html.lastIndexOf("<tr", start)
+      const blockStart = trStart >= 0 ? trStart : start
+      if (!seenStarts.has(blockStart)) {
+        seenStarts.add(blockStart)
         const afterStart = start + needle.length
         const nextDayHead = html.indexOf("bb-scheduleTable__head", afterStart)
         const tbodyEnd = html.indexOf("</tbody>", afterStart)
         const endExclusive =
           nextDayHead >= 0 ? nextDayHead : tbodyEnd >= 0 ? tbodyEnd : html.length
-        const scoped = sliceScheduleDayBlockAt(html, start, endExclusive)
+        const scoped = sliceScheduleDayBlockAt(html, blockStart, endExclusive)
         if (scoped) blocks.push(scoped)
       }
       from = start + needle.length
@@ -246,6 +278,7 @@ export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] 
 
     const homeTeamShort = extractTeamShortFromHtmlFragment(row, "home")
     const awayTeamShort = extractTeamShortFromHtmlFragment(row, "away")
+    const statusText = extractStatusTextFromHtmlFragment(row)
 
     games.push(
       attachTeamCodes({
@@ -253,6 +286,8 @@ export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] 
         stadiumName: normalizeStadiumNameFromSchedule(stadiumRaw),
         homeTeamShort: homeTeamShort || undefined,
         awayTeamShort: awayTeamShort || undefined,
+        statusText: statusText || undefined,
+        gameState: normalizeScheduleGameState(statusText),
       }),
     )
   }
@@ -302,12 +337,15 @@ export function extractGamesFromScoreListHtml(html: string): ScheduleGameEntry[]
     const stadiumName = normalizeStadiumNameFromSchedule(venueM ? venueM[1] ?? "" : "")
     const homeTeamShort = extractTeamShortFromHtmlFragment(inner, "home")
     const awayTeamShort = extractTeamShortFromHtmlFragment(inner, "away")
+    const statusText = extractStatusTextFromHtmlFragment(inner)
     out.push(
       attachTeamCodes({
         gameId,
         stadiumName,
         homeTeamShort: homeTeamShort || undefined,
         awayTeamShort: awayTeamShort || undefined,
+        statusText: statusText || undefined,
+        gameState: normalizeScheduleGameState(statusText),
       }),
     )
   }

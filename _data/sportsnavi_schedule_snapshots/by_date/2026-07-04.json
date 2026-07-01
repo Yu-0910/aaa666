@@ -1,8 +1,8 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-04",
-  "fetchedAt": "2026-06-24T05:57:24.042Z",
+  "fetchedAt": "2026-06-30T22:21:59.839Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-07-04",
   "gameIds": [
     "2021039088",
@@ -18,6 +18,8 @@
       "stadiumName": "神宮球場",
       "homeTeamShort": "ヤクルト",
       "awayTeamShort": "DeNA",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "S",
       "awayTeamCode": "DB"
     },
@@ -26,6 +28,8 @@
       "stadiumName": "バンテリンD",
       "homeTeamShort": "中日",
       "awayTeamShort": "巨人",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "D",
       "awayTeamCode": "G"
     },
@@ -34,6 +38,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "広島",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "H",
       "awayTeamCode": "C"
     },
@@ -42,6 +48,8 @@
       "stadiumName": "楽天モバイル",
       "homeTeamShort": "楽天",
       "awayTeamShort": "日本ハム",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "E",
       "awayTeamCode": "F"
     },
@@ -50,6 +58,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "オリックス",
       "awayTeamShort": "西武",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "Bs",
       "awayTeamCode": "L"
     },
@@ -58,6 +68,8 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "ロッテ",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "Hs",
       "awayTeamCode": "M"
     }
@@ -69,5 +81,13 @@
     "2021039091": "楽天モバイル",
     "2021039092": "地方球場",
     "2021039093": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039088": "試合前",
+    "2021039089": "試合前",
+    "2021039090": "試合前",
+    "2021039091": "試合前",
+    "2021039092": "試合前",
+    "2021039093": "試合前"
   }
 }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039025",
-  "builtAt": "2026-06-24T07:33:20.460Z",
+  "builtAt": "2026-06-24T10:52:01.880Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "a9be2e8b57ac48adeb0998191532b19a68dee7d2527c26f7e5e657f3dff18f5e",
-  "normalizedFetchedAt": "2026-06-24T07:33:20.460Z",
+  "sourceCompositeFingerprint": "1d45990875f0bdb1757dea5caa5345f72770b0fb5beca2615464f70e91d6118c",
+  "normalizedFetchedAt": "2026-06-24T10:52:01.880Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月20日 横浜DeNAベイスターズvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -16,9 +16,7 @@
     "statsPlayerLinkedRows": [],
     "yahooPlayersMentioned": {},
     "missingOrPartial": [
-      "phase2: stats HTML present but no player rows parsed",
-      "phase2: hint: スポナビ /stats は CSR のため、初回 fetch が空テーブルだけになることがある。phase2_fetch は遅延再試行する。手動では npm run phase2:sportsnavi:stats-text -- --year 2026 --game-ids 2021039025 --force",
-      "phase2: text HTML present but no bb-liveText sections parsed",
+      "phase2: game cancelled (試合中止); empty stats/text expected",
       "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039025.html",
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039025.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039025.html",

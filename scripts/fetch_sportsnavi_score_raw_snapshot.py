@@ -47,6 +47,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 from fetch_game_pitch_types import parse_plate_appearances_from_html  # noqa: E402
 from scrape_yahoo_pitch_details import fetch_pitch_detail_score_pages_for_pa  # noqa: E402
 from yahoo_scrape_guard import ensure_yahoo_network_fetch_allowed  # noqa: E402
+from sportsnavi_schedule_status import is_schedule_cancelled_game  # noqa: E402
 
 def read_json(p: Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
@@ -255,6 +256,12 @@ def _run_games(
     done_games = 0
     for gi, game_id in enumerate(game_ids):
         started_game = time.time()
+        if is_schedule_cancelled_game(root, str(args.year), game_id) is True:
+            _emit(
+                f"[score-raw] skip {gi + 1}/{len(game_ids)} {game_id}: schedule 試合中止/ノーゲーム",
+                log_fp,
+            )
+            continue
         gdir = out_root / game_id
         html_text = load_text_html(root, game_id)
         if not html_text or html_text.strip().startswith("FETCH_FAILED"):

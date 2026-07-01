@@ -15,6 +15,8 @@
  *   npm run display:r2:upload:derived
  *   npm run display:r2:upload:derived:dry
  *   node scripts/display_r2_upload_derived.mjs --year 2026 --player-ids 03105157,1750223,11515133,1000138
+ *   node scripts/display_r2_upload_derived.mjs --only npb_player_meta
+ *   node scripts/display_r2_upload_derived.mjs --only npb_player_meta --player-ids 91193848
  */
 
 import fs from 'node:fs'
@@ -36,6 +38,10 @@ const playerIdsArg =
 const PLAYER_IDS = playerIdsArg
   ? playerIdsArg.split(',').map((s) => s.trim()).filter(Boolean)
   : null
+const onlyArg =
+  process.argv.find((a) => a.startsWith('--only='))?.split('=')[1]
+  ?? (process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null)
+const ONLY_CATEGORY = onlyArg?.trim() || null
 
 function loadDotEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return false
@@ -65,7 +71,7 @@ const loadedLocal = loadDotEnvFile(ENV_LOCAL)
 const loadedEnv = loadDotEnvFile(ENV_FILE)
 
 /** 個人ページ API が参照する派生カテゴリ（_backup* は除外） */
-const DERIVED_CATEGORIES = [
+const DERIVED_CATEGORIES_BASE = [
   'player_season_batting',
   'player_season_batting_context',
   'player_season_batting_splits',
@@ -84,10 +90,28 @@ const DERIVED_CATEGORIES = [
   'pitcher_season_pitch_types',
   'player_matchup_batting',
   'player_matchup_pitching',
+  'player_batter_vs_team_count_pitch_types',
   'player_fa_estimates',
   /** 通算タブ: profile-merged API（fetchDerivedJsonServer） */
   'player_profile',
 ]
+
+/** 名簿外フルローマ名（profile-merged API）。--only で明示時のみアップロード */
+const NPB_PLAYER_META_CATEGORY = 'npb_player_meta'
+
+const DERIVED_CATEGORIES_ALL = [...DERIVED_CATEGORIES_BASE, NPB_PLAYER_META_CATEGORY]
+
+function resolveDerivedCategories() {
+  if (!ONLY_CATEGORY) return DERIVED_CATEGORIES_BASE
+  if (!DERIVED_CATEGORIES_ALL.includes(ONLY_CATEGORY)) {
+    console.error(`Unknown --only category: ${ONLY_CATEGORY}`)
+    console.error(`  allowed: ${DERIVED_CATEGORIES_ALL.join(', ')}`)
+    process.exit(1)
+  }
+  return [ONLY_CATEGORY]
+}
+
+const DERIVED_CATEGORIES = resolveDerivedCategories()
 
 const META_UPLOADS = [{ local: '_data/scraped_games/derived/yahoo_to_npb_full.json', key: 'data/derived/meta/yahoo_to_npb_full.json' }]
 
@@ -155,7 +179,8 @@ async function main() {
       console.warn(`Skip missing: ${u.local}`)
       continue
     }
-    const skipYearFilter = u.keyPrefix.endsWith('/player_profile')
+    const skipYearFilter =
+      u.keyPrefix.endsWith('/player_profile') || u.keyPrefix.endsWith(`/${NPB_PLAYER_META_CATEGORY}`)
     for (const f of walkJsonFiles(abs)) {
       const rel = path.relative(abs, f).replace(/\\/g, '/')
       if (YEAR_FILTER && !skipYearFilter && !matchesYearFilter(rel, YEAR_FILTER)) continue
@@ -164,6 +189,7 @@ async function main() {
     }
   }
   for (const m of META_UPLOADS) {
+    if (ONLY_CATEGORY) continue
     const abs = path.join(ROOT, m.local)
     if (!fs.existsSync(abs)) {
       console.warn(`Skip missing meta: ${m.local}`)
@@ -171,7 +197,7 @@ async function main() {
     }
     files.push({ local: abs, key: m.key })
   }
-  if (YEAR_FILTER && !PLAYER_IDS?.length) {
+  if (YEAR_FILTER && !PLAYER_IDS?.length && !ONLY_CATEGORY) {
     const faLocal = path.join(ROOT, `_data/derived/player_fa_estimates/${YEAR_FILTER}/npb_fa_estimates.json`)
     if (fs.existsSync(faLocal)) {
       files.push({
@@ -180,7 +206,7 @@ async function main() {
       })
     }
   }
-  if (PLAYER_IDS?.length) {
+  if (PLAYER_IDS?.length && !ONLY_CATEGORY) {
     const faYear = YEAR_FILTER || '2026'
     const faLocal = path.join(ROOT, `_data/derived/player_fa_estimates/${faYear}/npb_fa_estimates.json`)
     if (fs.existsSync(faLocal)) {
@@ -191,6 +217,7 @@ async function main() {
     }
   }
 
+  if (ONLY_CATEGORY) console.log(`Filter: only=${ONLY_CATEGORY}`)
   if (YEAR_FILTER) console.log(`Filter: year=${YEAR_FILTER}`)
   if (PLAYER_IDS?.length) console.log(`Filter: player-ids=${PLAYER_IDS.join(',')}`)
   console.log(`JSON files: ${files.length}`)
@@ -247,7 +274,12 @@ async function main() {
   console.log(`\nDone: ${ok} ok, ${fail} failed`)
   if (fail > 0) process.exit(1)
   console.log('\nVerify:')
-  console.log('  https://pub-41ff9f32fcf748529b7036f73f9e04e5.r2.dev/data/derived/player_season_batting/2026/yahoo_2000051.json')
+  if (ONLY_CATEGORY === NPB_PLAYER_META_CATEGORY) {
+    const sample = PLAYER_IDS?.[0] || '91193848'
+    console.log(`  https://pub-41ff9f32fcf748529b7036f73f9e04e5.r2.dev/data/derived/npb_player_meta/${sample}.json`)
+  } else {
+    console.log('  https://pub-41ff9f32fcf748529b7036f73f9e04e5.r2.dev/data/derived/player_season_batting/2026/yahoo_2000051.json')
+  }
 }
 
 main().catch((e) => {

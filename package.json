@@ -221,6 +221,8 @@
     "display:r2:upload:derived:2026": "node scripts/display_r2_upload_derived.mjs --year 2026",
     "display:r2:upload:derived:dry": "node scripts/display_r2_upload_derived.mjs --dry-run",
     "display:r2:upload:derived:2026:dry": "node scripts/display_r2_upload_derived.mjs --year 2026 --dry-run",
+    "display:r2:upload:npb-player-meta": "node scripts/display_r2_upload_derived.mjs --only npb_player_meta",
+    "display:r2:upload:npb-player-meta:dry": "node scripts/display_r2_upload_derived.mjs --only npb_player_meta --dry-run",
     "display:r2:verify:production": "node scripts/verify_production_display_2026.mjs",
     "weekly:display:2026": "npm run phase28:build:weekly-rankings && npm run top-weekly-leaders:build:2026 && npm run display:r2:upload:2026",
     "display:refresh:2026": "npm run rankings:rebuild && npm run display:r2:upload:2026 && npm run display:r2:upload:derived:2026",

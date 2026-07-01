@@ -1,24 +1,1228 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039045",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-06-24T13:31:24.770Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "38f5387d1929d41402764729d05522356157cc500a4db671c101eaabb340df09",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "sourceCompositeFingerprint": "abc90848a77e64db9e690ac7e6a6233c1fb7e719d62068034bbbe7cf52448b60",
+  "normalizedFetchedAt": "2026-06-24T12:59:20.822Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月24日 北海道日本ハムファイターズvs.千葉ロッテマリーンズ 試合出場成績 - プロ野球 - スポーツナビ",
       "ogTitle": "2026年6月24日 北海道日本ハムファイターズvs.千葉ロッテマリーンズ 試合出場成績 - プロ野球 - スポーツナビ"
     },
     "scoreboard": [],
-    "teams": [],
-    "textPlayByPlay": [],
-    "statsPlayerLinkedRows": [],
-    "yahooPlayersMentioned": {},
+    "teams": [
+      {
+        "yahooTeamId": "9",
+        "teamName": "ロッテ",
+        "startingLineup": [
+          {
+            "battingOrder": "1",
+            "fieldingPosition": "二",
+            "playerName": "小川 龍成",
+            "yahooPlayerId": "2000089",
+            "bats": null,
+            "avgDisplay": ".281"
+          },
+          {
+            "battingOrder": "2",
+            "fieldingPosition": "右",
+            "playerName": "西川 史礁",
+            "yahooPlayerId": "1950286",
+            "bats": null,
+            "avgDisplay": ".289"
+          },
+          {
+            "battingOrder": "3",
+            "fieldingPosition": "左",
+            "playerName": "山口 航輝",
+            "yahooPlayerId": "1800053",
+            "bats": null,
+            "avgDisplay": ".269"
+          },
+          {
+            "battingOrder": "4",
+            "fieldingPosition": "一",
+            "playerName": "ソト",
+            "yahooPlayerId": "1700020",
+            "bats": null,
+            "avgDisplay": ".253"
+          },
+          {
+            "battingOrder": "5",
+            "fieldingPosition": "捕",
+            "playerName": "佐藤 都志也",
+            "yahooPlayerId": "1900081",
+            "bats": null,
+            "avgDisplay": ".244"
+          },
+          {
+            "battingOrder": "6",
+            "fieldingPosition": "指",
+            "playerName": "井上 広大",
+            "yahooPlayerId": "1900045",
+            "bats": null,
+            "avgDisplay": ".151"
+          },
+          {
+            "battingOrder": "7",
+            "fieldingPosition": "三",
+            "playerName": "安田 尚憲",
+            "yahooPlayerId": "1700092",
+            "bats": null,
+            "avgDisplay": ".267"
+          },
+          {
+            "battingOrder": "8",
+            "fieldingPosition": "中",
+            "playerName": "山本 大斗",
+            "yahooPlayerId": "2000094",
+            "bats": null,
+            "avgDisplay": ".178"
+          },
+          {
+            "battingOrder": "9",
+            "fieldingPosition": "遊",
+            "playerName": "友杉 篤輝",
+            "yahooPlayerId": "2106798",
+            "bats": null,
+            "avgDisplay": ".261"
+          }
+        ]
+      },
+      {
+        "yahooTeamId": "8",
+        "teamName": "日本ハム",
+        "startingLineup": [
+          {
+            "battingOrder": "1",
+            "fieldingPosition": "左",
+            "playerName": "水谷 瞬",
+            "yahooPlayerId": "1800110",
+            "bats": null,
+            "avgDisplay": ".253"
+          },
+          {
+            "battingOrder": "2",
+            "fieldingPosition": "遊",
+            "playerName": "水野 達稀",
+            "yahooPlayerId": "1851204",
+            "bats": null,
+            "avgDisplay": ".299"
+          },
+          {
+            "battingOrder": "3",
+            "fieldingPosition": "指",
+            "playerName": "レイエス",
+            "yahooPlayerId": "1860140",
+            "bats": null,
+            "avgDisplay": ".332"
+          },
+          {
+            "battingOrder": "4",
+            "fieldingPosition": "三",
+            "playerName": "野村 佑希",
+            "yahooPlayerId": "1800091",
+            "bats": null,
+            "avgDisplay": ".258"
+          },
+          {
+            "battingOrder": "5",
+            "fieldingPosition": "一",
+            "playerName": "清宮 幸太郎",
+            "yahooPlayerId": "1700025",
+            "bats": null,
+            "avgDisplay": ".229"
+          },
+          {
+            "battingOrder": "6",
+            "fieldingPosition": "右",
+            "playerName": "万波 中正",
+            "yahooPlayerId": "1800093",
+            "bats": null,
+            "avgDisplay": ".238"
+          },
+          {
+            "battingOrder": "7",
+            "fieldingPosition": "二",
+            "playerName": "大塚 瑠晏",
+            "yahooPlayerId": "2050143",
+            "bats": null,
+            "avgDisplay": ".242"
+          },
+          {
+            "battingOrder": "8",
+            "fieldingPosition": "中",
+            "playerName": "吉田 賢吾",
+            "yahooPlayerId": "2107900",
+            "bats": null,
+            "avgDisplay": ".233"
+          },
+          {
+            "battingOrder": "9",
+            "fieldingPosition": "捕",
+            "playerName": "田宮 裕涼",
+            "yahooPlayerId": "1800095",
+            "bats": null,
+            "avgDisplay": ".284"
+          }
+        ]
+      }
+    ],
+    "textPlayByPlay": [
+      {
+        "sectionTitle": "試合前情報",
+        "lines": [
+          "先発ピッチャーは日本ハムが中13日で 加藤貴 、ロッテが4月10日以来の登板となる 河村 先攻:ロッテのスターティングラインアップは1番: 小川 (二)、2番: 西川 (右)、3番: 山口 (左)、4番: ソト (一)、5番: 佐藤 (捕)、6番: 井上 (指)、7番: 安田 (三)、8番: 山本 (中)、9番: 友杉 (遊) 後攻:日本ハムのスターティングラインアップは1番: 水谷 (左)、2番: 水野 (遊)、3番: レイエス (指)、4番: 野村 (三)、5番: 清宮幸 (一)、6番: 万波 (右)、7番: 大塚 (二)、8番: 吉田 (中)、9番: 田宮 (捕)"
+        ],
+        "playHeadlineJa": [
+          null
+        ]
+      },
+      {
+        "sectionTitle": "1回表",
+        "lines": [
+          "1： 1番 小川 龍成 無死走者なし セカンドゴロ 1アウト",
+          "2： 2番 西川 史礁 一死走者なし 内角低めのカットボールを打つもレフトフライ 2アウト",
+          "3： 3番 山口 航輝 二死走者なし 外角低めのフォークを打つもセンターフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "1回裏",
+        "lines": [
+          "1： 1番 水谷 瞬 無死走者なし レフトへのヒットで出塁 一塁",
+          "2： 2番 水野 達稀 無死一塁 一塁けん制:ランナー 水谷 帰塁 見事送りバントを成功させる 1アウト二塁",
+          "3： 3番 レイエス 一死二塁 ストレートのフォアボールで出塁 一二塁",
+          "4： 4番 野村 佑希 一死一二塁 ワンバウンドした球を空振り三振 2アウト",
+          "5： 5番 清宮 幸太郎 二死一二塁 ランナー一二塁の1-2からライトへの先制タイムリーツーベース！ 日 1-0 ロ 二三塁 0:54 【1回裏】昨日の悔しさを晴らす一打!! ファイターズ・清宮幸太郎 変化球を上手く打って先制!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          "6： 6番 万波 中正 二死二三塁 低めのフォークを打つもセンターフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          "【1回裏】昨日の悔しさを晴らす一打!! ファイターズ・清宮幸太郎 変化球を上手く打って先制!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          null
+        ]
+      },
+      {
+        "sectionTitle": "2回表",
+        "lines": [
+          "1： 4番 ソト 無死走者なし 低めのカットボールを打つもライトフライ 1アウト",
+          "2： 5番 佐藤 都志也 一死走者なし 空振りの三振を喫する 2アウト",
+          "3： 6番 井上 広大 二死走者なし ショートフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "2回裏",
+        "lines": [
+          "1： 7番 大塚 瑠晏 無死走者なし ファウルフライを 佐藤 (捕)が捕球してバッターアウト 1アウト",
+          "2： 8番 吉田 賢吾 一死走者なし フェンス直撃の二塁打を放つ 二塁",
+          "3： 9番 田宮 裕涼 一死二塁 ボテボテのサードゴロ 2アウト三塁",
+          "4： 1番 水谷 瞬 二死三塁 8球粘るも外角低めの真っ直ぐに空振り三振 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "3回表",
+        "lines": [
+          "1： 7番 安田 尚憲 無死走者なし ライトへのヒットで出塁 一塁",
+          "2： 8番 山本 大斗 無死一塁 ファーストフライ 1アウト",
+          "3： 9番 友杉 篤輝 一死一塁 サードゴロ 2アウト一塁",
+          "4： 1番 小川 龍成 二死一塁 ファウルフライを 清宮幸 (一)が捕球してバッターアウト 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "3回裏",
+        "lines": [
+          "1： 2番 水野 達稀 無死走者なし フェンス直撃のスリーベースを放つ 三塁",
+          "2： 3番 レイエス 無死三塁 0アウト三塁の1-0からセンターへの犠牲フライを放つ 日 2-0 ロ 1アウト",
+          "3： 4番 野村 佑希 一死走者なし 2-2からホームラン 日 3-0 ロ 0:45 【3回裏】4番の一振り!! ファイターズ・野村佑希 内角を上手く捌いた打球はそのままスタンドイン!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          "4： 5番 清宮 幸太郎 一死走者なし サードフライ 2アウト",
+          "5： 6番 万波 中正 二死走者なし 見逃し三振 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          "【3回裏】4番の一振り!! ファイターズ・野村佑希 内角を上手く捌いた打球はそのままスタンドイン!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "4回表",
+        "lines": [
+          "1： 2番 西川 史礁 無死走者なし 外角低めの落ちる球を引っかけてサードゴロ 1アウト",
+          "2： 3番 山口 航輝 一死走者なし 低めのフォークを打つもレフトフライ 2アウト",
+          "3： 4番 ソト 二死走者なし 内角高めのカットボールを打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "4回裏",
+        "lines": [
+          "1： 7番 大塚 瑠晏 無死走者なし 空振り三振でバッターアウト 1アウト",
+          "2： 8番 吉田 賢吾 一死走者なし レフトへのヒットで出塁 一塁",
+          "3： 9番 田宮 裕涼 一死一塁 ファウルフライを 安田 (三)がつかんでバッターアウト 2アウト",
+          "4： 1番 水谷 瞬 二死一塁 1-0からライトスタンドへの2ランホームラン 日 5-0 ロ",
+          "5： 2番 水野 達稀 二死走者なし －ロッテ:内野手マウンドへ集まる－ ショートフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "5回表",
+        "lines": [
+          "1： 5番 佐藤 都志也 無死走者なし 外角のカットボールを打つもレフトフライ 1アウト",
+          "2： 6番 井上 広大 一死走者なし 見逃し三振でバッターアウト！ 2アウト",
+          "3： 7番 安田 尚憲 二死走者なし ファーストゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "5回裏",
+        "lines": [
+          "1： 3番 レイエス 無死走者なし ショートゴロ 1アウト",
+          "2： 4番 野村 佑希 一死走者なし 2-1からスタンド上段に飛び込むホームランを放つ 日 6-0 ロ",
+          "3： 5番 清宮 幸太郎 一死走者なし ライトへのヒットを放つ 一塁",
+          "4： 6番 万波 中正 一死一塁 5-4-3のダブルプレー 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "6回表",
+        "lines": [
+          "1： 8番 山本 大斗 無死走者なし レフトへの二塁打 二塁",
+          "2： 9番 友杉 篤輝 無死二塁 0アウト二塁から低めのカットボールを打つもセンターフライ 1アウト",
+          "3： 1番 小川 龍成 一死二塁 ショートゴロ 2アウト三塁",
+          "4： 2番 西川 史礁 二死三塁 内角の球を打つもセンターフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "6回裏",
+        "lines": [
+          "1： 7番 大塚 瑠晏 無死走者なし 投手交代: 河村 → 高野脩 守備交代:キャッチャー 松川 内角のストレートを打つもセカンドライナー 1アウト",
+          "2： 8番 吉田 賢吾 一死走者なし サードゴロ 2アウト",
+          "3： 9番 田宮 裕涼 二死走者なし ライトへのヒットで出塁 一塁",
+          "4： 1番 水谷 瞬 二死一塁 フォアボールを選ぶ 一二塁",
+          "5： 2番 水野 達稀 二死一二塁 カウント2-2から空振り三振でバッターアウト 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "7回表",
+        "lines": [
+          "1： 3番 山口 航輝 無死走者なし セカンドフライ 1アウト",
+          "2： 4番 ソト 一死走者なし センターへのヒットで出塁 一塁",
+          "3： 5番 松川 虎生 一死一塁 ピッチャーフライ 2アウト",
+          "4： 代打 ポランコ 二死一塁 井上 →代打: ポランコ フルカウントからライトスタンドへの2ランホームラン 日 6-2 ロ 0:59 【7回表】代打で大仕事!! マリーンズ・ポランコ ライトへ確信の2ランホームランを放つ!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          "5： 7番 安田 尚憲 二死走者なし ど真ん中の落ちる球を打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          "【7回表】代打で大仕事!! マリーンズ・ポランコ ライトへ確信の2ランホームランを放つ!! 2026年6月24日 北海道日本ハムファイターズ 対 千葉ロッテマリーンズ",
+          null
+        ]
+      },
+      {
+        "sectionTitle": "7回裏",
+        "lines": [
+          "1： 3番 レイエス 無死走者なし 投手交代: 高野脩 → 小野 カウント0-1からホームラン 日 7-2 ロ",
+          "2： 4番 野村 佑希 無死走者なし 低めの球を打つもサードライナー 1アウト",
+          "3： 5番 清宮 幸太郎 一死走者なし ライトへのヒットを放つ 一塁",
+          "4： 6番 万波 中正 一死一塁 サードゴロ 2アウト一塁",
+          "5： 代打 奈良間 大己 二死一塁 大塚 →代打: 奈良間 内角低めのフォークを打つもセカンドライナー 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "8回表",
+        "lines": [
+          "1： 8番 山本 大斗 無死走者なし 投手交代: 加藤貴 → 柳川 守備交代:サード 山縣 守備交代:センター 五十幡 守備変更: 奈良間 →セカンド サードゴロ 1アウト",
+          "2： 代打 宮崎 竜成 一死走者なし 友杉 →代打: 宮崎竜 粘りを見せて9球目にフォアボールを選ぶ 一塁",
+          "3： 1番 小川 龍成 一死一塁 柳川 (投):ワイルドピッチ 二塁 ワンバウンドした球を空振り三振 2アウト",
+          "4： 2番 西川 史礁 二死二塁 フォアボールを選ぶ 一二塁",
+          "5： 3番 山口 航輝 二死一二塁 －日本ハム:コーチマウンドへむかう－ ランナー一二塁から2点タイムリーツーベース！ 日 7-4 ロ 二塁",
+          "6： 4番 ソト 二死二塁 ピッチャー 柳川 に代わって 島本 がマウンドにあがる カウント1-2からワンバウンドした球に空振り、三振を喫する 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "8回裏",
+        "lines": [
+          "1： 8番 五十幡 亮汰 無死走者なし 投手交代: 小野 → 益田 守備変更: 宮崎竜 →ショート セカンドゴロ 1アウト",
+          "2： 9番 田宮 裕涼 一死走者なし ファーストフライ 2アウト",
+          "3： 1番 水谷 瞬 二死走者なし 詰まりながらもライトへヒットを放つ 一塁",
+          "4： 2番 水野 達稀 二死一塁 一塁走者 水谷 →代走: 矢澤 外角の真っ直ぐを打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "9回表",
+        "lines": [
+          "1： 5番 松川 虎生 無死走者なし ピッチャー 島本 に代わって 達 がマウンドにあがる 守備変更: 矢澤 →レフト 外角のスイーパーを打つもライトフライ 1アウト",
+          "2： 6番 ポランコ 一死走者なし 空振りの三振を喫する 2アウト",
+          "3： 7番 安田 尚憲 二死走者なし 外角高めの球を打つもセンターフライ 3アウト 試合終了"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      }
+    ],
+    "statsPlayerLinkedRows": [
+      {
+        "yahooPlayerId": "2000089",
+        "playerName": "小川 龍成",
+        "cells": [
+          "(二)",
+          "小川 龍成",
+          ".281",
+          "4",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "二ゴロ",
+          "",
+          "一邪飛",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "空三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1950286",
+        "playerName": "西川 史礁",
+        "cells": [
+          "(右)",
+          "西川 史礁",
+          ".289",
+          "3",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "左飛",
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "中飛",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800053",
+        "playerName": "山口 航輝",
+        "cells": [
+          "(左)",
+          "山口 航輝",
+          ".269",
+          "4",
+          "0",
+          "1",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "中飛",
+          "",
+          "",
+          "左飛",
+          "",
+          "",
+          "二飛",
+          "左２",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700020",
+        "playerName": "ソト",
+        "cells": [
+          "(一)",
+          "ソト",
+          ".253",
+          "4",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "右飛",
+          "",
+          "左飛",
+          "",
+          "",
+          "中安",
+          "空三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900081",
+        "playerName": "佐藤 都志也",
+        "cells": [
+          "(捕)",
+          "佐藤 都志也",
+          ".244",
+          "2",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "空三振",
+          "",
+          "",
+          "左飛",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100346",
+        "playerName": "松川 虎生",
+        "cells": [
+          "捕",
+          "松川 虎生",
+          ".224",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "投飛",
+          "",
+          "右飛",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900045",
+        "playerName": "井上 広大",
+        "cells": [
+          "(指)",
+          "井上 広大",
+          ".151",
+          "2",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "遊飛",
+          "",
+          "",
+          "見三振",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1460080",
+        "playerName": "ポランコ",
+        "cells": [
+          "打指",
+          "ポランコ",
+          ".202",
+          "2",
+          "1",
+          "1",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "右本",
+          "",
+          "空三振",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700092",
+        "playerName": "安田 尚憲",
+        "cells": [
+          "(三)",
+          "安田 尚憲",
+          ".267",
+          "4",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "右安",
+          "",
+          "一ゴロ",
+          "",
+          "左飛",
+          "",
+          "中飛",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000094",
+        "playerName": "山本 大斗",
+        "cells": [
+          "(中)",
+          "山本 大斗",
+          ".178",
+          "3",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "一飛",
+          "",
+          "",
+          "左２",
+          "",
+          "三ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106798",
+        "playerName": "友杉 篤輝",
+        "cells": [
+          "(遊)",
+          "友杉 篤輝",
+          ".261",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "中飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2117855",
+        "playerName": "宮崎 竜成",
+        "cells": [
+          "打遊",
+          "宮崎 竜成",
+          ".160",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800110",
+        "playerName": "水谷 瞬",
+        "cells": [
+          "(左)",
+          "水谷 瞬",
+          ".253",
+          "4",
+          "2",
+          "3",
+          "2",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "左安",
+          "空三振",
+          "",
+          "右本",
+          "",
+          "四球",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106284",
+        "playerName": "矢澤 宏太",
+        "cells": [
+          "走左",
+          "矢澤 宏太",
+          ".214",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1851204",
+        "playerName": "水野 達稀",
+        "cells": [
+          "(遊)",
+          "水野 達稀",
+          ".299",
+          "4",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "一犠打",
+          "",
+          "中３",
+          "遊飛",
+          "",
+          "空三振",
+          "",
+          "左飛",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1860140",
+        "playerName": "レイエス",
+        "cells": [
+          "(指)",
+          "レイエス",
+          ".332",
+          "2",
+          "1",
+          "1",
+          "2",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "四球",
+          "",
+          "中犠飛",
+          "",
+          "遊ゴロ",
+          "",
+          "中本",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800091",
+        "playerName": "野村 佑希",
+        "cells": [
+          "(三)",
+          "野村 佑希",
+          ".258",
+          "4",
+          "2",
+          "2",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "2",
+          "空三振",
+          "",
+          "左本",
+          "",
+          "左本",
+          "",
+          "三直",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2114529",
+        "playerName": "山縣 秀",
+        "cells": [
+          "三",
+          "山縣 秀",
+          ".128",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700025",
+        "playerName": "清宮 幸太郎",
+        "cells": [
+          "(一)",
+          "清宮 幸太郎",
+          ".229",
+          "4",
+          "0",
+          "3",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "右２",
+          "",
+          "三飛",
+          "",
+          "右安",
+          "",
+          "右安",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800093",
+        "playerName": "万波 中正",
+        "cells": [
+          "(右)",
+          "万波 中正",
+          ".238",
+          "4",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "中飛",
+          "",
+          "見三振",
+          "",
+          "三併打",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2050143",
+        "playerName": "大塚 瑠晏",
+        "cells": [
+          "(二)",
+          "大塚 瑠晏",
+          ".242",
+          "3",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "捕邪飛",
+          "",
+          "空三振",
+          "",
+          "二直",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850932",
+        "playerName": "奈良間 大己",
+        "cells": [
+          "打二",
+          "奈良間 大己",
+          ".243",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "二直",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2107900",
+        "playerName": "吉田 賢吾",
+        "cells": [
+          "(中)",
+          "吉田 賢吾",
+          ".233",
+          "3",
+          "1",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "中２",
+          "",
+          "左安",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000080",
+        "playerName": "五十幡 亮汰",
+        "cells": [
+          "中",
+          "五十幡 亮汰",
+          ".200",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "二ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800095",
+        "playerName": "田宮 裕涼",
+        "cells": [
+          "(捕)",
+          "田宮 裕涼",
+          ".284",
+          "4",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "三ゴロ",
+          "",
+          "三邪飛",
+          "",
+          "右安",
+          "",
+          "一飛",
+          "",
+          ""
+        ]
+      }
+    ],
+    "yahooPlayersMentioned": {
+      "1460080": "ポランコ",
+      "1700020": "ソト",
+      "1700025": "清宮 幸太郎",
+      "1700092": "安田 尚憲",
+      "1800053": "山口 航輝",
+      "1800091": "野村 佑希",
+      "1800093": "万波 中正",
+      "1800095": "田宮 裕涼",
+      "1800110": "水谷 瞬",
+      "1850932": "奈良間 大己",
+      "1851204": "水野 達稀",
+      "1860140": "レイエス",
+      "1900045": "井上 広大",
+      "1900081": "佐藤 都志也",
+      "1950286": "西川 史礁",
+      "2000080": "五十幡 亮汰",
+      "2000089": "小川 龍成",
+      "2000094": "山本 大斗",
+      "2050143": "大塚 瑠晏",
+      "2100346": "松川 虎生",
+      "2106284": "矢澤 宏太",
+      "2106798": "友杉 篤輝",
+      "2107900": "吉田 賢吾",
+      "2114529": "山縣 秀",
+      "2117855": "宮崎 竜成"
+    },
     "missingOrPartial": [
-      "phase2: stats HTML present but no player rows parsed",
-      "phase2: hint: スポナビ /stats は CSR のため、初回 fetch が空テーブルだけになることがある。phase2_fetch は遅延再試行する。手動では npm run phase2:sportsnavi:stats-text -- --year 2026 --game-ids 2021039045 --force",
-      "phase2: text HTML present but no bb-liveText sections parsed",
       "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039045.html",
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039045.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039045.html",
@@ -30,10 +1234,1345 @@
     }
   },
   "domain": {
-    "plateAppearances": [],
+    "plateAppearances": [
+      {
+        "paId": "2021039045-1-表-1",
+        "inningHalf": "1回表",
+        "yahooBatterId": "2000089",
+        "resultSummaryJa": "二ゴロ"
+      },
+      {
+        "paId": "2021039045-1-表-2",
+        "inningHalf": "1回表",
+        "yahooBatterId": "1950286",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-1-表-3",
+        "inningHalf": "1回表",
+        "yahooBatterId": "1800053",
+        "resultSummaryJa": "中飛"
+      },
+      {
+        "paId": "2021039045-1-裏-1",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1800110",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-1-裏-2",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1851204",
+        "resultSummaryJa": "犠打"
+      },
+      {
+        "paId": "2021039045-1-裏-3",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1860140",
+        "resultSummaryJa": "四球"
+      },
+      {
+        "paId": "2021039045-1-裏-4",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1800091",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021039045-1-裏-5",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1700025",
+        "resultSummaryJa": "二塁打"
+      },
+      {
+        "paId": "2021039045-1-裏-6",
+        "inningHalf": "1回裏",
+        "yahooBatterId": "1800093",
+        "resultSummaryJa": "中飛"
+      },
+      {
+        "paId": "2021039045-2-表-1",
+        "inningHalf": "2回表",
+        "yahooBatterId": "1700020",
+        "resultSummaryJa": "右飛"
+      },
+      {
+        "paId": "2021039045-2-表-2",
+        "inningHalf": "2回表",
+        "yahooBatterId": "1900081",
+        "resultSummaryJa": "三振"
+      },
+      {
+        "paId": "2021039045-2-表-3",
+        "inningHalf": "2回表",
+        "yahooBatterId": "1900045",
+        "resultSummaryJa": "遊飛"
+      },
+      {
+        "paId": "2021039045-2-裏-1",
+        "inningHalf": "2回裏",
+        "yahooBatterId": "2050143",
+        "resultSummaryJa": "中飛"
+      },
+      {
+        "paId": "2021039045-2-裏-2",
+        "inningHalf": "2回裏",
+        "yahooBatterId": "2107900",
+        "resultSummaryJa": "二塁打"
+      },
+      {
+        "paId": "2021039045-2-裏-3",
+        "inningHalf": "2回裏",
+        "yahooBatterId": "1800095",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-2-裏-4",
+        "inningHalf": "2回裏",
+        "yahooBatterId": "1800110",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021039045-3-表-1",
+        "inningHalf": "3回表",
+        "yahooBatterId": "1700092",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-3-表-2",
+        "inningHalf": "3回表",
+        "yahooBatterId": "2000094",
+        "resultSummaryJa": "一飛"
+      },
+      {
+        "paId": "2021039045-3-表-3",
+        "inningHalf": "3回表",
+        "yahooBatterId": "2106798",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-3-表-4",
+        "inningHalf": "3回表",
+        "yahooBatterId": "2000089",
+        "resultSummaryJa": "一飛"
+      },
+      {
+        "paId": "2021039045-3-裏-1",
+        "inningHalf": "3回裏",
+        "yahooBatterId": "1851204",
+        "resultSummaryJa": "三塁打"
+      },
+      {
+        "paId": "2021039045-3-裏-2",
+        "inningHalf": "3回裏",
+        "yahooBatterId": "1860140",
+        "resultSummaryJa": "犠飛"
+      },
+      {
+        "paId": "2021039045-3-裏-3",
+        "inningHalf": "3回裏",
+        "yahooBatterId": "1800091",
+        "resultSummaryJa": "本塁打"
+      },
+      {
+        "paId": "2021039045-3-裏-4",
+        "inningHalf": "3回裏",
+        "yahooBatterId": "1700025",
+        "resultSummaryJa": "三飛"
+      },
+      {
+        "paId": "2021039045-3-裏-5",
+        "inningHalf": "3回裏",
+        "yahooBatterId": "1800093",
+        "resultSummaryJa": "見三振"
+      },
+      {
+        "paId": "2021039045-4-表-1",
+        "inningHalf": "4回表",
+        "yahooBatterId": "1950286",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-4-表-2",
+        "inningHalf": "4回表",
+        "yahooBatterId": "1800053",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-4-表-3",
+        "inningHalf": "4回表",
+        "yahooBatterId": "1700020",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-4-裏-1",
+        "inningHalf": "4回裏",
+        "yahooBatterId": "2050143",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021039045-4-裏-2",
+        "inningHalf": "4回裏",
+        "yahooBatterId": "2107900",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-4-裏-3",
+        "inningHalf": "4回裏",
+        "yahooBatterId": "1800095",
+        "resultSummaryJa": "一飛"
+      },
+      {
+        "paId": "2021039045-4-裏-4",
+        "inningHalf": "4回裏",
+        "yahooBatterId": "1800110",
+        "resultSummaryJa": "本塁打"
+      },
+      {
+        "paId": "2021039045-4-裏-5",
+        "inningHalf": "4回裏",
+        "yahooBatterId": "1851204",
+        "resultSummaryJa": "遊飛"
+      },
+      {
+        "paId": "2021039045-5-表-1",
+        "inningHalf": "5回表",
+        "yahooBatterId": "1900081",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-5-表-2",
+        "inningHalf": "5回表",
+        "yahooBatterId": "1900045",
+        "resultSummaryJa": "見三振"
+      },
+      {
+        "paId": "2021039045-5-表-3",
+        "inningHalf": "5回表",
+        "yahooBatterId": "1700092",
+        "resultSummaryJa": "一ゴロ"
+      },
+      {
+        "paId": "2021039045-5-裏-1",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1860140",
+        "resultSummaryJa": "遊ゴロ"
+      },
+      {
+        "paId": "2021039045-5-裏-2",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1800091",
+        "resultSummaryJa": "本塁打"
+      },
+      {
+        "paId": "2021039045-5-裏-3",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1700025",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-5-裏-4",
+        "inningHalf": "5回裏",
+        "yahooBatterId": "1800093"
+      },
+      {
+        "paId": "2021039045-6-表-1",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2000094",
+        "resultSummaryJa": "二塁打"
+      },
+      {
+        "paId": "2021039045-6-表-2",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2106798",
+        "resultSummaryJa": "中飛"
+      },
+      {
+        "paId": "2021039045-6-表-3",
+        "inningHalf": "6回表",
+        "yahooBatterId": "2000089",
+        "resultSummaryJa": "遊ゴロ"
+      },
+      {
+        "paId": "2021039045-6-表-4",
+        "inningHalf": "6回表",
+        "yahooBatterId": "1950286",
+        "resultSummaryJa": "中飛"
+      },
+      {
+        "paId": "2021039045-6-裏-1",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "2050143"
+      },
+      {
+        "paId": "2021039045-6-裏-2",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "2107900",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-6-裏-3",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "1800095",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-6-裏-4",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "1800110",
+        "resultSummaryJa": "四球"
+      },
+      {
+        "paId": "2021039045-6-裏-5",
+        "inningHalf": "6回裏",
+        "yahooBatterId": "1851204",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021039045-7-表-1",
+        "inningHalf": "7回表",
+        "yahooBatterId": "1800053",
+        "resultSummaryJa": "二飛"
+      },
+      {
+        "paId": "2021039045-7-表-2",
+        "inningHalf": "7回表",
+        "yahooBatterId": "1700020",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-7-表-3",
+        "inningHalf": "7回表",
+        "yahooBatterId": "2100346"
+      },
+      {
+        "paId": "2021039045-7-表-4",
+        "inningHalf": "7回表",
+        "yahooBatterId": "1460080",
+        "resultSummaryJa": "本塁打"
+      },
+      {
+        "paId": "2021039045-7-表-5",
+        "inningHalf": "7回表",
+        "yahooBatterId": "1700092",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-7-裏-1",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "1860140",
+        "resultSummaryJa": "本塁打"
+      },
+      {
+        "paId": "2021039045-7-裏-2",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "1800091"
+      },
+      {
+        "paId": "2021039045-7-裏-3",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "1700025",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-7-裏-4",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "1800093",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-7-裏-5",
+        "inningHalf": "7回裏",
+        "yahooBatterId": "1850932"
+      },
+      {
+        "paId": "2021039045-8-表-1",
+        "inningHalf": "8回表",
+        "yahooBatterId": "2000094",
+        "resultSummaryJa": "三ゴロ"
+      },
+      {
+        "paId": "2021039045-8-表-2",
+        "inningHalf": "8回表",
+        "yahooBatterId": "2117855",
+        "resultSummaryJa": "四球"
+      },
+      {
+        "paId": "2021039045-8-表-3",
+        "inningHalf": "8回表",
+        "yahooBatterId": "2000089",
+        "resultSummaryJa": "空三振"
+      },
+      {
+        "paId": "2021039045-8-表-4",
+        "inningHalf": "8回表",
+        "yahooBatterId": "1950286",
+        "resultSummaryJa": "四球"
+      },
+      {
+        "paId": "2021039045-8-表-5",
+        "inningHalf": "8回表",
+        "yahooBatterId": "1800053",
+        "resultSummaryJa": "二塁打"
+      },
+      {
+        "paId": "2021039045-8-表-6",
+        "inningHalf": "8回表",
+        "yahooBatterId": "1700020",
+        "resultSummaryJa": "三振"
+      },
+      {
+        "paId": "2021039045-8-裏-1",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "2000080",
+        "resultSummaryJa": "二ゴロ"
+      },
+      {
+        "paId": "2021039045-8-裏-2",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "1800095",
+        "resultSummaryJa": "一飛"
+      },
+      {
+        "paId": "2021039045-8-裏-3",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "1800110",
+        "resultSummaryJa": "安打"
+      },
+      {
+        "paId": "2021039045-8-裏-4",
+        "inningHalf": "8回裏",
+        "yahooBatterId": "1851204",
+        "resultSummaryJa": "左飛"
+      },
+      {
+        "paId": "2021039045-9-表-1",
+        "inningHalf": "9回表",
+        "yahooBatterId": "2100346",
+        "resultSummaryJa": "右飛"
+      },
+      {
+        "paId": "2021039045-9-表-2",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1460080",
+        "resultSummaryJa": "三振"
+      },
+      {
+        "paId": "2021039045-9-表-3",
+        "inningHalf": "9回表",
+        "yahooBatterId": "1700092",
+        "resultSummaryJa": "中飛"
+      }
+    ],
     "pitchEvents": [],
     "runnerEvents": [],
-    "battingLines": [],
-    "pitchingLines": []
-  }
+    "battingLines": [
+      {
+        "yahooPlayerId": "2000089",
+        "playerName": "小川 龍成",
+        "positionCell": "(二)",
+        "avg": ".281",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "二ゴロ",
+          "",
+          "一邪飛",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "空三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1950286",
+        "playerName": "西川 史礁",
+        "positionCell": "(右)",
+        "avg": ".289",
+        "ab": 3,
+        "r": 1,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "左飛",
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "中飛",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800053",
+        "playerName": "山口 航輝",
+        "positionCell": "(左)",
+        "avg": ".269",
+        "ab": 4,
+        "r": 0,
+        "h": 1,
+        "rbi": 2,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 1,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "中飛",
+          "",
+          "",
+          "左飛",
+          "",
+          "",
+          "二飛",
+          "左２",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700020",
+        "playerName": "ソト",
+        "positionCell": "(一)",
+        "avg": ".253",
+        "ab": 4,
+        "r": 1,
+        "h": 1,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "右飛",
+          "",
+          "左飛",
+          "",
+          "",
+          "中安",
+          "空三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900081",
+        "playerName": "佐藤 都志也",
+        "positionCell": "(捕)",
+        "avg": ".244",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "空三振",
+          "",
+          "",
+          "左飛",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100346",
+        "playerName": "松川 虎生",
+        "positionCell": "捕",
+        "avg": ".224",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "投飛",
+          "",
+          "右飛",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900045",
+        "playerName": "井上 広大",
+        "positionCell": "(指)",
+        "avg": ".151",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "遊飛",
+          "",
+          "",
+          "見三振",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1460080",
+        "playerName": "ポランコ",
+        "positionCell": "打指",
+        "avg": ".202",
+        "ab": 2,
+        "r": 1,
+        "h": 1,
+        "rbi": 2,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "右本",
+          "",
+          "空三振",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700092",
+        "playerName": "安田 尚憲",
+        "positionCell": "(三)",
+        "avg": ".267",
+        "ab": 4,
+        "r": 0,
+        "h": 1,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "右安",
+          "",
+          "一ゴロ",
+          "",
+          "左飛",
+          "",
+          "中飛",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000094",
+        "playerName": "山本 大斗",
+        "positionCell": "(中)",
+        "avg": ".178",
+        "ab": 3,
+        "r": 0,
+        "h": 1,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 1,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "一飛",
+          "",
+          "",
+          "左２",
+          "",
+          "三ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106798",
+        "playerName": "友杉 篤輝",
+        "positionCell": "(遊)",
+        "avg": ".261",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "中飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2117855",
+        "playerName": "宮崎 竜成",
+        "positionCell": "打遊",
+        "avg": ".160",
+        "ab": 0,
+        "r": 1,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800110",
+        "playerName": "水谷 瞬",
+        "positionCell": "(左)",
+        "avg": ".253",
+        "ab": 4,
+        "r": 2,
+        "h": 3,
+        "rbi": 2,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "左安",
+          "空三振",
+          "",
+          "右本",
+          "",
+          "四球",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106284",
+        "playerName": "矢澤 宏太",
+        "positionCell": "走左",
+        "avg": ".214",
+        "ab": 0,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1851204",
+        "playerName": "水野 達稀",
+        "positionCell": "(遊)",
+        "avg": ".299",
+        "ab": 4,
+        "r": 1,
+        "h": 1,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 1,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 0,
+        "h3": 1,
+        "appearancePaSlotsJa": [
+          "一犠打",
+          "",
+          "中３",
+          "遊飛",
+          "",
+          "空三振",
+          "",
+          "左飛",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1860140",
+        "playerName": "レイエス",
+        "positionCell": "(指)",
+        "avg": ".332",
+        "ab": 2,
+        "r": 1,
+        "h": 1,
+        "rbi": 2,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "四球",
+          "",
+          "中犠飛",
+          "",
+          "遊ゴロ",
+          "",
+          "中本",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800091",
+        "playerName": "野村 佑希",
+        "positionCell": "(三)",
+        "avg": ".258",
+        "ab": 4,
+        "r": 2,
+        "h": 2,
+        "rbi": 2,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 2,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "空三振",
+          "",
+          "左本",
+          "",
+          "左本",
+          "",
+          "三直",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2114529",
+        "playerName": "山縣 秀",
+        "positionCell": "三",
+        "avg": ".128",
+        "ab": 0,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700025",
+        "playerName": "清宮 幸太郎",
+        "positionCell": "(一)",
+        "avg": ".229",
+        "ab": 4,
+        "r": 0,
+        "h": 3,
+        "rbi": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 1,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "右２",
+          "",
+          "三飛",
+          "",
+          "右安",
+          "",
+          "右安",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800093",
+        "playerName": "万波 中正",
+        "positionCell": "(右)",
+        "avg": ".238",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "中飛",
+          "",
+          "見三振",
+          "",
+          "三併打",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2050143",
+        "playerName": "大塚 瑠晏",
+        "positionCell": "(二)",
+        "avg": ".242",
+        "ab": 3,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "捕邪飛",
+          "",
+          "空三振",
+          "",
+          "二直",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850932",
+        "playerName": "奈良間 大己",
+        "positionCell": "打二",
+        "avg": ".243",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "二直",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2107900",
+        "playerName": "吉田 賢吾",
+        "positionCell": "(中)",
+        "avg": ".233",
+        "ab": 3,
+        "r": 1,
+        "h": 2,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 1,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "",
+          "中２",
+          "",
+          "左安",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000080",
+        "playerName": "五十幡 亮汰",
+        "positionCell": "中",
+        "avg": ".200",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "二ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800095",
+        "playerName": "田宮 裕涼",
+        "positionCell": "(捕)",
+        "avg": ".284",
+        "ab": 4,
+        "r": 0,
+        "h": 1,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "三ゴロ",
+          "",
+          "三邪飛",
+          "",
+          "右安",
+          "",
+          "一飛",
+          "",
+          ""
+        ]
+      }
+    ],
+    "pitchingLines": [
+      {
+        "yahooPlayerId": "2000090",
+        "playerName": "河村 説人",
+        "era": "5.73",
+        "ip": "5",
+        "pitches": 86,
+        "bf": 24,
+        "h": 9,
+        "hr": 3,
+        "so": 4,
+        "bb": 1,
+        "hbp": 0,
+        "bk": 0,
+        "r": 6,
+        "er": 6,
+        "decision": "loss",
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "2105534",
+        "playerName": "高野 脩汰",
+        "era": "4.09",
+        "ip": "1",
+        "pitches": 16,
+        "bf": 5,
+        "h": 1,
+        "hr": 0,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": null,
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "1400140",
+        "playerName": "小野 郁",
+        "era": "2.00",
+        "ip": "1",
+        "pitches": 14,
+        "bf": 5,
+        "h": 2,
+        "hr": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 1,
+        "er": 1,
+        "decision": null,
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "1100104",
+        "playerName": "益田 直也",
+        "era": "4.26",
+        "ip": "1",
+        "pitches": 12,
+        "bf": 4,
+        "h": 1,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": null,
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "1500110",
+        "playerName": "加藤 貴之",
+        "era": "2.88",
+        "ip": "7",
+        "pitches": 79,
+        "bf": 25,
+        "h": 4,
+        "hr": 1,
+        "so": 2,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 2,
+        "er": 2,
+        "decision": "win",
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "2103635",
+        "playerName": "柳川 大晟",
+        "era": "2.67",
+        "ip": "0.2",
+        "pitches": 34,
+        "bf": 5,
+        "h": 1,
+        "hr": 0,
+        "so": 1,
+        "bb": 2,
+        "hbp": 0,
+        "bk": 0,
+        "r": 2,
+        "er": 2,
+        "decision": null,
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "1000164",
+        "playerName": "島本 浩也",
+        "era": "0.86",
+        "ip": "0.1",
+        "pitches": 4,
+        "bf": 1,
+        "h": 0,
+        "hr": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": "hold",
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "2050307",
+        "playerName": "達 孝太",
+        "era": "3.79",
+        "ip": "1",
+        "pitches": 11,
+        "bf": 3,
+        "h": 0,
+        "hr": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": "save",
+        "inferredFrom": "score_table_v0"
+      }
+    ]
+  },
+  "eventsFingerprint": "8d3013016b8d34375824d274b8d5122eeaeda07196b3921d4a1ea7db122a7772"
 }

@@ -1,8 +1,8 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-06-27",
-  "fetchedAt": "2026-06-24T05:57:24.042Z",
+  "fetchedAt": "2026-06-30T19:11:53.938Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-27",
   "gameIds": [
     "2021039056",
@@ -18,6 +18,8 @@
       "stadiumName": "神宮球場",
       "homeTeamShort": "ヤクルト",
       "awayTeamShort": "中日",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "S",
       "awayTeamCode": "D"
     },
@@ -26,6 +28,8 @@
       "stadiumName": "横浜スタジアム",
       "homeTeamShort": "DeNA",
       "awayTeamShort": "巨人",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "DB",
       "awayTeamCode": "G"
     },
@@ -34,6 +38,8 @@
       "stadiumName": "マツダ",
       "homeTeamShort": "広島",
       "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "C",
       "awayTeamCode": "H"
     },
@@ -42,6 +48,8 @@
       "stadiumName": "ベルーナD",
       "homeTeamShort": "西武",
       "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "L",
       "awayTeamCode": "F"
     },
@@ -50,6 +58,8 @@
       "stadiumName": "ZOZOマリン",
       "homeTeamShort": "ロッテ",
       "awayTeamShort": "ソフトバンク",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "M",
       "awayTeamCode": "Hs"
     },
@@ -58,6 +68,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "オリックス",
       "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Bs",
       "awayTeamCode": "E"
     }
@@ -69,5 +81,13 @@
     "2021039059": "ベルーナD",
     "2021039060": "ZOZOマリン",
     "2021039061": "地方球場"
+  },
+  "scheduleStatusByGameId": {
+    "2021039056": "試合中止",
+    "2021039057": "試合中止",
+    "2021039058": "試合終了",
+    "2021039059": "試合終了",
+    "2021039060": "試合中止",
+    "2021039061": "試合終了"
   }
 }

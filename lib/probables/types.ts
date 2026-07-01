@@ -67,6 +67,8 @@ export type ScheduleDayGame = {
   awayTeamCode: string
   homeTeamShort?: string
   awayTeamShort?: string
+  statusText?: string
+  gameState?: "completed" | "cancelled" | "no_game" | "scheduled" | "in_progress" | "unknown"
 }
 
 export type ThreeGameSeriesCard = {

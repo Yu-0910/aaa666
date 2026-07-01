@@ -1,15 +1,14 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-02",
-  "fetchedAt": "2026-06-24T05:57:24.042Z",
+  "fetchedAt": "2026-06-30T22:21:59.839Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-07-02",
   "gameIds": [
     "2021039078",
     "2021039079",
     "2021039080",
-    "2021039081",
-    "2021044743"
+    "2021039081"
   ],
   "games": [
     {
@@ -17,6 +16,8 @@
       "stadiumName": "横浜スタジアム",
       "homeTeamShort": "DeNA",
       "awayTeamShort": "広島",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "DB",
       "awayTeamCode": "C"
     },
@@ -25,6 +26,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "中日",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "H",
       "awayTeamCode": "D"
     },
@@ -33,6 +36,8 @@
       "stadiumName": "エスコンＦ",
       "homeTeamShort": "日本ハム",
       "awayTeamShort": "オリックス",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "F",
       "awayTeamCode": "Bs"
     },
@@ -41,23 +46,22 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "西武",
+      "statusText": "試合前",
+      "gameState": "scheduled",
       "homeTeamCode": "Hs",
       "awayTeamCode": "L"
-    },
-    {
-      "gameId": "2021044743",
-      "stadiumName": "甲子園球場",
-      "homeTeamShort": "阪神",
-      "awayTeamShort": "楽天",
-      "homeTeamCode": "H",
-      "awayTeamCode": "E"
     }
   ],
   "stadiumByGameId": {
     "2021039078": "横浜スタジアム",
     "2021039079": "甲子園球場",
     "2021039080": "エスコンＦ",
-    "2021039081": "みずほPayPay",
-    "2021044743": "甲子園球場"
+    "2021039081": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039078": "試合前",
+    "2021039079": "試合前",
+    "2021039080": "試合前",
+    "2021039081": "試合前"
   }
 }

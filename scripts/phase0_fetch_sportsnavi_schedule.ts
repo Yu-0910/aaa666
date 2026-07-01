@@ -34,7 +34,18 @@ import {
   SCHEDULE_MAX_GAMES_PER_DAY,
   type ScheduleGameEntry,
 } from "@/lib/sportsnaviScheduleParse"
+import { appendBulkIssueFixLog } from "./bulkIssueFixLog.mjs"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+
+type DaySnapshotV1 = {
+  schemaVersion: "sportsnavi-schedule-day-v1"
+  year: string
+  dateJst: string
+  fetchedAt: string
+  sourceUrl: string
+  gameIds: string[]
+  stadiumByGameId?: Record<string, string>
+}
 
 type DaySnapshotV2 = {
   schemaVersion: "sportsnavi-schedule-day-v2"
@@ -58,7 +69,19 @@ type DaySnapshotV3 = {
   stadiumByGameId: Record<string, string>
 }
 
-type DaySnapshot = DaySnapshotV2 | DaySnapshotV3
+type DaySnapshotV4 = {
+  schemaVersion: "sportsnavi-schedule-day-v4"
+  year: string
+  dateJst: string
+  fetchedAt: string
+  sourceUrl: string
+  gameIds: string[]
+  games: ScheduleGameEntry[]
+  stadiumByGameId: Record<string, string>
+  scheduleStatusByGameId: Record<string, string>
+}
+
+type DaySnapshot = DaySnapshotV1 | DaySnapshotV2 | DaySnapshotV3 | DaySnapshotV4
 
 type DayDiffV1 = {
   schemaVersion: "sportsnavi-schedule-day-diff-v1"
@@ -79,6 +102,10 @@ type SeasonIndexV1 = {
   byDate: Record<string, string[]>
   /** gameId → 日程表左上の球場名（Phase 13 等） */
   stadiumByGameId: Record<string, string>
+  /** gameId → Yahoo日程ページの状態（試合終了 / 試合中止 / ノーゲーム / 試合前）。中止判定の最終基準。 */
+  scheduleStatusByGameId?: Record<string, string>
+  /** gameId → Phase0で保存した対戦カード情報。予想先発タブ等の対戦カード基準。 */
+  scheduleGameByGameId?: Record<string, ScheduleGameEntry>
 }
 
 function parseArgs(argv: string[]) {
@@ -135,6 +162,23 @@ function gamesToStadiumMap(games: ScheduleGameEntry[]): Record<string, string> {
   return m
 }
 
+function gamesToStatusMap(games: ScheduleGameEntry[]): Record<string, string> {
+  const m: Record<string, string> = {}
+  for (const g of games) {
+    const status = String(g.statusText ?? "").trim()
+    if (g.gameId && status) m[g.gameId] = status
+  }
+  return m
+}
+
+function gamesToGameMap(games: ScheduleGameEntry[]): Record<string, ScheduleGameEntry> {
+  const m: Record<string, ScheduleGameEntry> = {}
+  for (const g of games) {
+    if (g.gameId) m[g.gameId] = g
+  }
+  return m
+}
+
 function readJsonIfExists<T>(p: string): T | null {
   if (!fs.existsSync(p)) return null
   try {
@@ -146,6 +190,73 @@ function readJsonIfExists<T>(p: string): T | null {
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+function extractYmdFromTitle(title: string): string {
+  const m = String(title ?? "").match(/(\d{4})年(\d{1,2})月(\d{1,2})日/)
+  if (!m) return ""
+  const [, yyyy, mm, dd] = m
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`
+}
+
+function readCanonicalYmdIfExists(root: string, gameId: string): string {
+  const canonPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+  if (!fs.existsSync(canonPath)) return ""
+  try {
+    const doc = JSON.parse(fs.readFileSync(canonPath, "utf8")) as {
+      game?: { meta?: { documentTitle?: string; ogTitle?: string } }
+    }
+    const meta = doc?.game?.meta ?? {}
+    return (
+      extractYmdFromTitle(meta.documentTitle ?? "") || extractYmdFromTitle(meta.ogTitle ?? "")
+    )
+  } catch {
+    return ""
+  }
+}
+
+function filterGamesByCanonicalDateMismatch(
+  root: string,
+  ymd: string,
+  games: ScheduleGameEntry[],
+  sourceUrl: string,
+): ScheduleGameEntry[] {
+  const kept: ScheduleGameEntry[] = []
+  const removed: Array<{ gameId: string; canonicalYmd: string }> = []
+
+  for (const game of games) {
+    const canonicalYmd = readCanonicalYmdIfExists(root, game.gameId)
+    if (canonicalYmd && canonicalYmd !== ymd) {
+      removed.push({ gameId: game.gameId, canonicalYmd })
+      continue
+    }
+    kept.push(game)
+  }
+
+  if (removed.length > 0) {
+    const issue = `schedule page included stale cross-day gameId(s): ${removed
+      .map((r) => `${r.gameId}:${r.canonicalYmd}`)
+      .join(", ")}`
+    const fix = "excluded gameId(s) whose canonical title date did not match the requested day"
+    console.warn(`[phase0] ${ymd}: ${issue}`)
+    appendBulkIssueFixLog(root, {
+      phase: "phase0:sportsnavi:schedule",
+      dateJst: ymd,
+      issue,
+      fix,
+      gameIds: removed.map((r) => r.gameId),
+      sourceUrl,
+    })
+    appendPipelineBulkLog(
+      root,
+      "phase0_schedule",
+      `date=${ymd} filtered stale cross-day gameId(s): ${removed
+        .map((r) => `${r.gameId}:${r.canonicalYmd}`)
+        .join(", ")}`,
+    )
+  }
+
+  return kept
 }
 
 async function fetchText(url: string, fetchRetries: number): Promise<string> {
@@ -198,6 +309,12 @@ async function main() {
   const stadiumByGameId: Record<string, string> = {
     ...(existingIndex?.stadiumByGameId ?? {}),
   }
+  const scheduleStatusByGameId: Record<string, string> = {
+    ...(existingIndex?.scheduleStatusByGameId ?? {}),
+  }
+  const scheduleGameByGameId: Record<string, ScheduleGameEntry> = {
+    ...(existingIndex?.scheduleGameByGameId ?? {}),
+  }
   const all = new Set<string>()
   const fetchedAt = new Date().toISOString()
 
@@ -224,22 +341,25 @@ async function main() {
         : gamesLeague.length >= gamesInter.length
           ? gamesLeague
           : gamesInter
-
-    const extractedIds = extractedGames.map((g) => g.gameId)
-    let games = extractedGames
-    let gameIds = extractedIds
     const url = gamesInter.length > gamesLeague.length ? urlInter : urlLeague
+    const filteredGames = filterGamesByCanonicalDateMismatch(root, ymd, extractedGames, url)
+
+    const extractedIds = filteredGames.map((g) => g.gameId)
+    let games = filteredGames
+    let gameIds = extractedIds
 
     if (gameIds.length > PHASE0_MAX_GAMES_PER_DAY) {
       const revertTo =
         prevSnap &&
-        (prevSnap.schemaVersion === "sportsnavi-schedule-day-v3" ||
+        (prevSnap.schemaVersion === "sportsnavi-schedule-day-v4" ||
+          prevSnap.schemaVersion === "sportsnavi-schedule-day-v3" ||
           prevSnap.schemaVersion === "sportsnavi-schedule-day-v2" ||
           prevSnap.schemaVersion === "sportsnavi-schedule-day-v1") &&
         Array.isArray(prevSnap.gameIds)
           ? [...prevSnap.gameIds]
           : []
       const revertGames =
+        prevSnap?.schemaVersion === "sportsnavi-schedule-day-v4" ||
         prevSnap?.schemaVersion === "sportsnavi-schedule-day-v3" ||
         prevSnap?.schemaVersion === "sportsnavi-schedule-day-v2"
           ? [...prevSnap.games]
@@ -262,9 +382,16 @@ async function main() {
     for (const [gid, name] of Object.entries(dayStadiumMap)) {
       stadiumByGameId[gid] = name
     }
+    const dayStatusMap = gamesToStatusMap(games)
+    for (const [gid, status] of Object.entries(dayStatusMap)) {
+      scheduleStatusByGameId[gid] = status
+    }
+    for (const [gid, game] of Object.entries(gamesToGameMap(games))) {
+      scheduleGameByGameId[gid] = game
+    }
 
-    const snap: DaySnapshotV3 = {
-      schemaVersion: "sportsnavi-schedule-day-v3",
+    const snap: DaySnapshotV4 = {
+      schemaVersion: "sportsnavi-schedule-day-v4",
       year,
       dateJst: ymd,
       fetchedAt,
@@ -272,6 +399,7 @@ async function main() {
       gameIds,
       games,
       stadiumByGameId: dayStadiumMap,
+      scheduleStatusByGameId: dayStatusMap,
     }
 
     const prev = prevSnap
@@ -282,7 +410,8 @@ async function main() {
 
     if (
       prev &&
-      (prev.schemaVersion === "sportsnavi-schedule-day-v3" ||
+      (prev.schemaVersion === "sportsnavi-schedule-day-v4" ||
+        prev.schemaVersion === "sportsnavi-schedule-day-v3" ||
         prev.schemaVersion === "sportsnavi-schedule-day-v2" ||
         prev.schemaVersion === "sportsnavi-schedule-day-v1")
     ) {
@@ -349,6 +478,8 @@ async function main() {
     gameIds: [...mergedGameIds].sort(),
     byDate: mergedByDate,
     stadiumByGameId: stadiumByGameIdMerged,
+    scheduleStatusByGameId,
+    scheduleGameByGameId,
   }
   fs.writeFileSync(idxPath, JSON.stringify(index, null, 2), "utf8")
   const stadiumCount = Object.keys(stadiumByGameIdMerged).length
@@ -361,4 +492,3 @@ main().catch((e) => {
   console.error("[phase0] failed:", e)
   process.exit(1)
 })
-

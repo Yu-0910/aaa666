@@ -37,6 +37,7 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
 import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
+import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
 import {
   countBbLiveTextSplits,
   isHtmlFetchFailed,
@@ -84,7 +85,7 @@ function isCancelledGameMainRaw(root, gameId) {
  * 既存キャッシュが「パースに足る中身」があるときだけスキップ。
  * 空の CSR スケルトンだけが保存されている場合は再取得する（再発防止）。
  */
-function shouldSkipExistingFetch({ root, kind, gameId, force, htmlPath, metaPath }) {
+function shouldSkipExistingFetch({ root, year, kind, gameId, force, htmlPath, metaPath }) {
   if (force) return false
   if (!fs.existsSync(htmlPath) || !fs.existsSync(metaPath)) return false
   let html = ""
@@ -95,7 +96,13 @@ function shouldSkipExistingFetch({ root, kind, gameId, force, htmlPath, metaPath
   }
   if (isHtmlFetchFailed(html)) return false
 
-  const cancelled = isCancelledGameMainRaw(root, gameId)
+  const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+  const cancelled =
+    scheduleCancelled === true
+      ? true
+      : scheduleCancelled === false
+        ? false
+        : isCancelledGameMainRaw(root, gameId)
   if (kind === "stats") {
     if (cancelled) return true
     return isStatsHtmlParseComplete(html)
@@ -238,6 +245,7 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
   const skipLogStride = targets.length <= 24 ? 1 : logEvery
   let done = 0
   let skipped = 0
+  let skippedCancelled = 0
   let failed = 0
   let retriedIncomplete = 0
 
@@ -245,7 +253,16 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
     const gameId = targets[i]
     const htmlPath = path.join(outDir, `${gameId}.html`)
     const metaPath = path.join(metaDir, `${gameId}.json`)
-    const effectiveForce = force || !shouldSkipExistingFetch({ root, kind, gameId, force: false, htmlPath, metaPath })
+    const scheduleCancelled = isScheduleCancelledGame(root, year, gameId)
+    if (scheduleCancelled === true) {
+      skipped += 1
+      skippedCancelled += 1
+      console.log(
+        `[phase2:stats-text] ${kind} ${i + 1}/${targets.length} ${gameId} … skip (schedule: 試合中止/ノーゲーム) fetched=${done} skipped=${skipped} failed=${failed}`,
+      )
+      continue
+    }
+    const effectiveForce = force || !shouldSkipExistingFetch({ root, year, kind, gameId, force: false, htmlPath, metaPath })
     if (!effectiveForce) {
       skipped += 1
       if (i === 0 || (i + 1) % skipLogStride === 0 || i + 1 === targets.length) {
@@ -257,7 +274,13 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
     }
 
     const url = `https://baseball.yahoo.co.jp/npb/game/${encodeURIComponent(gameId)}/${kind}`
-    const cancelled = isCancelledGameMainRaw(root, gameId)
+    const scheduleCancelledForFetch = isScheduleCancelledGame(root, year, gameId)
+    const cancelled =
+      scheduleCancelledForFetch === true
+        ? true
+        : scheduleCancelledForFetch === false
+          ? false
+          : isCancelledGameMainRaw(root, gameId)
 
     const writeSuccess = (text, httpStatus, httpStatusText) => {
       fs.writeFileSync(htmlPath, text, "utf8")
@@ -317,7 +340,7 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
   }
 
   writeJson(failuresPath, failures)
-  return { outDir, targets: targets.length, fetched: done, skipped, failed, retriedIncomplete }
+  return { outDir, targets: targets.length, fetched: done, skipped, skippedCancelled, failed, retriedIncomplete }
 }
 
 async function main() {
@@ -357,7 +380,7 @@ async function main() {
 
   if (onlyIncomplete) {
     const before = targets.length
-    targets = targets.filter((id) => !isPhase2RawCompleteForGame(root, id))
+    targets = targets.filter((id) => isScheduleCancelledGame(root, year, id) !== true && !isPhase2RawCompleteForGame(root, id))
     console.log(`[phase2:stats-text] only-incomplete: ${targets.length} / ${before} game(s) need refetch`)
     if (targets.length === 0) {
       console.log("[phase2:stats-text] nothing to do")
@@ -373,7 +396,8 @@ async function main() {
   console.log(
     `[phase2:stats-text] year=${year} targets=${targets.length} ` +
       `stats(fetched=${stats.fetched}, skipped=${stats.skipped}, failed=${stats.failed}, incompleteRetries=${stats.retriedIncomplete ?? 0}) ` +
-      `text(fetched=${text.fetched}, skipped=${text.skipped}, failed=${text.failed}, incompleteRetries=${text.retriedIncomplete ?? 0})`,
+      `text(fetched=${text.fetched}, skipped=${text.skipped}, failed=${text.failed}, incompleteRetries=${text.retriedIncomplete ?? 0}) ` +
+      `scheduleCancelled(stats=${stats.skippedCancelled ?? 0}, text=${text.skippedCancelled ?? 0})`,
   )
   if (
     stats.failed > 0 ||
@@ -405,4 +429,3 @@ main().catch((e) => {
   console.error("[phase2:stats-text] failed:", e)
   process.exit(1)
 })
-

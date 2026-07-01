@@ -41,14 +41,14 @@ function chartPx(compact: boolean, compactPx: number, fullPx: number): number {
 }
 
 export const PITCH_TYPE_CHART_COLORS = [
-  "#FF4444",
-  "#FFFF44",
-  "#44CC88",
-  "#4488FF",
-  "#CC88FF",
-  "#88DDFF",
-  "#FFAA44",
-  "#88FF88",
+  "#E03E4C",
+  "#E0A70A",
+  "#28BB65",
+  "#3472D8",
+  "#944BD9",
+  "#1EBAD1",
+  "#E08C17",
+  "#41C371",
 ] as const
 
 const COLORS = PITCH_TYPE_CHART_COLORS

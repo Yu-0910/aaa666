@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039043",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-06-24T12:59:20.822Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "0f6bab2ad4929a61363688fc2e564a1f13aea64e990317c287feb9c46388386a",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "normalizedFetchedAt": "2026-06-24T12:59:20.822Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月24日 阪神タイガースvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -16,9 +16,7 @@
     "statsPlayerLinkedRows": [],
     "yahooPlayersMentioned": {},
     "missingOrPartial": [
-      "phase2: stats HTML present but no player rows parsed",
-      "phase2: hint: スポナビ /stats は CSR のため、初回 fetch が空テーブルだけになることがある。phase2_fetch は遅延再試行する。手動では npm run phase2:sportsnavi:stats-text -- --year 2026 --game-ids 2021039043 --force",
-      "phase2: text HTML present but no bb-liveText sections parsed",
+      "phase2: game cancelled (試合中止); empty stats/text expected",
       "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039043.html",
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039043.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039043.html",

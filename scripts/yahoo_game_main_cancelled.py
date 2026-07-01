@@ -10,8 +10,12 @@ _BB_HEAD01_TITLE_RE = re.compile(
 )
 _HEAD_CANCELLED_RE = re.compile(r"試合中止|ノーゲーム|コールドゲーム|コールド|試合は中止")
 _BB_SPLITS_NOGAME_RE = re.compile(r"bb-splitsTable__nogame", re.IGNORECASE)
-_BB_GAME_CARD_STATE_RE = re.compile(
-    r'class="bb-gameCard__state"[\s\S]{0,160}(試合中止|ノーゲーム)',
+_BB_GAME_CARD_STATE_PRIMARY_RE = re.compile(
+    r'<p[^>]*\bbb-gameCard__state\b[^>]*>[\s\S]*?<span>\s*([^<]+?)\s*</span>',
+    re.IGNORECASE,
+)
+_BB_SCORELIST_CURRENT_STATE_RE = re.compile(
+    r'<span[^>]*\bbb-scoreList__state\b[^>]*>\s*(試合中止|ノーゲーム)\s*</span>',
     re.IGNORECASE,
 )
 
@@ -34,13 +38,16 @@ def main_html_cancelled(html: str | None, game_id: str = "") -> bool:
     if _BB_SPLITS_NOGAME_RE.search(html):
         return True
 
-    if _BB_GAME_CARD_STATE_RE.search(html):
+    if _BB_SCORELIST_CURRENT_STATE_RE.search(html):
+        return True
+
+    primary_m = _BB_GAME_CARD_STATE_PRIMARY_RE.search(html)
+    primary_state = primary_m.group(1).strip() if primary_m else ""
+    if primary_state in ("試合中止", "ノーゲーム"):
         return True
 
     gid = str(game_id or "").strip()
     if gid:
-        if re.search(r'class="bb-scoreList__state">\s*(試合中止|ノーゲーム)\s*<', html, re.I):
-            return True
         if re.search(
             rf'class="bb-scoreList__state"[^>]*href="/npb/game/{re.escape(gid)}/index"[^>]*>[\s\S]*?(試合中止|ノーゲーム)',
             html,

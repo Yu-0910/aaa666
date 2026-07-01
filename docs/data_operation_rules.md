@@ -130,9 +130,27 @@ Windows タスク スケジューラ例: `powershell -File scripts/invoke_watch_
 
 1. 試合当日などに Phase10 が走り、**canonical／打席一覧が未整備** → `pitchRows: []` だけ保存された。  
 2. あとから score HTML・canonical が揃ったが、**derived ファイルが存在するため restore がスキップ**された（実装は「ファイルがある＝済み」だった）。  
-3. 派生（球種別など）は **ディスク上の canonical に `pitchEvents` が無い**試合が大量に残った。
+3. 派生（球種別など）は **ディスク上の canonical に `pitchEvents` が無い**試合が大量に残った。  
 
 **コード側の要件**（方針と一致させる）: `phase4_yahoo_pitch_by_pitch_pipeline.mjs` は空 `pitchRows` をスキップしない。`run_yahoo_phase10_restore.py` は打席 0 件で空 JSON を書いたとき警告終了する。
+
+#### 2026-06-26 記録
+
+- 6月26日は **1試合開催 + 4試合中止** が正しい。
+- 一時的に `2021044743` が日程スナップショットへ混入し、`2026-06-26` が 6件に見える問題があった。
+- 対応: Phase0 の日程保存時に、**取得対象日と canonical の試合日が不一致な gameId を除外**するよう修正した。
+- 追加対応: `score-raw-gate` で `no_plate_appearances` / `missing_text_raw` が出た試合は、score raw ではなく **Phase2a-repair（stats/text 再取得）** を先に回す。
+- 補足: `async-inning` / `async-text` だけの **JS 空シェル** は、Phase2a-repair で直らない別系統として扱う。
+- 復旧: JS 空シェルは `scripts/refetch_sportsnavi_text_rendered_playwright.py` で **描画後 HTML** を保存してから続行する。
+- 2026-06 追記: `score-raw-gate` は、`text raw` 側の `bb-scoreList__state` に **試合中止 / ノーゲーム** が出ている試合を中止として除外する。空シェルでも中止試合は再取得しない。
+- 2026-06 追記: Phase4 / Phase10 restore も同じく `text raw` の現在カード状態を参照し、`raw_sportsnavi` が `試合前` のままでも `raw_sportsnavi_text` が `試合中止` なら restore 対象外にする。
+- 問題と修正の追記先: `_data/scraped_games/_meta/bulk_issue_fix.log`
+
+#### スクリプト修正時の記録ルール
+
+- スクリプトを修正したら、**問題点と修正内容を必ず追記**する。
+- 追記先の正は `_data/scraped_games/_meta/bulk_issue_fix.log`。
+- 運用ルールに関わる変更は、この文書にも短く残す。
 
 #### 成績データの正（2026-05 以降）
 
@@ -440,6 +458,14 @@ npm run phase4:merge:phase10:all
 **Phase11 で CS が極端に少ないとき**: ディスク上の canonical には score 由来 `runnerEvents` があっても、Phase11 は **Phase10 マージ（メモリ上）** を通す。以前はここで **text 実況由来の runnerEvents に上書き**され CS が落ちていた。**2026-05 修正**: Phase10 マージ後も **`sourceTier: "score"` を優先保持**。canonical の再マージは不要で **`npm run rebuild:batting-cs-from-score-2026` の再実行**でよい。
 
 ### 既知の不具合と運用上の対策（重要）
+
+#### 一括取得: 中止/ノーゲームの最終判定
+
+- **基準**: `https://baseball.yahoo.co.jp/npb/schedule/`（実装では `schedule/first/league` と `schedule/first/inter`）の日程ページを最終判定にする。
+- **取得対象外**: 日程ページで `試合中止` または `ノーゲーム` と分かった試合は、試合トップ・stats/text・score raw・Phase10/Phase4 を取得しない。
+- **取得対象**: 日程ページで `試合終了` など開催扱いの試合は、個別ページ raw が古く `試合中止` 風に見えても中止扱いしない。
+- **対戦カード**: 予想先発タブなどの先日程カードは、Phase0 の日程スナップショット `games[]`（home/away/teamCode/stadium/status）を基準にする。
+- **保存先**: Phase0 は `_data/sportsnavi_schedule_snapshots/by_date/YYYY-MM-DD.json` と `_data/sportsnavi_schedule_index/season_YYYY.json` に `statusText` / `gameState` / `scheduleStatusByGameId` を保存する。
 
 #### Phase10: 投手/打者IDの取り違え（例: 森浦・勝野が「打席に立った」扱いになる）
 

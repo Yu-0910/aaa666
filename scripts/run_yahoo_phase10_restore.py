@@ -234,21 +234,35 @@ def synthetic_intentional_walk_pitch_row(
 
 
 from yahoo_game_main_cancelled import main_html_cancelled  # noqa: E402
+from sportsnavi_schedule_status import is_schedule_cancelled_game  # noqa: E402
 
 
-def _load_main_html_cancelled(root: Path, game_id: str) -> bool:
-    main_path = root / "_data" / "scraped_games" / "raw_sportsnavi" / f"{game_id}.html"
-    if not main_path.is_file():
+def _load_main_html_cancelled(root: Path, game_id: str, year: str = "2026") -> bool:
+    schedule_cancelled = is_schedule_cancelled_game(root, year, game_id)
+    if schedule_cancelled is True:
+        return True
+    if schedule_cancelled is False:
         return False
-    try:
-        return main_html_cancelled(main_path.read_text(encoding="utf-8"), game_id)
-    except OSError:
-        return False
+
+    for rel in (
+        ("_data", "scraped_games", "raw_sportsnavi", f"{game_id}.html"),
+        ("_data", "scraped_games", "raw_sportsnavi_text", f"{game_id}.html"),
+    ):
+        p = root.joinpath(*rel)
+        if not p.is_file():
+            continue
+        try:
+            if main_html_cancelled(p.read_text(encoding="utf-8"), game_id):
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Phase10: 一球ログを取得して derived JSON に保存")
     ap.add_argument("--game-id", default="2021038624", help="試合ID")
+    ap.add_argument("--year", default="2026", help="season index の年")
     ap.add_argument("--sleep", type=float, default=1.2, help="打席間の待機秒")
     ap.add_argument(
         "--text-from-raw",
@@ -266,8 +280,9 @@ def main() -> None:
     ensure_yahoo_network_fetch_allowed()
 
     game_id = args.game_id.strip()
+    year = str(args.year).strip() or "2026"
     root = Path(__file__).resolve().parent.parent
-    if _load_main_html_cancelled(root, game_id):
+    if _load_main_html_cancelled(root, game_id, year):
         safe_print(f"[phase10] skip {game_id}: game cancelled — no pitch-by-pitch to restore")
         sys.exit(0)
     score_cache_dir = root / "_data" / "scraped_games" / "raw_sportsnavi_score" / game_id
@@ -399,7 +414,7 @@ def main() -> None:
     safe_print(f"\nWrote {out_path} (pitch rows={len(all_rows)}, missing={len(missing)})")
 
     if len(pas) == 0:
-        if _load_main_html_cancelled(root, game_id):
+        if _load_main_html_cancelled(root, game_id, year):
             safe_print(f"[phase10] skip {game_id}: game cancelled (0 PA expected)")
             sys.exit(0)
         safe_print(
