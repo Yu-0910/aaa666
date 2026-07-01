@@ -23,6 +23,7 @@ import {
   teamPageWeeklyWeekKeyFromPathname,
 } from "@/lib/teamPage/teamPagePath"
 import type { TeamPageV1Year } from "@/lib/teamPage/teamPageConstants"
+import SiteFooter from "@/app/components/common/SiteFooter"
 
 export type TeamPageShellProps = {
   teamCode: string
@@ -196,6 +197,7 @@ export default function TeamPageShell({
 
         {children}
       </main>
+      <SiteFooter className="mt-12" />
     </div>
   )
 }

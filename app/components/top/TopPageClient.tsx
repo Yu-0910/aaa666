@@ -14,6 +14,7 @@ import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabCo
 import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabContent"
 import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
+import SiteFooter from "@/app/components/common/SiteFooter"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
@@ -198,6 +199,7 @@ export function TopPageClient({
       <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
       </div>
+      <SiteFooter className="mt-12" />
     </div>
   )
 }

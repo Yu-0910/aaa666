@@ -12,6 +12,7 @@ import type { ViewportLayout } from "@/lib/viewportLayout"
 import { useClientPathname, useClientSearchString, useViewportLayout } from "@/hooks/useIsDesktop"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
+import SiteFooter from "@/app/components/common/SiteFooter"
 import {
   isFabianPlayerPage,
   isKikuchiPlayerPage,
@@ -1833,12 +1834,7 @@ export function PlayerPageClient({
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t mt-12 py-8" style={{ backgroundColor: "#000000", borderColor: "#333333" }}>
-        <div className="container mx-auto px-5 text-center" style={{ color: "#999" }}>
-          <p className="text-sm">© 2025 NPB打撃成績ランキング</p>
-        </div>
-      </footer>
+      <SiteFooter className="mt-12" />
     </div>
   )
 }

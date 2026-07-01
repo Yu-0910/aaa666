@@ -21,6 +21,7 @@ import { playerPageHref } from '@/lib/playerPageHref'
 import { usesRanking2025CompactTableUi } from '@/lib/ranking/rankingUiVariant'
 import { withOfficialRomanOverride } from '@/lib/playerOfficialRomanOverrides'
 import { dedupeRankingRowsForDisplay } from '@/lib/ranking/dedupeRankingRows'
+import SiteFooter from "@/app/components/common/SiteFooter"
 
 interface RankingUIProps {
   viewModel: RankingViewModel
@@ -633,6 +634,7 @@ export default function RankingUI({
         {tableBlock}
       </main>
       {debugBlock}
+      <SiteFooter className="mt-12" />
     </div>
   )
 }
