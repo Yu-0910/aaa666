@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { FullPageLoading } from "@/components/ui/spinner"
 import TeamPitchingRankingPageClient from "../../TeamPitchingRankingPageClient"
-import { loadMetricsFromRecordPitching } from "@/lib/ranking/recordPitching"
+import { loadMetricsFromRecordPitchingForYear } from "@/lib/ranking/recordPitching"
 import type { RankingViewModel } from "@/lib/ranking/types"
 import {
   isValidWeeklyWeekKey,
@@ -23,7 +23,7 @@ export default async function TeamWeeklyPitchingPage({ params }: Props) {
   const parsed = parseTeamPageParams(teamCode, year)
   if (!parsed || !isValidWeeklyWeekKey(weekKey)) notFound()
 
-  const metrics = loadMetricsFromRecordPitching()
+  const metrics = loadMetricsFromRecordPitchingForYear(Number(parsed.year))
   if (metrics.length === 0) {
     return (
       <div className="bg-[#1a1a1a] border border-[#333] px-4 py-8 text-center text-sm text-gray-400">
