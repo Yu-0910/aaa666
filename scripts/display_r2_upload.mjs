@@ -111,6 +111,7 @@ async function main() {
           u.keyPrefix === 'data/rankings' &&
           (rel.startsWith(`${y}/`) ||
             rel.startsWith(`pitching/${y}/`) ||
+            rel.startsWith(`pitching/weekly/${y}/`) ||
             rel.startsWith(`weekly/${y}/`))
         const matchTop =
           u.keyPrefix === 'data/top-leaders' &&

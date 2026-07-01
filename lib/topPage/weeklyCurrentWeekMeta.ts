@@ -4,6 +4,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { join } from "path"
+import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
 import { hasBattingRankingsAtLeagueDir } from "@/lib/ranking/leadersFromRankingsAtLeagueDir"
 import { weeklyBattingRankingsLeagueDir } from "@/lib/ranking/leadersFromRankingsAtLeagueDir"
@@ -109,4 +110,15 @@ export function readWeeklyCurrentWeekJson(
   } catch {
     return null
   }
+}
+
+export async function readWeeklyCurrentWeekJsonAsync(
+  projectRoot: string,
+  year: string
+): Promise<WeeklyCurrentWeekJson | null> {
+  const local = readWeeklyCurrentWeekJson(projectRoot, year)
+  if (local) return local
+  return fetchDisplayJsonServer<WeeklyCurrentWeekJson>(
+    `/data/rankings/weekly/${year}/current-week.json`
+  )
 }

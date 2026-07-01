@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation"
-import { readWeeklyCurrentWeekJson } from "@/lib/topPage/weeklyCurrentWeekMeta"
+import { readWeeklyCurrentWeekJsonAsync } from "@/lib/topPage/weeklyCurrentWeekMeta"
 import { teamPageHref } from "@/lib/teamPage/teamPageHref"
 import { parseTeamPageParams } from "@/lib/teamPage/teamPageParams"
 
@@ -15,7 +15,7 @@ export default async function TeamBattingWeeklyRedirectPage({ params, searchPara
   if (!parsed) notFound()
 
   const sp = await searchParams
-  const meta = readWeeklyCurrentWeekJson(process.cwd(), parsed.year)
+  const meta = await readWeeklyCurrentWeekJsonAsync(process.cwd(), parsed.year)
   const weekKey = meta?.weekKey
   if (!weekKey) notFound()
 
