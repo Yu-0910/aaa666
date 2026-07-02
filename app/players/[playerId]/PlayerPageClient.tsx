@@ -1426,6 +1426,31 @@ export function PlayerPageClient({
     return tabs
   }, [routePlayerSlug, showPitcherSeasonSuganoUi, showSeasonCareerTabs])
 
+  const renderRouteTabBar = () =>
+    showSeasonCareerTabs &&
+    statsTab === "season" &&
+    routeTabs.length > 0 && (
+      <div className="mt-4 mb-5 flex flex-wrap gap-2">
+        {routeTabs.map((tab) => {
+          const active = tab.key === pageSection
+          return (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              className="rounded-sm border px-3 py-1.5 text-[11px] font-bold transition-colors"
+              style={{
+                borderColor: active ? "#FFFF44" : "#555555",
+                backgroundColor: active ? "#FFFF44" : "transparent",
+                color: active ? "#000000" : "#d1d5db",
+              }}
+            >
+              {tab.label}
+            </Link>
+          )
+        })}
+      </div>
+    )
+
   const profileTableProps = {
     mergedBirthRaw,
     mergedProDebut,
@@ -1713,27 +1738,6 @@ export function PlayerPageClient({
               </button>
             </div>
           )}
-          {showSeasonCareerTabs && statsTab === "season" && routeTabs.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {routeTabs.map((tab) => {
-                const active = tab.key === pageSection
-                return (
-                  <Link
-                    key={tab.key}
-                    href={tab.href}
-                    className="rounded-sm border px-3 py-1.5 text-[11px] font-bold transition-colors"
-                    style={{
-                      borderColor: active ? "#FFFF44" : "#555555",
-                      backgroundColor: active ? "#FFFF44" : "transparent",
-                      color: active ? "#000000" : "#d1d5db",
-                    }}
-                  >
-                    {tab.label}
-                  </Link>
-                )
-              })}
-            </div>
-          )}
         </div>
 
         {/* Profile Table */}
@@ -1773,6 +1777,7 @@ export function PlayerPageClient({
                 style={pilotScaledBlockStyle(pilotProfileScaleCollapse)}
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
+                {renderRouteTabBar()}
               </div>
               <div
                 ref={seasonSubTabRail.anchorRef}
@@ -1826,6 +1831,7 @@ export function PlayerPageClient({
                 }
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
+                {renderRouteTabBar()}
               </div>
               {/* 投手: 今季サブタブ（プロフィール表と同じ scale コンテナ内） */}
               {showSeasonCareerTabs &&
