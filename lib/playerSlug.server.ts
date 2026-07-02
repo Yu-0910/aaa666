@@ -22,6 +22,10 @@ type PlayerSlugIndex = {
 
 let cachedIndex: PlayerSlugIndex | null = null
 
+const LEGACY_PLAYER_SLUG_ALIASES: Record<string, string> = {
+  "sato-t": "teruaki-sato",
+}
+
 function buildSlugIndex(): PlayerSlugIndex {
   if (cachedIndex) return cachedIndex
   const entries = [...CURRENT_ROSTER_PLAYER_ENTRIES]
@@ -64,6 +68,11 @@ export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
     decoded = decodeURIComponent(decoded).normalize("NFC")
   } catch {
     decoded = decoded.normalize("NFC")
+  }
+  const aliasSlug = LEGACY_PLAYER_SLUG_ALIASES[decoded.toLowerCase()]?.trim()
+  if (aliasSlug) {
+    const aliased = getPlayerSlugEntryBySlug(aliasSlug)
+    if (aliased) return aliased
   }
   const bySlug = getPlayerSlugEntryBySlug(decoded)
   if (bySlug) return bySlug
