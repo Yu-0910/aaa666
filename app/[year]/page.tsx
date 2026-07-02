@@ -1,10 +1,4 @@
 import { TopPageRoot } from "@/app/components/top/TopPageRoot"
-import {
-  loadSeasonTabPayloadServer,
-  loadWeeklyTabPayloadServer,
-} from "@/lib/topPage/loadTopPageTabDataServer"
-import { sanitizeRscPayload } from "@/lib/topPage/sanitizeRscPayload"
-import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 import { permanentRedirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
@@ -21,28 +15,13 @@ export default async function YearTopPage({ params }: PageProps) {
     permanentRedirect("/")
   }
 
-  let seasonInitial: SeasonTabPayload | null = null
-  let weeklyInitial: WeeklyTabPayload | null = null
-  if (y === 2026) {
-    ;[seasonInitial, weeklyInitial] = await Promise.all([
-      loadSeasonTabPayloadServer(2026),
-      loadWeeklyTabPayloadServer(2026),
-    ])
-    if (seasonInitial) {
-      seasonInitial = sanitizeRscPayload(seasonInitial)
-    }
-    if (weeklyInitial) {
-      weeklyInitial = sanitizeRscPayload(weeklyInitial)
-    }
-  }
-
   return (
     <TopPageRoot
       activeMainTab={0}
       initialYear={y}
       articlesMode="rss"
-      seasonInitial={seasonInitial}
-      weeklyInitial={weeklyInitial}
+      seasonInitial={null}
+      weeklyInitial={null}
     />
   )
 }

@@ -10,17 +10,32 @@ import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
 export { displaySitePathToObjectKey, displaySitePathToPublicUrl } from '@/lib/displayData/sitePath'
 
-async function fetchFromR2Direct<T>(sitePath: string): Promise<T | null> {
-  if (!getRankingsBaseUrl()) return null
+const DISPLAY_FETCH_TIMEOUT_MS = 5000
+
+async function fetchJsonWithTimeout<T>(url: string): Promise<T | null> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), DISPLAY_FETCH_TIMEOUT_MS)
   try {
-    const url = getExternalDisplayDataUrl(displaySitePathToObjectKey(sitePath))
     const res = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       cache: 'no-store',
+      signal: controller.signal,
     })
     if (!res.ok) return null
     return (await res.json()) as T
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function fetchFromR2Direct<T>(sitePath: string): Promise<T | null> {
+  if (!getRankingsBaseUrl()) return null
+  try {
+    const url = getExternalDisplayDataUrl(displaySitePathToObjectKey(sitePath))
+    return fetchJsonWithTimeout<T>(url)
   } catch {
     return null
   }
@@ -38,13 +53,7 @@ async function fetchFromSameOriginProxy<T>(sitePath: string): Promise<T | null> 
   const path = sitePath.startsWith('/') ? sitePath : `/${sitePath}`
   const url = `${getServerSiteOrigin()}${path}`
   try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    })
-    if (!res.ok) return null
-    return (await res.json()) as T
+    return fetchJsonWithTimeout<T>(url)
   } catch {
     return null
   }

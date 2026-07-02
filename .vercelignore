@@ -1,6 +1,23 @@
 # Vercelデプロイ時に除外する巨大データ
 # Functionサイズ超過を防ぐため
 
+# ローカル依存物・ビルド生成物
+node_modules/
+.next/
+.git/
+.cursor/
+.agents/
+.codex/
+
+# ドキュメント・ローカル補助物
+docs/
+tests/
+logs/
+_reports/
+_tools/
+*.log
+*.tsbuildinfo
+
 # output ディレクトリ（バックアップ、キャッシュ、レポートなど）
 output/backups/
 output/html_cache/

@@ -86,6 +86,9 @@ async function readWeeklyCurrentWeekMetaAsync(
 
 /** Vercel 本番: R2 フォールバック（rankingsBaseUrl）が使えるときはサーバー先読み可 */
 export function canPreload2026TabDataOnServer(): boolean {
+  // 本番トップでの先読みは、外部 JSON 取得の遅延がそのままページ全体の 504 になる。
+  // クライアント側に同等のフォールバック取得があるため、本番では先読みを切る。
+  if (process.env.VERCEL && process.env.NODE_ENV === "production") return false
   if (getRankingsBaseUrl()) return true
   if (!process.env.VERCEL) return true
   return false
