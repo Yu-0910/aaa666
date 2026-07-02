@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound, permanentRedirect } from "next/navigation"
+import { permanentRedirect } from "next/navigation"
 import {
   playerPagePath,
   playerPageSectionDescription,
@@ -17,6 +17,24 @@ import {
 export type PlayerRouteResolved = {
   entry: PlayerSlugEntry
   pageSection: PlayerPageSection
+}
+
+function buildFallbackEntry(rawPlayerId: string): PlayerSlugEntry {
+  const raw = String(rawPlayerId ?? "").trim()
+  let decoded = raw
+  try {
+    decoded = decodeURIComponent(raw).normalize("NFC")
+  } catch {
+    decoded = raw.normalize("NFC")
+  }
+  return {
+    npbPlayerId: "",
+    nameJa: decoded || "選手",
+    romanFull: "",
+    position: "",
+    teamCode: "",
+    slug: raw || "unknown-player",
+  }
 }
 
 function advancedPageUsesDedicatedContent(_resolved: PlayerRouteResolved): boolean {
@@ -89,14 +107,16 @@ export function resolvePlayerRouteOrRedirect(options: {
   const legacyRoot = String(playerId ?? "").trim()
   const legacyAlias = String(rest?.[0] ?? "").trim()
   const section = normalizeRestSection(rest)
-  const entry = resolvePlayerSlugEntry(legacyRoot) ?? resolvePlayerSlugEntry(legacyAlias)
-  if (!entry) {
-    notFound()
-  }
-  if (section === "pitch-types" && !supportsPitchTypeRoute(entry)) {
+  const entry =
+    resolvePlayerSlugEntry(legacyRoot) ??
+    resolvePlayerSlugEntry(legacyAlias) ??
+    buildFallbackEntry(legacyRoot || legacyAlias)
+  if (entry.npbPlayerId && section === "pitch-types" && !supportsPitchTypeRoute(entry)) {
     permanentRedirect(playerPagePath(entry.slug))
   }
-  redirectIfNeeded(legacyRoot || legacyAlias, entry, section, searchParams)
+  if (entry.npbPlayerId) {
+    redirectIfNeeded(legacyRoot || legacyAlias, entry, section, searchParams)
+  }
   return { entry, pageSection: section }
 }
 
