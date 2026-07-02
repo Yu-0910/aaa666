@@ -1,37 +1,15 @@
-import type { Metadata } from "next"
 import PlayerPageRoot from "./PlayerPageRoot"
-import { metadataForResolvedPlayerRoute, resolvePlayerRouteOrRedirect } from "./playerRouteServer"
+import type { PlayerPageSection } from "@/lib/playerSlug"
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: {
-  /** `playerId` is the existing segment name. Runtime value is a slug or legacy player segment. */
-  params: Promise<{ playerId: string }> | { playerId: string }
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>
-}): Promise<Metadata> {
-  const resolvedParams = params instanceof Promise ? await params : params
-  const resolvedSearch = searchParams instanceof Promise ? await searchParams : searchParams
-  const resolved = resolvePlayerRouteOrRedirect({
-    playerId: resolvedParams.playerId,
-    searchParams: resolvedSearch,
-  })
-  return metadataForResolvedPlayerRoute(resolved)
-}
+const BASIC_SECTION: PlayerPageSection = "basic"
 
 export default async function PlayerPage({
-  params,
-  searchParams,
+  params: _params,
+  searchParams: _searchParams,
 }: {
   /** `playerId` is the existing segment name. Runtime value is a slug or legacy player segment. */
   params: Promise<{ playerId: string }> | { playerId: string }
   searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>
 }) {
-  const resolvedParams = params instanceof Promise ? await params : params
-  const resolvedSearch = searchParams instanceof Promise ? await searchParams : searchParams
-  const resolved = resolvePlayerRouteOrRedirect({
-    playerId: resolvedParams.playerId,
-    searchParams: resolvedSearch,
-  })
-  return <PlayerPageRoot pageSection={resolved.pageSection} />
+  return <PlayerPageRoot pageSection={BASIC_SECTION} />
 }

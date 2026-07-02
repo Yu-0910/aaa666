@@ -1,21 +1,20 @@
-import type { Metadata } from "next"
 import PlayerPageRoot from "../PlayerPageRoot"
-import { metadataForResolvedPlayerRoute, resolvePlayerRouteOrRedirect } from "../playerRouteServer"
+import type { PlayerPageSection } from "@/lib/playerSlug"
 
-export async function generateMetadata({
-  params,
-}: {
-  /** `playerId` is the existing segment name. Runtime value is a slug or legacy player segment. */
-  params:
-    | Promise<{ playerId: string; rest?: string[] }>
-    | { playerId: string; rest?: string[] }
-}): Promise<Metadata> {
-  const resolvedParams = params instanceof Promise ? await params : params
-  const resolved = resolvePlayerRouteOrRedirect({
-    playerId: resolvedParams.playerId,
-    rest: resolvedParams.rest,
-  })
-  return metadataForResolvedPlayerRoute(resolved)
+function normalizeRestSection(rest: string[] | undefined): PlayerPageSection {
+  const section = String(rest?.[rest.length - 1] ?? "").trim().toLowerCase()
+  switch (section) {
+    case "advanced":
+      return "advanced"
+    case "splits":
+      return "splits"
+    case "game-log":
+      return "game-log"
+    case "pitch-types":
+      return "pitch-types"
+    default:
+      return "basic"
+  }
 }
 
 export default async function PlayerSectionPage({
@@ -27,9 +26,5 @@ export default async function PlayerSectionPage({
     | { playerId: string; rest?: string[] }
 }) {
   const resolvedParams = params instanceof Promise ? await params : params
-  const resolved = resolvePlayerRouteOrRedirect({
-    playerId: resolvedParams.playerId,
-    rest: resolvedParams.rest,
-  })
-  return <PlayerPageRoot pageSection={resolved.pageSection} />
+  return <PlayerPageRoot pageSection={normalizeRestSection(resolvedParams.rest)} />
 }
