@@ -277,7 +277,7 @@ export function PlayerPageClient({
     }
   })()
   const routePlayerSlug = playerIdNormalized
-  const showLegacySeasonSubTabs = false
+  const showLegacySeasonSubTabs = true
 
   /** 旧 player-N + ?roman= URL → /players/{npb_id} へ統一 */
   useEffect(() => {
@@ -1425,43 +1425,7 @@ export function PlayerPageClient({
     return tabs
   }, [routePlayerSlug, showPitcherSeasonSuganoUi, showSeasonCareerTabs])
 
-  const renderRouteTabBar = () => {
-    if (!(showSeasonCareerTabs && statsTab === "season" && routeTabs.length > 0)) {
-      return null
-    }
-
-    const activeIdx = Math.max(0, routeTabs.findIndex((tab) => tab.key === pageSection))
-
-    return (
-      <div
-        className={pitcherCareerSubTabBarShellClass}
-        style={{ border: "1px solid #555555", backgroundColor: "#1a1a1a" }}
-      >
-        <div
-          className="absolute inset-y-0 left-0 transition-transform duration-200 ease-out"
-          style={{
-            backgroundColor: "#FFFF44",
-            width: seasonSubTabSliderWidthPct(routeTabs.length),
-            transform: seasonSubTabSliderTransform(activeIdx),
-          }}
-        />
-        {routeTabs.map((tab) => {
-          const active = tab.key === pageSection
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => router.push(tab.href)}
-              className={pitcherSubTabButtonClass}
-              style={{ color: active ? "#000000" : "#9ca3af" }}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-    )
-  }
+  const renderRouteTabBar = () => null
 
   const profileTableProps = {
     mergedBirthRaw,
