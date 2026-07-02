@@ -64,7 +64,6 @@ import { usePlayerGameLogDerived } from "@/hooks/usePlayerGameLogDerived"
 import { useBatterVsTeamCountPitchTypesDerived } from "@/hooks/useBatterVsTeamCountPitchTypesDerived"
 import {
   playerPagePath,
-  playerPageSectionHeading,
   type PlayerPageSection,
 } from "@/lib/playerSlug"
 import {
@@ -1426,30 +1425,43 @@ export function PlayerPageClient({
     return tabs
   }, [routePlayerSlug, showPitcherSeasonSuganoUi, showSeasonCareerTabs])
 
-  const renderRouteTabBar = () =>
-    showSeasonCareerTabs &&
-    statsTab === "season" &&
-    routeTabs.length > 0 && (
-      <div className="mt-4 mb-5 flex flex-wrap gap-2">
+  const renderRouteTabBar = () => {
+    if (!(showSeasonCareerTabs && statsTab === "season" && routeTabs.length > 0)) {
+      return null
+    }
+
+    const activeIdx = Math.max(0, routeTabs.findIndex((tab) => tab.key === pageSection))
+
+    return (
+      <div
+        className={pitcherCareerSubTabBarShellClass}
+        style={{ border: "1px solid #555555", backgroundColor: "#1a1a1a" }}
+      >
+        <div
+          className="absolute inset-y-0 left-0 transition-transform duration-200 ease-out"
+          style={{
+            backgroundColor: "#FFFF44",
+            width: seasonSubTabSliderWidthPct(routeTabs.length),
+            transform: seasonSubTabSliderTransform(activeIdx),
+          }}
+        />
         {routeTabs.map((tab) => {
           const active = tab.key === pageSection
           return (
-            <Link
+            <button
               key={tab.key}
-              href={tab.href}
-              className="rounded-sm border px-3 py-1.5 text-[11px] font-bold transition-colors"
-              style={{
-                borderColor: active ? "#FFFF44" : "#555555",
-                backgroundColor: active ? "#FFFF44" : "transparent",
-                color: active ? "#000000" : "#d1d5db",
-              }}
+              type="button"
+              onClick={() => router.push(tab.href)}
+              className={pitcherSubTabButtonClass}
+              style={{ color: active ? "#000000" : "#9ca3af" }}
             >
               {tab.label}
-            </Link>
+            </button>
           )
         })}
       </div>
     )
+  }
 
   const profileTableProps = {
     mergedBirthRaw,
@@ -1673,11 +1685,7 @@ export function PlayerPageClient({
                   fontWeight: 900,
                 }}
               >
-                {displayName
-                  ? statsTab === "career"
-                    ? displayName
-                    : playerPageSectionHeading(displayName, pageSection)
-                  : displayName}
+                {displayName}
               </h1>
               {(() => {
                 const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }
