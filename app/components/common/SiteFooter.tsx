@@ -7,7 +7,7 @@ const footerLinks = [
   { href: "/contact", label: "お問い合わせ" },
   { href: "/privacy-policy", label: "プライバシーポリシー" },
   { href: "/disclaimer", label: "免責事項" },
-  { href: "/sitemap", label: "サイトマップ" },
+  { href: "/site-map", label: "サイトマップ" },
 ] as const
 
 type SiteFooterProps = {

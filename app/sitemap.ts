@@ -13,7 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/standings",
     "/ranking",
     "/ranking/pitching",
-    "/sitemap",
+    "/site-map",
     "/about",
     "/contact",
     "/privacy-policy",
@@ -38,4 +38,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return items
 }
-

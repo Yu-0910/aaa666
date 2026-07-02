@@ -46,7 +46,7 @@ const playerLinks = getAllPlayerSlugEntries().slice(0, 60).map((entry) => ({
   pitchTypesHref: supportsPitchTypeRoute(entry) ? playerPagePath(entry.slug, "pitch-types") : null,
 }))
 
-export default function SitemapPage() {
+export default function SiteMapPage() {
   return (
     <StaticPageLayout
       title="サイトマップ"
