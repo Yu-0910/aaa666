@@ -181,7 +181,7 @@ export function PlayerPageClient({
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
   const BUILD_MARKER = "phase7-career-bat-all-players-20260528"
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [selectedYear, setSelectedYear] = useState(2025)
+  const [selectedYear, setSelectedYear] = useState(2026)
   /** 既定は今季。名簿照合前は showSeasonCareerTabs が偽でも通算は (!showSeasonCareerTabs || …) で出るため、career 固定より安全 */
   const [statsTab, setStatsTab] = useState<"season" | "career">("season")
   /** 投手「今季の成績」4タブ（PoC シェル）。将来のAPI連携で値を差し替え可能 */
@@ -740,6 +740,7 @@ export function PlayerPageClient({
     (isFabianPage ||
       isKikuchiPage ||
       rosterKnownFielder ||
+      (!numericPilotIdFromPath && Boolean(playerIdNormalized.trim())) ||
       (numericPilotIdFromPath &&
         rosterMainReady &&
         pitcherSeasonPocApiSettled &&
@@ -754,6 +755,7 @@ export function PlayerPageClient({
       isKikuchiPage ||
       isFabianPage ||
       numericPilotIdFromPath ||
+      Boolean(playerIdNormalized.trim()) ||
       /^\d+$/.test(String(seasonPilotPlayerId || "").trim()))
 
   useEffect(() => {
