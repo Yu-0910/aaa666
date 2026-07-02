@@ -1,8 +1,8 @@
 import { buildTopPageRoot } from "@/app/components/top/TopPageRoutePage"
 import { topPageMetadataFor } from "@/app/components/top/topPageRouteConfig"
 
-export const metadata = topPageMetadataFor("top")
+export const metadata = topPageMetadataFor("weekly")
 
-export default async function HomePage() {
-  return buildTopPageRoot("top")
+export default async function WeeklyStatsPage() {
+  return buildTopPageRoot("weekly")
 }

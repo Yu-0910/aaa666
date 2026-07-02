@@ -7,6 +7,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "node:url"
 import { compactPlayerName, isJapaneseNpbListedNameJa, rosterNameMatchKey } from "@/lib/playerNameNormalize"
+import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
 import { getProjectRoot } from "@/lib/projectRoot"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
@@ -185,6 +186,10 @@ export function findRosterPlayerByPublicId(raw: string): NpbRosterPlayer | null 
   if (/^\d+$/.test(id)) {
     const lookupId = resolveNpbPlayerIdFromPublicId(id)
     return roster.find((r) => r.npb_player_id === lookupId) ?? null
+  }
+  const slugEntry = resolvePlayerSlugEntry(id)
+  if (slugEntry) {
+    return roster.find((r) => r.npb_player_id === slugEntry.npbPlayerId) ?? null
   }
   const key = rosterNameMatchKey(id)
   const direct = roster.find((r) => rosterNameMatchKey(r.name_ja) === key)

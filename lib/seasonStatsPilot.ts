@@ -13,6 +13,7 @@ import {
 } from '@/lib/pilotPlayerConstants'
 import { createFielderPlaceholderTotalRow } from '@/lib/fielderSeasonPlaceholderRow'
 import { findRosterPlayerByPublicId } from '@/lib/npbRoster'
+import { resolvePlayerSlugEntry } from '@/lib/playerSlug.server'
 import {
   fetchDerivedJsonServer,
   readDerivedJsonLocalSync,
@@ -117,6 +118,11 @@ export function getYahooIdForPilot(playerIdOrName: string): string | null {
     const y = resolveYahooPilotIdForStats(rosterPlayer.npb_player_id)
     if (y) return y
   }
+  const slugEntry = resolvePlayerSlugEntry(trimmed)
+  if (slugEntry?.npbPlayerId) {
+    const y = resolveYahooPilotIdForStats(slugEntry.npbPlayerId)
+    if (y) return y
+  }
   return null
 }
 
@@ -131,6 +137,10 @@ export async function getYahooIdForPilotAsync(playerIdOrName: string): Promise<s
   const rosterPlayer = findRosterPlayerByPublicId(trimmed)
   if (rosterPlayer?.npb_player_id) {
     return resolveYahooPilotIdForStatsAsync(rosterPlayer.npb_player_id)
+  }
+  const slugEntry = resolvePlayerSlugEntry(trimmed)
+  if (slugEntry?.npbPlayerId) {
+    return resolveYahooPilotIdForStatsAsync(slugEntry.npbPlayerId)
   }
   return null
 }

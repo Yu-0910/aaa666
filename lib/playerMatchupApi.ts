@@ -4,6 +4,7 @@
  */
 
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 import { loadPlayerMatchupFromRepoAsync } from "@/lib/playerMatchupLoad"
 import type { PlayerMatchupDerived } from "@/lib/playerMatchupTypes"
@@ -14,6 +15,9 @@ export function resolveMatchupNpbPlayerId(decodedPublicId: string): string {
 
   const fromRoster = findRosterPlayerByPublicId(id)?.npb_player_id?.trim() ?? ""
   if (fromRoster) return fromRoster
+
+  const fromSlug = resolvePlayerSlugEntry(id)?.npbPlayerId?.trim() ?? ""
+  if (fromSlug) return fromSlug
 
   const mapped = resolveNpbPlayerIdFromPublicId(id)?.trim() ?? ""
   if (mapped) return mapped

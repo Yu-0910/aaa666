@@ -5,6 +5,7 @@ import Link from "next/link"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
+import { playerPageHref } from "@/lib/playerPageHref"
 import type { PlayerMatchupDerived, PlayerMatchupOpponentRow } from "@/lib/playerMatchupTypes"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 import {
@@ -167,7 +168,11 @@ export function PlayerPageMatchupBody({
                       style={{ backgroundColor: "#1a1a1a" }}
                     >
                       <Link
-                        href={`/players/${encodeURIComponent(row.opponentPublicId)}`}
+                        href={playerPageHref({
+                          npbPlayerId: row.opponentNpbId,
+                          playerId: row.opponentPublicId,
+                          name: matchupOpponentDisplayNameJa(row.opponentName),
+                        })}
                         className="hover:text-[#FFFF44] transition-colors"
                       >
                         {matchupOpponentDisplayNameJa(row.opponentName)}

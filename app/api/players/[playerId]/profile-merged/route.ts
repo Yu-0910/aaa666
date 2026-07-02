@@ -1,4 +1,5 @@
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import {
   decodePlayerPathSegment,
   jsonDerivedResponse,
@@ -74,10 +75,11 @@ export async function GET(
     const { playerId } = context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const rosterPlayer = findRosterPlayerByPublicId(decoded)
+    const slugEntry = resolvePlayerSlugEntry(decoded)
     const resolvedNpbId = /^\d+$/.test(decoded)
       ? resolveNpbPlayerIdFromPublicId(decoded)
       : null
-    const npbId = rosterPlayer?.npb_player_id ?? resolvedNpbId ?? decoded
+    const npbId = rosterPlayer?.npb_player_id ?? slugEntry?.npbPlayerId ?? resolvedNpbId ?? decoded
     const faSeasonYear = yearFromRequest(request)
     const payload = await readMergedByNpbId(npbId)
     if (!payload) {

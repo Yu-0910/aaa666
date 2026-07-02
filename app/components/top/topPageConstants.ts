@@ -514,13 +514,7 @@ export const standingsPL: StandingRow[] = [
   },
 ]
 
-export const mainTabs = [
-  { id: 0, label: "TOP", type: "top" },
-  { id: 1, label: "今週", type: "weekly" },
-  { id: 2, label: "予想投手", type: "probables" },
-  { id: 3, label: "最新情報", type: "articles" },
-  { id: 4, label: "順位表", type: "standings_tab" },
-] as const
+export { TOP_PAGE_TABS as mainTabs } from "@/app/components/top/topPageRouteConfig"
 
 export const subTabs = [
   { id: 0, label: "セ個人成績", type: "combined", league: "CL" },

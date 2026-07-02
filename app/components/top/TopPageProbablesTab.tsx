@@ -157,6 +157,10 @@ function formatDateLabel(dateJst: string): string {
   return `${parseInt(m[2]!, 10)}/${parseInt(m[3]!, 10)}${wd ? ` ${wd}` : ""}`
 }
 
+function firstDisplayedGameDate(card: TopProbablesCard): string {
+  return card.games.map((g) => g.dateJst).sort()[0] ?? card.seriesStart
+}
+
 const WEEKDAY_TEXT_CLASS = "text-[13px] font-semibold text-white"
 
 function opponentBatterNameTextClass(isMobile: boolean, textScale = 1): string {
@@ -369,7 +373,12 @@ function OpponentBatterTable({
               >
                 {batter.opponentPublicId ? (
                   <Link
-                    href={`/players/${encodeURIComponent(batter.opponentPublicId)}`}
+                    href={playerPageHref({
+                      playerId: batter.opponentPublicId,
+                      npbPlayerId: batter.opponentNpbId ?? undefined,
+                      name: batter.nameJa,
+                      romanName: batter.romanName ?? undefined,
+                    })}
                     className="hover:text-[#FFFF44] transition-colors"
                   >
                     {displayName}
@@ -540,7 +549,12 @@ function OpponentBatterRows({
         const rankLabel = `${index + 1}.\u3000`
         const nameContent = b.opponentPublicId ? (
           <Link
-            href={`/players/${encodeURIComponent(b.opponentPublicId)}`}
+            href={playerPageHref({
+              playerId: b.opponentPublicId,
+              npbPlayerId: b.opponentNpbId ?? undefined,
+              name: b.nameJa,
+              romanName: b.romanName ?? undefined,
+            })}
             className={`min-w-0 truncate hover:text-[#ffff44] transition-colors ${opponentBatterNameClass}`}
             style={opponentBatterNameStyle}
           >
@@ -945,9 +959,15 @@ export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) 
     )
   }
 
+  const sortedCards = [...data.cards].sort((a, b) => {
+    const dateCompare = firstDisplayedGameDate(a).localeCompare(firstDisplayedGameDate(b))
+    if (dateCompare !== 0) return dateCompare
+    return a.cardKey.localeCompare(b.cardKey)
+  })
+
   return (
     <div className="space-y-6">
-      {data.cards.map((card) => (
+      {sortedCards.map((card) => (
         <ProbablesCard
           key={`${card.cardKey}-${card.seriesStart}`}
           card={card}

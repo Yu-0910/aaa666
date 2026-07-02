@@ -9,6 +9,7 @@ import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
 import { mainTabs, dummyArticles } from "@/app/components/top/topPageConstants"
+import { type TopPageTabId } from "@/app/components/top/topPageRouteConfig"
 import { usesTopBattingModernLayout } from "@/lib/topPageBatting2025Grid"
 import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabContent"
 import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabContent"
@@ -21,6 +22,7 @@ export type TopPageClientProps = {
   layout: TopPageLayoutMode
   initialYear: number
   articlesMode: "rss" | "dummy"
+  activeMainTab: TopPageTabId
   /** 2026 など: サーバーで読んだ TOP タブ用データ */
   seasonInitial?: SeasonTabPayload | null
   /** 2026: サーバーで読んだ今週タブ用データ */
@@ -31,11 +33,11 @@ export function TopPageClient({
   layout,
   initialYear,
   articlesMode,
+  activeMainTab,
   seasonInitial = null,
   weeklyInitial = null,
 }: TopPageClientProps) {
   const isMobile = layout === "mobile"
-  const [activeMainTab, setActiveMainTab] = useState(0)
   const [selectedYear, setSelectedYear] = useState(initialYear)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isWeeklyMainTab = activeMainTab === 1
@@ -59,27 +61,27 @@ export function TopPageClient({
   const mainTabButtons = (
     <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-black" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-black"}>
       {mainTabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => setActiveMainTab(tab.id)}
+        <Link
+          key={tab.tabId}
+          href={tab.href}
           className={`relative overflow-hidden group transition-all duration-200 flex items-center justify-center ${
-            activeMainTab === tab.id ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
+            activeMainTab === tab.tabId ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
           } border border-[#555] ${isMobile ? "py-1.5 px-3 text-xs" : "py-2 px-3 text-sm"} font-semibold whitespace-nowrap`}
+          aria-current={activeMainTab === tab.tabId ? "page" : undefined}
         >
           {tab.label}
-        </button>
+        </Link>
       ))}
     </div>
   )
 
-  const prefetchSeasonTab = selectedYear === 2026 && seasonInitial != null
-  const prefetchWeeklyTab = selectedYear === 2026 && weeklyInitial != null
+  const prefetchSeasonTab = activeMainTab === 0 && selectedYear === 2026 && seasonInitial != null
+  const prefetchWeeklyTab = activeMainTab === 1 && selectedYear === 2026 && weeklyInitial != null
 
   const tabContentInner = (
     <>
-      {(activeMainTab === 0 || prefetchSeasonTab) && (
-        <div className={activeMainTab !== 0 ? "hidden" : undefined} aria-hidden={activeMainTab !== 0}>
+      {activeMainTab === 0 && (
+        <div>
           <TopPageSeasonTabContent
             year={selectedYear}
             layout={layout}
@@ -87,8 +89,8 @@ export function TopPageClient({
           />
         </div>
       )}
-      {(activeMainTab === 1 || prefetchWeeklyTab) && (
-        <div className={activeMainTab !== 1 ? "hidden" : undefined} aria-hidden={activeMainTab !== 1}>
+      {activeMainTab === 1 && (
+        <div>
           <TopPageWeeklyTabContent
             year={selectedYear}
             layout={layout}
@@ -175,7 +177,9 @@ export function TopPageClient({
               <Link href={pitchingRankingHref} className="hover:text-[#ffff44] transition-colors">
                 投手ランキング
               </Link>
-              <span className="text-gray-500 cursor-not-allowed">ドラフト情報</span>
+              <span className="text-gray-500 cursor-not-allowed">
+                ドラフト情報
+              </span>
             </nav>
             <select
               value={selectedYear}

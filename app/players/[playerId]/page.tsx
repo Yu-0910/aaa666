@@ -1,28 +1,37 @@
-"use client"
+import type { Metadata } from "next"
+import PlayerPageRoot from "./PlayerPageRoot"
+import { metadataForResolvedPlayerRoute, resolvePlayerRouteOrRedirect } from "./playerRouteServer"
 
-import dynamic from "next/dynamic"
-import { useViewportLayout } from "@/hooks/useIsDesktop"
-import { SectionLoadingSpinner } from "@/components/ui/spinner"
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  /** `playerId` is the existing segment name. Runtime value is a slug or legacy player segment. */
+  params: Promise<{ playerId: string }> | { playerId: string }
+  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>
+}): Promise<Metadata> {
+  const resolvedParams = params instanceof Promise ? await params : params
+  const resolvedSearch = searchParams instanceof Promise ? await searchParams : searchParams
+  const resolved = resolvePlayerRouteOrRedirect({
+    playerId: resolvedParams.playerId,
+    searchParams: resolvedSearch,
+  })
+  return metadataForResolvedPlayerRoute(resolved)
+}
 
-const PlayerPageClient = dynamic(
-  () => import("./PlayerPageClient").then((mod) => ({ default: mod.PlayerPageClient })),
-  {
-    loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <SectionLoadingSpinner />
-      </div>
-    ),
-    ssr: false,
-  },
-)
-
-export default function PlayerPage() {
-  const { isDesktop, forceMobile } = useViewportLayout()
-
-  return (
-    <PlayerPageClient
-      layout={isDesktop ? "desktop" : "mobile"}
-      forceMobile={forceMobile}
-    />
-  )
+export default async function PlayerPage({
+  params,
+  searchParams,
+}: {
+  /** `playerId` is the existing segment name. Runtime value is a slug or legacy player segment. */
+  params: Promise<{ playerId: string }> | { playerId: string }
+  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>
+}) {
+  const resolvedParams = params instanceof Promise ? await params : params
+  const resolvedSearch = searchParams instanceof Promise ? await searchParams : searchParams
+  const resolved = resolvePlayerRouteOrRedirect({
+    playerId: resolvedParams.playerId,
+    searchParams: resolvedSearch,
+  })
+  return <PlayerPageRoot pageSection={resolved.pageSection} />
 }

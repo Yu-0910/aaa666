@@ -60,7 +60,13 @@ import {
   useScaleLayoutCollapse,
 } from "@/hooks/useScaleLayoutCollapse"
 import { usePlayerMatchupDerived } from "@/hooks/usePlayerMatchupDerived"
+import { usePlayerGameLogDerived } from "@/hooks/usePlayerGameLogDerived"
 import { useBatterVsTeamCountPitchTypesDerived } from "@/hooks/useBatterVsTeamCountPitchTypesDerived"
+import {
+  playerPagePath,
+  playerPageSectionHeading,
+  type PlayerPageSection,
+} from "@/lib/playerSlug"
 import {
   activeSeasonSubTabIndex,
   buildFielderSeasonSubTabs,
@@ -127,6 +133,7 @@ import { PlayerPageCatcherSeasonBody } from "./PlayerPageCatcherSeasonBody"
 import { PlayerPageCareerSection } from "./PlayerPageCareerSection"
 import { PlayerPageMatchupBody } from "./PlayerPageMatchupBody"
 import { PlayerPageFielderVsTeamPitchBody } from "./PlayerPageFielderVsTeamPitchBody"
+import { PlayerPageGameLogBody } from "./PlayerPageGameLogBody"
 import { PlayerPageProfileTableBlock } from "./PlayerPageProfileTableBlock"
 
 /** 通算成績行から在籍年数が最多の球団キー（team / team_code）を返す */
@@ -164,9 +171,11 @@ const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieCha
 export function PlayerPageClient({
   layout,
   forceMobile,
+  pageSection,
 }: {
   layout: ViewportLayout
   forceMobile?: boolean
+  pageSection: PlayerPageSection
 }) {
   const isMobile = layout === "mobile"
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
@@ -268,6 +277,8 @@ export function PlayerPageClient({
       return playerSegmentCore.normalize("NFC")
     }
   })()
+  const routePlayerSlug = playerIdNormalized
+  const showLegacySeasonSubTabs = false
 
   /** 旧 player-N + ?roman= URL → /players/{npb_id} へ統一 */
   useEffect(() => {
@@ -838,6 +849,25 @@ export function PlayerPageClient({
     setPitchTypeVsHandPanels(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
   }, [pitcherSeasonPocPayload?.npbPlayerId])
 
+  useEffect(() => {
+    if (pageSection === "pitch-types") {
+      setPitcherSeasonSubTab("pitch")
+      return
+    }
+    if (pageSection === "splits") {
+      setPitcherSeasonSubTab("situation")
+      setKikuchiSeasonDetailTab("situation")
+      return
+    }
+    setPitcherSeasonSubTab("basic")
+    setKikuchiSeasonDetailTab("basic")
+  }, [pageSection, playerIdNormalized])
+
+  const playerGameLogDerived = usePlayerGameLogDerived({
+    enabled: showSeasonCareerTabs && statsTab === "season" && pageSection === "game-log",
+    playerId: seasonPilotPlayerId,
+  })
+
   const togglePitchTypeVsHandPanel = useCallback(
     (section: "paRound" | "count", side: "left" | "right") => {
       setPitchTypeVsHandPanels((prev) => {
@@ -1171,6 +1201,7 @@ export function PlayerPageClient({
 
   /** 投手・野手の今季: プロフィール表の下でサブタブをヘッダー下に固定 */
   const showSeasonSubTabPinLayout =
+    showLegacySeasonSubTabs &&
     showSeasonCareerTabs &&
     statsTab === "season" &&
     (showPitcherSeasonSuganoUi || showFielderSeasonPilotUi)
@@ -1372,6 +1403,26 @@ export function PlayerPageClient({
       ))}
     </div>
   )
+
+  const routeTabs = useMemo(() => {
+    if (!routePlayerSlug || !showSeasonCareerTabs) return []
+    const tabs: Array<{ key: PlayerPageSection; label: string; href: string }> = [
+      { key: "basic", label: "基本成績", href: playerPagePath(routePlayerSlug, "basic") },
+      { key: "advanced", label: "詳細成績", href: playerPagePath(routePlayerSlug, "advanced") },
+    ]
+    if (showPitcherSeasonSuganoUi) {
+      tabs.push({
+        key: "pitch-types",
+        label: "球種情報",
+        href: playerPagePath(routePlayerSlug, "pitch-types"),
+      })
+    }
+    tabs.push(
+      { key: "splits", label: "状況別成績", href: playerPagePath(routePlayerSlug, "splits") },
+      { key: "game-log", label: "試合別成績", href: playerPagePath(routePlayerSlug, "game-log") },
+    )
+    return tabs
+  }, [routePlayerSlug, showPitcherSeasonSuganoUi, showSeasonCareerTabs])
 
   const profileTableProps = {
     mergedBirthRaw,
@@ -1595,7 +1646,11 @@ export function PlayerPageClient({
                   fontWeight: 900,
                 }}
               >
-                {displayName}
+                {displayName
+                  ? statsTab === "career"
+                    ? displayName
+                    : playerPageSectionHeading(displayName, pageSection)
+                  : displayName}
               </h1>
               {(() => {
                 const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }
@@ -1656,6 +1711,27 @@ export function PlayerPageClient({
               </button>
             </div>
           )}
+          {showSeasonCareerTabs && statsTab === "season" && routeTabs.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {routeTabs.map((tab) => {
+                const active = tab.key === pageSection
+                return (
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
+                    className="rounded-sm border px-3 py-1.5 text-[11px] font-bold transition-colors"
+                    style={{
+                      borderColor: active ? "#FFFF44" : "#555555",
+                      backgroundColor: active ? "#FFFF44" : "transparent",
+                      color: active ? "#000000" : "#d1d5db",
+                    }}
+                  >
+                    {tab.label}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Profile Table */}
@@ -1707,7 +1783,8 @@ export function PlayerPageClient({
                     ref={pilotTabsScaleCollapse.ref}
                     style={pilotScaledBlockStyle(pilotTabsScaleCollapse)}
                   >
-                    {showPitcherSeasonSuganoUi
+                    {showLegacySeasonSubTabs &&
+                    (showPitcherSeasonSuganoUi
                       ? renderPitcherSeasonSubTabBar(
                           true,
                           pitcherStickySubTabBarShellClass,
@@ -1716,7 +1793,7 @@ export function PlayerPageClient({
                       : renderFielderSeasonSubTabBar(
                           fielderStickySubTabBarShellClass,
                           seasonSubTabRail.pinTargetRef,
-                        )}
+                        ))}
                   </div>
                 </div>
               </div>
@@ -1724,7 +1801,13 @@ export function PlayerPageClient({
                 ref={pilotContentScaleCollapse.ref}
                 style={pilotScaledBlockStyle(pilotContentScaleCollapse)}
               >
-                {showPitcherSeasonSuganoUi
+                {pageSection === "game-log" ? (
+                  <PlayerPageGameLogBody
+                    payload={playerGameLogDerived.payload}
+                    loading={playerGameLogDerived.loading}
+                    settled={playerGameLogDerived.settled}
+                  />
+                ) : showPitcherSeasonSuganoUi
                   ? pitcherSeasonSubTab === "matchup"
                     ? renderPitcherSeasonMatchupBody()
                     : renderPitcherSeasonBody()
@@ -1746,6 +1829,7 @@ export function PlayerPageClient({
               {showSeasonCareerTabs &&
                 statsTab === "season" &&
                 showPitcherSeasonSuganoUi &&
+                showLegacySeasonSubTabs &&
                 renderPitcherSeasonSubTabBar(true)}
               {showSeasonCareerTabs &&
                 statsTab === "career" &&
@@ -1756,9 +1840,17 @@ export function PlayerPageClient({
               {showSeasonCareerTabs &&
                 statsTab === "season" &&
                 showPitcherSeasonSuganoUi &&
-                (pitcherSeasonSubTab === "matchup"
-                  ? renderPitcherSeasonMatchupBody()
-                  : renderPitcherSeasonBody())}
+                (pageSection === "game-log" ? (
+                  <PlayerPageGameLogBody
+                    payload={playerGameLogDerived.payload}
+                    loading={playerGameLogDerived.loading}
+                    settled={playerGameLogDerived.settled}
+                  />
+                ) : pitcherSeasonSubTab === "matchup" ? (
+                  renderPitcherSeasonMatchupBody()
+                ) : (
+                  renderPitcherSeasonBody()
+                ))}
             </>
           )}
           {/* 名簿野手: 今季サブタブ（プロフィール表・名簿ブロックと同じ幅に揃える） */}
@@ -1767,6 +1859,7 @@ export function PlayerPageClient({
             !showPitcherSeasonSuganoUi &&
             showFielderSeasonPilotUi &&
             !showSeasonSubTabPinLayout &&
+            showLegacySeasonSubTabs &&
             renderFielderSeasonSubTabBar()}
           {showSeasonCareerTabs &&
             statsTab === "career" &&
@@ -1787,7 +1880,15 @@ export function PlayerPageClient({
             !showPitcherSeasonSuganoUi &&
             showFielderSeasonPilotUi &&
             !showSeasonSubTabPinLayout &&
-            renderFielderSeasonBody()}
+            (pageSection === "game-log" ? (
+              <PlayerPageGameLogBody
+                payload={playerGameLogDerived.payload}
+                loading={playerGameLogDerived.loading}
+                settled={playerGameLogDerived.settled}
+              />
+            ) : (
+              renderFielderSeasonBody()
+            ))}
         </div>
 
         {pitcherCareerPitchingTightLayout && (
