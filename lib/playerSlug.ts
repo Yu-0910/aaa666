@@ -2,6 +2,11 @@ import { CURRENT_ROSTER_PLAYER_SLUGS } from "@/lib/currentRosterPlayerSlugs"
 
 export type PlayerPageSection =
   | "basic"
+  | "pitch"
+  | "situation"
+  | "matchup"
+  | "vs-team"
+  | "catcher"
   | "advanced"
   | "splits"
   | "game-log"
@@ -14,7 +19,7 @@ export type PlayerLinkIds = {
   romanName?: string
 }
 
-export function slugifyPlayerRomanName(romanName: string): string {
+function romanSlugTokens(romanName: string): string[] {
   const normalized = String(romanName ?? "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -22,13 +27,29 @@ export function slugifyPlayerRomanName(romanName: string): string {
     .replace(/[^A-Za-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .toLowerCase()
-  if (!normalized) return ""
+  if (!normalized) return []
   const tokens = normalized.split(" ").filter(Boolean)
-  if (tokens.length === 0) return ""
-  if (tokens.length === 1) return tokens[0]!
+  if (tokens.length === 0) return []
+  if (tokens.length === 1) return [tokens[0]!]
   const [family, ...givenParts] = tokens
-  return [...givenParts, family].join("-")
+  return [...givenParts, family]
+}
+
+export function slugifyPlayerRomanName(romanName: string): string {
+  const tokens = romanSlugTokens(romanName)
+  if (tokens.length === 0) return ""
+  return tokens.map((token) => token.toLowerCase()).join("-")
+}
+
+export function formatPlayerRomanSlug(romanName: string): string {
+  const tokens = romanSlugTokens(romanName)
+  if (tokens.length === 0) return ""
+  return tokens
+    .map((token) => {
+      const lower = token.toLowerCase()
+      return `${lower.slice(0, 1).toUpperCase()}${lower.slice(1)}`
+    })
+    .join("-")
 }
 
 export function playerPagePath(slug: string, section: PlayerPageSection = "basic"): string {
@@ -82,6 +103,16 @@ export function resolvePlayerPageSectionFromLegacyTab(tab: string | null | undef
 
 export function playerPageSectionHeading(nameJa: string, section: PlayerPageSection): string {
   switch (section) {
+    case "pitch":
+      return `${nameJa} 球種情報 2026`
+    case "situation":
+      return `${nameJa} 状況別成績 2026`
+    case "matchup":
+      return `${nameJa} 対戦成績 2026`
+    case "vs-team":
+      return `${nameJa} 球団別成績 2026`
+    case "catcher":
+      return `${nameJa} 捕手成績 2026`
     case "advanced":
       return `${nameJa} 詳細成績 2026`
     case "splits":
@@ -97,6 +128,16 @@ export function playerPageSectionHeading(nameJa: string, section: PlayerPageSect
 
 export function playerPageSectionTitle(nameJa: string, section: PlayerPageSection): string {
   switch (section) {
+    case "pitch":
+      return `${nameJa} 球種情報 2026 | Short-Stop`
+    case "situation":
+      return `${nameJa} 状況別成績 2026 | Short-Stop`
+    case "matchup":
+      return `${nameJa} 対戦成績 2026 | Short-Stop`
+    case "vs-team":
+      return `${nameJa} 球団別成績 2026 | Short-Stop`
+    case "catcher":
+      return `${nameJa} 捕手成績 2026 | Short-Stop`
     case "advanced":
       return `${nameJa} 詳細成績 2026 | Short-Stop`
     case "splits":
@@ -112,6 +153,16 @@ export function playerPageSectionTitle(nameJa: string, section: PlayerPageSectio
 
 export function playerPageSectionDescription(nameJa: string, section: PlayerPageSection): string {
   switch (section) {
+    case "pitch":
+      return `${nameJa}の2026年球種情報を掲載。球種割合、平均球速、球種別成績、空振り率などを確認できます。`
+    case "situation":
+      return `${nameJa}の2026年状況別成績を掲載。対右、対左、得点圏、月別成績などを確認できます。`
+    case "matchup":
+      return `${nameJa}の2026年対戦成績を掲載。対戦相手別の成績を確認できます。`
+    case "vs-team":
+      return `${nameJa}の2026年球団別成績を掲載。相手球団ごとの成績を確認できます。`
+    case "catcher":
+      return `${nameJa}の2026年捕手成績を掲載。捕手関連の派生成績を確認できます。`
     case "advanced":
       return `${nameJa}の2026年詳細成績を掲載。OPS、出塁率、長打率、K-BB%、WHIPなどの指標を確認できます。`
     case "splits":

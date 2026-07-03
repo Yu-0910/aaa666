@@ -3,6 +3,11 @@ import Link from "next/link"
 import StaticPageLayout from "@/app/components/common/StaticPageLayout"
 import { getAllPlayerSlugEntries, supportsPitchTypeRoute } from "@/lib/playerSlug.server"
 import { playerPagePath } from "@/lib/playerSlug"
+import { playerPageTabUrlPath } from "@/lib/playerPageTabUrlPhase2"
+import {
+  isCatcherRegistrationPosition,
+  isPitcherRegistrationPosition,
+} from "@/lib/rosterPitcher"
 import { TEAM_PAGE_DRAWER_NAV } from "@/lib/teamPage/teamPageNavLinks"
 import { teamPageHubHref } from "@/lib/teamPage/teamPageHref"
 
@@ -40,10 +45,15 @@ const teamLinks = [...TEAM_PAGE_DRAWER_NAV.CL, ...TEAM_PAGE_DRAWER_NAV.PL].map((
 const playerLinks = getAllPlayerSlugEntries().slice(0, 60).map((entry) => ({
   label: `${entry.nameJa} 成績`,
   href: playerPagePath(entry.slug),
-  advancedHref: playerPagePath(entry.slug, "advanced"),
-  splitsHref: playerPagePath(entry.slug, "splits"),
-  gameLogHref: playerPagePath(entry.slug, "game-log"),
-  pitchTypesHref: supportsPitchTypeRoute(entry) ? playerPagePath(entry.slug, "pitch-types") : null,
+  situationHref: playerPageTabUrlPath(entry.slug, "situation"),
+  matchupHref: playerPageTabUrlPath(entry.slug, "matchup"),
+  vsTeamHref: isPitcherRegistrationPosition(entry.position, { rosterNpbPlayerId: entry.npbPlayerId })
+    ? null
+    : playerPageTabUrlPath(entry.slug, "vs-team"),
+  catcherHref: isCatcherRegistrationPosition(entry.position)
+    ? playerPageTabUrlPath(entry.slug, "catcher")
+    : null,
+  pitchTypesHref: supportsPitchTypeRoute(entry) ? playerPageTabUrlPath(entry.slug, "pitch") : null,
 }))
 
 export default function SiteMapPage() {
@@ -87,15 +97,22 @@ export default function SiteMapPage() {
               <Link href={link.href} className="block text-gray-200 transition-colors hover:text-[#ffff44]">
                 {link.label}
               </Link>
-              <Link href={link.advancedHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
-                詳細成績
-              </Link>
-              <Link href={link.splitsHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
+              <Link href={link.situationHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
                 状況別成績
               </Link>
-              <Link href={link.gameLogHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
-                試合別成績
+              <Link href={link.matchupHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
+                対戦成績
               </Link>
+              {link.vsTeamHref ? (
+                <Link href={link.vsTeamHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
+                  球団別
+                </Link>
+              ) : null}
+              {link.catcherHref ? (
+                <Link href={link.catcherHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
+                  捕手成績
+                </Link>
+              ) : null}
               {link.pitchTypesHref ? (
                 <Link href={link.pitchTypesHref} className="block text-sm text-gray-400 transition-colors hover:text-white">
                   球種情報

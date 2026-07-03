@@ -1,18 +1,26 @@
 import type { Metadata } from "next"
 import { permanentRedirect } from "next/navigation"
 import {
-  playerPagePath,
   playerPageSectionDescription,
   playerPageSectionHeading,
   playerPageSectionTitle,
-  resolvePlayerPageSectionFromLegacyTab,
   type PlayerPageSection,
 } from "@/lib/playerSlug"
 import {
+  isPlayerPageTabUrlSegmentSupportedForAudience,
+  playerPageTabUrlPath,
+  resolvePlayerPageTabUrlSegment,
+  resolvePlayerPageTabUrlSegmentFromLegacy,
+  type PlayerPageTabUrlSegment,
+} from "@/lib/playerPageTabUrlPhase2"
+import {
   resolvePlayerSlugEntry,
-  supportsPitchTypeRoute,
   type PlayerSlugEntry,
 } from "@/lib/playerSlug.server"
+import {
+  isCatcherRegistrationPosition,
+  isPitcherRegistrationPosition,
+} from "@/lib/rosterPitcher"
 
 export type PlayerRouteResolved = {
   entry: PlayerSlugEntry
@@ -41,36 +49,42 @@ function advancedPageUsesDedicatedContent(_resolved: PlayerRouteResolved): boole
   return false
 }
 
-function normalizeRestSection(rest: string[] | undefined): PlayerPageSection {
-  const section = String(rest?.[rest.length - 1] ?? "").trim().toLowerCase()
-  switch (section) {
-    case "":
-      return "basic"
-    case "advanced":
-      return "advanced"
-    case "splits":
-      return "splits"
-    case "game-log":
-      return "game-log"
-    case "pitch-types":
-      return "pitch-types"
-    default:
-      return "basic"
+function resolveAudienceForEntry(entry: PlayerSlugEntry): "pitcher" | "fielder" | "catcher" {
+  if (isPitcherRegistrationPosition(entry.position, { rosterNpbPlayerId: entry.npbPlayerId })) {
+    return "pitcher"
   }
+  if (isCatcherRegistrationPosition(entry.position)) {
+    return "catcher"
+  }
+  return "fielder"
+}
+
+function normalizeCanonicalSegmentForEntry(
+  entry: PlayerSlugEntry,
+  segment: PlayerPageTabUrlSegment,
+): PlayerPageTabUrlSegment {
+  return isPlayerPageTabUrlSegmentSupportedForAudience(resolveAudienceForEntry(entry), segment)
+    ? segment
+    : "basic"
 }
 
 function redirectIfNeeded(
   rawPlayerId: string,
   entry: PlayerSlugEntry,
   pageSection: PlayerPageSection,
+  rest?: string[],
   searchParams?: Record<string, string | string[] | undefined>,
 ): void {
   const currentTab = String(searchParams?.tab ?? "").trim()
-  const targetSection =
-    currentTab && pageSection === "basic"
-      ? resolvePlayerPageSectionFromLegacyTab(currentTab)
-      : pageSection
-  const targetPath = playerPagePath(entry.slug, targetSection)
+  const restKey = String(rest?.[rest.length - 1] ?? "").trim().toLowerCase()
+  const fromLegacyQuery = currentTab && pageSection === "basic"
+  const targetSectionRaw = fromLegacyQuery
+    ? resolvePlayerPageTabUrlSegmentFromLegacy(currentTab)
+    : restKey
+      ? resolvePlayerPageTabUrlSegmentFromLegacy(restKey)
+      : (pageSection as PlayerPageTabUrlSegment)
+  const targetSection = normalizeCanonicalSegmentForEntry(entry, targetSectionRaw)
+  const targetPath = playerPageTabUrlPath(entry.slug, targetSection)
   const search = new URLSearchParams()
   let droppedLegacyParam = false
   for (const [key, value] of Object.entries(searchParams ?? {})) {
@@ -92,7 +106,12 @@ function redirectIfNeeded(
   }
   const isCanonicalSegment = rawClean === entry.slug
   const hasLegacySearchTab = Boolean(currentTab)
-  if (isCanonicalSegment && !hasLegacySearchTab && !droppedLegacyParam) return
+  const hasRest = restKey.length > 0
+  const isCanonicalRest = !hasRest || restKey === targetSection
+  const usedLegacyRest = hasRest && resolvePlayerPageTabUrlSegment(rest) !== restKey
+  if (isCanonicalSegment && isCanonicalRest && !hasLegacySearchTab && !droppedLegacyParam && !usedLegacyRest) {
+    return
+  }
   const suffix = search.toString()
   permanentRedirect(suffix ? `${targetPath}?${suffix}` : targetPath)
 }
@@ -106,18 +125,18 @@ export function resolvePlayerRouteOrRedirect(options: {
   const { playerId, rest, searchParams } = options
   const legacyRoot = String(playerId ?? "").trim()
   const legacyAlias = String(rest?.[0] ?? "").trim()
-  const section = normalizeRestSection(rest)
+  const section = resolvePlayerPageTabUrlSegment(rest)
   const entry =
     resolvePlayerSlugEntry(legacyRoot) ??
     resolvePlayerSlugEntry(legacyAlias) ??
     buildFallbackEntry(legacyRoot || legacyAlias)
-  if (entry.npbPlayerId && section === "pitch-types" && !supportsPitchTypeRoute(entry)) {
-    permanentRedirect(playerPagePath(entry.slug))
-  }
+  const normalizedSection = entry.npbPlayerId
+    ? normalizeCanonicalSegmentForEntry(entry, section)
+    : section
   if (entry.npbPlayerId) {
-    redirectIfNeeded(legacyRoot || legacyAlias, entry, section, searchParams)
+    redirectIfNeeded(legacyRoot || legacyAlias, entry, normalizedSection, rest, searchParams)
   }
-  return { entry, pageSection: section }
+  return { entry, pageSection: normalizedSection }
 }
 
 export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): Metadata {
@@ -128,7 +147,10 @@ export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): M
     title: playerPageSectionTitle(resolved.entry.nameJa, resolved.pageSection),
     description: playerPageSectionDescription(resolved.entry.nameJa, resolved.pageSection),
     alternates: {
-      canonical: `https://short-stop.jp${playerPagePath(resolved.entry.slug, canonicalSection)}`,
+      canonical: `https://short-stop.jp${playerPageTabUrlPath(
+        resolved.entry.slug,
+        canonicalSection as PlayerPageTabUrlSegment,
+      )}`,
     },
     robots: advancedIsDuplicate
       ? {

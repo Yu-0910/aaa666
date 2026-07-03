@@ -67,6 +67,14 @@ import {
   type PlayerPageSection,
 } from "@/lib/playerSlug"
 import {
+  normalizePlayerPageSectionForTabSync,
+  playerPageTabUrlPath,
+  resolveFielderSeasonDetailTabFromUrlSegment,
+  resolvePitcherSeasonSubTabFromUrlSegment,
+  resolveUrlSegmentFromFielderSeasonDetailTab,
+  resolveUrlSegmentFromPitcherSeasonSubTab,
+} from "@/lib/playerPageTabUrlPhase2"
+import {
   activeSeasonSubTabIndex,
   buildFielderSeasonSubTabs,
   buildPitcherSeasonSubTabs,
@@ -85,7 +93,7 @@ import {
   buildCareerHighPitchingFromRows,
   formatCareerHighPitchingHeading,
 } from "@/lib/playerCareerHighPitching"
-import { DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327, resolvePitcherPocYahooGameId } from "@/lib/yahooGame/pitcherPocDefaults"
+import { resolvePitcherPocYahooGameId } from "@/lib/yahooGame/pitcherPocDefaults"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
@@ -171,10 +179,14 @@ export function PlayerPageClient({
   layout,
   forceMobile,
   pageSection,
+  initialDisplayName,
+  initialDisplayRomanName,
 }: {
   layout: ViewportLayout
   forceMobile?: boolean
   pageSection: PlayerPageSection
+  initialDisplayName: string
+  initialDisplayRomanName?: string | null
 }) {
   const isMobile = layout === "mobile"
   const tb = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
@@ -200,8 +212,10 @@ export function PlayerPageClient({
     useState<FielderSeasonDetailTab>("basic")
   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
-  const [displayName, setDisplayName] = useState("")
-  const [displayRomanName, setDisplayRomanName] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState(() => String(initialDisplayName ?? "").trim())
+  const [displayRomanName, setDisplayRomanName] = useState<string | null>(
+    () => initialDisplayRomanName?.trim() || null,
+  )
   const [profileMerged, setProfileMerged] = useState<ProfileMergedPayload>(null)
   const [profileMergedSettled, setProfileMergedSettled] = useState(false)
   /** _data/npb_roster_2026.csv 由来（API・フル英字）。名簿にいる選手は playerRomanNames より優先 */
@@ -331,9 +345,9 @@ export function PlayerPageClient({
   useLayoutEffect(() => {
     setRosterMainReady(false)
     if (playerIdNormalized) {
-      setDisplayName((prev) => prev || playerIdNormalized)
+      setDisplayName((prev) => prev || initialDisplayName || playerIdNormalized)
     }
-  }, [playerIdNormalized])
+  }, [initialDisplayName, playerIdNormalized])
 
   useEffect(() => {
     let cancelled = false
@@ -518,13 +532,16 @@ export function PlayerPageClient({
         setDisplayName(nameFromQuery)
       }
     } else {
-      const pathParts = window.location.pathname.split("/").filter(Boolean)
-      const playerIdFromPath = pathParts[pathParts.length - 1]
-      if (playerIdFromPath && playerIdFromPath !== "players") {
-        try {
-          setDisplayName(decodeURIComponent(playerIdFromPath))
-        } catch {
-          setDisplayName(playerIdFromPath)
+      if (initialDisplayName) {
+        setDisplayName(initialDisplayName)
+      } else {
+        const playerIdFromPath = playerIdSegmentFromPathname(window.location.pathname)
+        if (playerIdFromPath && playerIdFromPath !== "players") {
+          try {
+            setDisplayName(decodeURIComponent(playerIdFromPath))
+          } catch {
+            setDisplayName(playerIdFromPath)
+          }
         }
       }
     }
@@ -535,9 +552,9 @@ export function PlayerPageClient({
         setDisplayRomanName(romanFromQuery)
       }
     } else {
-      setDisplayRomanName(null)
+      setDisplayRomanName(initialDisplayRomanName?.trim() || null)
     }
-  }, [pathname])
+  }, [initialDisplayName, initialDisplayRomanName, pathname])
 
   // 青柳: 「今季の成績」投球パイロット（3/15 試合・pitcher 2103788 のデータを表示）
   const isAoyagiPage =
@@ -696,12 +713,23 @@ export function PlayerPageClient({
     () => String(profileMerged?.meta?.page_kind ?? "").trim() === "career_only_non_roster",
     [profileMerged],
   )
+  const nonRosterHasCareerStats =
+    profileMergedSettled &&
+    !isRosterPlayer &&
+    Boolean(profileMerged) &&
+    (hasMergedBattingFromProfile || hasMergedPitchingFromProfile)
   const showCareerOnlyShell =
-    isCareerOnlyNonRosterPage && profileMergedSettled && Boolean(profileMerged)
+    profileMergedSettled &&
+    Boolean(profileMerged) &&
+    (isCareerOnlyNonRosterPage || nonRosterHasCareerStats)
   /** Phase4-B: 2026名簿外でも profile-merged があればプロフィール表のみ表示 */
   const hasProfileOnly = useMemo(() => {
     if (isCareerOnlyNonRosterPage) return false
     if (isRosterPlayer || !profileMergedSettled || !profileMerged?.profile) return false
+    const hasCareerStats =
+      ((profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]).length > 0 ||
+      ((profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[]).length > 0
+    if (hasCareerStats) return false
     const p = profileMerged.profile
     return Boolean(
       String(p.birth_date_raw ?? "").trim() ||
@@ -723,7 +751,7 @@ export function PlayerPageClient({
   /** 名簿未確定の数値 ID 向けに season-pitching を先読みして投手か判定する */
   const shouldProbePitcherSeasonData =
     !hasProfileOnly &&
-    !isCareerOnlyNonRosterPage &&
+    !showCareerOnlyShell &&
     !deferNonRosterNumericPilot &&
     !isKikuchiPage &&
     !pathMatchesKikuchiPilot(pathname) &&
@@ -733,13 +761,12 @@ export function PlayerPageClient({
       (numericPilotIdFromPath && rosterMainReady && !rosterKnownFielder))
   const showFielderSeasonPilotUi =
     !hasProfileOnly &&
-    !isCareerOnlyNonRosterPage &&
+    !showCareerOnlyShell &&
     !deferNonRosterNumericPilot &&
     !showPitcherSeasonSuganoUi &&
     (isFabianPage ||
       isKikuchiPage ||
       rosterKnownFielder ||
-      (!numericPilotIdFromPath && Boolean(playerIdNormalized.trim())) ||
       (numericPilotIdFromPath &&
         rosterMainReady &&
         pitcherSeasonPocApiSettled &&
@@ -748,13 +775,12 @@ export function PlayerPageClient({
   /** 名簿にいる選手・パイロット対象に加え、数値ID（NPB/Yahoo）を持つページは今季ブロックを出す */
   const showSeasonCareerTabs =
     !hasProfileOnly &&
-    !isCareerOnlyNonRosterPage &&
+    !showCareerOnlyShell &&
     (isRosterPlayer ||
       isAoyagiPage ||
       isKikuchiPage ||
       isFabianPage ||
       numericPilotIdFromPath ||
-      Boolean(playerIdNormalized.trim()) ||
       /^\d+$/.test(String(seasonPilotPlayerId || "").trim()))
 
   useEffect(() => {
@@ -851,18 +877,14 @@ export function PlayerPageClient({
   }, [pitcherSeasonPocPayload?.npbPlayerId])
 
   useEffect(() => {
-    if (pageSection === "pitch-types") {
-      setPitcherSeasonSubTab("pitch")
-      return
-    }
-    if (pageSection === "splits") {
-      setPitcherSeasonSubTab("situation")
-      setKikuchiSeasonDetailTab("situation")
-      return
-    }
-    setPitcherSeasonSubTab("basic")
-    setKikuchiSeasonDetailTab("basic")
-  }, [pageSection, playerIdNormalized])
+    if (!showSeasonCareerTabs || showCareerOnlyShell) return
+    const segment = normalizePlayerPageSectionForTabSync(pageSection)
+    setStatsTab("season")
+    setPitcherSeasonSubTab(resolvePitcherSeasonSubTabFromUrlSegment(segment))
+    setKikuchiSeasonDetailTab(
+      resolveFielderSeasonDetailTabFromUrlSegment(segment, showCatcherSeasonTab),
+    )
+  }, [pageSection, playerIdNormalized, showCatcherSeasonTab, showCareerOnlyShell, showSeasonCareerTabs])
 
   const playerGameLogDerived = usePlayerGameLogDerived({
     enabled: showSeasonCareerTabs && statsTab === "season" && pageSection === "game-log",
@@ -882,42 +904,20 @@ export function PlayerPageClient({
     [],
   )
 
-  /**
-   * 既定の試合 ID を URL に書き込む。?yahooGameId= が無いとき（または旧 PoC 既定のみのとき）
-   * 実効 ID と表示がずれないよう共有・手動変更しやすいクエリに同期する。
-   */
+  /** 個人ページ URL から yahooGameId は見せない。実効 ID 解決は内部 state 側で継続する。 */
   useEffect(() => {
-    if (!showPitcherSeasonSuganoUi) return
     if (typeof window === "undefined") return
-    if (!isAoyagiPage && !pitcherSeasonPocApiSettled) return
-
-    const gid = pitcherPocYahooGameId.trim()
-    if (!gid) return
-
     const qs = clientSearch.startsWith("?") ? clientSearch.slice(1) : clientSearch
+    if (!qs) return
     const params = new URLSearchParams(qs)
-    const current = (params.get("yahooGameId") ?? "").trim()
-
-    if (current === gid) return
-    if (
-      current &&
-      current !== DEFAULT_YAHOO_GAME_ID_HIROSHIMA_CHUNICHI_20260327
-    ) {
-      return
-    }
-
-    params.set("yahooGameId", gid)
+    if (!params.has("yahooGameId")) return
+    params.delete("yahooGameId")
     const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [
-    showPitcherSeasonSuganoUi,
-    clientSearch,
-    pathname,
-    router,
-    isAoyagiPage,
-    pitcherSeasonPocApiSettled,
-    pitcherPocYahooGameId,
-  ])
+    const nextUrl = next ? `${pathname}?${next}` : pathname
+    const currentUrl = `${window.location.pathname}${window.location.search}`
+    if (currentUrl === nextUrl) return
+    window.history.replaceState(window.history.state, "", nextUrl)
+  }, [clientSearch, pathname])
 
   /**
    * 試合単位の球種別（gamePitchTypes）。コース別ゾーン表示は廃止。
@@ -1119,12 +1119,25 @@ export function PlayerPageClient({
         fontWeight: 900 as const,
       }
 
-  /** 名簿外の数値 ID は profile-merged 確定まで待つ（profile-only 判定のため） */
-  const pageShellReady = isRosterPlayer
-    ? rosterMainReady
-    : numericPilotIdFromPath
-      ? rosterMainReady && profileMergedSettled
-      : rosterMainReady || Boolean(playerIdNormalized.trim())
+  const routeHasRomanQuery = useMemo(() => {
+    if (!clientSearch) return false
+    try {
+      return new URLSearchParams(clientSearch).has("roman")
+    } catch {
+      return false
+    }
+  }, [clientSearch])
+  /**
+   * 名簿解決前の URL 断片（ローマ字・仮 ID・数値 ID）が一瞬見えるのを防ぐ。
+   * 名簿照合が終わるまでは本文を出さず、解決待ちが必要なルートでは profile-merged まで待つ。
+   */
+  const needsResolvedPlayerShell =
+    numericPilotIdFromPath ||
+    routeHasRomanQuery ||
+    isPlaceholderPlayerPageId(playerIdNormalized)
+  const pageShellReady =
+    rosterMainReady && (isRosterPlayer || !needsResolvedPlayerShell || profileMergedSettled)
+  const pageContentReady = pageShellReady && profileMergedSettled
 
   const mergedBirthRaw = String(profileMerged?.profile?.birth_date_raw ?? "").trim()
   const mergedProDebut = String(profileMerged?.profile?.pro_debut_raw ?? "").trim()
@@ -1346,7 +1359,7 @@ export function PlayerPageClient({
           <button
             key={t.key}
             type="button"
-            onClick={() => setPitcherSeasonSubTab(t.key as PitcherSeasonSubTab)}
+            onClick={() => handlePitcherSeasonSubTabClick(t.key as PitcherSeasonSubTab)}
             className={pitcherSubTabButtonClass}
             style={{
               color: pitcherSeasonSubTab === t.key ? "#000000" : "#9ca3af",
@@ -1388,7 +1401,7 @@ export function PlayerPageClient({
         <button
           key={t.key}
           type="button"
-          onClick={() => setKikuchiSeasonDetailTab(t.key as FielderSeasonDetailTab)}
+          onClick={() => handleFielderSeasonSubTabClick(t.key as FielderSeasonDetailTab)}
           title={
             t.key === "catcher"
               ? "名簿登録捕手は常に表示。数値は試合派生データに依存します"
@@ -1426,6 +1439,38 @@ export function PlayerPageClient({
   }, [routePlayerSlug, showPitcherSeasonSuganoUi, showSeasonCareerTabs])
 
   const renderRouteTabBar = () => null
+
+  const replaceSeasonTabUrl = useCallback(
+    (segment: "basic" | "pitch" | "situation" | "matchup" | "vs-team" | "catcher") => {
+      if (typeof window === "undefined" || !routePlayerSlug) return
+      const nextPath = playerPageTabUrlPath(routePlayerSlug, segment)
+      const qs = clientSearch.startsWith("?") ? clientSearch.slice(1) : clientSearch
+      const params = new URLSearchParams(qs)
+      params.delete("yahooGameId")
+      const nextSearch = params.toString()
+      const nextUrl = nextSearch ? `${nextPath}?${nextSearch}` : nextPath
+      const currentUrl = `${window.location.pathname}${window.location.search}`
+      if (currentUrl === nextUrl) return
+      window.history.pushState(window.history.state, "", nextUrl)
+    },
+    [clientSearch, routePlayerSlug],
+  )
+
+  const handlePitcherSeasonSubTabClick = useCallback(
+    (tab: PitcherSeasonSubTab) => {
+      setPitcherSeasonSubTab(tab)
+      replaceSeasonTabUrl(resolveUrlSegmentFromPitcherSeasonSubTab(tab))
+    },
+    [replaceSeasonTabUrl],
+  )
+
+  const handleFielderSeasonSubTabClick = useCallback(
+    (tab: FielderSeasonDetailTab) => {
+      setKikuchiSeasonDetailTab(tab)
+      replaceSeasonTabUrl(resolveUrlSegmentFromFielderSeasonDetailTab(tab))
+    },
+    [replaceSeasonTabUrl],
+  )
 
   const profileTableProps = {
     mergedBirthRaw,
@@ -1613,7 +1658,7 @@ export function PlayerPageClient({
         }
         style={isMobile ? { paddingLeft: "20px", paddingRight: "20px" } : undefined}
       >
-        {!pageShellReady ? (
+        {!pageContentReady ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center py-20">
             <SectionLoadingSpinner className="py-8" />
           </div>

@@ -5,6 +5,7 @@ const OFFICIAL_ROMAN_BY_NPB_ID: Record<string, string> = {
   "31735119": "G.G.Sato",
   "01903828": "Higashio Osamu",
   "1903828": "Higashio Osamu",
+  "13515135": "Brad Eldred",
 }
 
 const OFFICIAL_ROMAN_BY_NAME: Record<string, string> = {
@@ -14,6 +15,7 @@ const OFFICIAL_ROMAN_BY_NAME: Record<string, string> = {
   "東尾修": "Higashio Osamu",
   "東尾　修": "Higashio Osamu",
   "東尾 修": "Higashio Osamu",
+  "B.エルドレッド": "Brad Eldred",
 }
 
 function normalizeNpbId(id: string | null | undefined): string {

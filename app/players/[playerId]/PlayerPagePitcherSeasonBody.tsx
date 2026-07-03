@@ -7,6 +7,7 @@ import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNot
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import type { PitcherSeasonPocPayload, PitcherSeasonPitchingPeriodPayload } from "@/lib/pitcherSeasonPocTypes"
+import { ORDERED_PITCH_COUNT_KEYS } from "@/lib/yahooGame/pitchCountSim"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 import {
   pitcherPocBasicRow1,

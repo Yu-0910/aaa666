@@ -17,7 +17,15 @@ const PlayerPageClient = dynamic(
   },
 )
 
-export default function PlayerPageRoot({ pageSection }: { pageSection: PlayerPageSection }) {
+export default function PlayerPageRoot({
+  pageSection,
+  initialDisplayName,
+  initialDisplayRomanName,
+}: {
+  pageSection: PlayerPageSection
+  initialDisplayName: string
+  initialDisplayRomanName?: string | null
+}) {
   const { isDesktop, forceMobile } = useViewportLayout()
 
   return (
@@ -25,7 +33,8 @@ export default function PlayerPageRoot({ pageSection }: { pageSection: PlayerPag
       layout={isDesktop ? "desktop" : "mobile"}
       forceMobile={forceMobile}
       pageSection={pageSection}
+      initialDisplayName={initialDisplayName}
+      initialDisplayRomanName={initialDisplayRomanName ?? null}
     />
   )
 }
-
