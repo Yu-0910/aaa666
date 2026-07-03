@@ -1,1 +1,1 @@
-export { generateMetadata, default } from "../../../../players/[playerId]/[...rest]/page"
+export { generateMetadata, default } from "../../../../players/[playerId]/[[...rest]]/page"

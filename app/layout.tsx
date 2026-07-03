@@ -61,6 +61,13 @@ export default function RootLayout({
       className={`${inter.variable} ${notoSansJp.variable} ${bebasNeue.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5927852752448438"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body
         className="font-sans antialiased"
         suppressHydrationWarning
