@@ -384,6 +384,7 @@ export default function RankingUI({
                     name: row.name,
                   })
                   const hasRomanName = romanName.trim()
+                  const romanNameForUrl = hasRomanName ? romanName : undefined
                   const shouldShowHeader = idx > 0 && idx % 15 === 0
                   
                   return (
@@ -464,10 +465,7 @@ export default function RankingUI({
                                     npbPlayerId: row.npbPlayerId,
                                     playerId: row.playerId,
                                     name: row.name,
-                                    romanName:
-                                      hasRomanName
-                                        ? formatRomanNameForRanking(romanName, { nameJa: row.name })
-                                        : undefined,
+                                    romanName: romanNameForUrl,
                                   })}
                                   className="block truncate"
                                 >
