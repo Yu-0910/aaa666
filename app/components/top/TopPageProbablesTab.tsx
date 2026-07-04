@@ -686,7 +686,7 @@ function PitcherBlock({
         href={playerPageHref({
           npbPlayerId: slot.pitcherPublicId,
           name,
-          romanName: hasRomanName ? romanDisplay : undefined,
+          romanName: romanRaw || undefined,
         })}
         className="block truncate text-center"
       >
