@@ -1,16 +1,20 @@
 import { playerRomanNames } from "@/app/components/top/topPageConstants"
 import { withOfficialRomanOverride } from "@/lib/playerOfficialRomanOverrides"
 
+export function fullRomanForPlayerUrl(leader: { romanName?: string; name: string }): string {
+  return withOfficialRomanOverride({
+    romanName: leader.romanName || playerRomanNames[leader.name],
+    name: leader.name,
+  })
+}
+
 /**
  * TOP 等で使う略式ローマ字（例: K.Kozono = 名の頭文字 + 姓）。
  * `playerRomanNames` は「姓 名」（例: Sato Teruaki）を想定。
  * URL クエリ `roman` とも同一形式。
  */
 export function abbreviatedRomanForUrl(leader: { romanName?: string; name: string }): string {
-  const raw = withOfficialRomanOverride({
-    romanName: leader.romanName || playerRomanNames[leader.name],
-    name: leader.name,
-  })
+  const raw = fullRomanForPlayerUrl(leader)
   if (!raw) return ""
   if (/^(?:[A-Z]\.)+[A-Za-z][A-Za-z'.-]*$/.test(raw)) return raw
   const parts = raw.split(/\s+/)

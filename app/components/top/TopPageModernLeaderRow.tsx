@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { formatRankingStatDisplay } from "@/lib/formatStat"
-import { abbreviatedRomanForUrl } from "@/lib/topPageLeaderName"
+import { abbreviatedRomanForUrl, fullRomanForPlayerUrl } from "@/lib/topPageLeaderName"
 import type { TopLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
 import { playerPageHref } from "@/lib/playerPageHref"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
@@ -36,6 +36,10 @@ export function TopPageModernLeaderRow({
     npbPlayerId?: string
   }
   const romanShort = abbreviatedRomanForUrl({ romanName: l.romanName, name: String(l.name ?? "") })
+  const romanForUrl = fullRomanForPlayerUrl({
+    romanName: l.romanName,
+    name: String(l.name ?? ""),
+  })
   const playerNameRaw = typeof leader.name === "string" ? leader.name : ""
   const playerName = matchupOpponentDisplayNameJa(playerNameRaw).replace(/[\s\u3000]+/g, "")
   const teamKey = typeof leader.team === "string" ? leader.team : ""
@@ -70,7 +74,7 @@ export function TopPageModernLeaderRow({
           npbPlayerId: l.npbPlayerId,
           playerId: l.playerId,
           name: playerName,
-          romanName: romanShort,
+          romanName: romanForUrl || romanShort,
         })}
         className={`flex-1 min-w-0 hover:opacity-80 transition-opacity ${modernLeaderRow ? "flex flex-col justify-center gap-0" : "flex items-center gap-1"}`}
       >
