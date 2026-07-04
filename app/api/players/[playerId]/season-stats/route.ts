@@ -25,8 +25,16 @@ import {
   mergePilotSeasonStatsWithDerivedAsync,
 } from "@/lib/seasonStatsPilot"
 import type { PilotBlocksData, SeasonStatsRow } from "@/lib/seasonStatsPilotShared"
-import { loadPitchTypeStatsAsync, loadSpeedBandStatsAsync } from "@/lib/pitchDetailsPilot"
-import type { PitchTypeStats, SpeedBandStatsMap } from "@/lib/pitchDetailsPilot"
+import {
+  loadPitchTypeHandSplitStatsAsync,
+  loadPitchTypeStatsAsync,
+  loadSpeedBandStatsAsync,
+} from "@/lib/pitchDetailsPilot"
+import type {
+  PitchTypeHandSplitStats,
+  PitchTypeStats,
+  SpeedBandStatsMap,
+} from "@/lib/pitchDetailsPilot"
 import { resolveYahooPilotIdForStatsAsync } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
@@ -36,6 +44,7 @@ export type SeasonStatsApiPayload = {
   isPilot: boolean
   blocks: PilotBlocksData | null
   pitchTypeStats: PitchTypeStats[]
+  pitchTypeHandSplit: PitchTypeHandSplitStats
   speedBandStats: SpeedBandStatsMap
   /** 通算行の由来。出場成績フォールバック時は一球未連携でも表を埋められる */
   battingTotalRowSource: BattingTotalRowSource
@@ -84,6 +93,7 @@ function fielderPlaceholderPayload(): SeasonStatsApiPayload {
     isPilot: true,
     blocks: null,
     pitchTypeStats: [],
+    pitchTypeHandSplit: { vsRight: [], vsLeft: [] },
     speedBandStats: {},
     battingTotalRowSource: null,
     battingVsHandReconciliation: null,
@@ -169,8 +179,9 @@ export async function GET(
         blocks.blocks.F.by_risp_stats = byRispStats
       }
     }
-    const [pitchTypeStats, speedBandStats] = await Promise.all([
+    const [pitchTypeStats, pitchTypeHandSplit, speedBandStats] = await Promise.all([
       loadPitchTypeStatsAsync(yahooId, year),
+      loadPitchTypeHandSplitStatsAsync(yahooId, year),
       loadSpeedBandStatsAsync(yahooId, year),
     ])
 
@@ -192,6 +203,7 @@ export async function GET(
       isPilot: true,
       blocks,
       pitchTypeStats,
+      pitchTypeHandSplit,
       speedBandStats,
       battingTotalRowSource,
       battingVsHandReconciliation,

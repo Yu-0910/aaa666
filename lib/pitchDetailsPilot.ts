@@ -194,6 +194,11 @@ export type PitchTypeStats = {
   ops: string
 }
 
+export type PitchTypeHandSplitStats = {
+  vsRight: PitchTypeStats[]
+  vsLeft: PitchTypeStats[]
+}
+
 /** 投球詳細から球種別成績を集計 */
 export type AggregateByPitchTypeOptions = {
   /** Whiff% の分母。既定は swings（スイング企図）。pitches は SwStr% 参考用 */
@@ -296,6 +301,35 @@ export function aggregateByPitchType(
   }
 
   return result.sort((a, b) => b.pitches - a.pitches)
+}
+
+function pitcherThrowHandForPlateAppearance(pa: PlateAppearancePitches): "R" | "L" | "" {
+  for (let i = pa.pitches.length - 1; i >= 0; i--) {
+    const pid = (pa.pitches[i]?.pitcher_id ?? "").trim()
+    if (!pid) continue
+    const hand = pitcherThrowHandRLFromYahooPitcherId(pid)
+    if (hand === "R" || hand === "L") return hand
+  }
+  return ""
+}
+
+export function aggregateByPitchTypePitcherHand(
+  plateAppearances: PlateAppearancePitches[],
+  options?: AggregateByPitchTypeOptions,
+): PitchTypeHandSplitStats {
+  const vsRightPas: PlateAppearancePitches[] = []
+  const vsLeftPas: PlateAppearancePitches[] = []
+
+  for (const pa of plateAppearances) {
+    const hand = pitcherThrowHandForPlateAppearance(pa)
+    if (hand === "R") vsRightPas.push(pa)
+    else if (hand === "L") vsLeftPas.push(pa)
+  }
+
+  return {
+    vsRight: aggregateByPitchType(vsRightPas, options),
+    vsLeft: aggregateByPitchType(vsLeftPas, options),
+  }
 }
 
 /** ゾーン別成績（25マス） */
@@ -737,6 +771,38 @@ export async function loadPitchTypeStatsAsync(
   if (b?.pitchTypeStats && b.pitchTypeStats.length > 0) return b.pitchTypeStats
   const pas = loadPitchDetails(yahooId)
   return aggregateByPitchType(pas)
+}
+
+function resolvePitchTypeHandSplitForBatter(
+  yahooId: string,
+  year: string,
+  bundle: Phase14PitchFile | null,
+): PitchTypeHandSplitStats {
+  const gameIds = bundle?.source?.canonicalGames
+  const pas =
+    Array.isArray(gameIds) && gameIds.length > 0
+      ? loadPlateAppearancePitchesForYahooBatter(yahooId, year, { gameIds })
+      : loadPitchDetails(yahooId)
+  if (pas.length === 0) {
+    return { vsRight: [], vsLeft: [] }
+  }
+  return aggregateByPitchTypePitcherHand(pas)
+}
+
+export function loadPitchTypeHandSplitStats(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT,
+): PitchTypeHandSplitStats {
+  const b = loadPhase14PitchBundle(yahooId, year)
+  return resolvePitchTypeHandSplitForBatter(yahooId, year, b)
+}
+
+export async function loadPitchTypeHandSplitStatsAsync(
+  yahooId: string,
+  year: string = DERIVED_SEASON_YEAR_DEFAULT,
+): Promise<PitchTypeHandSplitStats> {
+  const b = await loadPhase14PitchBundleAsync(yahooId, year)
+  return resolvePitchTypeHandSplitForBatter(yahooId, year, b)
 }
 
 function resolveSpeedBandStatsForBatter(

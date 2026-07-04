@@ -4,6 +4,7 @@
 
 import type {
   PlateAppearancePitches,
+  PitchTypeHandSplitStats,
   PitchTypeStats,
   SpeedBandStatsMap,
   ZoneStats,
@@ -20,6 +21,7 @@ export type SeasonStatsUnpacked = {
   isPilot: boolean
   blocks: PilotBlocksData | null
   pitchTypeStats: PitchTypeStats[]
+  pitchTypeHandSplit: PitchTypeHandSplitStats
   speedBandStats: SpeedBandStatsMap
   battingTotalRowSource: BattingTotalRowSource
   battingVsHandReconciliation: BattingVsHandTotalReconciliation | null
@@ -30,6 +32,7 @@ const emptySeason: SeasonStatsUnpacked = {
   isPilot: false,
   blocks: null,
   pitchTypeStats: [],
+  pitchTypeHandSplit: { vsRight: [], vsLeft: [] },
   speedBandStats: {},
   battingTotalRowSource: null,
   battingVsHandReconciliation: null,
@@ -65,6 +68,10 @@ export function unwrapSeasonStatsApiJson(json: unknown): SeasonStatsUnpacked {
     pitchTypeStats: Array.isArray(inner.pitchTypeStats)
       ? (inner.pitchTypeStats as PitchTypeStats[])
       : [],
+    pitchTypeHandSplit:
+      inner.pitchTypeHandSplit != null && typeof inner.pitchTypeHandSplit === "object"
+        ? (inner.pitchTypeHandSplit as PitchTypeHandSplitStats)
+        : { vsRight: [], vsLeft: [] },
     speedBandStats:
       inner.speedBandStats != null && typeof inner.speedBandStats === "object"
         ? (inner.speedBandStats as SpeedBandStatsMap)

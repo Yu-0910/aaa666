@@ -10,6 +10,10 @@ type Row = {
 }
 
 export type PitchTypeDonutCenterStats = {
+  primaryLabel?: string
+  primaryValue?: string
+  secondaryLabel?: string
+  secondaryValue?: string
   avgAgainst?: string
   kBbPct?: string
 }
@@ -161,7 +165,11 @@ function DonutCenterPanel({
   compact: boolean
   labelScale?: number
 }) {
-  const hasStats = Boolean(centerStats?.avgAgainst || centerStats?.kBbPct)
+  const primaryLabel = centerStats?.primaryLabel ?? (centerStats?.avgAgainst ? "被打率" : undefined)
+  const primaryValue = centerStats?.primaryValue ?? centerStats?.avgAgainst
+  const secondaryLabel = centerStats?.secondaryLabel ?? (centerStats?.kBbPct ? "K-BB%" : undefined)
+  const secondaryValue = centerStats?.secondaryValue ?? centerStats?.kBbPct
+  const hasStats = Boolean(primaryValue || secondaryValue)
   if (!hasStats) return null
 
   const valueStyle = donutCenterValueStyle(compact, labelScale)
@@ -192,21 +200,21 @@ function DonutCenterPanel({
               gap: Math.round(chartPx(compact, 3, 4) * labelScale),
             }}
           >
-            {centerStats?.avgAgainst ? (
+            {primaryValue ? (
               <div className="text-center" style={{ marginTop: avgAgainstNudgePx }}>
                 <div
                   className="font-noto text-[#9ca3af] leading-none"
                   style={{ fontSize: `${labelFontPx}px`, fontWeight: 700 }}
                 >
-                  被打率
+                  {primaryLabel}
                 </div>
                 <div className="tabular-nums leading-none text-white" style={valueStyle}>
-                  {centerStats.avgAgainst}
+                  {primaryValue}
                 </div>
               </div>
             ) : null}
 
-            {centerStats?.avgAgainst && centerStats?.kBbPct ? (
+            {primaryValue && secondaryValue ? (
               <div
                 className="mx-auto w-[70%]"
                 style={{
@@ -217,16 +225,16 @@ function DonutCenterPanel({
               />
             ) : null}
 
-            {centerStats?.kBbPct ? (
+            {secondaryValue ? (
               <div className="text-center">
                 <div
                   className="font-noto text-[#9ca3af] leading-none"
                   style={{ fontSize: `${labelFontPx}px`, fontWeight: 700 }}
                 >
-                  K-BB%
+                  {secondaryLabel}
                 </div>
                 <div className="tabular-nums leading-none text-white" style={valueStyle}>
-                  {centerStats.kBbPct}
+                  {secondaryValue}
                 </div>
               </div>
             ) : null}
@@ -356,7 +364,7 @@ export default function PitchTypePieChart({
   const chartHeight = compact ? chartSide : designHeight
   const outerRadius =
     compact && chartSide > 0
-      ? Math.min(designOuter, Math.floor(chartSide * 0.4))
+      ? Math.floor(chartSide * 0.4)
       : designOuter
   const innerRadius = Math.round(outerRadius * (centerStats ? 0.54 : 0.48))
   const chartFitScale =
