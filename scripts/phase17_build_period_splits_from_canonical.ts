@@ -28,6 +28,7 @@ import {
   formatWeekRangeTueToSunFromTuesdayYmd,
 } from "../lib/yahooGame/jstPeriodKeys"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 
@@ -46,12 +47,6 @@ function parseArgs(): { year: string } {
   return { year }
 }
 
-function fmtSlash3(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return ".000"
-  const s = n.toFixed(3)
-  return s.startsWith("0") ? s.slice(1) : s
-}
-
 function aggToRow(
   split_type: "calendar_month" | "calendar_week",
   split_value: string,
@@ -63,7 +58,7 @@ function aggToRow(
   const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
-  return {
+  return enrichSeasonStatsRowSabermetrics({
     split_type,
     split_value,
     split_label,
@@ -108,7 +103,7 @@ function aggToRow(
     seca: ".000",
     ta: ".000",
     noi: ".000",
-  }
+  })
 }
 
 function loadCanonicalFiles(): CanonicalGameDocument[] {

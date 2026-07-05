@@ -26,6 +26,7 @@ import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
 import {
   aggregateBattingForBatterInGameForProfiles,
   emptyBattingSeasonAggYahoo,
@@ -68,7 +69,7 @@ function toSeasonStatsRow(splitType: string, splitValue: string, agg: BattingSea
   const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
-  return {
+  return enrichSeasonStatsRowSabermetrics({
     split_type: splitType,
     split_value: splitValue,
     split_label: splitLabelForRow(splitType, splitValue),
@@ -113,7 +114,7 @@ function toSeasonStatsRow(splitType: string, splitValue: string, agg: BattingSea
     seca: ".000",
     ta: ".000",
     noi: ".000",
-  }
+  })
 }
 
 function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {

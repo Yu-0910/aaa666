@@ -51,6 +51,7 @@ import {
   type BattingSeasonAggYahoo,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
 import { loadVsHandRowsFromCanonicalWithDebug } from "../lib/seasonStatsPilot"
 import { basesBeforeForPlateAppearanceHybrid } from "../lib/yahooGame/basesFromSportsnaviPlayLine"
 import { buildPaIdToSportsnaviPlayLineMap } from "../lib/yahooGame/supplementPlateAppearancesFromTextPlayByPlay"
@@ -102,7 +103,7 @@ function aggToSeasonStatsRow(
   const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
-  return {
+  return enrichSeasonStatsRowSabermetrics({
     split_type: splitType,
     split_value: splitValue,
     split_label: splitLabel,
@@ -147,7 +148,7 @@ function aggToSeasonStatsRow(
     seca: ".000",
     ta: ".000",
     noi: ".000",
-  }
+  })
 }
 
 function labelForPaRound(splitValue: string): string {

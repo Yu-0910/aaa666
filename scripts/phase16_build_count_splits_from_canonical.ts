@@ -17,13 +17,19 @@ import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
 import { pitchCountKeyForPlateAppearance } from "../lib/yahooGame/pitchCountSim"
-import { plateAppearanceLastResultText } from "../lib/yahooGame/canonicalBattingSeasonAgg"
+import { dedupePlateAppearancesByInningHalfOrder } from "../lib/yahooGame/dedupePlateAppearances"
+import {
+  plateAppearanceResultTextFromPitchOnly,
+  plateAppearanceResolvedResultText,
+} from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import {
   emptyBattingSeasonAggYahoo,
   updateBattingAggFromPa,
+  updateBattingAggFromResultJa,
   type BattingSeasonAggYahoo,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
+import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 
@@ -48,7 +54,7 @@ function aggToSeasonStatsRow(splitValue: string, agg: BattingSeasonAggYahoo): Se
   const risp_avg = slashRate3FromCounts(agg.risp_h, agg.risp_ab)
   const sbPct = agg.sb + agg.cs > 0 ? agg.sb / (agg.sb + agg.cs) : null
 
-  return {
+  return enrichSeasonStatsRowSabermetrics({
     split_type: "pitch_count",
     split_value: splitValue,
     split_label: splitValue,
@@ -93,7 +99,7 @@ function aggToSeasonStatsRow(splitValue: string, agg: BattingSeasonAggYahoo): Se
     seca: ".000",
     ta: ".000",
     noi: ".000",
-  }
+  })
 }
 
 function loadCanonicalFiles(): CanonicalGameDocument[] {
@@ -149,15 +155,28 @@ function main(): void {
 
   for (const doc of docs) {
     const gameId = doc.gameId
-    for (const pa of doc.domain.plateAppearances ?? []) {
+    const pas = dedupePlateAppearancesByInningHalfOrder(
+      doc.domain.plateAppearances ?? [],
+      gameId,
+    )
+    for (const pa of pas) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
-      const resultText = plateAppearanceLastResultText(pa)
+      const resolvedResultText = plateAppearanceResolvedResultText(doc, pa).trim()
+      const fallbackResultText = plateAppearanceResultTextFromPitchOnly(pa).trim()
+      const resultText = resolvedResultText || fallbackResultText
+      if (!resultText) continue
       const ck = pitchCountKeyForPlateAppearance(pa.pitchEvents, resultText)
       if (!ck) continue
       const cm = ensureCountMap(bid)
       const agg = cm.get(ck) ?? emptyBattingSeasonAggYahoo()
-      updateBattingAggFromPa(agg, gameId, pa)
+      if (resolvedResultText) {
+        updateBattingAggFromPa(agg, gameId, pa, doc)
+      } else {
+        agg.gameIds.add(gameId)
+        agg.pa += 1
+        updateBattingAggFromResultJa(agg, resultText)
+      }
       cm.set(ck, agg)
     }
   }
