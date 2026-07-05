@@ -49,9 +49,15 @@ export function TopPageClient({
     setSelectedYear(initialYear)
   }, [initialYear])
 
+  const routeHrefForYear = (tabId: TopPageTabId, year: number): string => {
+    if (tabId === 0) return year === 2026 ? "/" : `/${year}`
+    if (tabId === 4) return year === 2026 ? "/standings" : `/standings/${year}`
+    return mainTabs.find((tab) => tab.tabId === tabId)?.href ?? "/"
+  }
+
   const handleYearChange = (year: number) => {
     setSelectedYear(year)
-    router.push(`/${year}`)
+    router.push(routeHrefForYear(activeMainTab, year))
   }
 
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
@@ -63,7 +69,7 @@ export function TopPageClient({
       {mainTabs.map((tab) => (
         <Link
           key={tab.tabId}
-          href={tab.href}
+          href={routeHrefForYear(tab.tabId, selectedYear)}
           className={`relative overflow-hidden group transition-all duration-200 flex items-center justify-center ${
             activeMainTab === tab.tabId ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
           } border border-[#555] ${isMobile ? "py-1.5 px-3 text-xs" : "py-2 px-3 text-sm"} font-semibold whitespace-nowrap`}
