@@ -1,5 +1,11 @@
 import { CURRENT_ROSTER_PLAYER_SLUGS } from "@/lib/currentRosterPlayerSlugs"
-import { historicalSlugOverrideForLink } from "@/lib/historicalPlayerSlugOverrides"
+import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
+import {
+  historicalSlugOverrideById,
+  historicalSlugOverrideByName,
+  historicalSlugOverrideByRoman,
+} from "@/lib/historicalPlayerSlugOverrides"
+import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 
 export type PlayerPageSection =
   | "basic"
@@ -53,6 +59,19 @@ export function formatPlayerRomanSlug(romanName: string): string {
     .join("-")
 }
 
+const currentRosterSlugByName = new Map<string, string>()
+const currentRosterSlugByRoman = new Map<string, string>()
+
+for (const entry of CURRENT_ROSTER_PLAYER_ENTRIES) {
+  const name = String(entry.nameJa ?? "").trim()
+  if (name) {
+    currentRosterSlugByName.set(rosterNameMatchKey(name), entry.slug)
+    currentRosterSlugByName.set(compactPlayerName(name), entry.slug)
+  }
+  const romanSlug = slugifyPlayerRomanName(entry.romanFull)
+  if (romanSlug) currentRosterSlugByRoman.set(romanSlug, entry.slug)
+}
+
 export function playerPagePath(slug: string, section: PlayerPageSection = "basic"): string {
   const cleanSlug = String(slug ?? "").trim().replace(/^\/+|\/+$/g, "")
   if (!cleanSlug) return "/players/unknown-player"
@@ -62,12 +81,20 @@ export function playerPagePath(slug: string, section: PlayerPageSection = "basic
 }
 
 export function playerPagePathSegment(link: PlayerLinkIds): string {
-  const historicalSlug = historicalSlugOverrideForLink(link)
-  if (historicalSlug) return historicalSlug
+  const historicalIdSlug = historicalSlugOverrideById(link.npbPlayerId)?.slug
+  if (historicalIdSlug) return historicalIdSlug
   const rosterSlug =
-    CURRENT_ROSTER_PLAYER_SLUGS[String(link.npbPlayerId ?? "").trim()] ||
-    CURRENT_ROSTER_PLAYER_SLUGS[String(link.playerId ?? "").trim()]
+    CURRENT_ROSTER_PLAYER_SLUGS[String(link.npbPlayerId ?? "").trim()]
   if (rosterSlug) return rosterSlug
+  const currentRosterNameSlug =
+    currentRosterSlugByName.get(rosterNameMatchKey(link.name ?? "")) ??
+    currentRosterSlugByName.get(compactPlayerName(link.name ?? ""))
+  if (currentRosterNameSlug) return currentRosterNameSlug
+  const currentRosterRomanSlug = currentRosterSlugByRoman.get(slugifyPlayerRomanName(link.romanName || ""))
+  if (currentRosterRomanSlug) return currentRosterRomanSlug
+  const historicalSlug =
+    historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
+  if (historicalSlug) return historicalSlug
   const slug = slugifyPlayerRomanName(link.romanName || "")
   if (slug) return slug
   return String(link.name ?? "")

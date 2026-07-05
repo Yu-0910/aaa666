@@ -17,7 +17,7 @@ import {
 } from "@/lib/ranking/qualifyingThresholds"
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
-import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
+import { resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 import {
   BATTING_TOP_2025_RBI_TOP_N,
   BATTING_TOP_2026_SEASON_ALL_METRICS,
@@ -133,10 +133,12 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   const rank = Math.min(5, Math.max(1, displayRank)) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
   const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
-  const npbPlayerId =
-    explicitNpb ||
-    (/^\d{6,}$/.test(yahooPlayerId) ? yahooPlayerId : undefined) ||
-    (yahooPlayerId ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined : undefined)
+  const npbPlayerId = resolveRankingNpbPlayerId({
+    name: nameRaw,
+    team: teamRaw,
+    playerId: yahooPlayerId,
+    explicitNpb,
+  })
 
   return {
     rank,

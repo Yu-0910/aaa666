@@ -101,7 +101,6 @@ export function historicalSlugOverrideForLink(link: {
 }): string | undefined {
   return (
     historicalSlugOverrideById(link.npbPlayerId)?.slug ??
-    historicalSlugOverrideById(link.playerId)?.slug ??
     historicalSlugOverrideByName(link.name)?.slug ??
     historicalSlugOverrideByRoman(link.romanName)?.slug
   )
