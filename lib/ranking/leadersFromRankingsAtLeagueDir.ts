@@ -33,6 +33,10 @@ import {
   PITCHING_TOP_2026_MINI_METRICS,
   pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
+import {
+  enrichBattingRankingDerivedMetrics,
+  enrichPitchingRankingDerivedMetrics,
+} from "@/lib/ranking/enrichRankingDerivedMetrics"
 
 const BATTING_TOP3_METRICS = ["OPS", "打率", "本塁打"] as const
 const BATTING_MINI_METRICS = ["出塁率", "長打率", "打点", "安打", "盗塁"] as const
@@ -112,10 +116,29 @@ function readMetricJson(leagueDir: string, metricLabel: string, kind: "batting" 
   if (!fs.existsSync(p)) return null
   try {
     const raw = JSON.parse(fs.readFileSync(p, "utf-8")) as unknown
-    return Array.isArray(raw) ? (raw as RankingJsonRow[]) : null
+    if (!Array.isArray(raw)) return null
+    return (raw as RankingJsonRow[]).map((row) =>
+      kind === "batting"
+        ? enrichBattingRankingDerivedMetrics(row)
+        : enrichPitchingRankingDerivedMetrics(row)
+    )
   } catch {
     return null
   }
+}
+
+function sortRowsByMetric(
+  rows: RankingJsonRow[],
+  metricKey: string,
+  order: "asc" | "desc"
+): RankingJsonRow[] {
+  return [...rows].sort((a, b) => {
+    const av = Number(a[metricKey])
+    const bv = Number(b[metricKey])
+    if (!Number.isFinite(av)) return 1
+    if (!Number.isFinite(bv)) return -1
+    return order === "asc" ? av - bv : bv - av
+  })
 }
 
 function battingMetricValue(row: RankingJsonRow, metricLabel: string): string | number {
@@ -193,10 +216,23 @@ function extractBattingTop(
     }
   }
   const maxDisplayRank = options.weekKey ? BATTING_WEEKLY_TAB_TOP_N : 3
-  return ordered
+  const metricKey = getJsonKey(metricLabel)
+  const sortOrder = metricKey === "kPct" ? "asc" : "desc"
+  return sortRowsByMetric(ordered, metricKey, sortOrder)
     .slice(0, topN)
     .map((row, i) => toLeaderRow(row, i + 1, metricLabel, "batting", maxDisplayRank))
 }
+
+const PITCHING_LOWER_BETTER = new Set([
+  "era",
+  "whip",
+  "avg_against",
+  "babip_against",
+  "obp_against",
+  "slg_against",
+  "p_ip",
+  "bb_pct",
+])
 
 function extractPitchingTop(
   rows: RankingJsonRow[],
@@ -229,7 +265,11 @@ function extractPitchingTop(
       )
     }
   }
-  return ordered.slice(0, topN).map((row, i) => toLeaderRow(row, i + 1, metricLabel, "pitching"))
+  const metricKey = getPitchingJsonKey(metricLabel)
+  const sortOrder = PITCHING_LOWER_BETTER.has(metricKey) ? "asc" : "desc"
+  return sortRowsByMetric(ordered, metricKey, sortOrder)
+    .slice(0, topN)
+    .map((row, i) => toLeaderRow(row, i + 1, metricLabel, "pitching"))
 }
 
 function battingTopN(metricLabel: string, year: string, weekKey?: string): number {

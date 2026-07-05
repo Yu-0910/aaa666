@@ -13,6 +13,7 @@ import RankingUI from "@/components/RankingUI"
 import type { RankingViewModel, RankingRow } from "@/lib/ranking/types"
 
 import { loadWeeklyRankingJson } from "@/lib/ranking/jsonLoader"
+import { enrichBattingRankingDerivedMetrics } from "@/lib/ranking/enrichRankingDerivedMetrics"
 
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
 
@@ -101,7 +102,7 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
 
   ).trim()
 
-  return {
+  return enrichBattingRankingDerivedMetrics({
 
     ...raw,
 
@@ -115,7 +116,7 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
 
     team: String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? ""),
 
-  } as RankingRow
+  } as RankingRow) as RankingRow
 
 }
 

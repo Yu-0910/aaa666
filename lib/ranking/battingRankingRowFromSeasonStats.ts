@@ -2,7 +2,10 @@
  * Phase 12 / Phase 28 共通: SeasonStatsRow → ランキング JSON 1 行（指標列は metric.key で参照）
  */
 
-import type { SeasonStatsRow } from "@/lib/seasonStatsPilot"
+import {
+  enrichSeasonStatsRowSabermetrics,
+  type SeasonStatsRow,
+} from "@/lib/seasonStatsPilotShared"
 
 function numFromSlash(s: string): number {
   const v = String(s ?? "").trim()
@@ -45,10 +48,11 @@ function computeNoiFromCounts(
 
 export function buildBattingRankingRowBase(
   yahooId: string,
-  sr: SeasonStatsRow,
+  sourceRow: SeasonStatsRow,
   meta: { name: string; team: string },
   romanName?: string
 ): Record<string, unknown> {
+  const sr = enrichSeasonStatsRowSabermetrics(sourceRow)
   const name = meta.name.trim() || yahooId
   const team = meta.team.trim()
   const obpRaw = computeObpFromCounts(sr.h, sr.bb, sr.hbp, sr.ab, sr.sf)

@@ -1,5 +1,9 @@
 import type { RankingRow } from "@/lib/ranking/types"
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
+import {
+  enrichBattingRankingDerivedMetrics,
+  enrichPitchingRankingDerivedMetrics,
+} from "@/lib/ranking/enrichRankingDerivedMetrics"
 
 /** 指標のデフォルトソート順（K%のみ昇順） */
 export function getDefaultBattingSortOrder(metricKey: string): "asc" | "desc" {
@@ -22,7 +26,7 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
   const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "")
   const npbPlayerId = explicitNpb || undefined
-  return {
+  const normalized = {
     ...raw,
     rank: raw["rank"] as number,
     playerId,
@@ -31,6 +35,7 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
     romanName,
     team,
   } as RankingRow
+  return enrichPitchingRankingDerivedMetrics(enrichBattingRankingDerivedMetrics(normalized)) as RankingRow
 }
 
 export async function mergeRomanNamesFromCsv(

@@ -20,6 +20,11 @@ export function buildPitchingRankingRowFromPeriodRow(
   const kBbPct = bf > 0 ? ((row.so - row.bb) / bf) * 100 : 0
   const abEst = Math.max(0, bf - row.bb - row.hbp)
   const avgAgainst = abEst > 0 ? row.h / abEst : 0
+  const obpAgainst = bf > 0 ? (row.h + row.bb + row.hbp) / bf : 0
+  const tbEst = row.h + row.hr * 3
+  const slgAgainst = abEst > 0 ? tbEst / abEst : 0
+  const babipDenom = bf - row.bb - row.hbp - row.so - row.hr
+  const babipAgainst = babipDenom > 0 ? (row.h - row.hr) / babipDenom : 0
 
   const base: Record<string, unknown> = {
     playerId: yahooId,
@@ -48,15 +53,19 @@ export function buildPitchingRankingRowFromPeriodRow(
     hra: row.hr,
     so: row.so,
     bb: row.bb,
+    hbp: row.hbp,
+    er: row.er,
+    r: row.r,
+    wp: row.bk,
     k_pct: kPct,
     bb_pct: bbPct,
     qs_rate: 0,
     hqs_rate: 0,
     sqs_rate: 0,
     avg_against: avgAgainst,
-    babip_against: 0,
-    obp_against: bf > 0 ? (row.h + row.bb + row.hbp) / bf : 0,
-    slg_against: 0,
+    babip_against: babipAgainst,
+    obp_against: obpAgainst,
+    slg_against: slgAgainst,
   }
   if (romanName) base.romanName = romanName
   return base
