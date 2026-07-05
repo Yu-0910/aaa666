@@ -44,13 +44,14 @@ export const TEAM_CATCHER_COLUMNS: readonly TeamCatcherColumnDef[] = [
   { key: "rank", label: "順", sortable: false, numeric: false },
   { key: "player", label: "選手名", sortable: true, numeric: false },
   { key: "teamWinPct", label: "勝率", sortable: true, numeric: true },
+  { key: "era", label: "防御率", sortable: true, numeric: true },
+  { key: "csPct", label: "盗塁阻止率", sortable: true, numeric: true },
   { key: "gamesAsCatcher", label: "試合", sortable: true, numeric: true },
   { key: "starts", label: "先発", sortable: true, numeric: true },
   { key: "wins", label: "勝利", sortable: true, numeric: true },
   { key: "losses", label: "敗戦", sortable: true, numeric: true },
   { key: "avgAgainst", label: "被打率", sortable: true, numeric: true },
   { key: "qsCount", label: "QS", sortable: true, numeric: true },
-  { key: "era", label: "防御率", sortable: true, numeric: true },
   { key: "ipOuts", label: "回数", sortable: true, numeric: true },
   { key: "bf", label: "被打者", sortable: true, numeric: true },
   { key: "pitches", label: "投球数", sortable: true, numeric: true },
@@ -69,11 +70,10 @@ export const TEAM_CATCHER_COLUMNS: readonly TeamCatcherColumnDef[] = [
   { key: "obpAgainst", label: "被出塁率", sortable: true, numeric: true },
   { key: "slgAgainst", label: "被長打率", sortable: true, numeric: true },
   { key: "goAo", label: "GO/AO", sortable: true, numeric: true },
-  { key: "csPct", label: "盗塁阻止率", sortable: true, numeric: true },
   { key: "pbPer9", label: "PB/9", sortable: true, numeric: true },
 ] as const
 
-export const TEAM_CATCHER_DEFAULT_SORT_KEY: TeamCatcherSortKey = "gamesAsCatcher"
+export const TEAM_CATCHER_DEFAULT_SORT_KEY: TeamCatcherSortKey = "teamWinPct"
 
 export const TEAM_CATCHER_DEFAULT_SORT_ORDER: "asc" | "desc" = "desc"
 

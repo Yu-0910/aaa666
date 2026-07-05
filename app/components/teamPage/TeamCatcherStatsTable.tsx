@@ -29,7 +29,6 @@ const HEADER_ROW_HEIGHT = 38
 type Props = {
   rows: TeamCatcherStatsRow[]
   sortKey: TeamCatcherSortKey
-  order: "asc" | "desc"
   year: string
   onSortChange: (key: TeamCatcherSortKey) => void
 }
@@ -41,7 +40,6 @@ function tableMinWidth(leftBlockWidth: number, metricColMinWidth: number, metric
 export default function TeamCatcherStatsTable({
   rows,
   sortKey,
-  order,
   year,
   onSortChange,
 }: Props) {
@@ -141,7 +139,7 @@ export default function TeamCatcherStatsTable({
                         type="button"
                         onClick={() => onSortChange(col.key as TeamCatcherSortKey)}
                         title={col.label}
-                        className="flex h-full w-full cursor-pointer items-center justify-center gap-0.5 whitespace-nowrap px-0.5 hover:underline"
+                        className="relative flex h-full w-full cursor-pointer items-center justify-center whitespace-nowrap px-0.5"
                         style={{
                           height: HEADER_ROW_HEIGHT,
                           color: "#000000",
@@ -151,8 +149,23 @@ export default function TeamCatcherStatsTable({
                           margin: 0,
                         }}
                       >
-                        <span className="underline">{col.label}</span>
-                        {isActive ? (order === "asc" ? " ↑" : " ↓") : ""}
+                        <span>{col.label}</span>
+                        {isActive ? (
+                          <span
+                            className="pointer-events-none absolute inset-x-0 bottom-1 flex justify-center leading-none"
+                            aria-hidden
+                          >
+                            <span
+                              style={{
+                                width: 0,
+                                height: 0,
+                                borderLeft: "4px solid transparent",
+                                borderRight: "4px solid transparent",
+                                borderBottom: "5px solid #000000",
+                              }}
+                            />
+                          </span>
+                        ) : null}
                       </button>
                     ) : (
                       <span className="flex h-full items-center justify-center whitespace-nowrap px-0.5">
@@ -235,10 +248,7 @@ export default function TeamCatcherStatsTable({
                               href={playerPageHref({
                                 npbPlayerId: row.npbPlayerId,
                                 name: row.nameJa,
-                                romanName:
-                                  hasRomanName && row.romanName
-                                    ? formatRomanNameForRanking(row.romanName, { nameJa: row.nameJa })
-                                    : undefined,
+                                romanName: hasRomanName && row.romanName ? row.romanName : undefined,
                               })}
                               className="block truncate"
                             >

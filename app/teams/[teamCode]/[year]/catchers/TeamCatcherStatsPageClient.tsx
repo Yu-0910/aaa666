@@ -85,7 +85,6 @@ export default function TeamCatcherStatsPageClient({
         <TeamCatcherStatsTable
           rows={sortedRows}
           sortKey={sortKey}
-          order={order}
           year={year}
           onSortChange={handleSortChange}
         />
