@@ -1,4 +1,5 @@
 import { CURRENT_ROSTER_PLAYER_SLUGS } from "@/lib/currentRosterPlayerSlugs"
+import { historicalSlugOverrideForLink } from "@/lib/historicalPlayerSlugOverrides"
 
 export type PlayerPageSection =
   | "basic"
@@ -61,6 +62,8 @@ export function playerPagePath(slug: string, section: PlayerPageSection = "basic
 }
 
 export function playerPagePathSegment(link: PlayerLinkIds): string {
+  const historicalSlug = historicalSlugOverrideForLink(link)
+  if (historicalSlug) return historicalSlug
   const rosterSlug =
     CURRENT_ROSTER_PLAYER_SLUGS[String(link.npbPlayerId ?? "").trim()] ||
     CURRENT_ROSTER_PLAYER_SLUGS[String(link.playerId ?? "").trim()]

@@ -1,6 +1,14 @@
 import fs from "node:fs"
 import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
 import { derivedLocalPath, readDerivedJsonLocalSync } from "@/lib/derived/fetchDerivedJsonServer"
+import {
+  HISTORICAL_PLAYER_SLUG_OVERRIDES,
+  type HistoricalPlayerSlugOverride,
+  historicalSlugOverrideById,
+  historicalSlugOverrideByName,
+  historicalSlugOverrideByRoman,
+  historicalSlugOverrideBySlug,
+} from "@/lib/historicalPlayerSlugOverrides"
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import { resolveNonRosterNameEnFull } from "@/lib/playerRomanFromKana"
 import { type PlayerPageSection, playerPagePath, slugifyPlayerRomanName } from "@/lib/playerSlug"
@@ -53,9 +61,37 @@ function abbreviatedRomanFromFull(romanFull: string): string {
   return `${surname}-${given[0]}`
 }
 
+function entryFromHistoricalOverride(override: HistoricalPlayerSlugOverride): PlayerSlugEntry {
+  return {
+    npbPlayerId: override.npbPlayerId,
+    nameJa: override.nameJa,
+    romanFull: override.romanFull,
+    position: override.position,
+    teamCode: override.teamCode,
+    slug: override.slug,
+  }
+}
+
+function resolveHistoricalOverrideEntry(raw: string): PlayerSlugEntry | null {
+  const bySlug = historicalSlugOverrideBySlug(raw)
+  if (bySlug) return entryFromHistoricalOverride(bySlug)
+  if (/^\d+$/.test(raw)) {
+    const byId = historicalSlugOverrideById(resolveNpbPlayerIdFromPublicId(raw)) ?? historicalSlugOverrideById(raw)
+    if (byId) return entryFromHistoricalOverride(byId)
+  }
+  const byName = historicalSlugOverrideByName(raw)
+  if (byName) return entryFromHistoricalOverride(byName)
+  const byRoman = historicalSlugOverrideByRoman(raw)
+  if (byRoman) return entryFromHistoricalOverride(byRoman)
+  return null
+}
+
 function buildSlugIndex(): PlayerSlugIndex {
   if (cachedIndex) return cachedIndex
-  const entries = [...CURRENT_ROSTER_PLAYER_ENTRIES]
+  const entries = [
+    ...CURRENT_ROSTER_PLAYER_ENTRIES,
+    ...HISTORICAL_PLAYER_SLUG_OVERRIDES.map(entryFromHistoricalOverride),
+  ]
   const byKnownNpbId = new Set(entries.map((entry) => entry.npbPlayerId))
   try {
     const mergedDir = derivedLocalPath("player_profile", "merged")
@@ -91,6 +127,10 @@ function buildSlugIndex(): PlayerSlugIndex {
   const byRomanKey = new Map<string, PlayerSlugEntry>()
   for (const entry of entries) {
     bySlug.set(entry.slug, entry)
+    const historicalOverride = historicalSlugOverrideById(entry.npbPlayerId)
+    for (const legacySlug of historicalOverride?.legacySlugs ?? []) {
+      bySlug.set(legacySlug, entry)
+    }
     const abbreviatedSlug = slugifyPlayerRomanName(abbreviatedRomanFromFull(entry.romanFull))
     if (abbreviatedSlug && !bySlug.has(abbreviatedSlug)) {
       bySlug.set(abbreviatedSlug, entry)
@@ -134,6 +174,8 @@ export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
     const aliased = getPlayerSlugEntryBySlug(aliasSlug)
     if (aliased) return aliased
   }
+  const historicalOverride = resolveHistoricalOverrideEntry(decoded)
+  if (historicalOverride) return historicalOverride
   const bySlug = getPlayerSlugEntryBySlug(decoded)
   if (bySlug) return bySlug
   if (/^\d+$/.test(decoded)) {
