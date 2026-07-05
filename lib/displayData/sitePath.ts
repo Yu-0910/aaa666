@@ -13,11 +13,20 @@ export function displaySitePathToObjectKey(sitePath: string): string {
   return normalized
 }
 
+function encodeObjectKeyForUrl(objectKey: string): string {
+  return objectKey
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/')
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
+
 export function displaySitePathToPublicUrl(sitePath: string): string | null {
   const base = getPublicRankingsBaseUrl()
   if (!base) return null
   try {
-    return `${base.replace(/\/+$/, '')}/${displaySitePathToObjectKey(sitePath)}`
+    return `${base.replace(/\/+$/, '')}/${encodeObjectKeyForUrl(displaySitePathToObjectKey(sitePath))}`
   } catch {
     return null
   }

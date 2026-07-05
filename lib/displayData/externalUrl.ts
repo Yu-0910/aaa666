@@ -4,12 +4,21 @@
 
 import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
+function encodeObjectKeyForUrl(objectKey: string): string {
+  return objectKey
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/')
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
+
 export function getExternalDisplayDataUrl(objectKey: string): string {
   const baseUrl = getRankingsBaseUrl()
   if (!baseUrl) {
     throw new Error('RANKINGS_BASE_URL is not configured')
   }
-  const key = objectKey.replace(/^\/+/, '').replace(/\/+/g, '/')
+  const key = encodeObjectKeyForUrl(objectKey)
   return `${baseUrl.replace(/\/+$/, '')}/${key}`
 }
 

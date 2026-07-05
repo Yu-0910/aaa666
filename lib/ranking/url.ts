@@ -8,6 +8,13 @@ import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 /** Windowsで禁止の文字を "_" に置換（Python sanitize_filename と同一） */
 const FORBIDDEN_FILENAME_CHARS = /[\\/:*?"<>|]/g
 
+function encodePathSegments(path: string): string {
+  return path
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
+
 /**
  * 指標名をJSONファイル名（拡張子なし）にサニタイズ
  * ビルドスクリプトの sanitize_filename と同一ルール
@@ -40,6 +47,7 @@ export function sanitizeMetricForPath(metric: string): string {
 export function getRankingsUrl(path: string): string {
   // パスを正規化: 必ず / で始まり、二重スラッシュを防ぐ
   const normalizedPath = '/' + path.replace(/^\/+/, '').replace(/\/+/g, '/')
+  const encodedPath = '/' + encodePathSegments(normalizedPath.replace(/^\/+/, ''))
   
   // 段階移行: scope をチェック
   const scope = process.env.RANKINGS_EXTERNALIZE_SCOPE || ''
@@ -53,17 +61,17 @@ export function getRankingsUrl(path: string): string {
       // scope外: ローカルファイル参照（開発環境）またはエラー
       if (process.env.NODE_ENV === 'development') {
         // 開発環境ではローカルファイル参照を許可
-        return normalizedPath
+        return encodedPath
       }
       // 本番環境ではエラーを投げる（または404を返す）
       // 注意: この関数はURL生成のみを行うため、エラーチェックは呼び出し側で行う
       console.warn(`[getRankingsUrl] Path ${normalizedPath} is not in externalization scope: ${scope}`)
-      return normalizedPath // とりあえずパスを返す（プロキシ側で処理）
+      return encodedPath // とりあえずパスを返す（プロキシ側で処理）
     }
   }
   
   // プロキシ経由でアクセス（同一オリジン）
-  return normalizedPath
+  return encodedPath
 }
 
 /**
