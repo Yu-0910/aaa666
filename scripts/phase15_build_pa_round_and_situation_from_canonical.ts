@@ -432,16 +432,18 @@ function main(): void {
 
       const n = (appearanceCount.get(bid) ?? 0) + 1
       appearanceCount.set(bid, n)
-      const roundKey = n <= 4 ? String(n) : "5"
-      const roundMap = ensureRoundMap(bid)
       const scoreCtx = scoreCtxByPaId.get(pa.paId)
-      const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
-      const rbiBefore = roundAgg.rbi
-      updateBattingAggFromPa(roundAgg, gameId, pa, doc, basesBefore, scoreCtx)
-      roundMap.set(roundKey, roundAgg)
-      inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
-
       const slot = starterSlot.get(bid)
+      if (slot) {
+        const roundKey = n <= 4 ? String(n) : "5"
+        const roundMap = ensureRoundMap(bid)
+        const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
+        const rbiBefore = roundAgg.rbi
+        updateBattingAggFromPa(roundAgg, gameId, pa, doc, basesBefore, scoreCtx)
+        roundMap.set(roundKey, roundAgg)
+        inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
+      }
+
       if (slot) addBatOrderAgg(bid, slot, gameId, pa, doc, basesBefore, scoreCtx)
       const fieldKey = starterField.get(bid)
       if (fieldKey) addStarterFieldAgg(bid, fieldKey, gameId, pa, doc, basesBefore, scoreCtx)
@@ -598,6 +600,8 @@ function main(): void {
         plateResultSource: usePitchPbp ? "pitch_pbp" : "appearance_only",
         batOrderNote:
           "スタメン登録の打順（1〜9）。代打・途中出場のみでスタメン名簿に無い打席は集計対象外。",
+        paRoundNote:
+          "巡目別はスタメン出場した試合の打席のみを集計。代打・途中出場の打席は含めない。",
         starterFieldNote:
           "スタメン登録の守備位置（出場成績 HTML の括弧付き「位置」）。同一選手が試合ごとに別守備でスタメンなら行が分かれる。",
         vsHandNote:
