@@ -46,13 +46,22 @@ export function pitcherPocBasicRow1(pp: PitcherSeasonPocPayload): string[] {
   const b = pp.basic
   const games =
     b.gamesAppeared ?? Math.max(1, pp.source.canonicalGames?.length ?? 1)
-  let w = "—"
-  let l = "—"
-  let s = "—"
+  let wins = 0
+  let losses = 0
+  let saves = 0
+  if (typeof b.winCount === "number") {
+    wins = b.winCount
+    losses = b.lossCount ?? 0
+    saves = b.saveCount ?? 0
+  } else {
+    if (b.decision === "win") wins = 1
+    if (b.decision === "loss") losses = 1
+    if (b.decision === "save") saves = 1
+  }
+  const w = String(wins)
+  const l = String(losses)
+  const s = String(saves)
   const hp = b.holds != null ? String(b.holds) : "—"
-  if (b.decision === "win") w = "1"
-  if (b.decision === "loss") l = "1"
-  if (b.decision === "save") s = "1"
   const era = formatEra(b.era)
   const rawAvg = (b.avgAgainstApprox ?? "").trim()
   const avgVs = rawAvg ? formatSlashStatDisplay(rawAvg) : "—"

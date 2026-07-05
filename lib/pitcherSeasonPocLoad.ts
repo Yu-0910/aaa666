@@ -130,30 +130,16 @@ function qualityStartRatesFromCounts(
   }
 }
 
-function needsQualityStartMergeFromCanonical(b: PitcherSeasonPocPayload["basic"]): boolean {
-  return (
-    b.qsRate == null ||
-    b.hqsRate == null ||
-    b.sqsRate == null ||
-    b.qsCount == null ||
-    b.hqsCount == null ||
-    b.sqsCount == null
-  )
-}
-
 /**
- * 旧派生 JSON（QS/HQS/SQS 率・回数未収録）向けに canonical から先発ベースの QS 系を補完する。
+ * 旧派生 JSON や stale な派生 JSON 向けに、canonical からシーズン基幹カウントを補完する。
+ * 勝敗・先発/救援・S/H・完投/完封・QS 系は canonical を正として上書きする。
  * canonical が読めない本番 API では、JSON に載っている回数から率だけ算出する。
  */
-function mergeQualityStartFromCanonical(
+function mergeSeasonCoreCountsFromCanonical(
   payload: PitcherSeasonPocPayload,
   projectRoot: string
 ): PitcherSeasonPocPayload {
   const b = payload.basic
-  if (!needsQualityStartMergeFromCanonical(b)) {
-    return { ...payload, basic: qualityStartRatesFromCounts(b) }
-  }
-
   const gameIds = payload.source?.canonicalGames ?? []
   if (gameIds.length === 0 || payload.yahooPitcherIds.length === 0) {
     return { ...payload, basic: qualityStartRatesFromCounts(b) }
@@ -179,27 +165,29 @@ function mergeQualityStartFromCanonical(
   }
 
   const core = sumPitchingSeasonAggYahoo(aggs)
-  const gs = core.gamesStarted
-  if (gs <= 0) {
-    return { ...payload, basic: qualityStartRatesFromCounts(b) }
-  }
-
-  const gamesStarted = b.gamesStarted ?? gs
-  const qsCount = b.qsCount ?? core.qsStarts
-  const hqsCount = b.hqsCount ?? core.hqsStarts
-  const sqsCount = b.sqsCount ?? core.sqsStarts
-  const denom = gamesStarted > 0 ? gamesStarted : gs
+  const gamesStarted = core.gamesStarted
+  const qsCount = core.qsStarts
+  const hqsCount = core.hqsStarts
+  const sqsCount = core.sqsStarts
+  const denom = gamesStarted > 0 ? gamesStarted : 0
 
   const mergedBasic: PitcherSeasonPocPayload["basic"] = {
     ...b,
-    gamesStarted: b.gamesStarted ?? gs,
-    gamesInRelief: b.gamesInRelief ?? core.gamesInRelief,
+    gamesAppeared: core.gameIds.size,
+    gamesStarted,
+    gamesInRelief: core.gamesInRelief,
+    holds: core.hld,
+    completeGames: core.completeGames,
+    shutouts: core.shutouts,
+    winCount: core.w,
+    lossCount: core.l,
+    saveCount: core.sv,
     qsCount,
     hqsCount,
     sqsCount,
-    qsRate: b.qsRate ?? qsCount / denom,
-    hqsRate: b.hqsRate ?? hqsCount / denom,
-    sqsRate: b.sqsRate ?? sqsCount / denom,
+    qsRate: denom > 0 ? qsCount / denom : null,
+    hqsRate: denom > 0 ? hqsCount / denom : null,
+    sqsRate: denom > 0 ? sqsCount / denom : null,
   }
 
   return { ...payload, basic: qualityStartRatesFromCounts(mergedBasic) }
@@ -211,8 +199,8 @@ function enrichPitcherSeasonPocPayload(
   year: string,
   npbPlayerId: string
 ): PitcherSeasonPocPayload {
-  const withQualityStart = mergeQualityStartFromCanonical(payload, projectRoot)
-  return mergeNf3MetricsFromAggregate(withQualityStart, projectRoot, year, npbPlayerId)
+  const withCoreCounts = mergeSeasonCoreCountsFromCanonical(payload, projectRoot)
+  return mergeNf3MetricsFromAggregate(withCoreCounts, projectRoot, year, npbPlayerId)
 }
 
 export function pitcherSeasonPocFilePath(
