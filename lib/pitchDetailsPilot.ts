@@ -462,6 +462,7 @@ export type Phase14PitchFile = {
   yahooBatterId?: string
   source?: { canonicalGames?: string[] }
   pitchTypeStats?: PitchTypeStats[]
+  pitchTypeHandSplit?: PitchTypeHandSplitStats
   zoneStats?: ZoneStats[]
   speedBandStats?: SpeedBandStatsMap
   /** speedBandStats 各プロパティの意味（投球割合＝pitch_share_pct など） */
@@ -778,6 +779,17 @@ function resolvePitchTypeHandSplitForBatter(
   year: string,
   bundle: Phase14PitchFile | null,
 ): PitchTypeHandSplitStats {
+  if (bundle?.pitchTypeHandSplit) {
+    const vsRight = Array.isArray(bundle.pitchTypeHandSplit.vsRight)
+      ? bundle.pitchTypeHandSplit.vsRight
+      : []
+    const vsLeft = Array.isArray(bundle.pitchTypeHandSplit.vsLeft)
+      ? bundle.pitchTypeHandSplit.vsLeft
+      : []
+    if (vsRight.length > 0 || vsLeft.length > 0) {
+      return { vsRight, vsLeft }
+    }
+  }
   const gameIds = bundle?.source?.canonicalGames
   const pas =
     Array.isArray(gameIds) && gameIds.length > 0

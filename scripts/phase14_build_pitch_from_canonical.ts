@@ -19,6 +19,7 @@ import { fileURLToPath } from "url"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
 import {
   aggregateByPitchType,
+  aggregateByPitchTypePitcherHand,
   aggregateByZone,
   aggregateSpeedBandsStraightOnly,
   canonicalPlateAppearanceToPilot,
@@ -92,6 +93,7 @@ function main(): void {
   for (const bid of batterIds) {
     const pas = byBatter.get(bid)!
     const pitchTypeStats = aggregateByPitchType(pas)
+    const pitchTypeHandSplit = aggregateByPitchTypePitcherHand(pas)
     const zoneStats = aggregateByZone(pas)
     const speedBandStats = aggregateSpeedBandsStraightOnly(pas)
 
@@ -105,6 +107,7 @@ function main(): void {
       },
       speedBandStatsFieldJa: PHASE14_SPEED_BAND_STATS_FIELD_JA,
       pitchTypeStats,
+      pitchTypeHandSplit,
       zoneStats,
       speedBandStats,
     }
