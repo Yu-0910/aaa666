@@ -1,5 +1,6 @@
 import type { RankingRow } from "@/lib/ranking/types"
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
+import { resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 import {
   enrichBattingRankingDerivedMetrics,
   enrichPitchingRankingDerivedMetrics,
@@ -24,8 +25,13 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   ).trim()
   const playerId = String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? "").trim()
   const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
-  const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "")
-  const npbPlayerId = explicitNpb || undefined
+  const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "").trim()
+  const npbPlayerId = resolveRankingNpbPlayerId({
+    name,
+    team,
+    playerId,
+    explicitNpb,
+  })
   const normalized = {
     ...raw,
     rank: raw["rank"] as number,

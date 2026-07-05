@@ -16,6 +16,7 @@ import { loadWeeklyRankingJson } from "@/lib/ranking/jsonLoader"
 import { enrichBattingRankingDerivedMetrics } from "@/lib/ranking/enrichRankingDerivedMetrics"
 
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
+import { resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
@@ -102,19 +103,32 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
 
   ).trim()
 
+  const nameValue = name || "不明"
+  const playerId = String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? "").trim()
+  const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
+  const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "").trim()
+  const npbPlayerId = resolveRankingNpbPlayerId({
+    name: nameValue,
+    team,
+    playerId,
+    explicitNpb,
+  })
+
   return enrichBattingRankingDerivedMetrics({
 
     ...raw,
 
     rank: raw["rank"] as number,
 
-    playerId: String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? ""),
+    playerId,
 
-    name: name || "不明",
+    npbPlayerId,
+
+    name: nameValue,
 
     romanName,
 
-    team: String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? ""),
+    team,
 
   } as RankingRow) as RankingRow
 
@@ -153,6 +167,10 @@ async function mergeRomanNamesFromCsv(
   return rows.map((row) => {
 
     if (row.romanName && row.romanName.trim()) return row
+
+    const npbId = String(row.npbPlayerId ?? "").replace(/\D/g, "").replace(/^0+/, "")
+    const byNpbId = npbId ? map[`npb:${npbId}`]?.trim() : ""
+    if (byNpbId) return { ...row, romanName: byNpbId }
 
     const en = lookupRomanInMap(map, row.name, row.team)
 

@@ -258,6 +258,19 @@ type SportingNewsRotationSnapshot = {
 |------|------|
 | `scripts/run_daily_npb_pipeline.mjs` | fetch: `phase0:fetch:schedule-ahead` + `phase35:fetch:sportingnews-rotation` |
 | 同上 derive ブロック | Phase 30 **直後**: `phase36:build:top-probables` |
+| 同上 publish ブロック | `top-probables` を含む表示データ更新後、**予想投手タブの本番反映用 push** を実行 |
+
+**本番反映段階（追加）**
+
+1. 一括取得・派生更新で `public/data/top-probables/{year}/current.json` を再生成
+2. 表示データの publish / refresh で `top-probables` を本番配信物へ反映
+3. その差分を **本番ブランチへ push** して、予想投手タブを本番公開する
+
+**完了条件**
+
+- [ ] 一括取得スクリプト実行後、予想投手タブの生成物まで更新される
+- [ ] `top-probables` を含む publish 後に、本番 push 段階が運用手順として明記されている
+- [ ] 予想投手タブの変更を単独でも本番反映できる
 | `package.json` `rankings:rebuild` | 末尾: `phase36:build:top-probables` |
 | `package.json` `display:build:2026` | `phase36` 含める |
 | `package.json` `display:refresh:2026` | 上記経由で自動 |

@@ -240,6 +240,16 @@ type ProbablePitcherSlot = {
 | `display:build:2026` / `display:refresh:2026` | `phase36` を含める |
 | `scripts/display_r2_upload.mjs` | `public/data/top-probables` → `data/top-probables` |
 
+### 9.3 本番 push 段階
+
+一括取得スクリプトの新案には、生成と publish だけでなく **予想投手タブを本番へ push する段階** まで含める。
+
+1. `phase36:build:top-probables` で `public/data/top-probables/{year}/current.json` を更新
+2. `display:build:2026` / `display:refresh:2026` と R2 upload で本番配信データを更新
+3. 予想投手タブの反映差分を **本番ブランチへ push** して公開完了とする
+
+この段階を含めることで、「一括取得は済んだが予想投手タブだけ本番未反映」の状態を運用上の未完了として扱う。
+
 **注意**: Phase 36 は Phase 30（対戦成績）に依存するが、canonical 派生全体には依存しない。SN 取得は **fetch フェーズ**で先行させ、derive 時点では `_data/external` を読むだけにする。
 
 ---

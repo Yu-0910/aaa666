@@ -603,6 +603,8 @@ export function PlayerPageClient({
     ((profileMerged?.career_pitching?.rows ?? []) as CareerDisplayRow[]).length > 0
   const hasMergedBattingFromProfile =
     ((profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]).length > 0
+  const canFallbackToPitcherFromMergedProfile =
+    hasMergedPitchingFromProfile && !rosterKnownFielder && !rosterKnownCatcher
   /** 名簿ポジション空欄は投手・野手両方 true になり得る。打撃のみのときは野手今季 UI を優先 */
   const rosterEmptyPositionPrefersFielderUi =
     isRosterPlayer &&
@@ -655,7 +657,7 @@ export function PlayerPageClient({
     !rosterEmptyPositionPrefersFielderUi &&
     (isAoyagiPage ||
       rosterKnownPitcher ||
-      hasMergedPitchingFromProfile ||
+      canFallbackToPitcherFromMergedProfile ||
       Boolean(pitcherSeasonPocPayload))
   /** クエリに明示された Yahoo 試合 ID（無ければ空文字） */
   const pitcherPocYahooGameIdExplicit = useMemo(() => {
@@ -1257,7 +1259,7 @@ export function PlayerPageClient({
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mb-3"
   /** 固定時: 外側 mt-7 でプロフィール表との間隔を確保 */
   const fielderStickySubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mb-3"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mb-5"
   const pitcherCareerSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-1"
   const pitcherSubTabButtonClass =
