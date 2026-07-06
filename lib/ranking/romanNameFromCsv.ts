@@ -3,9 +3,10 @@
  * クライアントから import しないこと（fs / npbRoster を引くため）。
  */
 
-import path from 'path'
-import fs from 'fs'
+import path from 'node:path'
+import fs from 'node:fs'
 import { getNpbRoster2026, rosterEnglishShortForRanking } from '@/lib/npbRoster'
+import { getProjectRoot } from '@/lib/projectRoot'
 import { normalizeRomanMapKey, normalizeRomanMapKeyNoSpace } from '@/lib/ranking/romanNameLookup'
 import { readFsTextWithLegacyEncodings } from '@/lib/ranking/readFsTextWithLegacyEncodings'
 
@@ -88,12 +89,13 @@ function registerNpbRomanAlias(map: Record<string, string>, npbPlayerId: string 
 function readNpbMetaRomanName(npbPlayerId: string | undefined): string {
   const normalized = normalizeNpbId(npbPlayerId)
   if (!normalized) return ''
+  const projectRoot = getProjectRoot()
   const candidates = [
     normalized,
     normalized.padStart(8, '0'),
   ]
   for (const id of candidates) {
-    const metaPath = path.join(process.cwd(), '_data', 'derived', 'npb_player_meta', `${id}.json`)
+    const metaPath = path.join(projectRoot, '_data', 'derived', 'npb_player_meta', `${id}.json`)
     if (!fs.existsSync(metaPath)) continue
     try {
       const data = JSON.parse(fs.readFileSync(metaPath, 'utf8')) as {
@@ -115,14 +117,15 @@ function readNpbMetaRomanName(npbPlayerId: string | undefined): string {
  */
 function findBattingCsvForRoman(year: string, league: string): string | null {
   const upperLeague = league.toUpperCase()
+  const projectRoot = getProjectRoot()
   const baseNames = [
     `batting_${year}_${upperLeague}_from_master.csv`,
     `batting_${year}_${upperLeague}_qualifying.csv`,
   ]
   const dirs = [
-    path.join(process.cwd(), '_data', 'master_csv_calculated'),
-    path.join(process.cwd(), '_data', 'master_csv'),
-    process.cwd(),
+    path.join(projectRoot, '_data', 'master_csv_calculated'),
+    path.join(projectRoot, '_data', 'master_csv'),
+    projectRoot,
   ]
   for (const base of baseNames) {
     for (const dir of dirs) {
@@ -135,13 +138,14 @@ function findBattingCsvForRoman(year: string, league: string): string | null {
 
 function findPitchingCsvForRoman(year: string, league: string): string | null {
   const upperLeague = league.toUpperCase()
+  const projectRoot = getProjectRoot()
   const baseNames = [
     `pitching_${year}_${upperLeague}_from_master.csv`,
   ]
   const dirs = [
-    path.join(process.cwd(), '_data', 'master_csv_calculated'),
-    path.join(process.cwd(), '_data', 'master_csv'),
-    process.cwd(),
+    path.join(projectRoot, '_data', 'master_csv_calculated'),
+    path.join(projectRoot, '_data', 'master_csv'),
+    projectRoot,
   ]
   for (const base of baseNames) {
     for (const dir of dirs) {

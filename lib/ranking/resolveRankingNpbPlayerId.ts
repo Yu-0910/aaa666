@@ -1,6 +1,3 @@
-import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
-import { lookupNpbPlayerIdForYahooId } from "@/lib/yahooNpbBatterIdMap"
-
 const teamNameToCode: Record<string, string> = {
   阪神: "H",
   阪神タイガース: "H",
@@ -37,28 +34,21 @@ export function rankingTeamCodeFromLabel(team: string): string {
   return t
 }
 
-/** ランキング行の playerId（Yahoo 等）から個人ページ用 NPB ID を解決する */
+function normalizeNpbId(raw: string | undefined): string | undefined {
+  const id = String(raw ?? "").trim().replace(/[^\d]/g, "")
+  return id || undefined
+}
+
+/**
+ * クライアント共有版:
+ * ランキング JSON に NPB ID が明示されている場合のみ採用する。
+ * 追加の名簿/橋渡し解決は server 側 helper に寄せる。
+ */
 export function resolveRankingNpbPlayerId(opts: {
   name: string
   team: string
   playerId?: string
   explicitNpb?: string
 }): string | undefined {
-  const nameKey = opts.name.replace(/\s+/g, "")
-  const teamCode = rankingTeamCodeFromLabel(opts.team)
-  const yahooPlayerId = (opts.playerId ?? "").trim()
-  const explicitNpb = (opts.explicitNpb ?? "").trim()
-
-  const roster = findRosterPlayerByPublicId(nameKey)
-  const rosterTeamCode = roster
-    ? rankingTeamCodeFromLabel(String(roster.team_code ?? roster.team ?? "").trim())
-    : ""
-  const rosterNpb =
-    roster && rosterTeamCode === teamCode ? roster.npb_player_id.trim() : ""
-
-  const npbFromYahooLookup = yahooPlayerId
-    ? lookupNpbPlayerIdForYahooId(yahooPlayerId) ?? undefined
-    : undefined
-
-  return rosterNpb || npbFromYahooLookup || explicitNpb || undefined
+  return normalizeNpbId(opts.explicitNpb)
 }

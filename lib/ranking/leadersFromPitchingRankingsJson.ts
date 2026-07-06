@@ -21,7 +21,8 @@ import {
   pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
 import { fetchPitchingRankingMetricJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
-import { rankingTeamCodeFromLabel, resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
+import { rankingTeamCodeFromLabel } from "@/lib/ranking/resolveRankingNpbPlayerId"
+import { resolveRankingNpbPlayerIdServer } from "@/lib/ranking/resolveRankingNpbPlayerId.server"
 import { readTopLeadersSnapshot, TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshot2026"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 
@@ -130,7 +131,7 @@ function toLeaderRow(row: RankingJsonRow, displayRank: number, metricLabel: stri
   ) as LeaderRow["rank"]
   const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
   const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
-  const npbPlayerId = resolveRankingNpbPlayerId({
+  const npbPlayerId = resolveRankingNpbPlayerIdServer({
     name: nameRaw,
     team: teamRaw,
     playerId: yahooPlayerId,
