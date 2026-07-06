@@ -46,6 +46,7 @@ import {
 import { isPlateResultPitchPbp } from "../lib/yahooGame/plateResultSourceFeatureFlag"
 import {
   emptyBattingSeasonAggYahoo,
+  updateBattingAggFromResultJa,
   plateAppearanceResolvedResultText,
   updateBattingAggFromPa,
   type BattingSeasonAggYahoo,
@@ -66,6 +67,10 @@ import { loadSportsnaviScoreSnapshots } from "../lib/yahooGame/sportsnaviScoreSn
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import {
+  extractAppearanceStatSlotsFromCells,
+  countNonEmptyAppearanceSlots,
+} from "../lib/yahooGame/appearanceStatsTrailingCells"
+import {
   STARTER_FIELD_TABLE_KEYS,
   labelForStarterFieldSplit,
   starterFieldSplitKeyFromLineupPosition,
@@ -74,12 +79,19 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
+      i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
       i++
     }
     if (args[i] === "--pitch-pbp") {
@@ -89,7 +101,7 @@ function parseArgs(): { year: string } {
       process.env.TOPPAGE_SITUATION_BASES_SOURCE = "score_illustration"
     }
   }
-  return { year }
+  return { year, onlyYahooIds }
 }
 
 function aggToSeasonStatsRow(
@@ -249,8 +261,27 @@ function compareHalfKeys(a: string, b: string): number {
   return ta === "表" ? -1 : 1
 }
 
+function appearanceSlotResultsByBatter(doc: CanonicalGameDocument): Map<string, string[]> {
+  const byBid = new Map<string, string[]>()
+  for (const line of doc.domain?.battingLines ?? []) {
+    const bid = String(line.yahooPlayerId ?? "").trim()
+    if (!bid) continue
+    const slots = (line.appearancePaSlotsJa ?? []).map((s) => String(s ?? "").trim()).filter(Boolean)
+    if (slots.length <= 0) continue
+    const prev = byBid.get(bid)
+    if (!prev || slots.length >= prev.length) byBid.set(bid, slots)
+  }
+  for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+    const bid = String(row.yahooPlayerId ?? "").trim()
+    if (!bid || byBid.has(bid)) continue
+    const slots = extractAppearanceStatSlotsFromCells(row.cells ?? []).filter(Boolean)
+    if (countNonEmptyAppearanceSlots(slots) > 0) byBid.set(bid, slots)
+  }
+  return byBid
+}
+
 function main(): void {
-  const { year } = parseArgs()
+  const { year, onlyYahooIds } = parseArgs()
   const usePitchPbp = isPlateResultPitchPbp()
   const useScoreBases = isSituationBasesFromScoreIllustration()
   const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
@@ -405,11 +436,29 @@ function main(): void {
     const inferredRbiInGame = new Map<string, number>()
     const starterSlot = starterSlotByYahooId(doc)
     const starterField = starterFieldKeyByYahooId(doc)
+    const appearanceSlotsByBatter = appearanceSlotResultsByBatter(doc)
     const playLineByPaId = usePitchPbp ? null : buildPaIdToSportsnaviPlayLineMap(doc)
     const scoreCtxByPaId = buildScoreBasesContextByPaId(
       pas.map((p) => p.paId),
       loadSportsnaviScoreSnapshots(projectRoot, doc.gameId),
     )
+
+    for (const [bid, slotResults] of appearanceSlotsByBatter.entries()) {
+      if (!starterSlot.get(bid)) continue
+      const roundMap = ensureRoundMap(bid)
+      for (let i = 0; i < slotResults.length; i++) {
+        const result = String(slotResults[i] ?? "").trim()
+        if (!result) continue
+        const roundKey = i < 4 ? String(i + 1) : "5"
+        const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
+        const rbiBefore = roundAgg.rbi
+        roundAgg.pa += 1
+        roundAgg.gameIds.add(gameId)
+        updateBattingAggFromResultJa(roundAgg, result)
+        roundMap.set(roundKey, roundAgg)
+        inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
+      }
+    }
 
     const halfGroups = new Map<string, PlateAppearance[]>()
     for (const pa of pas) {
@@ -434,7 +483,7 @@ function main(): void {
       appearanceCount.set(bid, n)
       const scoreCtx = scoreCtxByPaId.get(pa.paId)
       const slot = starterSlot.get(bid)
-      if (slot) {
+      if (slot && !appearanceSlotsByBatter.has(bid)) {
         const roundKey = n <= 4 ? String(n) : "5"
         const roundMap = ensureRoundMap(bid)
         const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
@@ -505,6 +554,8 @@ function main(): void {
 
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      if (onlyYahooIds && !onlyYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -533,7 +584,7 @@ function main(): void {
     ...byBatterStarterField.keys(),
     ...allBattersWithBattingLines,
   ])
-  const batterIds = [...allBatterIds].sort()
+  const batterIds = (onlyYahooIds ?? [...allBatterIds]).slice().sort()
   for (const bid of batterIds) {
     const roundMap = byBatterRound.get(bid)
     const sitMap = byBatterSit.get(bid)
