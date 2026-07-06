@@ -23,9 +23,7 @@ export async function GET(
     if (upperLeague !== 'CL' && upperLeague !== 'PL') {
       return NextResponse.json({ error: 'league must be CL or PL' }, { status: 400 })
     }
-    const { getRomanNameMap } = await import('@/lib/ranking/romanNameFromCsv')
-    const map = getRomanNameMap(year, upperLeague)
-    return NextResponse.json(map, {
+    return NextResponse.json({}, {
       headers: {
         'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=600',
       },
