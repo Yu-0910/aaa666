@@ -784,6 +784,45 @@ function main(): void {
     }
     return m
   }
+  function applyGamePaRoundReconcileFromPitchingLines(
+    doc: CanonicalGameDocument,
+    inferredByNpb: Map<string, PaAgg>,
+    lastRoundKeyByNpb: Map<string, string>,
+  ): void {
+    const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
+    for (const line of mergedLines.values()) {
+      const npb = npbByYahooPitcherId.get(line.yahooPlayerId) ?? null
+      if (!npb || !byNpb.has(npb)) continue
+      const inferred = inferredByNpb.get(npb) ?? emptyPaAgg()
+      const abOfficial = Math.max(0, line.bf - line.bb - line.hbp)
+      const deltas = {
+        bf: line.bf - inferred.bf,
+        ab: abOfficial - inferred.ab,
+        h: line.h - inferred.h,
+        hr: line.hr - inferred.hr,
+        so: line.so - inferred.so,
+        bb: line.bb - inferred.bb,
+        hbp: line.hbp - inferred.hbp,
+        outs: line.outs - inferred.outs,
+        er: line.er - inferred.er,
+      }
+      if (Object.values(deltas).every((n) => n === 0)) continue
+
+      const roundKey = lastRoundKeyByNpb.get(npb) ?? (line.bf > 0 ? "1" : "5")
+      const pm = ensurePaRound(npb)
+      const agg = pm.get(roundKey) ?? emptyPaAgg()
+      agg.bf += deltas.bf
+      agg.ab += deltas.ab
+      agg.h += deltas.h
+      agg.hr += deltas.hr
+      agg.so += deltas.so
+      agg.bb += deltas.bb
+      agg.hbp += deltas.hbp
+      agg.outs += deltas.outs
+      agg.er += deltas.er
+      pm.set(roundKey, agg)
+    }
+  }
   function ensurePaRoundPitchTypes(npb: string) {
     let m = byPaRoundPitchTypes.get(npb)
     if (!m) {
@@ -845,6 +884,8 @@ function main(): void {
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
     const erByPaId = buildEstimatedErByPaId(doc)
     const bfInGameByNpb = new Map<string, number>()
+    const inferredPaRoundByNpb = new Map<string, PaAgg>()
+    const lastPaRoundKeyByNpb = new Map<string, string>()
 
     for (const pa of pas) {
       const pid = yahooPitcherIdForVsHandFromPa(pa)
@@ -961,6 +1002,12 @@ function main(): void {
         agg.outs += outsAdded
         agg.er += erDelta
         pm.set(key, agg)
+        const inferred = inferredPaRoundByNpb.get(npb) ?? emptyPaAgg()
+        addPitcherPaCount(inferred, res)
+        inferred.outs += outsAdded
+        inferred.er += erDelta
+        inferredPaRoundByNpb.set(npb, inferred)
+        lastPaRoundKeyByNpb.set(npb, key)
       }
 
       const pitcherThrowRaw = (
@@ -994,6 +1041,8 @@ function main(): void {
         im.set(parsed.inning, innAgg)
       }
     }
+
+    applyGamePaRoundReconcileFromPitchingLines(doc, inferredPaRoundByNpb, lastPaRoundKeyByNpb)
 
     const halfGroups = new Map<string, PlateAppearance[]>()
     for (const pa of pas) {
