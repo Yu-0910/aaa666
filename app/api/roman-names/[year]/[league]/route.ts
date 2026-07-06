@@ -5,7 +5,6 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getRomanNameMap } from '@/lib/ranking/romanNameFromCsv'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -24,6 +23,7 @@ export async function GET(
     if (upperLeague !== 'CL' && upperLeague !== 'PL') {
       return NextResponse.json({ error: 'league must be CL or PL' }, { status: 400 })
     }
+    const { getRomanNameMap } = await import('@/lib/ranking/romanNameFromCsv')
     const map = getRomanNameMap(year, upperLeague)
     return NextResponse.json(map, {
       headers: {
