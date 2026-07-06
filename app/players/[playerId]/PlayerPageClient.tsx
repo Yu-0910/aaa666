@@ -1536,33 +1536,33 @@ export function PlayerPageClient({
 
   const renderFielderSeasonBody = () => (
     <div className={PLAYER_SEASON_TAB_NUMERICS_CLASS}>
-      {kikuchiSeasonDetailTab === "catcher" ? (
-        <PlayerPageCatcherSeasonBody
-          tb={tb}
-          sectionStripeColor={sectionStripeColor}
-          derived={catcherSeasonDerived}
-          gamePitchTypes={gamePitchTypes}
-        />
-      ) : kikuchiSeasonDetailTab === "vs_team_pitch" ? (
-        <PlayerPageFielderVsTeamPitchBody
-          tb={tb}
-          sectionStripeColor={sectionStripeColor}
-          playerId={seasonPilotPlayerId}
-          loading={batterVsTeamPitchDerived.loading}
-          settled={batterVsTeamPitchDerived.settled}
-          payload={batterVsTeamPitchDerived.payload}
-        />
-      ) : kikuchiSeasonDetailTab === "matchup" ? (
-        <PlayerPageMatchupBody
-          tb={tb}
-          sectionStripeColor={sectionStripeColor}
-          role="batter"
-          loading={playerMatchupDerivedFielder.loading}
-          settled={playerMatchupDerivedFielder.settled}
-          payload={playerMatchupDerivedFielder.payload}
-        />
-      ) : (
-        <>
+      <div className={PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS}>
+        {kikuchiSeasonDetailTab === "catcher" ? (
+          <PlayerPageCatcherSeasonBody
+            tb={tb}
+            sectionStripeColor={sectionStripeColor}
+            derived={catcherSeasonDerived}
+            gamePitchTypes={gamePitchTypes}
+          />
+        ) : kikuchiSeasonDetailTab === "vs_team_pitch" ? (
+          <PlayerPageFielderVsTeamPitchBody
+            tb={tb}
+            sectionStripeColor={sectionStripeColor}
+            playerId={seasonPilotPlayerId}
+            loading={batterVsTeamPitchDerived.loading}
+            settled={batterVsTeamPitchDerived.settled}
+            payload={batterVsTeamPitchDerived.payload}
+          />
+        ) : kikuchiSeasonDetailTab === "matchup" ? (
+          <PlayerPageMatchupBody
+            tb={tb}
+            sectionStripeColor={sectionStripeColor}
+            role="batter"
+            loading={playerMatchupDerivedFielder.loading}
+            settled={playerMatchupDerivedFielder.settled}
+            payload={playerMatchupDerivedFielder.payload}
+          />
+        ) : (
           <SeasonStatsPilot
             playerId={seasonPilotPlayerId}
             seasonDetailTab={kikuchiSeasonDetailTab as any}
@@ -1573,14 +1573,14 @@ export function PlayerPageClient({
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
           />
-        </>
-      )}
+        )}
+      </div>
     </div>
   )
 
   return (
     <div
-      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}`}
+      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}`}
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}
