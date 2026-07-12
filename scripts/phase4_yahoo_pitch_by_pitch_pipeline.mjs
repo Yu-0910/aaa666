@@ -10,6 +10,7 @@
  *   node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year 2026 --sleep 1.2
  *   node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year 2026 --force --to-date 2026-04-19
  *   node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year 2026 --from-date 2026-05-04 --to-date 2026-05-06
+ *   node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year 2026 --game-ids 2021039122,2021039124
  *     … byDate 上でその期間（両端含む）の gameId のみ処理
  *
  * 注意:
@@ -61,6 +62,7 @@ function parseArgs(argv) {
   const sleepIdx = argv.indexOf("--sleep")
   const toDateIdx = argv.indexOf("--to-date")
   const fromDateIdx = argv.indexOf("--from-date")
+  const gameIdsIdx = argv.indexOf("--game-ids")
   const force = argv.includes("--force")
   const year = yearIdx >= 0 ? String(argv[yearIdx + 1] ?? "").trim() : "2026"
   const limitRaw = limitIdx >= 0 ? String(argv[limitIdx + 1] ?? "").trim() : ""
@@ -69,7 +71,14 @@ function parseArgs(argv) {
   const sleepSec = sleepRaw ? Math.max(0.0, parseFloat(sleepRaw) || 0) : 1.2
   const toDate = toDateIdx >= 0 ? String(argv[toDateIdx + 1] ?? "").trim() : ""
   const fromDate = fromDateIdx >= 0 ? String(argv[fromDateIdx + 1] ?? "").trim() : ""
-  return { year, limit, sleepSec, force, toDate, fromDate }
+  const gameIds =
+    gameIdsIdx >= 0
+      ? String(argv[gameIdsIdx + 1] ?? "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean)
+      : []
+  return { year, limit, sleepSec, force, toDate, fromDate, gameIds }
 }
 
 /**
@@ -164,6 +173,48 @@ function phase10PitchRowCount(phase10Path) {
   }
 }
 
+function buildScoreIndex(inning, topBottom, batOrder) {
+  const inn = String(parseInt(String(inning), 10)).padStart(2, "0")
+  const tb = String(topBottom) === "裏" ? "2" : "1"
+  const bo = String(parseInt(String(batOrder), 10)).padStart(2, "0")
+  return `${inn}${tb}${bo}00`
+}
+
+function baseScoreIndex(scoreIndex) {
+  const s = String(scoreIndex ?? "").trim()
+  if (!/^\d{7}$/.test(s)) return ""
+  return `${s.slice(0, 5)}00`
+}
+
+function scoreRawBaseIndexes(root, gameId) {
+  const metaPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi_score", "_meta", `${gameId}.json`)
+  if (!fileExists(metaPath)) return new Set()
+  try {
+    const meta = readJson(metaPath)
+    const indexes = Array.isArray(meta?.scoreIndexes) ? meta.scoreIndexes : []
+    return new Set(indexes.map(baseScoreIndex).filter(Boolean))
+  } catch {
+    return new Set()
+  }
+}
+
+function phase10CoveredBaseIndexes(phase10Path) {
+  if (!fileExists(phase10Path)) return new Set()
+  try {
+    const rows = pitchRowsFromPhase10Json(readJson(phase10Path))
+    return new Set(rows.map((r) => buildScoreIndex(r?.inning, r?.top_bottom, r?.bat_order)).filter(Boolean))
+  } catch {
+    return new Set()
+  }
+}
+
+function missingPhase10BaseIndexes(root, gameId, phase10Path) {
+  const rawBases = scoreRawBaseIndexes(root, gameId)
+  if (rawBases.size === 0) return []
+  const covered = phase10CoveredBaseIndexes(phase10Path)
+  return [...rawBases].filter((ix) => !covered.has(ix)).sort()
+}
+
 function safeReadText(p) {
   try {
     return fs.readFileSync(p, "utf8")
@@ -240,7 +291,7 @@ function run(cmd, args, label) {
 }
 
 async function main() {
-  const { year, limit, sleepSec, force, toDate, fromDate } = parseArgs(process.argv.slice(2))
+  const { year, limit, sleepSec, force, toDate, fromDate, gameIds: explicitGameIds } = parseArgs(process.argv.slice(2))
   const root = process.cwd()
   const indexPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
   if (!fileExists(indexPath)) {
@@ -264,6 +315,16 @@ async function main() {
     }
     const rangeLabel = [fromDate || "…", toDate || "…"].join(" … ")
     console.log(`[phase4] 日付範囲 ${rangeLabel}: ${before} gameIds → ${gameIdsAll.length} (byDate による絞り込み)`)
+  }
+  if (explicitGameIds.length > 0) {
+    const before = gameIdsAll.length
+    const allowed = new Set(explicitGameIds)
+    gameIdsAll = gameIdsAll.filter((id) => allowed.has(id))
+    if (gameIdsAll.length === 0) {
+      console.error("[phase4] --game-ids に一致する gameId が season index にありません:", explicitGameIds.join(","))
+      process.exit(1)
+    }
+    console.log(`[phase4] gameIds 指定: ${before} gameIds → ${gameIdsAll.length} (${gameIdsAll.join(",")})`)
   }
   const gameIds = limit > 0 ? gameIdsAll.slice(0, limit) : gameIdsAll
   if (gameIds.length === 0) {
@@ -327,10 +388,14 @@ async function main() {
 
     // restore（空 pitchRows の derived は未完了扱い → 削除して再実行）
     const existingRows = phase10PitchRowCount(phase10Path)
-    if (!force && existingRows > 0) {
+    const missingBaseIndexes = !force && existingRows > 0 ? missingPhase10BaseIndexes(root, gameId, phase10Path) : []
+    if (!force && existingRows > 0 && missingBaseIndexes.length === 0) {
       skippedRestore += 1
       console.log(`[phase4] restore: skipped (pitchRows=${existingRows})`)
     } else {
+      if (!force && existingRows > 0 && missingBaseIndexes.length > 0) {
+        console.log(`[phase4] restore: raw 更新を検出（未反映 score index=${missingBaseIndexes.join(",")}）`)
+      }
       if (!force && fileExists(phase10Path) && existingRows === 0) {
         try {
           fs.unlinkSync(phase10Path)

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-07-22",
+  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-22",
+  "gameIds": [
+    "2021039175",
+    "2021039176",
+    "2021039177",
+    "2021039178",
+    "2021039179",
+    "2021039180"
+  ],
+  "games": [
+    {
+      "gameId": "2021039175",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "広島",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "G",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039176",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "中日",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "S",
+      "awayTeamCode": "D"
+    },
+    {
+      "gameId": "2021039177",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "H",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039178",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "L",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021039179",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "楽天",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "M",
+      "awayTeamCode": "E"
+    },
+    {
+      "gameId": "2021039180",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "Bs"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039175": "東京ドーム",
+    "2021039176": "神宮球場",
+    "2021039177": "甲子園球場",
+    "2021039178": "ベルーナD",
+    "2021039179": "ZOZOマリン",
+    "2021039180": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039175": "試合前",
+    "2021039176": "試合前",
+    "2021039177": "試合前",
+    "2021039178": "試合前",
+    "2021039179": "試合前",
+    "2021039180": "試合前"
+  }
+}

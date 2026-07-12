@@ -45,6 +45,8 @@ import {
   isStatsHtmlParseComplete,
 } from "../lib/yahooGame/phase2RawCanonicalSync.mjs"
 
+const seasonIndexCache = new Map()
+
 function parseArgs(argv) {
   const yearIdx = argv.indexOf("--year")
   const fromIdx = argv.indexOf("--from")
@@ -69,6 +71,40 @@ function parseArgs(argv) {
         .filter(Boolean)
     : null
   return { year, from, to, throttleMs, limit, force, onlyIncomplete, gameIdsOverride }
+}
+
+function jstDeadlineUtcMs(ymd, hm) {
+  const [hh, mm] = String(hm).split(":").map((x) => parseInt(x, 10))
+  const utc = new Date(`${ymd}T00:00:00.000Z`).getTime()
+  return utc + (hh - 9) * 60 * 60 * 1000 + mm * 60 * 1000
+}
+
+function gameDateForId(root, year, gameId) {
+  const key = `${root}|${year}`
+  let byDate = seasonIndexCache.get(key)
+  if (!byDate) {
+    const p = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
+    try {
+      byDate = JSON.parse(fs.readFileSync(p, "utf8"))?.byDate ?? {}
+    } catch {
+      byDate = {}
+    }
+    seasonIndexCache.set(key, byDate)
+  }
+  for (const [date, ids] of Object.entries(byDate)) {
+    if (Array.isArray(ids) && ids.map(String).includes(String(gameId))) return date
+  }
+  return ""
+}
+
+function existingRawWasCapturedBeforeFinalization({ root, year, gameId, metaPath }) {
+  const meta = readJsonIfExists(metaPath)
+  const fetchedAt = meta?.fetchedAt ? new Date(String(meta.fetchedAt)) : null
+  if (!fetchedAt || Number.isNaN(fetchedAt.getTime())) return false
+  const gameDate = gameDateForId(root, year, gameId)
+  if (!gameDate) return false
+  const finalizationMs = jstDeadlineUtcMs(gameDate, "23:30")
+  return fetchedAt.getTime() < finalizationMs && Date.now() >= finalizationMs
 }
 
 function isCancelledGameMainRaw(root, gameId) {
@@ -105,6 +141,7 @@ function shouldSkipExistingFetch({ root, year, kind, gameId, force, htmlPath, me
         : isCancelledGameMainRaw(root, gameId)
   if (kind === "stats") {
     if (cancelled) return true
+    if (existingRawWasCapturedBeforeFinalization({ root, year, gameId, metaPath })) return false
     return isStatsHtmlParseComplete(html)
   }
   if (cancelled) return true

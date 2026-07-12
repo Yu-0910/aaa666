@@ -29,8 +29,8 @@ export function hitBases(result: string): 0 | 1 | 2 | 3 | 4 {
   const core = stripBracketNotes(result)
   if (/本塁打|ホームラン|HR/.test(core)) return 4
   if (/左中本|右中本|左本|右本|中本(?:$)/.test(core)) return 4
-  if (/三塁打|左３|中３|右３|左3|中3|右3/.test(core)) return 3
-  if (/二塁打|左２|中２|右２|左2|中2|右2/.test(core)) return 2
+  if (/三塁打|[一二三遊左中右投捕]３|[一二三遊左中右投捕]3/.test(core)) return 3
+  if (/二塁打|[一二三遊左中右投捕]２|[一二三遊左中右投捕]2/.test(core)) return 2
   if (/内安|内野安打/.test(core)) return 1
   if (/二安/.test(core)) return 1
   if (/三安/.test(core)) return 1

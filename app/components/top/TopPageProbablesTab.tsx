@@ -19,6 +19,7 @@ import { fetchTopProbablesJson } from "@/lib/probables/fetchTopProbablesJson"
 import { formatPitcherSeasonStatsLine } from "@/lib/probables/formatPitcherSeasonStatsLine"
 import { enrichProbablesSnapshotFromApi } from "@/lib/probables/fetchEnrichedProbablesSnapshot"
 import { withRakutenHanshinProbablesSample } from "@/lib/probables/rakutenHanshinProbablesSample"
+import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
 import type {
   TopProbablesCard,
   TopProbablesGame,
@@ -29,7 +30,7 @@ import type {
 import { ProbablesPitchDataOverlay } from "@/app/components/top/ProbablesPitchDataOverlay"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX } from "@/lib/playerMatchupSeasonTab"
-import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
+import { matchupOpponentDisplayNameJa, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import { playerPageHref } from "@/lib/playerPageHref"
 import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
 import { resolveRomanNameFromMap } from "@/lib/ranking/romanNameLookup"
@@ -138,6 +139,43 @@ function rowBackgroundColor(idx: number): string {
 }
 
 const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"] as const
+
+function normalizeNpbId(id: string | null | undefined): string {
+  return String(id ?? "").replace(/\D/g, "").replace(/^0+/, "")
+}
+
+function pitcherAliasKeys(nameJa: string): string[] {
+  const normalized = String(nameJa ?? "").trim()
+  const compact = rosterNameMatchKey(normalized)
+  const withoutInitial = compact
+    .replace(/^[\uFF21-\uFF3A\uFF41-\uFF5A][．.]/u, "")
+    .replace(/^[A-Za-z][.．]/u, "")
+  const surname = normalized.match(/^[^\s\u3000]+/)?.[0] ?? compact
+  const spaced = normalized.match(/^([^\s\u3000]+)[\s\u3000]+([^\s\u3000])/)
+  const familyGivenInitial = spaced ? rosterNameMatchKey(`${spaced[1]}${spaced[2]}`) : ""
+
+  return [...new Set([compact, withoutInitial, rosterNameMatchKey(surname), familyGivenInitial].filter(Boolean))]
+}
+
+function resolveProbablesPitcherRosterEntry(
+  nameJa: string,
+  teamCode: string,
+  ids: Array<string | null | undefined>,
+) {
+  const normalizedIds = new Set(ids.map(normalizeNpbId).filter(Boolean))
+  const teamPitchers = CURRENT_ROSTER_PLAYER_ENTRIES.filter(
+    (entry) => entry.teamCode === teamCode && entry.position.includes("投"),
+  )
+  const byId = teamPitchers.find((entry) => normalizedIds.has(normalizeNpbId(entry.npbPlayerId)))
+  if (byId) return byId
+
+  const inputKey = rosterNameMatchKey(nameJa)
+  return (
+    teamPitchers.find((entry) => rosterNameMatchKey(entry.nameJa) === inputKey) ??
+    teamPitchers.find((entry) => pitcherAliasKeys(entry.nameJa).includes(inputKey)) ??
+    null
+  )
+}
 
 function weekdayJaOneChar(dateJst: string): string {
   const m = dateJst.match(/^(\d{4})-(\d{2})-(\d{2})$/)
@@ -365,19 +403,19 @@ function OpponentBatterTable({
       <tbody>
         {batters.map((batter) => {
           const displayName = matchupOpponentDisplayNameJa(batter.opponentName)
+          const opponentLinkId = batter.opponentNpbId ?? batter.opponentPublicId ?? null
           return (
             <tr key={`${batter.opponentName}-${batter.ab}`} style={OPPONENT_BATTER_TABLE_DATA_ROW}>
               <td
                 className="px-1 py-1 text-left latin font-black tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
                 style={{ backgroundColor: "#1a1a1a", fontSize: "1.3em" }}
               >
-                {batter.opponentPublicId ? (
+                {opponentLinkId ? (
                   <Link
                     href={playerPageHref({
                       playerId: batter.opponentPublicId,
-                      npbPlayerId: batter.opponentNpbId ?? undefined,
-                      name: batter.nameJa,
-                      romanName: batter.romanName ?? undefined,
+                      npbPlayerId: opponentLinkId,
+                      name: batter.opponentName,
                     })}
                     className="hover:text-[#FFFF44] transition-colors"
                   >
@@ -547,13 +585,13 @@ function OpponentBatterRows({
         const displayName = matchupOpponentDisplayNameJa(b.opponentName)
         const statLine = formatOpponentStatLine(b)
         const rankLabel = `${index + 1}.\u3000`
-        const nameContent = b.opponentPublicId ? (
+        const opponentLinkId = b.opponentNpbId ?? b.opponentPublicId ?? null
+        const nameContent = opponentLinkId ? (
           <Link
             href={playerPageHref({
               playerId: b.opponentPublicId,
-              npbPlayerId: b.opponentNpbId ?? undefined,
-              name: b.nameJa,
-              romanName: b.romanName ?? undefined,
+              npbPlayerId: opponentLinkId,
+              name: b.opponentName,
             })}
             className={`min-w-0 truncate hover:text-[#ffff44] transition-colors ${opponentBatterNameClass}`}
             style={opponentBatterNameStyle}
@@ -671,23 +709,39 @@ function PitcherBlock({
   }
 
   const nameRaw = (slot.pitcherNameJa ?? "未定").trim()
-  const name = matchupOpponentDisplayNameJa(nameRaw).replace(/[\s\u3000]+/g, "")
+  const rosterPitcher = resolveProbablesPitcherRosterEntry(nameRaw, teamCode, [
+    slot.pitcherPublicId,
+    slot.pitcherNpbId,
+  ])
+  const nameForDisplay = rosterPitcher?.nameJa ?? nameRaw
+  const name = matchupOpponentDisplayNameJa(nameForDisplay).replace(/[\s\u3000]+/g, "")
   const teamShort = teamShortFromCode(teamCode)
+  const resolvedPitcherNpbId = rosterPitcher?.npbPlayerId ?? slot.pitcherNpbId ?? null
+  const resolvedPitcherPublicId = slot.pitcherPublicId ?? slot.pitcherNpbId ?? rosterPitcher?.npbPlayerId ?? null
   const romanRaw =
+    (resolvedPitcherNpbId ? romanMap[`npb:${normalizeNpbId(resolvedPitcherNpbId)}`] : undefined) ??
+    (resolvedPitcherPublicId ? romanMap[`npb:${normalizeNpbId(resolvedPitcherPublicId)}`] : undefined) ??
     resolveRomanNameFromMap(nameRaw, teamShort, romanMap) ??
+    resolveRomanNameFromMap(nameForDisplay, teamShort, romanMap) ??
     resolveRomanNameFromMap(name, teamShort, romanMap) ??
     ""
   const romanDisplay = romanRaw ? formatRomanNameForRanking(romanRaw, { nameJa: name }) : ""
   const hasRomanName = romanDisplay.length > 0
-
-  const nameEl =
-    slot.pitcherPublicId != null ? (
-      <Link
-        href={playerPageHref({
-          npbPlayerId: slot.pitcherPublicId,
+  const pitcherLinkId = resolvedPitcherPublicId ?? resolvedPitcherNpbId ?? undefined
+  const pitcherHref =
+    pitcherLinkId || romanRaw || name
+      ? playerPageHref({
+          npbPlayerId: pitcherLinkId ?? undefined,
+          playerId: pitcherLinkId ?? undefined,
           name,
           romanName: romanRaw || undefined,
-        })}
+        })
+      : null
+
+  const nameEl =
+    pitcherHref != null ? (
+      <Link
+        href={pitcherHref}
         className="block truncate text-center"
       >
         <span className={`${nameTextClass} hover:text-white transition-colors truncate block text-center`}>
@@ -720,7 +774,7 @@ function PitcherBlock({
           <RakutenLotteSideTooltipButtons
             opponentStripeSide={opponentStripeSide}
             batters={slot.topOpponentBatters ?? []}
-            pitcherPublicId={slot.pitcherPublicId}
+            pitcherPublicId={resolvedPitcherPublicId}
             season={season}
             isMobile={isMobile}
           />

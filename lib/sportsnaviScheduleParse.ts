@@ -93,6 +93,14 @@ export function stripHtmlToText(fragment: string): string {
     .trim()
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function countProbableMarkers(text: string): number {
+  return (String(text ?? "").match(/\(予\)|予告先発/g) ?? []).length
+}
+
 /** 日程表の表示名をマスタで正規化（空のみ「未設定」）。 */
 export function normalizeStadiumNameFromSchedule(raw: string): string {
   const s = stripHtmlToText(raw)
@@ -246,7 +254,16 @@ export function isNoGameScheduleDay(scoped: string, jaNeedle: string): boolean {
 }
 
 export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] {
-  const games: ScheduleGameEntry[] = []
+  return extractGameRowsFromScopedHtml(scoped).map((row) => row.entry)
+}
+
+export type ScheduleGameRowEntry = {
+  entry: ScheduleGameEntry
+  rowHtml: string
+}
+
+export function extractGameRowsFromScopedHtml(scoped: string): ScheduleGameRowEntry[] {
+  const rows: ScheduleGameRowEntry[] = []
   const trRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi
   let trm: RegExpExecArray | null
   while ((trm = trRe.exec(scoped))) {
@@ -280,18 +297,32 @@ export function extractGamesFromScopedHtml(scoped: string): ScheduleGameEntry[] 
     const awayTeamShort = extractTeamShortFromHtmlFragment(row, "away")
     const statusText = extractStatusTextFromHtmlFragment(row)
 
-    games.push(
-      attachTeamCodes({
-        gameId,
-        stadiumName: normalizeStadiumNameFromSchedule(stadiumRaw),
-        homeTeamShort: homeTeamShort || undefined,
-        awayTeamShort: awayTeamShort || undefined,
-        statusText: statusText || undefined,
-        gameState: normalizeScheduleGameState(statusText),
-      }),
-    )
+    const entry = attachTeamCodes({
+      gameId,
+      stadiumName: normalizeStadiumNameFromSchedule(stadiumRaw),
+      homeTeamShort: homeTeamShort || undefined,
+      awayTeamShort: awayTeamShort || undefined,
+      statusText: statusText || undefined,
+      gameState: normalizeScheduleGameState(statusText),
+    })
+    rows.push({ entry, rowHtml: row })
   }
-  return games
+  return rows
+}
+
+export function extractProbablePitcherNameFromScheduleRow(
+  rowHtml: string,
+  teamShort: string,
+): string {
+  const short = String(teamShort ?? "").trim()
+  if (!short) return ""
+  const text = stripHtmlToText(rowHtml)
+  const teamRe = escapeRegExp(short)
+  const re = new RegExp(`${teamRe}\\s*(?:\\(予\\)|予)\\s*([^\\s]+)`)
+  const m = text.match(re)
+  const name = String(m?.[1] ?? "").trim()
+  if (name && !/^\d{1,2}:\d{2}$/.test(name) && name !== "見どころ" && name !== "試合前") return name
+  return ""
 }
 
 export function dedupeScheduleGamesById(games: ScheduleGameEntry[]): ScheduleGameEntry[] {
@@ -393,6 +424,36 @@ export function extractGamesFromScheduleHtml(html: string, ymd: string): Schedul
   const fromScore = extractGamesFromScoreListHtml(html)
   if (fromScore.length > 0 && fromScore.length <= SCHEDULE_MAX_GAMES_PER_DAY) return fromScore
   return picked
+}
+
+export function extractGameRowsFromScheduleHtml(html: string, ymd: string): ScheduleGameRowEntry[] {
+  const blocks = enumerateScopedBlocksForDate(html, ymd)
+  const rows: ScheduleGameRowEntry[] = []
+  const seen = new Set<string>()
+  const scored = blocks
+    .map((scoped) => {
+      const text = stripHtmlToText(scoped)
+      const probableMarkers = countProbableMarkers(text)
+      const gameCount = extractGamesFromScopedHtml(scoped).length
+      return { scoped, probableMarkers, gameCount }
+    })
+    .sort((a, b) => {
+      if (b.probableMarkers !== a.probableMarkers) return b.probableMarkers - a.probableMarkers
+      if (b.gameCount !== a.gameCount) return b.gameCount - a.gameCount
+      return b.scoped.length - a.scoped.length
+    })
+
+  const prioritized = scored.length > 0 ? [scored[0]!.scoped, ...scored.slice(1).map((s) => s.scoped)] : []
+  for (const scoped of prioritized) {
+    const scopedRows = extractGameRowsFromScopedHtml(scoped)
+    for (const row of scopedRows) {
+      const gameId = row.entry.gameId
+      if (seen.has(gameId)) continue
+      seen.add(gameId)
+      rows.push(row)
+    }
+  }
+  return rows
 }
 
 export function extractGameIdsFromScheduleHtml(html: string, ymd: string): string[] {

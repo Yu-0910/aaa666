@@ -1,12 +1,11 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-06-22",
-  "fetchedAt": "2026-06-24T16:27:21.278Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-22",
+  "fetchedAt": "2026-07-01T19:25:34.519Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-06-22",
   "gameIds": [
-    "2021039035",
-    "2021044743"
+    "2021039035"
   ],
   "games": [
     {
@@ -14,20 +13,16 @@
       "stadiumName": "東京ドーム",
       "homeTeamShort": "楽天",
       "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "E",
       "awayTeamCode": "L"
-    },
-    {
-      "gameId": "2021044743",
-      "stadiumName": "甲子園球場",
-      "homeTeamShort": "阪神",
-      "awayTeamShort": "楽天",
-      "homeTeamCode": "H",
-      "awayTeamCode": "E"
     }
   ],
   "stadiumByGameId": {
-    "2021039035": "東京ドーム",
-    "2021044743": "甲子園球場"
+    "2021039035": "東京ドーム"
+  },
+  "scheduleStatusByGameId": {
+    "2021039035": "試合終了"
   }
 }

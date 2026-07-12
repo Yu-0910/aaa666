@@ -13,7 +13,9 @@ Phase2a-b 直後に実行し、未完了のまま Phase4 に入ると打席ご�
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -42,11 +44,58 @@ from yahoo_game_main_cancelled import main_html_cancelled as _main_html_cancelle
 from sportsnavi_schedule_status import is_schedule_cancelled_game  # noqa: E402
 
 
+def schedule_status_text_for_game(root: Path, game_id: str) -> str:
+    snap_dir = root / "_data" / "sportsnavi_schedule_snapshots" / "by_date"
+    if not snap_dir.is_dir():
+        return ""
+    for snap_path in sorted(snap_dir.glob("*.json")):
+        try:
+            snap = json.loads(snap_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        games = snap.get("games") if isinstance(snap, dict) else None
+        if not isinstance(games, list):
+            continue
+        for game in games:
+            if str(game.get("gameId", "")).strip() == game_id:
+                return str(game.get("statusText", "") or "").strip()
+    return ""
+
+
+def parse_iso_ms(value: object) -> float:
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp() * 1000
+    except ValueError:
+        return 0.0
+
+
+def schedule_fetched_at_ms_for_game(root: Path, game_id: str) -> float:
+    snap_dir = root / "_data" / "sportsnavi_schedule_snapshots" / "by_date"
+    if not snap_dir.is_dir():
+        return 0.0
+    for snap_path in sorted(snap_dir.glob("*.json")):
+        try:
+            snap = json.loads(snap_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        games = snap.get("games") if isinstance(snap, dict) else None
+        if not isinstance(games, list):
+            continue
+        for game in games:
+            if str(game.get("gameId", "")).strip() == game_id:
+                return parse_iso_ms(snap.get("fetchedAt"))
+    return 0.0
+
+
 def collect_incomplete_game_ids(
     root: Path,
     year: str,
     from_date: str,
     to_date: str,
+    game_ids_filter: set[str] | None = None,
 ) -> tuple[list[str], list[tuple[str, str]], int, list[str]]:
     """(game_ids, incomplete, skipped_cancelled, error_messages)"""
     index_path = root / "_data" / "sportsnavi_schedule_index" / f"season_{year}.json"
@@ -60,6 +109,8 @@ def collect_incomplete_game_ids(
         if str(x).strip()
     ]
     game_ids = filter_game_ids_by_date_range(idx, game_ids, from_date, to_date)
+    if game_ids_filter is not None:
+        game_ids = [gid for gid in game_ids if gid in game_ids_filter]
     if not game_ids:
         return [], [], 0, []
 
@@ -105,6 +156,12 @@ def collect_incomplete_game_ids(
         gdir = out_root / game_id
         meta_path = meta_dir / f"{game_id}.json"
         if _score_raw_game_already_complete(gdir, meta_path, len(pas)):
+            meta = read_json(meta_path) if meta_path.is_file() else {}
+            status_text = schedule_status_text_for_game(root, game_id)
+            schedule_fetched_at_ms = schedule_fetched_at_ms_for_game(root, game_id)
+            raw_fetched_at_ms = parse_iso_ms(meta.get("fetchedAt")) if isinstance(meta, dict) else 0.0
+            if "試合終了" in status_text and schedule_fetched_at_ms > 0 and raw_fetched_at_ms < schedule_fetched_at_ms:
+                incomplete.append((game_id, "score_raw_before_game_finished"))
             continue
         incomplete.append((game_id, "score_raw_incomplete"))
 
@@ -116,6 +173,7 @@ def main() -> None:
     ap.add_argument("--year", default="2026")
     ap.add_argument("--from-date", default="")
     ap.add_argument("--to-date", default="")
+    ap.add_argument("--game-ids", default="", help="確認対象の試合ID（カンマ区切り）。日付範囲内からさらに絞り込む")
     ap.add_argument("--fail", action="store_true", help="未完了があれば exit 1")
     ap.add_argument(
         "--emit-incomplete-csv",
@@ -128,9 +186,14 @@ def main() -> None:
     year = str(args.year).strip()
     from_date = str(args.from_date or "").strip()
     to_date = str(args.to_date or "").strip()
+    game_ids_filter = {
+        x.strip()
+        for x in str(args.game_ids or "").split(",")
+        if x.strip()
+    } or None
 
     game_ids, incomplete, skipped_cancelled, errors = collect_incomplete_game_ids(
-        root, year, from_date, to_date
+        root, year, from_date, to_date, game_ids_filter
     )
     if errors:
         for msg in errors:
@@ -162,7 +225,11 @@ def main() -> None:
     stats_text_retryable = [
         gid for gid, reason in incomplete if reason in {"no_plate_appearances", "missing_text_raw"}
     ]
-    score_raw_retryable = [gid for gid, reason in incomplete if reason == "score_raw_incomplete"]
+    score_raw_retryable = [
+        gid
+        for gid, reason in incomplete
+        if reason in {"score_raw_incomplete", "score_raw_before_game_finished"}
+    ]
     if args.emit_incomplete_csv:
         print(
             "SCORE_RAW_GATE_INCOMPLETE_CSV="

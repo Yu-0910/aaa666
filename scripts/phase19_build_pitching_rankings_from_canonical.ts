@@ -39,6 +39,7 @@ import {
   assignRanks,
   filterPitchingRowsForQualifyingAtBuild,
 } from '../lib/ranking/filterRankingsByQualifyingAtBuild'
+import { inferPitcherTeamForNf3Line } from '../lib/yahooGame/pitcherPocHelpers'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, '..')
@@ -82,12 +83,14 @@ function yahooMetaFromCanonical(docs: CanonicalGameDocument[]): Map<string, { na
       const pn = String(pl.playerName ?? '').trim()
       if (!id || !pn) continue
       const cur = map.get(id)
-      const lineupTeam = teamForYahooId(doc, id)
-      const short = rosterTeamToRankingShort(lineupTeam || '')
+      const inferredTeam = teamForYahooId(doc, id) || inferPitcherTeamForNf3Line(doc, id) || ''
+      const short = rosterTeamToRankingShort(inferredTeam)
       if (!cur) {
         map.set(id, { name: pn, team: short })
       } else if (pn.length > cur.name.length) {
         map.set(id, { ...cur, name: pn, team: cur.team || short })
+      } else if (!cur.team && short) {
+        map.set(id, { ...cur, team: short })
       }
     }
   }
@@ -221,11 +224,15 @@ function main(): void {
     CL: [],
     PL: [],
   }
+  const romanFallbacks: string[] = []
 
   for (const [yahooId, { agg, league }] of aggregated.entries()) {
     const meta = metaMap.get(yahooId) ?? { name: yahooId, team: '' }
     const romanMap = league === 'PL' ? romanMapPL : romanMapCL
-    const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap)
+    const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap) || meta.name.trim() || yahooId
+    if (roman === meta.name.trim() && !resolveRomanName(yahooId, meta.name, meta.team, romanMap)) {
+      romanFallbacks.push(`${league}:${yahooId}:${meta.name || yahooId}:${meta.team || "-"}`)
+    }
     const row = buildPitchingRow(yahooId, agg, meta, roman)
     byLeague[league].push({ yahooId, row })
   }
@@ -261,6 +268,9 @@ function main(): void {
   }
 
   console.log(`[phase19] source games: ${docs.map((d) => d.gameId).join(', ')}`)
+  if (romanFallbacks.length > 0) {
+    console.warn(`[phase19] romanName fallback used for ${romanFallbacks.length} player(s): ${romanFallbacks.join(', ')}`)
+  }
   assertPitchingRankingRosterComplete(projectRoot, year)
 }
 

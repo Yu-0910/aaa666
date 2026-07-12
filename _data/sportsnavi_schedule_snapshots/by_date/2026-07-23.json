@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-07-23",
+  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-23",
+  "gameIds": [
+    "2021039181",
+    "2021039182",
+    "2021039183"
+  ],
+  "games": [
+    {
+      "gameId": "2021039181",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "L",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021039182",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "楽天",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "M",
+      "awayTeamCode": "E"
+    },
+    {
+      "gameId": "2021039183",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "Bs"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039181": "ベルーナD",
+    "2021039182": "ZOZOマリン",
+    "2021039183": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039181": "試合前",
+    "2021039182": "試合前",
+    "2021039183": "試合前"
+  }
+}

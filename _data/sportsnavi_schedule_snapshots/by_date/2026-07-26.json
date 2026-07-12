@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-07-26",
+  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-26",
+  "gameIds": [
+    "2021039195",
+    "2021039196",
+    "2021039197",
+    "2021039198",
+    "2021039199",
+    "2021039200"
+  ],
+  "games": [
+    {
+      "gameId": "2021039195",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "広島",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "S",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039196",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "D",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039197",
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "巨人",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "H",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039198",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "楽天",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "F",
+      "awayTeamCode": "E"
+    },
+    {
+      "gameId": "2021039199",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "ソフトバンク",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "L",
+      "awayTeamCode": "Hs"
+    },
+    {
+      "gameId": "2021039200",
+      "stadiumName": "京セラD大阪",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "ロッテ",
+      "statusText": "試合前",
+      "gameState": "scheduled",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "M"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039195": "神宮球場",
+    "2021039196": "バンテリンD",
+    "2021039197": "甲子園球場",
+    "2021039198": "エスコンＦ",
+    "2021039199": "ベルーナD",
+    "2021039200": "京セラD大阪"
+  },
+  "scheduleStatusByGameId": {
+    "2021039195": "試合前",
+    "2021039196": "試合前",
+    "2021039197": "試合前",
+    "2021039198": "試合前",
+    "2021039199": "試合前",
+    "2021039200": "試合前"
+  }
+}

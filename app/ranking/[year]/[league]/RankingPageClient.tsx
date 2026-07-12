@@ -8,7 +8,7 @@
 import { useRouter } from "next/navigation"
 import RankingUI from "@/components/RankingUI"
 import type { RankingViewModel } from "@/lib/ranking/types"
-import { getDefaultBattingSortOrder } from "@/lib/ranking/normalizeRankingRow"
+import { getDefaultBattingSortOrder } from "@/lib/ranking/battingSortOrder"
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
 import { season2026BattingQualifyingNote } from "@/lib/ranking/qualifyingUiNotes"
 import { buildRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"

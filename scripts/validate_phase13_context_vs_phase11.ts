@@ -4,6 +4,7 @@
  *   npx tsx scripts/validate_phase13_context_vs_phase11.ts --year 2026
  *   npx tsx scripts/validate_phase13_context_vs_phase11.ts --year 2026 --fail
  *   npx tsx scripts/validate_phase13_context_vs_phase11.ts --year 2026 --yahoo 1100097
+ *   npx tsx scripts/validate_phase13_context_vs_phase11.ts --year 2026 --only-yahoo-ids 1100097,1100100
  */
 
 import { existsSync, readdirSync, readFileSync } from "fs"
@@ -34,11 +35,11 @@ type Row = {
   hr: number
 }
 
-function parseArgs(): { year: string; fail: boolean; yahoo: string | null } {
+function parseArgs(): { year: string; fail: boolean; yahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
   let fail = false
-  let yahoo: string | null = null
+  let yahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
@@ -46,11 +47,17 @@ function parseArgs(): { year: string; fail: boolean; yahoo: string | null } {
     } else if (args[i] === "--fail") {
       fail = true
     } else if ((args[i] === "--yahoo" || args[i] === "--yahoo-id") && args[i + 1]) {
-      yahoo = args[i + 1].trim()
+      yahooIds = [args[i + 1].trim()].filter(Boolean)
+      i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      yahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
       i++
     }
   }
-  return { year, fail, yahoo }
+  return { year, fail, yahooIds }
 }
 
 function resolveVsTeamForBatter(doc: CanonicalGameDocument, bid: string): string | null {
@@ -84,7 +91,7 @@ function recomputeVsTeam(
 }
 
 function main(): void {
-  const { year, fail, yahoo } = parseArgs()
+  const { year, fail, yahooIds } = parseArgs()
   const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   const ctxDir = join(projectRoot, "_data", "derived", "player_season_batting_context", year)
   if (!existsSync(ctxDir)) {
@@ -93,12 +100,13 @@ function main(): void {
   }
 
   const files = readdirSync(ctxDir).filter((f) => f.startsWith("yahoo_") && f.endsWith(".json"))
+  const yahooIdSet = yahooIds ? new Set(yahooIds) : null
   let mismatches = 0
   let checked = 0
 
   for (const f of files) {
     const bid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
-    if (yahoo && bid !== yahoo) continue
+    if (yahooIdSet && !yahooIdSet.has(bid)) continue
 
     const raw = JSON.parse(readFileSync(join(ctxDir, f), "utf8")) as { rows?: Row[] }
     const vsRows = (raw.rows ?? []).filter((r) => r.split_type === "vs_team")
@@ -123,7 +131,7 @@ function main(): void {
   }
 
   console.log(
-    `[validate:phase13] checked ${checked} vs_team rows, mismatches=${mismatches}${yahoo ? ` (yahoo=${yahoo})` : ""}`,
+    `[validate:phase13] checked ${checked} vs_team rows, mismatches=${mismatches}${yahooIds ? ` (yahooIds=${yahooIds.length})` : ""}`,
   )
   if (fail && mismatches > 0) process.exit(1)
 }

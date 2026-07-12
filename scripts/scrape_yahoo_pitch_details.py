@@ -210,6 +210,57 @@ def fetch_pitch_detail_score_pages_for_pa(
     return out
 
 
+def _row_text(v: object) -> str:
+    return str(v or "").strip()
+
+
+def _same_pitch_row_for_overlap(a: dict, b: dict) -> bool:
+    """
+    2つの投球行が同じ球かを判定する。
+    """
+    if _row_text(a.get("result")) != _row_text(b.get("result")):
+        return False
+    if _row_text(a.get("pitch_type")) != _row_text(b.get("pitch_type")):
+        return False
+    if _row_text(a.get("speed_kmh")) != _row_text(b.get("speed_kmh")):
+        return False
+
+    a_pid = _row_text(a.get("pitcher_id"))
+    b_pid = _row_text(b.get("pitcher_id"))
+    if a_pid and b_pid and a_pid != b_pid:
+        return False
+
+    a_bid = _row_text(a.get("batter_id"))
+    b_bid = _row_text(b.get("batter_id"))
+    if a_bid and b_bid and a_bid != b_bid:
+        return False
+
+    return True
+
+
+def _leading_overlap_len(prev_rows: list[dict], next_rows: list[dict]) -> int:
+    """
+    次ページ先頭が前ページ内容を何球ぶん再掲しているか返す。
+    例:
+      prev = [1,2,3]
+      next = [1,2,3,4,5]
+      -> 3
+    """
+    max_k = min(len(prev_rows), len(next_rows))
+    best = 0
+    for k in range(1, max_k + 1):
+        ok = True
+        for i in range(k):
+            if not _same_pitch_row_for_overlap(prev_rows[i], next_rows[i]):
+                ok = False
+                break
+        if ok:
+            best = k
+        else:
+            break
+    return best
+
+
 def parse_pitch_details_merged_score_pages(
     pages: list[str],
     game_id: str,
@@ -217,12 +268,13 @@ def parse_pitch_details_merged_score_pages(
     top_bottom: str,
     bat_order: int,
 ) -> list[dict]:
-    """同一打席の複数 score HTML を、投球通し番号・ゾーン連番が途切れないよう結合してパースする。"""
+    """同一打席の複数 score HTML を結合し、再掲された先頭部分を除く。"""
     if not pages:
         return []
+
     merged: list[dict] = []
-    row_start = 1
     zone_start = 1
+
     for html in pages:
         next_zone: list[int] = []
         rows = parse_pitch_details(
@@ -231,13 +283,23 @@ def parse_pitch_details_merged_score_pages(
             inning,
             top_bottom,
             bat_order,
-            global_row_start=row_start,
+            global_row_start=1,
             zone_seq_start=zone_start,
             next_zone_seq_out=next_zone,
         )
+        if not rows:
+            continue
+
+        if merged:
+            overlap = _leading_overlap_len(merged, rows)
+            rows = rows[overlap:]
+
+        for i, row in enumerate(rows, start=len(merged) + 1):
+            row["pitch_no"] = str(i)
+
         merged.extend(rows)
-        row_start = len(merged) + 1
         zone_start = next_zone[0] if next_zone else zone_start
+
     return merged
 
 

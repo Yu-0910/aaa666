@@ -2,8 +2,8 @@
   "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-01",
-  "fetchedAt": "2026-06-30T22:21:59.839Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-07-01",
+  "fetchedAt": "2026-07-02T19:44:53.905Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-01",
   "gameIds": [
     "2021039074",
     "2021039075",
@@ -17,7 +17,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "巨人",
       "awayTeamShort": "ヤクルト",
-      "gameState": "unknown",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "G",
       "awayTeamCode": "S"
     },
@@ -26,7 +27,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "中日",
-      "gameState": "unknown",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "H",
       "awayTeamCode": "D"
     },
@@ -35,7 +37,8 @@
       "stadiumName": "エスコンＦ",
       "homeTeamShort": "日本ハム",
       "awayTeamShort": "オリックス",
-      "gameState": "unknown",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "F",
       "awayTeamCode": "Bs"
     },
@@ -44,7 +47,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "楽天",
       "awayTeamShort": "ロッテ",
-      "gameState": "unknown",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "E",
       "awayTeamCode": "M"
     },
@@ -53,7 +57,8 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "西武",
-      "gameState": "unknown",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Hs",
       "awayTeamCode": "L"
     }
@@ -65,5 +70,11 @@
     "2021039077": "地方球場",
     "2021039473": "みずほPayPay"
   },
-  "scheduleStatusByGameId": {}
+  "scheduleStatusByGameId": {
+    "2021039074": "試合終了",
+    "2021039075": "試合中止",
+    "2021039076": "試合終了",
+    "2021039077": "試合終了",
+    "2021039473": "試合終了"
+  }
 }

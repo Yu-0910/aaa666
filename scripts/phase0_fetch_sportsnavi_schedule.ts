@@ -2,7 +2,7 @@
  * Phase 0: スポナビ日程（1軍）を巡回し、日別スナップショットと gameId のインデックスを生成する。
  *
  * 入力:
- *   https://baseball.yahoo.co.jp/npb/schedule/first/league?date=YYYY-MM-DD
+ *   https://baseball.yahoo.co.jp/npb/schedule/first/all?date=YYYY-MM-DD
  *
  * 出力:
  *   _data/sportsnavi_schedule_snapshots/by_date/YYYY-MM-DD.json
@@ -324,24 +324,33 @@ async function main() {
     const snapPath = path.join(outByDate, `${ymd}.json`)
     const prevSnap = readJsonIfExists<DaySnapshot>(snapPath)
 
-    // 交流戦は `league` 側が「試合はありません」になるため、`inter` も併用する。
+    // 現在の正は `all`。パース異常時だけ、従来の league/inter 併用へ戻す。
+    const urlAll = `https://baseball.yahoo.co.jp/npb/schedule/first/all?date=${encodeURIComponent(ymd)}`
     const urlLeague = `https://baseball.yahoo.co.jp/npb/schedule/first/league?date=${encodeURIComponent(ymd)}`
     const urlInter = `https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=${encodeURIComponent(ymd)}`
 
-    const htmlLeague = await fetchText(urlLeague, fetchRetries)
-    const gamesLeague = extractGamesFromScheduleHtml(htmlLeague, ymd)
+    const htmlAll = await fetchText(urlAll, fetchRetries)
+    const gamesAll = extractGamesFromScheduleHtml(htmlAll, ymd)
 
-    const htmlInter = await fetchText(urlInter, fetchRetries)
-    const gamesInter = extractGamesFromScheduleHtml(htmlInter, ymd)
+    let extractedGames = gamesAll
+    let url = urlAll
+    if (gamesAll.length > SCHEDULE_MAX_GAMES_PER_DAY) {
+      // 交流戦などでページ構造が変わった場合の後方互換フォールバック。
+      const htmlLeague = await fetchText(urlLeague, fetchRetries)
+      const gamesLeague = extractGamesFromScheduleHtml(htmlLeague, ymd)
 
-    const union = dedupeScheduleGamesById([...gamesLeague, ...gamesInter])
-    const extractedGames =
-      union.length > 0 && union.length <= SCHEDULE_MAX_GAMES_PER_DAY
-        ? union
-        : gamesLeague.length >= gamesInter.length
-          ? gamesLeague
-          : gamesInter
-    const url = gamesInter.length > gamesLeague.length ? urlInter : urlLeague
+      const htmlInter = await fetchText(urlInter, fetchRetries)
+      const gamesInter = extractGamesFromScheduleHtml(htmlInter, ymd)
+
+      const union = dedupeScheduleGamesById([...gamesLeague, ...gamesInter])
+      extractedGames =
+        union.length > 0 && union.length <= SCHEDULE_MAX_GAMES_PER_DAY
+          ? union
+          : gamesLeague.length >= gamesInter.length
+            ? gamesLeague
+            : gamesInter
+      url = gamesInter.length > gamesLeague.length ? urlInter : urlLeague
+    }
     const filteredGames = filterGamesByCanonicalDateMismatch(root, ymd, extractedGames, url)
 
     const extractedIds = filteredGames.map((g) => g.gameId)

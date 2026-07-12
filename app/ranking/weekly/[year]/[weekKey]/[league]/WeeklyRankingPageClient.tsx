@@ -16,7 +16,6 @@ import { loadWeeklyRankingJson } from "@/lib/ranking/jsonLoader"
 import { enrichBattingRankingDerivedMetrics } from "@/lib/ranking/enrichRankingDerivedMetrics"
 
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
-import { resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
@@ -58,6 +57,14 @@ function getDefaultSortOrder(metricKey: string): "asc" | "desc" {
   if (metricKey === "kpct" || metricKey === "k%") return "asc"
 
   return "desc"
+
+}
+
+function normalizeExplicitNpbId(raw: unknown): string | undefined {
+
+  const id = String(raw ?? "").trim().replace(/[^\d]/g, "")
+
+  return id || undefined
 
 }
 
@@ -107,13 +114,6 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   const playerId = String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? "").trim()
   const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
   const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "").trim()
-  const npbPlayerId = resolveRankingNpbPlayerId({
-    name: nameValue,
-    team,
-    playerId,
-    explicitNpb,
-  })
-
   return enrichBattingRankingDerivedMetrics({
 
     ...raw,
@@ -122,7 +122,7 @@ function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
 
     playerId,
 
-    npbPlayerId,
+    npbPlayerId: normalizeExplicitNpbId(explicitNpb),
 
     name: nameValue,
 

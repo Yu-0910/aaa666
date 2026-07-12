@@ -5,11 +5,8 @@ import type { RankingRow, RankingViewModel } from "@/lib/ranking/types"
 import { loadRankingJson, loadWeeklyRankingJson } from "@/lib/ranking/jsonLoader"
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
 import { fetchMinPAByTeamClient } from "@/lib/ranking/qualifyingThresholdsShared"
-import {
-  getDefaultBattingSortOrder,
-  mergeRomanNamesFromCsv,
-  normalizeRankingRow,
-} from "@/lib/ranking/normalizeRankingRow"
+import { getDefaultBattingSortOrder } from "@/lib/ranking/battingSortOrder"
+import { mergeRomanNamesFromCsv, normalizeRankingRow } from "@/lib/ranking/normalizeRankingRow"
 import { sortBattingRankingRows } from "@/lib/ranking/sortBattingRankingRows"
 import { useClientSearchString } from "@/hooks/useIsDesktop"
 

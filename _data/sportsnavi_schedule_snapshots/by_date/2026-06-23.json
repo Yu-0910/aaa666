@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-06-23",
-  "fetchedAt": "2026-06-25T19:26:47.593Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-23",
+  "fetchedAt": "2026-07-01T19:25:34.519Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-06-23",
   "gameIds": [
     "2021039036",
     "2021039037",
@@ -18,6 +18,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "中日",
       "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "D",
       "awayTeamCode": "DB"
     },
@@ -26,6 +28,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "ヤクルト",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "H",
       "awayTeamCode": "S"
     },
@@ -34,6 +38,8 @@
       "stadiumName": "マツダ",
       "homeTeamShort": "広島",
       "awayTeamShort": "巨人",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "C",
       "awayTeamCode": "G"
     },
@@ -42,6 +48,8 @@
       "stadiumName": "エスコンＦ",
       "homeTeamShort": "日本ハム",
       "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "F",
       "awayTeamCode": "M"
     },
@@ -50,6 +58,8 @@
       "stadiumName": "地方球場",
       "homeTeamShort": "楽天",
       "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "E",
       "awayTeamCode": "L"
     },
@@ -58,6 +68,8 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Hs",
       "awayTeamCode": "Bs"
     }
@@ -69,5 +81,13 @@
     "2021039039": "エスコンＦ",
     "2021039040": "地方球場",
     "2021039041": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039036": "試合終了",
+    "2021039037": "試合終了",
+    "2021039038": "試合終了",
+    "2021039039": "試合終了",
+    "2021039040": "試合終了",
+    "2021039041": "試合終了"
   }
 }

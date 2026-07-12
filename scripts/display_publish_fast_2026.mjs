@@ -28,6 +28,9 @@ import { HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, "..")
 const DRY_RUN = process.argv.includes("--dry-run")
+const CONCURRENCY = Math.max(1, Number(process.env.FAST_PUBLISH_CONCURRENCY || 8))
+const UPLOAD_TIMEOUT_MS = Math.max(5000, Number(process.env.FAST_PUBLISH_UPLOAD_TIMEOUT_MS || 45000))
+const RETRIES = Math.max(1, Number(process.env.FAST_PUBLISH_RETRIES || 3))
 const yearArg =
   process.argv.find((a) => a.startsWith("--year="))?.split("=")[1] ??
   (process.argv.includes("--year") ? process.argv[process.argv.indexOf("--year") + 1] : null)
@@ -127,6 +130,66 @@ function collectFastFiles(year) {
   return files
 }
 
+async function sendWithTimeout(client, command, timeoutMs) {
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), timeoutMs)
+  try {
+    return await client.send(command, { abortSignal: ac.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function uploadWithRetry(client, bucket, file) {
+  let lastError = null
+  for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    try {
+      const body = fs.readFileSync(file.local)
+      await sendWithTimeout(
+        client,
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: file.key,
+          Body: body,
+          ContentType: "application/json",
+        }),
+        UPLOAD_TIMEOUT_MS,
+      )
+      return
+    } catch (e) {
+      lastError = e
+      const msg = e?.name === "AbortError" ? `timeout ${UPLOAD_TIMEOUT_MS}ms` : e?.message || String(e)
+      console.warn(`  retry ${attempt}/${RETRIES}: ${file.key}: ${msg}`)
+      if (attempt < RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+      }
+    }
+  }
+  throw new Error(`Failed to upload ${file.key}: ${lastError?.message || lastError}`)
+}
+
+async function uploadAll(client, bucket, files) {
+  let nextIndex = 0
+  let ok = 0
+  async function worker(workerId) {
+    while (nextIndex < files.length) {
+      const index = nextIndex
+      nextIndex += 1
+      const file = files[index]
+      await uploadWithRetry(client, bucket, file)
+      ok += 1
+      if (ok % 50 === 0 || ok === files.length) {
+        console.log(`  uploaded ${ok}/${files.length}...`)
+      }
+    }
+  }
+
+  const workerCount = Math.min(CONCURRENCY, files.length)
+  console.log(`Uploading: concurrency=${workerCount}, timeout=${UPLOAD_TIMEOUT_MS}ms, retries=${RETRIES}`)
+  await Promise.all(Array.from({ length: workerCount }, (_, i) => worker(i + 1)))
+  return ok
+}
+
 async function main() {
   console.log(`=== Fast publish ${DRY_RUN ? "(dry-run) " : ""}year=${YEAR} ===`)
 
@@ -151,23 +214,10 @@ async function main() {
     responseChecksumValidation: "WHEN_REQUIRED",
   })
 
-  await client.send(new HeadBucketCommand({ Bucket: bucket }))
+  await sendWithTimeout(client, new HeadBucketCommand({ Bucket: bucket }), UPLOAD_TIMEOUT_MS)
   console.log(`Bucket OK: ${bucket}`)
 
-  let ok = 0
-  for (const f of files) {
-    const body = fs.readFileSync(f.local)
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: f.key,
-        Body: body,
-        ContentType: "application/json",
-      }),
-    )
-    ok += 1
-    if (ok % 200 === 0) console.log(`  uploaded ${ok}/${files.length}...`)
-  }
+  const ok = await uploadAll(client, bucket, files)
 
   console.log(`Done: ${ok} uploaded`)
 }

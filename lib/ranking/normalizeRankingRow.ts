@@ -1,17 +1,13 @@
 import type { RankingRow } from "@/lib/ranking/types"
 import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
-import { resolveRankingNpbPlayerId } from "@/lib/ranking/resolveRankingNpbPlayerId"
 import {
   enrichBattingRankingDerivedMetrics,
   enrichPitchingRankingDerivedMetrics,
 } from "@/lib/ranking/enrichRankingDerivedMetrics"
 
-/** 指標のデフォルトソート順（K%のみ昇順） */
-export function getDefaultBattingSortOrder(metricKey: string): "asc" | "desc" {
-  if (metricKey === "kpct" || metricKey === "k%") {
-    return "asc"
-  }
-  return "desc"
+function normalizeExplicitNpbId(raw: unknown): string | undefined {
+  const id = String(raw ?? "").trim().replace(/[^\d]/g, "")
+  return id || undefined
 }
 
 export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
@@ -26,17 +22,11 @@ export function normalizeRankingRow(raw: Record<string, unknown>): RankingRow {
   const playerId = String(raw["playerId"] ?? raw["player_id"] ?? raw["id"] ?? "").trim()
   const explicitNpb = String(raw["npbPlayerId"] ?? raw["npb_player_id"] ?? "").trim()
   const team = String(raw["team"] ?? raw["Team"] ?? raw["チーム"] ?? raw["team_name"] ?? "").trim()
-  const npbPlayerId = resolveRankingNpbPlayerId({
-    name,
-    team,
-    playerId,
-    explicitNpb,
-  })
   const normalized = {
     ...raw,
     rank: raw["rank"] as number,
     playerId,
-    npbPlayerId,
+    npbPlayerId: normalizeExplicitNpbId(explicitNpb),
     name: name || "不明",
     romanName,
     team,

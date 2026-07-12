@@ -3,6 +3,7 @@
  *
  * 目的:
  * - 「同じ選手・同じ期間に AB が 72 と 73 のように二系統でズレる」ケースを早期に検知する
+ * - `捕２` のような打席結果略記の取りこぼしで H がズレるケースを検知する
  * - 一球ログ復元や表記ゆれが入ったときに、どの選手が影響を受けたか可視化する
  *
  * 使い方:
@@ -61,9 +62,11 @@ function main(): void {
     yahooBatterId: string
     gPa: number
     abPa: number
+    hPa: number
     pa: number
     gLines: number
     abLines: number
+    hLines: number
     paApproxLines: number
   }> = []
 
@@ -71,15 +74,17 @@ function main(): void {
     const a = byPa.get(bid)
     const b = byLines.get(bid)
     if (!a || !b) continue
-    // 出場成績行は PA を近似で持つため、比較の主対象は AB。
-    if (a.ab !== b.ab) {
+    // 出場成績行は PA を近似で持つため、比較の主対象は AB / H。
+    if (a.ab !== b.ab || a.h !== b.h) {
       mismatches.push({
         yahooBatterId: bid,
         gPa: a.gameIds.size,
         abPa: a.ab,
+        hPa: a.h,
         pa: a.pa,
         gLines: b.gameIds.size,
         abLines: b.ab,
+        hLines: b.h,
         paApproxLines: b.pa,
       })
     }
@@ -87,17 +92,17 @@ function main(): void {
 
   if (mismatches.length === 0) {
     console.log(
-      `[validate_phase11_vs_batting_lines_totals] OK (year=${year}): no AB mismatches on comparable games (n=${docs.length}).`,
+      `[validate_phase11_vs_batting_lines_totals] OK (year=${year}): no AB/H mismatches on comparable games (n=${docs.length}).`,
     )
     return
   }
 
   console.log(
-    `[validate_phase11_vs_batting_lines_totals] AB mismatch batters: ${mismatches.length} (comparable games n=${docs.length})`,
+    `[validate_phase11_vs_batting_lines_totals] AB/H mismatch batters: ${mismatches.length} (comparable games n=${docs.length})`,
   )
   for (const m of mismatches) {
     console.log(
-      `  yahooBatterId=${m.yahooBatterId}  PA(ab=${m.abPa},pa=${m.pa},g=${m.gPa})  battingLines(ab=${m.abLines},pa~=${m.paApproxLines},g=${m.gLines})`,
+      `  yahooBatterId=${m.yahooBatterId}  PA(ab=${m.abPa},h=${m.hPa},pa=${m.pa},g=${m.gPa})  battingLines(ab=${m.abLines},h=${m.hLines},pa~=${m.paApproxLines},g=${m.gLines})`,
     )
   }
 

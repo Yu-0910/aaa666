@@ -1,16 +1,15 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v3",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-06-24",
-  "fetchedAt": "2026-06-25T19:19:56.155Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-06-24",
+  "fetchedAt": "2026-07-01T19:25:34.519Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-06-24",
   "gameIds": [
     "2021039042",
     "2021039043",
     "2021039044",
     "2021039045",
-    "2021039046",
-    "2021044743"
+    "2021039046"
   ],
   "games": [
     {
@@ -18,6 +17,8 @@
       "stadiumName": "バンテリンD",
       "homeTeamShort": "中日",
       "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "D",
       "awayTeamCode": "DB"
     },
@@ -26,6 +27,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "ヤクルト",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "H",
       "awayTeamCode": "S"
     },
@@ -34,6 +37,8 @@
       "stadiumName": "マツダ",
       "homeTeamShort": "広島",
       "awayTeamShort": "巨人",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
       "homeTeamCode": "C",
       "awayTeamCode": "G"
     },
@@ -42,6 +47,8 @@
       "stadiumName": "エスコンＦ",
       "homeTeamShort": "日本ハム",
       "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "F",
       "awayTeamCode": "M"
     },
@@ -50,16 +57,10 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Hs",
       "awayTeamCode": "Bs"
-    },
-    {
-      "gameId": "2021044743",
-      "stadiumName": "甲子園球場",
-      "homeTeamShort": "阪神",
-      "awayTeamShort": "楽天",
-      "homeTeamCode": "H",
-      "awayTeamCode": "E"
     }
   ],
   "stadiumByGameId": {
@@ -67,7 +68,13 @@
     "2021039043": "甲子園球場",
     "2021039044": "マツダ",
     "2021039045": "エスコンＦ",
-    "2021039046": "みずほPayPay",
-    "2021044743": "甲子園球場"
+    "2021039046": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039042": "試合終了",
+    "2021039043": "試合中止",
+    "2021039044": "試合中止",
+    "2021039045": "試合終了",
+    "2021039046": "試合終了"
   }
 }

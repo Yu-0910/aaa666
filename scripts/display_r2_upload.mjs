@@ -17,15 +17,52 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { HeadBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DRY_RUN = process.argv.includes('--dry-run')
+const FORCE_UPLOAD = process.argv.includes('--force-upload')
 const yearArg = process.argv.find((a) => a.startsWith('--year='))?.split('=')[1]
   ?? (process.argv.includes('--year') ? process.argv[process.argv.indexOf('--year') + 1] : null)
 const YEAR_FILTER = yearArg?.trim() || null
+const onlyArg = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1]
+  ?? (process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null)
+const ONLY_PREFIXES = new Set(
+  onlyArg ? onlyArg.split(',').map((s) => s.trim()).filter(Boolean) : [],
+)
+const CONCURRENCY = Math.max(1, Number(process.env.DISPLAY_R2_UPLOAD_CONCURRENCY || 8))
+
+function contentHashes(body) {
+  return {
+    md5: crypto.createHash('md5').update(body).digest('hex'),
+    sha256: crypto.createHash('sha256').update(body).digest('hex'),
+  }
+}
+
+function normalizeEtag(etag) {
+  return String(etag ?? '').replace(/^"|"$/g, '').toLowerCase()
+}
+
+async function shouldUploadObject(client, bucket, key, hashes) {
+  if (FORCE_UPLOAD) return true
+  try {
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+    const remoteSha256 =
+      head.Metadata?.sha256 || head.Metadata?.['content-sha256'] || head.Metadata?.['x-amz-meta-sha256']
+    if (remoteSha256 && String(remoteSha256).toLowerCase() === hashes.sha256) return false
+    const etag = normalizeEtag(head.ETag)
+    if (etag && !etag.includes('-') && etag === hashes.md5) return false
+    return true
+  } catch (e) {
+    const status = e?.$metadata?.httpStatusCode
+    const name = e?.name || e?.Code
+    if (status === 404 || name === 'NotFound' || name === 'NoSuchKey') return true
+    throw e
+  }
+}
 
 /** Next.js の .env.local を Node スクリプトでも読む */
 function loadDotEnvFile(filePath) {
@@ -98,6 +135,7 @@ async function main() {
 
   const files = []
   for (const u of UPLOADS) {
+    if (ONLY_PREFIXES.size > 0 && !ONLY_PREFIXES.has(u.keyPrefix.replace(/^data\//, ''))) continue
     const abs = path.join(ROOT, u.local)
     if (!fs.existsSync(abs)) {
       console.warn(`Skip missing: ${u.local}`)
@@ -129,6 +167,7 @@ async function main() {
   if (YEAR_FILTER) {
     console.log(`Filter: year=${YEAR_FILTER} only (skip 1936〜2025 など)`)
   }
+  if (ONLY_PREFIXES.size > 0) console.log(`Filter: only=${[...ONLY_PREFIXES].join(',')}`)
   console.log(`JSON files: ${files.length}`)
   if (files.length === 0) {
     console.error('Nothing to upload. Run: npm run rankings:rebuild')
@@ -162,29 +201,50 @@ async function main() {
     process.exit(1)
   }
 
-  let ok = 0
+  let nextIndex = 0
+  let uploaded = 0
+  let skipped = 0
   let fail = 0
-  for (const f of files) {
-    try {
-      const body = fs.readFileSync(f.local)
-      await client.send(
-        new PutObjectCommand({
-          Bucket: bucket,
-          Key: f.key,
-          Body: body,
-          ContentType: 'application/json',
-        })
-      )
-      ok++
-      if (ok % 200 === 0) console.log(`  uploaded ${ok}/${files.length}...`)
-    } catch (e) {
-      fail++
-      if (fail <= 3) console.error(`  FAIL ${f.key}:`, e.message || e)
-      else if (fail === 4) console.error('  ... (further errors omitted)')
+  let processed = 0
+  async function worker() {
+    while (nextIndex < files.length) {
+      const index = nextIndex
+      nextIndex += 1
+      const f = files[index]
+      try {
+        const body = fs.readFileSync(f.local)
+        const hashes = contentHashes(body)
+        if (await shouldUploadObject(client, bucket, f.key, hashes)) {
+          await client.send(
+            new PutObjectCommand({
+              Bucket: bucket,
+              Key: f.key,
+              Body: body,
+              ContentType: 'application/json',
+              Metadata: { sha256: hashes.sha256 },
+            })
+          )
+          uploaded++
+        } else {
+          skipped++
+        }
+        processed++
+        if (processed % 200 === 0 || processed === files.length) {
+          console.log(`  checked ${processed}/${files.length} (uploaded=${uploaded}, skipped=${skipped})...`)
+        }
+      } catch (e) {
+        fail++
+        if (fail <= 3) console.error(`  FAIL ${f.key}:`, e.message || e)
+        else if (fail === 4) console.error('  ... (further errors omitted)')
+      }
     }
   }
 
-  console.log(`\nDone: ${ok} ok, ${fail} failed`)
+  const workerCount = Math.min(CONCURRENCY, files.length)
+  console.log(`Uploading changed files only: concurrency=${workerCount}${FORCE_UPLOAD ? ' force-upload' : ''}`)
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+
+  console.log(`\nDone: ${uploaded} uploaded, ${skipped} skipped, ${fail} failed`)
   if (fail > 0) process.exit(1)
   console.log('\nNext: Phase 8 — verify /data/rankings/2026/CL/OPS.json on production')
 }

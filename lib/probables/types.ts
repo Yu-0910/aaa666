@@ -4,6 +4,7 @@ export const TOP_PROBABLES_SCHEMA_VERSION = "top-probables-v1" as const
 
 export type TopProbablesOpponentBatter = {
   opponentName: string
+  opponentNpbId?: string | null
   opponentPublicId: string | null
   ops: string | null
   avg: string | null
@@ -16,7 +17,7 @@ export type TopProbablesPitcherSlot = {
   pitcherNameJa: string | null
   pitcherNpbId: string | null
   pitcherPublicId: string | null
-  source: "sportingnews"
+  source: "sportingnews" | "yahoo-schedule"
   topOpponentBatters: TopProbablesOpponentBatter[]
   /** 楽天 vs ロッテなどで表示する今季成績（防御率） */
   seasonEra?: string | null

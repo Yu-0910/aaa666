@@ -44,16 +44,23 @@ import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, onlyYahooIds }
 }
 
 function splitLabelForRow(splitType: string, splitValue: string): string {
@@ -160,7 +167,7 @@ function addGameAggToSplits(
 }
 
 function main(): void {
-  const { year } = parseArgs()
+  const { year, onlyYahooIds } = parseArgs()
   invalidateYahooNpbBatterMapsCache()
   const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
   if (docs.length === 0) {
@@ -209,6 +216,8 @@ function main(): void {
 
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      if (onlyYahooIds && !onlyYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -217,9 +226,10 @@ function main(): void {
     }
   }
 
-  const batterIds = [...byBatter.keys()].sort()
+  const batterIds = (onlyYahooIds ?? [...byBatter.keys()]).slice().sort()
   for (const bid of batterIds) {
-    const m = byBatter.get(bid)!
+    const m = byBatter.get(bid)
+    if (!m) continue
     const rows: SeasonStatsRow[] = []
     const keys = [...m.keys()].sort((a, b) => {
       const [ta, va] = a.split("\t")

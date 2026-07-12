@@ -4,8 +4,8 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
 import { teamPageNavEnabledForYear, teamPageNavHref } from "@/lib/teamPage/teamPageNavLinks"
-import { teamColors } from "@/app/components/top/topPageConstants"
 import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { fetchStandingsJson } from "@/lib/standings/fetchStandingsJson"
 import { formatStandingsCell } from "@/lib/standings/formatStandingsCell"
 import {
@@ -68,10 +68,6 @@ const STANDINGS_NUMERIC_CLASS = "latin font-black tabular-nums"
 
 function rowBackgroundColor(idx: number): string {
   return idx % 2 === 0 ? ROW_BG_EVEN : ROW_BG_ODD
-}
-
-function teamStripeColor(team: string): string {
-  return teamColors[team] ?? "#888"
 }
 
 function standingsMetricHeaderLabel(key: StandingsMetricKey, label: string) {
@@ -283,7 +279,7 @@ function TeamStandingsTable({
                         style={{
                           width: TEAM_BAR_WIDTH,
                           height: teamBarHeight,
-                          backgroundColor: teamStripeColor(row.team),
+                          backgroundColor: rankingTeamStripeColor(teamDisplayNameFromStandingRow(row)),
                         }}
                       />
                       <div

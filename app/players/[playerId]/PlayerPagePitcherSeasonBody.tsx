@@ -369,7 +369,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           }}
                         >
                           <colgroup>
-                            <col style={{ width: "102.6px" }} />
+                            <col style={{ width: "118px" }} />
                             <col style={{ width: "50px" }} />
                             <col style={{ width: "45px" }} />
                             <col style={{ width: "45px" }} />
@@ -578,7 +578,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             ).map((cell, i) => (
                               <td
                                 key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
                               >
                                 {cell}
                               </td>
@@ -615,7 +615,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             ).map((cell, i) => (
                               <td
                                 key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
                               >
                                 {cell}
                               </td>
@@ -652,7 +652,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             ).map((cell, i) => (
                               <td
                                 key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500 first:border-l-0"
+                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
                               >
                                 {cell}
                               </td>

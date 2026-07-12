@@ -3,14 +3,15 @@ import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
-export type DisplayDataKind = 'rankings' | 'top-leaders' | 'standings'
+export type DisplayDataKind = 'rankings' | 'top-leaders' | 'standings' | 'top-probables'
 
-const CACHE =
-  'public, max-age=300, s-maxage=300, stale-while-revalidate=600'
+const CACHE = 'no-store, max-age=0'
 
 function jsonResponseWithCache(data: unknown): NextResponse {
   const headers = new Headers()
   headers.set('Cache-Control', CACHE)
+  headers.set('CDN-Cache-Control', CACHE)
+  headers.set('Vercel-CDN-Cache-Control', CACHE)
   headers.set('Content-Type', 'application/json')
   return NextResponse.json(data, { headers })
 }
@@ -63,13 +64,13 @@ export async function handleDisplayDataGet(
   const relativePath = pathSegments.join('/')
   let pathForFetch = relativePath
   const preferLocal = String(process.env.RANKINGS_PREFER_LOCAL || '').trim() === '1'
+  const baseUrl = getRankingsBaseUrl()
 
-  if (preferLocal || kind === 'standings') {
+  if (preferLocal || (kind === 'standings' && !baseUrl)) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)
   }
 
-  const baseUrl = getRankingsBaseUrl()
   if (!baseUrl) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)
@@ -106,6 +107,8 @@ export async function handleDisplayDataGet(
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
+        cache: 'no-store',
+        next: { revalidate: 0 },
       })
     } finally {
       clearTimeout(timeoutId)
@@ -149,6 +152,8 @@ export async function handleDisplayDataGet(
 
   const headers = new Headers()
   headers.set('Cache-Control', CACHE)
+  headers.set('CDN-Cache-Control', CACHE)
+  headers.set('Vercel-CDN-Cache-Control', CACHE)
   const contentType = fetchResponse.headers.get('Content-Type')
   headers.set('Content-Type', contentType || 'application/json')
   const etag = fetchResponse.headers.get('ETag')

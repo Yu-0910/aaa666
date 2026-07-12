@@ -54,6 +54,28 @@ if (!mergedOnly.some((pl) => pl.yahooPlayerId === winner.yahooPlayerId && pl.ip 
   process.exit(1)
 }
 
+const noStateCellGameId = "2021039106"
+const noStateCellHtmlPath = path.join(
+  root,
+  "_data",
+  "scraped_games",
+  "raw_sportsnavi_stats",
+  `${noStateCellGameId}.html`,
+)
+if (fs.existsSync(noStateCellHtmlPath)) {
+  const noStateCellRows = parseSportsnaviPitcherScoreTableRows(fs.readFileSync(noStateCellHtmlPath, "utf8"))
+  const nishidate = noStateCellRows.find((r) => r.yahooPlayerId === "1850035")
+  const saiki = noStateCellRows.find((r) => r.yahooPlayerId === "1600115")
+  if (nishidate?.era !== "2.33" || nishidate.ip !== "5.1" || nishidate.pitches !== 104 || nishidate.bf !== 22 || nishidate.er !== 4) {
+    console.error("[validate_sportsnavi_pitcher_score_table] no-state-cell row parse failed:", nishidate)
+    process.exit(1)
+  }
+  if (saiki?.era !== "2.89" || saiki.ip !== "5" || saiki.pitches !== 72 || saiki.bf !== 21 || saiki.er !== 0) {
+    console.error("[validate_sportsnavi_pitcher_score_table] no-state-cell starter row parse failed:", saiki)
+    process.exit(1)
+  }
+}
+
 console.log(
   `[validate_sportsnavi_pitcher_score_table] OK gameId=${gameId} scoreRows=${scoreRows.length} mergedWithIp=${withIp.length} winner=${winner.playerName} ip=${winner.ip}`,
 )

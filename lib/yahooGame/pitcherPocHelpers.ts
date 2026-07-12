@@ -28,9 +28,12 @@ export function inferPitcherTeamFromPlateAppearance(
   if (fromLineup) return fromLineup
 
   const board = doc.game?.scoreboard ?? []
-  if (board.length < 2) return null
-  const visitor = (board[0]!.teamName ?? "").trim()
-  const home = (board[1]!.teamName ?? "").trim()
+  const visitor =
+    (board[0]?.teamName ?? "").trim() ||
+    (doc.game?.teams?.[0]?.teamName ?? "").trim()
+  const home =
+    (board[1]?.teamName ?? "").trim() ||
+    (doc.game?.teams?.[1]?.teamName ?? "").trim()
   if (!visitor || !home) return null
 
   let half: number | null = null

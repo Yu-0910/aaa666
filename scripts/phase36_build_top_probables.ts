@@ -20,9 +20,9 @@ function parseArgs(argv: string[]) {
   return { year, asOfDateJst }
 }
 
-function main() {
+async function main() {
   const { year, asOfDateJst } = parseArgs(process.argv.slice(2))
-  const snapshot = buildTopProbablesSnapshot({ year, asOfDateJst })
+  const snapshot = await buildTopProbablesSnapshot({ year, asOfDateJst })
   const outPath = writeTopProbablesSnapshot(snapshot)
   console.log(
     `[phase36] wrote ${outPath} cards=${snapshot.cards.length} warnings=${snapshot.warnings.length}`,
@@ -37,4 +37,7 @@ function main() {
   }
 }
 
-main()
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

@@ -20,6 +20,7 @@ function topOpponentBattersFromDerived(
     .slice(0, TOP_N)
     .map((o) => ({
       opponentName: o.opponentName,
+      opponentNpbId: o.opponentNpbId || null,
       opponentPublicId: o.opponentPublicId || null,
       ops: o.ops,
       avg: o.avg,

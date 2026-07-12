@@ -6,6 +6,7 @@ import {
   pickRecentThreeGameSeriesCards,
 } from "@/lib/probables/detectThreeGameSeries"
 import { enrichProbablesCard } from "@/lib/probables/enrichProbablesCard"
+import { buildYahooScheduleProbableSlot } from "@/lib/probables/yahooScheduleProbables"
 import {
   addDaysYmd,
   loadScheduleGamesInRange,
@@ -84,7 +85,7 @@ function buildPitcherSlot(
 
   return {
     teamCode,
-    pitcherNameJa: row.pitcherNameJa,
+    pitcherNameJa: resolved?.pitcherNameJa ?? row.pitcherNameJa,
     pitcherNpbId: resolved?.pitcherNpbId ?? null,
     pitcherPublicId: resolved?.pitcherPublicId ?? null,
     source: "sportingnews",
@@ -92,18 +93,45 @@ function buildPitcherSlot(
   }
 }
 
-export function buildTopProbablesSnapshot(options: {
+async function buildProbableSlotForGame(
+  year: string,
+  teamCode: string,
+  opponentTeamCode: string,
+  dateJst: string,
+  tomorrowDate: string,
+  snByTeam: Map<string, SportingNewsRotationSnapshot | null>,
+  warnings: string[],
+  projectRoot: string,
+): Promise<TopProbablesPitcherSlot | null> {
+  if (dateJst === tomorrowDate) {
+    return (
+      (await buildYahooScheduleProbableSlot(
+        year,
+        teamCode,
+        opponentTeamCode,
+        dateJst,
+        projectRoot,
+        true,
+      )) ?? buildPitcherSlot(year, teamCode, opponentTeamCode, dateJst, snByTeam, warnings)
+    )
+  }
+  return buildPitcherSlot(year, teamCode, opponentTeamCode, dateJst, snByTeam, warnings)
+}
+
+export async function buildTopProbablesSnapshot(options: {
   year: string
   projectRoot?: string
   asOfDateJst?: string
-}): TopProbablesSnapshot {
+}): Promise<TopProbablesSnapshot> {
   const projectRoot = options.projectRoot ?? getProjectRoot()
   const year = options.year
   const asOfDateJst = options.asOfDateJst ?? todayJstYmd()
   const warnings: string[] = []
 
-  const from = addDaysYmd(asOfDateJst, -1)
+  // 3連戦は今日をまたぐと開始日が 2 日前になることがあるため、2 日前まで遡る。
+  const from = addDaysYmd(asOfDateJst, -2)
   const to = addDaysYmd(asOfDateJst, 14)
+  const tomorrowDate = addDaysYmd(asOfDateJst, 1)
   const scheduleGames = loadScheduleGamesInRange(projectRoot, from, to)
   if (scheduleGames.length === 0) {
     warnings.push(`日程スナップショットに試合がありません (${from}..${to})。phase0:fetch:schedule-ahead を実行してください。`)
@@ -117,6 +145,11 @@ export function buildTopProbablesSnapshot(options: {
     teamCodeSet.add(card.teamCodes[0])
     teamCodeSet.add(card.teamCodes[1])
   }
+  for (const game of scheduleGames) {
+    if (game.dateJst < asOfDateJst) continue
+    teamCodeSet.add(game.homeTeamCode)
+    teamCodeSet.add(game.awayTeamCode)
+  }
   const snByTeam = new Map<string, SportingNewsRotationSnapshot | null>()
   for (const code of teamCodeSet) {
     snByTeam.set(code, readSnSnapshot(projectRoot, year, code))
@@ -125,29 +158,45 @@ export function buildTopProbablesSnapshot(options: {
     }
   }
 
-  const cards: TopProbablesCard[] = picked.map((series) => {
-    const games: TopProbablesGame[] = series.games.map((g) => ({
-      dateJst: g.dateJst,
-      gameId: g.gameId,
-      homeTeamCode: g.homeTeamCode,
-      awayTeamCode: g.awayTeamCode,
-      homeProbable: buildPitcherSlot(
+  const cards: TopProbablesCard[] = []
+  const coveredGameIds = new Set<string>()
+  for (const series of picked) {
+    const futureGames = series.games.filter((g) => g.dateJst >= asOfDateJst)
+    if (futureGames.length === 0) continue
+
+    const games: TopProbablesGame[] = []
+    for (const g of futureGames) {
+      const homeProbable = await buildProbableSlotForGame(
         year,
         g.homeTeamCode,
         g.awayTeamCode,
         g.dateJst,
+        tomorrowDate,
         snByTeam,
         warnings,
-      ),
-      awayProbable: buildPitcherSlot(
+        projectRoot,
+      )
+      const awayProbable = await buildProbableSlotForGame(
         year,
         g.awayTeamCode,
         g.homeTeamCode,
         g.dateJst,
+        tomorrowDate,
         snByTeam,
         warnings,
-      ),
-    }))
+        projectRoot,
+      )
+
+      games.push({
+        dateJst: g.dateJst,
+        gameId: g.gameId,
+        homeTeamCode: g.homeTeamCode,
+        awayTeamCode: g.awayTeamCode,
+        homeProbable,
+        awayProbable,
+      })
+      coveredGameIds.add(g.gameId)
+    }
 
     const card: TopProbablesCard = {
       cardKey: series.cardKey,
@@ -161,8 +210,56 @@ export function buildTopProbablesSnapshot(options: {
       games,
     }
 
-    return enrichProbablesCard(projectRoot, year, card)
-  })
+    cards.push(enrichProbablesCard(projectRoot, year, card))
+  }
+
+  const orphanGames = scheduleGames
+    .filter(
+      (g) =>
+        g.dateJst === asOfDateJst &&
+        !coveredGameIds.has(g.gameId),
+    )
+    .sort((a, b) => a.dateJst.localeCompare(b.dateJst) || a.gameId.localeCompare(b.gameId))
+  for (const g of orphanGames) {
+    const homeProbable = await buildProbableSlotForGame(
+      year,
+      g.homeTeamCode,
+      g.awayTeamCode,
+      g.dateJst,
+      tomorrowDate,
+      snByTeam,
+      warnings,
+      projectRoot,
+    )
+    const awayProbable = await buildProbableSlotForGame(
+      year,
+      g.awayTeamCode,
+      g.homeTeamCode,
+      g.dateJst,
+      tomorrowDate,
+      snByTeam,
+      warnings,
+      projectRoot,
+    )
+    const card: TopProbablesCard = {
+      cardKey: `${g.homeTeamCode}-${g.awayTeamCode}:${g.dateJst}`,
+      teamCodes: [g.homeTeamCode, g.awayTeamCode],
+      teamNames: [teamDisplayNameFromCode(g.homeTeamCode), teamDisplayNameFromCode(g.awayTeamCode)],
+      seriesStart: g.dateJst,
+      seriesEnd: g.dateJst,
+      games: [
+        {
+          dateJst: g.dateJst,
+          gameId: g.gameId,
+          homeTeamCode: g.homeTeamCode,
+          awayTeamCode: g.awayTeamCode,
+          homeProbable,
+          awayProbable,
+        },
+      ],
+    }
+    cards.push(enrichProbablesCard(projectRoot, year, card))
+  }
 
   return {
     schemaVersion: TOP_PROBABLES_SCHEMA_VERSION,

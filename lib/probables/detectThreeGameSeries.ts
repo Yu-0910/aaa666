@@ -92,7 +92,35 @@ export function pickRecentThreeGameSeriesCards(
   asOfDateJst: string,
   maxCards = MAX_PROBABLES_CARDS,
 ): ThreeGameSeriesCard[] {
-  const filtered = cards.filter((c) => c.games.some((g) => g.dateJst >= asOfDateJst))
-  filtered.sort((a, b) => a.seriesStart.localeCompare(b.seriesStart))
-  return filtered.slice(0, maxCards)
+  const filtered = cards
+    .filter((c) => c.games.some((g) => g.dateJst >= asOfDateJst))
+    .sort((a, b) => {
+      const aDate = firstFutureGameDate(a, asOfDateJst)
+      const bDate = firstFutureGameDate(b, asOfDateJst)
+      return aDate.localeCompare(bDate) || a.seriesStart.localeCompare(b.seriesStart) || a.cardKey.localeCompare(b.cardKey)
+    })
+
+  const selected = filtered.slice(0, maxCards)
+  if (selected.length === 0) return selected
+
+  const last = selected[selected.length - 1]!
+  if (seriesFutureGameCount(last, asOfDateJst) === 1) {
+    const next = filtered[selected.length]
+    if (next) selected.push(next)
+  }
+
+  return selected
+}
+
+function seriesFutureGameCount(card: ThreeGameSeriesCard, asOfDateJst: string): number {
+  return card.games.filter((g) => g.dateJst >= asOfDateJst).length
+}
+
+function firstFutureGameDate(card: ThreeGameSeriesCard, asOfDateJst: string): string {
+  return (
+    card.games
+      .filter((g) => g.dateJst >= asOfDateJst)
+      .map((g) => g.dateJst)
+      .sort()[0] ?? card.seriesStart
+  )
 }

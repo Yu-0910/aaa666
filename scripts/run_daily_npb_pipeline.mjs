@@ -78,7 +78,7 @@
  *   node scripts/run_daily_npb_pipeline.mjs --skip-yahoo-phase10
  *   node scripts/run_daily_npb_pipeline.mjs --derive-only
  *   node scripts/run_daily_npb_pipeline.mjs --fetch-only
- *     … 20:30 先行取得（Phase0〜2b。Phase4・派生なし）
+ *     … 20:30 先行取得（Phase0〜2b。Phase4・派生なし。未来日程ベースの予想投手 JSON は更新）
  *   node scripts/run_daily_npb_pipeline.mjs --finalize-only
  *     … 全試合終了後の続き（既定は当日。過去日は --from/--to も指定）
  *   node scripts/run_daily_npb_pipeline.mjs --finalize-only --from 2026-06-21 --to 2026-06-21
@@ -902,7 +902,7 @@ function main() {
 
   if (fetchOnly) {
     console.log(
-      "\n[daily:npb-pipeline] --fetch-only: Phase4・strict 検証・派生はスキップします（試合終了後に --finalize-only または watch:daily-pipeline）。\n",
+      "\n[daily:npb-pipeline] --fetch-only: Phase4・strict 検証・派生はスキップします（予想投手 JSON は未来日程から更新）。試合終了後は --finalize-only または watch:daily-pipeline を実行してください。\n",
     )
   }
 
@@ -985,9 +985,14 @@ function main() {
       )
     }
   } else {
+    run(
+      "トップ表示: 予想投手（fetch-only 先行更新・未来日程ベース）",
+      "npm run phase36:build:top-probables",
+    )
     appendPipelineBulkLog(root, "daily:npb-pipeline", `fetch-only 完了 (from=${from} to=${to})。続きは全試合終了後に --finalize-only`)
     console.log(
-      "\n[daily:npb-pipeline] fetch-only 完了。当日の試合中カードは raw が未充足のまま残り得ます。" +
+      "\n[daily:npb-pipeline] fetch-only 完了。予想投手タブ用の future snapshot は更新済みです。" +
+        "当日の試合中カードは raw が未充足のまま残り得ます。" +
         "全試合終了後に `npm run daily:npb-pipeline:finalize` または `npm run watch:daily-pipeline` を実行してください。\n",
     )
   }
