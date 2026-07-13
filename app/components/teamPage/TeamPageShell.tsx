@@ -25,6 +25,11 @@ import {
 import type { TeamPageV1Year } from "@/lib/teamPage/teamPageConstants"
 import SiteFooter from "@/app/components/common/SiteFooter"
 
+const TEAM_PAGE_CATCHER_SUB_TAB = { id: "catchers", label: "捕手成績", pathSuffix: "catchers" } as const
+const TEAM_PAGE_SHELL_SUB_TABS = TEAM_PAGE_SUB_TABS.some((tab) => tab.id === "catchers")
+  ? TEAM_PAGE_SUB_TABS
+  : ([...TEAM_PAGE_SUB_TABS, TEAM_PAGE_CATCHER_SUB_TAB] as const)
+
 export type TeamPageShellProps = {
   teamCode: string
   year: TeamPageV1Year
@@ -164,7 +169,7 @@ export default function TeamPageShell({
           className="relative isolate box-border mb-4 flex min-h-10 w-full shrink-0 items-stretch overflow-hidden"
           style={{ border: "1px solid #555", backgroundColor: "#1a1a1a" }}
         >
-          {TEAM_PAGE_SUB_TABS.map((tab) => {
+          {TEAM_PAGE_SHELL_SUB_TABS.map((tab) => {
             const active = tab.id === activeSubTab
             const tabWeekly =
               isWeekly && weekKey && (tab.id === "batting" || tab.id === "pitching") ? weekKey : undefined
