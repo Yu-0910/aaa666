@@ -78,7 +78,7 @@ function main() {
   assert(teamPagePitchingTitle("横浜", 2026) === "2026年 横浜 投手成績ランキング", "pitching title")
 
   assert(TEAM_CATCHER_COLUMNS.length === 30, "catcher columns")
-  assert(TEAM_CATCHER_DEFAULT_SORT_KEY === "gamesAsCatcher", "catcher default sort")
+  assert(TEAM_CATCHER_DEFAULT_SORT_KEY === "teamWinPct", "catcher default sort")
   assert(TEAM_CATCHER_DEFAULT_SORT_ORDER === "desc", "catcher default order")
 
   const agg = aggregateCatcherPitcherSplits([
