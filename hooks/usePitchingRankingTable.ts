@@ -132,6 +132,7 @@ export function usePitchingRankingTable({
         order,
         pitchingQualifyingThresholds,
         teamCode,
+        skipTeamQualifyingFilter: Boolean(teamCode && weekKey),
       }),
     [
       rowsFromJson,
@@ -140,6 +141,7 @@ export function usePitchingRankingTable({
       order,
       pitchingQualifyingThresholds,
       teamCode,
+      weekKey,
     ],
   )
 

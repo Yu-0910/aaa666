@@ -18,6 +18,8 @@ export type SortPitchingRankingRowsParams = {
   order: "asc" | "desc"
   pitchingQualifyingThresholds: PitchingQualifyingThresholds
   teamCode?: string
+  /** チームページ今週タブ: 規定未到達も含めて一覧表示 */
+  skipTeamQualifyingFilter?: boolean
 }
 
 export function sortPitchingRankingRows({
@@ -27,6 +29,7 @@ export function sortPitchingRankingRows({
   order,
   pitchingQualifyingThresholds,
   teamCode,
+  skipTeamQualifyingFilter = false,
 }: SortPitchingRankingRowsParams): SortedRankingResult {
   const scopedRows = teamCode ? filterRankingRowsByTeam(rows, teamCode) : rows
   const metric = metrics.find((m) => m.key === sortKey)
@@ -41,7 +44,7 @@ export function sortPitchingRankingRows({
   const passesQualifying = (row: RankingRow) =>
     rowMeetsPitchingQualifyingIp(row, pitchingQualifyingThresholds)
 
-  if (canApply && teamCode) {
+  if (canApply && teamCode && !skipTeamQualifyingFilter) {
     return partitionQualifyingRows(scopedRows, passesQualifying, metric.key, order)
   }
 
