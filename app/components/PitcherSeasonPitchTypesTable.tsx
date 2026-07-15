@@ -14,10 +14,10 @@ function fmtSpeed(v: number | null | undefined): string {
   return v.toFixed(1)
 }
 
-function fmtAvgHr(row: PitcherSeasonPitchTypeRow): string {
-  const avg = formatSlashStatDisplay(row.avg)
+function fmtAvgHr(avgRaw: string | undefined, hr: number | undefined): string {
+  const avg = formatSlashStatDisplay(avgRaw ?? "")
   if (avg === "—") return "—"
-  return `${avg} (${row.hr})`
+  return `${avg} (${hr ?? 0})`
 }
 
 type Props = {
@@ -27,45 +27,28 @@ type Props = {
   compactOverlay?: boolean
 }
 
-/** 球速列幅（50px × 1.15） */
-const SPEED_COL_WIDTH_PX = Math.round(Math.round(45 * 1.1) * 1.15)
+/** 球速列幅 */
+const SPEED_COL_WIDTH_PX = 54
 /** 投球割合列幅（flex 時の想定 114px × 0.8 × 0.95 × 0.95 × 0.5） */
 const PCT_COL_WIDTH_PX = Math.round(114 * 0.8 * 0.95 * 0.95 * 0.5)
-const REMOVED_OVERALL_PCT_COL_WIDTH_PX = PCT_COL_WIDTH_PX
 const OVERLAY_TABLE_SCALE = 1.2 * 0.9
 const OVERLAY_TABLE_VERTICAL_SCALE = 1.1
 const OVERLAY_NUMERIC_FONT_SCALE = 1.2
 const OVERLAY_NUMERIC_NUDGE_DOWN_PX = 2
 const OVERLAY_TABLE_NUDGE_UP_PX = 10
-const OVERLAY_NARROW_COL_SCALE = 0.9
 const overlayColWidth = (px: number) => Math.round(px * OVERLAY_TABLE_SCALE)
 
-/** ツールチップ表: 球速・Whiff・被打率を9割にし、削減分を投球割合2列と他列へ再配分 */
+/** ツールチップ表の列幅 */
 function overlayCompactColumnWidths() {
   const pitchTypeColWidth = overlayColWidth(88)
-  const speedBase = overlayColWidth(SPEED_COL_WIDTH_PX)
-  const pctBase = overlayColWidth(PCT_COL_WIDTH_PX)
-  const whiffBase = overlayColWidth(56)
-  const avgBase = overlayColWidth(72)
-  const speedColWidth = Math.round(speedBase * OVERLAY_NARROW_COL_SCALE)
-  const whiffColWidth = Math.round(whiffBase * OVERLAY_NARROW_COL_SCALE)
-  const avgColWidth = Math.round(avgBase * OVERLAY_NARROW_COL_SCALE)
-  const removedPctWidth = overlayColWidth(REMOVED_OVERALL_PCT_COL_WIDTH_PX)
-  const savedWidth =
-    (speedBase - speedColWidth) * 2 + (whiffBase - whiffColWidth) + (avgBase - avgColWidth)
-  const pctBonus = Math.floor(removedPctWidth / 4)
-  const otherBonus = Math.floor((removedPctWidth - pctBonus * 2) / 5)
-  const pitchTypeColWidthExpanded = pitchTypeColWidth + otherBonus
-  const speedColWidthExpanded = speedColWidth + otherBonus
-  const whiffColWidthExpanded = whiffColWidth + otherBonus
-  const avgColWidthExpanded = avgColWidth + otherBonus
-  const pctColWidth = pctBase + Math.floor(savedWidth / 2) + pctBonus
+  const speedColWidth = overlayColWidth(SPEED_COL_WIDTH_PX)
+  const pctColWidth = overlayColWidth(PCT_COL_WIDTH_PX)
+  const splitMetricColWidth = overlayColWidth(62)
   return {
-    pitchTypeColWidth: pitchTypeColWidthExpanded,
-    speedColWidth: speedColWidthExpanded,
+    pitchTypeColWidth,
+    speedColWidth,
     pctColWidth,
-    whiffColWidth: whiffColWidthExpanded,
-    avgColWidth: avgColWidthExpanded,
+    splitMetricColWidth,
   }
 }
 
@@ -103,13 +86,10 @@ export default function PitcherSeasonPitchTypesTable({
   const headerMainClass = "text-[10px]"
   const headerSubClass = "text-[9px]"
   const overlayCols = compactOverlay ? overlayCompactColumnWidths() : null
-  const basePctBonus = Math.floor(REMOVED_OVERALL_PCT_COL_WIDTH_PX / 4)
-  const baseOtherBonus = Math.floor((REMOVED_OVERALL_PCT_COL_WIDTH_PX - basePctBonus * 2) / 5)
-  const pitchTypeColWidth = overlayCols?.pitchTypeColWidth ?? 88 + baseOtherBonus
-  const speedColWidth = overlayCols?.speedColWidth ?? SPEED_COL_WIDTH_PX + baseOtherBonus
-  const pctColWidth = overlayCols?.pctColWidth ?? PCT_COL_WIDTH_PX + basePctBonus
-  const whiffColWidth = overlayCols?.whiffColWidth ?? 56 + baseOtherBonus
-  const avgColWidth = overlayCols?.avgColWidth ?? 72 + baseOtherBonus
+  const pitchTypeColWidth = overlayCols?.pitchTypeColWidth ?? 88
+  const speedColWidth = overlayCols?.speedColWidth ?? SPEED_COL_WIDTH_PX
+  const pctColWidth = overlayCols?.pctColWidth ?? PCT_COL_WIDTH_PX
+  const splitMetricColWidth = overlayCols?.splitMetricColWidth ?? 62
   const pitchTypeStickyClass = compactOverlay
     ? ""
     : "sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
@@ -136,11 +116,14 @@ export default function PitcherSeasonPitchTypesTable({
       <colgroup>
         <col style={{ width: `${pitchTypeColWidth}px` }} />
         <col style={{ width: `${speedColWidth}px` }} />
-        <col style={{ width: `${speedColWidth}px` }} />
         <col style={{ width: `${pctColWidth}px` }} />
         <col style={{ width: `${pctColWidth}px` }} />
-        <col style={{ width: `${whiffColWidth}px` }} />
-        <col style={{ width: `${avgColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
+        <col style={{ width: `${splitMetricColWidth}px` }} />
       </colgroup>
       <thead>
         <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -151,10 +134,12 @@ export default function PitcherSeasonPitchTypesTable({
             球種
           </th>
           <th
-            colSpan={2}
+            rowSpan={2}
             className={`px-0.5 py-1 text-center font-bold ${headerMainClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}
           >
-            球速(km/h)
+            平均
+            <br />
+            球速
           </th>
           <th
             colSpan={2}
@@ -163,26 +148,44 @@ export default function PitcherSeasonPitchTypesTable({
             投球割合
           </th>
           <th
-            rowSpan={2}
+            colSpan={2}
             className={`px-0.5 py-1 text-center font-bold ${headerMainClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}
           >
             Whiff%
           </th>
           <th
-            rowSpan={2}
+            colSpan={2}
             className={`px-0.5 py-1 text-center font-bold ${headerMainClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}
           >
             被打率
             <br />
             <span className={`font-normal ${headerSubClass}`}>(被本塁打)</span>
           </th>
+          <th
+            colSpan={2}
+            className={`px-0.5 py-1 text-center font-bold ${headerMainClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}
+          >
+            ストライク率
+          </th>
         </tr>
         <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
           <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
-            最高
+            対左
           </th>
           <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
-            平均
+            対右
+          </th>
+          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
+            対左
+          </th>
+          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
+            対右
+          </th>
+          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
+            対左
+          </th>
+          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
+            対右
           </th>
           <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
             対左
@@ -202,9 +205,6 @@ export default function PitcherSeasonPitchTypesTable({
               {row.pitch_type}
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
-              {fmtSpeed(row.max_speed_kmh)}
-            </td>
-            <td className={numericCellClass} style={numericCellStyle}>
               {fmtSpeed(row.avg_speed_kmh)}
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
@@ -214,10 +214,22 @@ export default function PitcherSeasonPitchTypesTable({
               {fmtPct(row.pct_vs_right)}
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
-              {row.whiff_pct}
+              {row.whiff_pct_vs_left ?? "—"}
+            </td>
+            <td className={numericCellClass} style={numericCellStyle}>
+              {row.whiff_pct_vs_right ?? "—"}
             </td>
             <td className={`${numericCellClass} whitespace-nowrap`} style={numericCellStyle}>
-              {fmtAvgHr(row)}
+              {fmtAvgHr(row.avg_vs_left, row.hr_vs_left)}
+            </td>
+            <td className={`${numericCellClass} whitespace-nowrap`} style={numericCellStyle}>
+              {fmtAvgHr(row.avg_vs_right, row.hr_vs_right)}
+            </td>
+            <td className={numericCellClass} style={numericCellStyle}>
+              {row.strike_pct_vs_left ?? "—"}
+            </td>
+            <td className={numericCellClass} style={numericCellStyle}>
+              {row.strike_pct_vs_right ?? "—"}
             </td>
           </tr>
         ))}

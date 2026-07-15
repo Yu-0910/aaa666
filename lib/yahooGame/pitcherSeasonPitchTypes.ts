@@ -30,14 +30,21 @@ export type PitcherSeasonPitchTypeRow = {
   pct_vs_left: number | null
   /** 対右打者への投球における当該球種の割合（%） */
   pct_vs_right: number | null
-  max_speed_kmh: number | null
   avg_speed_kmh: number | null
   so: number
   /** 奪三振に占める割合（%） */
   so_pct: number | null
   whiff_pct: string
+  whiff_pct_vs_left?: string
+  whiff_pct_vs_right?: string
+  strike_pct_vs_left?: string
+  strike_pct_vs_right?: string
   avg: string
+  avg_vs_left?: string
+  avg_vs_right?: string
   hr: number
+  hr_vs_left?: number
+  hr_vs_right?: number
 }
 
 export type PitcherSeasonPitchTypesPayload = {
@@ -174,6 +181,14 @@ export function aggregatePitcherSeasonPitchTypeRows(
   "schemaVersion" | "seasonYear" | "npbPlayerId" | "yahooPitcherIds" | "generatedAt" | "source"
 > {
   const coreStats = aggregateByPitchType(blocks, { whiffDenominator: 'swings' })
+  const vsLeftStats = aggregateByPitchType(
+    blocks.filter((b) => b.vsHand === "L"),
+    { whiffDenominator: "swings" },
+  )
+  const vsRightStats = aggregateByPitchType(
+    blocks.filter((b) => b.vsHand === "R"),
+    { whiffDenominator: "swings" },
+  )
   const totalSo = coreStats.reduce((s, r) => s + r.so, 0)
   const totalPitches = blocks.reduce((s, b) => s + b.pitches.length, 0)
 
@@ -181,17 +196,12 @@ export function aggregatePitcherSeasonPitchTypeRows(
   let pitchesVsRight = 0
   const typePitchVsLeft = new Map<string, number>()
   const typePitchVsRight = new Map<string, number>()
-  const typeSpeeds = new Map<string, number[]>()
+  const leftStatsByType = new Map(vsLeftStats.map((r) => [r.pitch_type, r]))
+  const rightStatsByType = new Map(vsRightStats.map((r) => [r.pitch_type, r]))
 
   for (const block of blocks) {
     for (const p of block.pitches) {
       const pt = p.pitch_type || "不明"
-      const spd = parseInt(p.speed_kmh, 10)
-      if (!Number.isNaN(spd) && spd > 0) {
-        const arr = typeSpeeds.get(pt) ?? []
-        arr.push(spd)
-        typeSpeeds.set(pt, arr)
-      }
       if (block.vsHand === "L") {
         pitchesVsLeft += 1
         typePitchVsLeft.set(pt, (typePitchVsLeft.get(pt) ?? 0) + 1)
@@ -204,17 +214,16 @@ export function aggregatePitcherSeasonPitchTypeRows(
 
   const rows: PitcherSeasonPitchTypeRow[] = coreStats.map((r) => {
     const pt = r.pitch_type
-    const speeds = typeSpeeds.get(pt) ?? []
-    const maxSpeed = speeds.length ? Math.max(...speeds) : null
     const leftN = typePitchVsLeft.get(pt) ?? 0
     const rightN = typePitchVsRight.get(pt) ?? 0
+    const leftStats = leftStatsByType.get(pt)
+    const rightStats = rightStatsByType.get(pt)
     return {
       pitch_type: pt,
       pitches: r.pitches,
       pct: pct(r.pitches, totalPitches) ?? 0,
       pct_vs_left: pct(leftN, pitchesVsLeft),
       pct_vs_right: pct(rightN, pitchesVsRight),
-      max_speed_kmh: maxSpeed,
       avg_speed_kmh:
         r.avg_speed != null && Number.isFinite(r.avg_speed)
           ? Math.round(r.avg_speed * 10) / 10
@@ -222,8 +231,16 @@ export function aggregatePitcherSeasonPitchTypeRows(
       so: r.so,
       so_pct: totalSo > 0 ? Math.round((r.so / totalSo) * 1000) / 10 : null,
       whiff_pct: r.whiff_pct,
+      whiff_pct_vs_left: leftStats?.whiff_pct ?? "—",
+      whiff_pct_vs_right: rightStats?.whiff_pct ?? "—",
+      strike_pct_vs_left: leftStats?.strike_pct ?? "—",
+      strike_pct_vs_right: rightStats?.strike_pct ?? "—",
       avg: r.avg,
+      avg_vs_left: leftStats?.avg ?? "—",
+      avg_vs_right: rightStats?.avg ?? "—",
       hr: r.hr,
+      hr_vs_left: leftStats?.hr ?? 0,
+      hr_vs_right: rightStats?.hr ?? 0,
     }
   })
 

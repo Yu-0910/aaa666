@@ -14,12 +14,26 @@ import { buildPitcherSeasonPitchTypesLive } from "@/lib/yahooGame/buildPitcherSe
 import { loadPitcherSeasonPitchTypesAsync } from "@/lib/yahooGame/loadPitcherSeasonPitchTypes"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 import { resolvePilotPitcherNpbFromUrlSegment } from "@/lib/pitcherSeasonPocPilotFallback"
-import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
 export const dynamic = "force-dynamic"
 
 export type PitcherSeasonPitchTypesApiResponse =
   DerivedPlayerApiEnvelope<PitcherSeasonPitchTypesPayload>
+
+function needsPitchTypeSplitRefresh(payload: PitcherSeasonPitchTypesPayload | null): boolean {
+  if (!payload?.rows?.length) return false
+  return payload.rows.some(
+    (row) =>
+      typeof row.whiff_pct_vs_left !== "string" ||
+      typeof row.whiff_pct_vs_right !== "string" ||
+      typeof row.strike_pct_vs_left !== "string" ||
+      typeof row.strike_pct_vs_right !== "string" ||
+      typeof row.avg_vs_left !== "string" ||
+      typeof row.avg_vs_right !== "string" ||
+      typeof row.hr_vs_left !== "number" ||
+      typeof row.hr_vs_right !== "number",
+  )
+}
 
 export async function GET(
   request: Request,
@@ -50,7 +64,7 @@ export async function GET(
     }
 
     let payload = await loadPitcherSeasonPitchTypesAsync(year, npb)
-    if (!payload) {
+    if (!payload || needsPitchTypeSplitRefresh(payload)) {
       payload = buildPitcherSeasonPitchTypesLive(npb, year)
     }
 
