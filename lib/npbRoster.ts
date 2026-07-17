@@ -184,6 +184,8 @@ export function findRosterPlayerByPublicId(raw: string): NpbRosterPlayer | null 
     id = raw.trim()
   }
   if (/^\d+$/.test(id)) {
+    const directNpbMatch = roster.find((r) => r.npb_player_id === id)
+    if (directNpbMatch) return directNpbMatch
     const lookupId = resolveNpbPlayerIdFromPublicId(id)
     return roster.find((r) => r.npb_player_id === lookupId) ?? null
   }
