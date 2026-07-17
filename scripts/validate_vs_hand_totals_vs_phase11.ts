@@ -37,19 +37,26 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? Math.trunc(n) : 0
 }
 
-function parseArgs(): { year: string; failOnNegativeRecon: boolean } {
+function parseArgs(): { year: string; failOnNegativeRecon: boolean; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
   let failOnNegativeRecon = false
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!
       i++
     } else if (args[i] === "--fail-on-negative-recon") {
       failOnNegativeRecon = true
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year, failOnNegativeRecon }
+  return { year, failOnNegativeRecon, onlyYahooIds }
 }
 
 function sumVsHandP0(rows: Row[]): { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number } {
@@ -67,7 +74,7 @@ function sumVsHandP0(rows: Row[]): { pa: number; ab: number; bb: number; hbp: nu
 }
 
 function main(): void {
-  const { year, failOnNegativeRecon } = parseArgs()
+  const { year, failOnNegativeRecon, onlyYahooIds } = parseArgs()
   const root = process.cwd()
   const phase11Dir = path.join(root, "_data", "derived", "player_season_batting", year)
   const splitsDir = path.join(root, "_data", "derived", "player_season_batting_splits", year)
@@ -82,7 +89,16 @@ function main(): void {
     process.exit(2)
   }
 
-  const phase11Files = fs.readdirSync(phase11Dir).filter((f) => f.endsWith(".json") && f.startsWith("yahoo_"))
+  const onlyYahooIdSet =
+    onlyYahooIds && onlyYahooIds.length > 0 ? new Set(onlyYahooIds.map(String)) : null
+  const phase11Files = fs
+    .readdirSync(phase11Dir)
+    .filter((f) => f.endsWith(".json") && f.startsWith("yahoo_"))
+    .filter((f) => {
+      if (!onlyYahooIdSet) return true
+      const id = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      return onlyYahooIdSet.has(id)
+    })
   let mismatches = 0
   let missingSplits = 0
   let negativeReconPlayers = 0
@@ -165,6 +181,11 @@ function main(): void {
   const extraSplits = fs
     .readdirSync(splitsDir)
     .filter((f) => f.endsWith(".json") && f.startsWith("yahoo_"))
+    .filter((f) => {
+      if (!onlyYahooIdSet) return true
+      const id = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      return onlyYahooIdSet.has(id)
+    })
     .filter((f) => !fs.existsSync(path.join(phase11Dir, f)))
 
   if (extraSplits.length > 0) {

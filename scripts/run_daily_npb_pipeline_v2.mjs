@@ -65,6 +65,18 @@ function formatMs(ms) {
   return `${mm}:${pad(ss)}`
 }
 
+function commandTimeoutMs(kind = "default") {
+  const byKind = {
+    default: process.env.TOPPAGE_PIPELINE_DEFAULT_TIMEOUT_MS,
+    validate: process.env.TOPPAGE_PIPELINE_VALIDATE_TIMEOUT_MS,
+    network: process.env.TOPPAGE_PIPELINE_NETWORK_TIMEOUT_MS,
+    publish: process.env.TOPPAGE_PIPELINE_PUBLISH_TIMEOUT_MS,
+  }
+  const raw = byKind[kind] ?? byKind.default
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
+}
+
 function parseArgs(argv) {
   const out = {
     year: "2026",
@@ -85,6 +97,7 @@ function parseArgs(argv) {
     skipScoreRawGate: false,
     skipVsHandValidate: false,
     skipFastPublish: false,
+    autoDeployProduction: false,
     noPublish: false,
     build: false,
     dryRun: false,
@@ -118,6 +131,7 @@ function parseArgs(argv) {
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
     else if (a === "--skip-fast-publish") out.skipFastPublish = true
+    else if (a === "--auto-deploy-production") out.autoDeployProduction = true
     else if (a === "--no-publish") out.noPublish = true
     else if (a === "--build") out.build = true
     else if (a === "--dry-run") out.dryRun = true
@@ -225,7 +239,188 @@ function onlyYahooIdsArg(ids) {
   return ids.length > 0 ? ` -- --only-yahoo-ids ${ids.join(",")}` : ""
 }
 
-function runFinishedRawFreshnessGate({ from, to, gameIds, noStatsText, noScoreRaw, dryRun }) {
+function canonicalJsonFiles() {
+  const dir = path.join(root, "_data", "scraped_games", "canonical")
+  if (!fs.existsSync(dir)) return []
+  return fs
+    .readdirSync(dir)
+    .filter((f) => /^\d+\.json$/.test(f))
+    .map((f) => path.join(dir, f))
+}
+
+function canonicalMtimeMsForGameId(gameId) {
+  const p = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+  try {
+    return fs.statSync(p).mtimeMs
+  } catch {
+    return 0
+  }
+}
+
+function readPhase17PeriodSourceSnapshot(periodDir, periodFiles) {
+  const metaPath = path.join(periodDir, "_meta.json")
+  const meta = readJsonOrNull(metaPath)
+  const metaIds = Array.isArray(meta?.source?.canonicalGames)
+    ? meta.source.canonicalGames.map(String).filter(Boolean)
+    : []
+  const metaGeneratedAt = String(meta?.generatedAt ?? "")
+  if (metaIds.length > 0 && metaGeneratedAt) {
+    return {
+      sourceIds: metaIds,
+      generatedAt: metaGeneratedAt,
+      sourceRef: "_meta.json",
+    }
+  }
+
+  let best = null
+  for (const file of periodFiles) {
+    const payload = readJsonOrNull(path.join(periodDir, file))
+    const sourceIds = Array.isArray(payload?.source?.canonicalGames)
+      ? payload.source.canonicalGames.map(String).filter(Boolean)
+      : []
+    const generatedAt = String(payload?.generatedAt ?? "")
+    if (sourceIds.length === 0 || !generatedAt) continue
+    const candidate = {
+      sourceIds,
+      generatedAt,
+      generatedAtMs: parseIsoMs(generatedAt),
+      sourceRef: file,
+    }
+    if (
+      !best ||
+      candidate.generatedAtMs > best.generatedAtMs ||
+      (candidate.generatedAtMs === best.generatedAtMs && candidate.sourceIds.length > best.sourceIds.length)
+    ) {
+      best = candidate
+    }
+  }
+
+  if (!best) {
+    return {
+      sourceIds: [],
+      generatedAt: "",
+      sourceRef: "",
+    }
+  }
+  return best
+}
+
+function battingPeriodFreshnessReport({ year, gameIds = [] }) {
+  const periodDir = path.join(root, "_data", "derived", "player_season_batting_period", year)
+  const canonicalFiles = canonicalJsonFiles()
+  const currentCanonicalCount = canonicalFiles.length
+  if (!fs.existsSync(periodDir)) {
+    return {
+      ok: false,
+      reason: "period_dir_missing",
+      currentCanonicalCount,
+      periodSourceCount: 0,
+      generatedAt: "",
+      staleTargetGameIds: [],
+      missingTargetGameIds: [],
+    }
+  }
+
+  const periodFiles = fs
+    .readdirSync(periodDir)
+    .filter((f) => f.startsWith("yahoo_") && f.endsWith(".json"))
+    .sort()
+  if (periodFiles.length === 0) {
+    return {
+      ok: false,
+      reason: "period_files_missing",
+      currentCanonicalCount,
+      periodSourceCount: 0,
+      generatedAt: "",
+      staleTargetGameIds: [],
+      missingTargetGameIds: [],
+    }
+  }
+
+  const snapshot = readPhase17PeriodSourceSnapshot(periodDir, periodFiles)
+  const sourceIds = snapshot.sourceIds
+  const generatedAt = snapshot.generatedAt
+  const generatedAtMs = parseIsoMs(generatedAt)
+  const sourceSet = new Set(sourceIds)
+  const targetIds = [...new Set(gameIds.map(String).filter(Boolean))].sort()
+  const canonicalTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) > 0)
+  const ignoredTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) <= 0)
+  const missingTargetGameIds = canonicalTargetGameIds.filter((id) => !sourceSet.has(id))
+  const staleTargetGameIds =
+    generatedAtMs > 0
+      ? canonicalTargetGameIds.filter((id) => canonicalMtimeMsForGameId(id) > generatedAtMs + 1000)
+      : canonicalTargetGameIds
+
+  const reasons = []
+  if (sourceIds.length < currentCanonicalCount) reasons.push("source_count_behind_canonical")
+  if (missingTargetGameIds.length > 0) reasons.push("target_games_missing_from_period_source")
+  if (staleTargetGameIds.length > 0) reasons.push("target_canonical_newer_than_period")
+
+  return {
+    ok: reasons.length === 0,
+    reason: reasons.join("+"),
+    currentCanonicalCount,
+    periodSourceCount: sourceIds.length,
+    generatedAt,
+    sourceRef: snapshot.sourceRef,
+    ignoredTargetGameIds,
+    staleTargetGameIds,
+    missingTargetGameIds,
+  }
+}
+
+function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitchingPeriod = false }) {
+  const targetIds = targetGameIdsForArgs({ from, to, gameIds })
+  const before = battingPeriodFreshnessReport({ year, gameIds: targetIds })
+  if (before.ok) {
+    console.log(
+      `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK: source=${before.periodSourceCount}, canonical=${before.currentCanonicalCount}, generatedAt=${before.generatedAt}\n`,
+    )
+    return
+  }
+
+  console.warn(
+    "\n[daily:npb-pipeline:v2] phase17 period 鮮度 NG → canonical 更新後の期間別集計を再生成します:",
+  )
+  console.warn(
+    `  reason=${before.reason || "-"} source=${before.periodSourceCount} canonical=${before.currentCanonicalCount} generatedAt=${before.generatedAt || "-"} sourceRef=${before.sourceRef || "-"}`,
+  )
+  if (before.missingTargetGameIds.length > 0) {
+    console.warn(`  missingTargetGameIds=${before.missingTargetGameIds.join(",")}`)
+  }
+  if (before.ignoredTargetGameIds.length > 0) {
+    console.warn(`  ignoredTargetGameIds(no canonical)=${before.ignoredTargetGameIds.join(",")}`)
+  }
+  if (before.staleTargetGameIds.length > 0) {
+    console.warn(`  staleTargetGameIds=${before.staleTargetGameIds.join(",")}`)
+  }
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `phase17 period stale reason=${before.reason || "-"} source=${before.periodSourceCount} canonical=${before.currentCanonicalCount}`,
+  )
+
+  run("派生: phase17 period（鮮度NGのため再生成）", "npm run phase17:build:period", { dryRun })
+  if (rebuildPitchingPeriod) {
+    run("派生: phase7 pitcher period（phase17再生成に合わせて再生成）", "npm run phase7:build:pitcher-period", {
+      dryRun,
+    })
+  }
+
+  if (dryRun) return
+
+  const after = battingPeriodFreshnessReport({ year, gameIds: targetIds })
+  if (!after.ok) {
+    throw new Error(
+      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} canonical=${after.currentCanonicalCount}`,
+    )
+  }
+  console.log(
+    `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, canonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
+  )
+}
+
+function collectFinishedRawFreshnessFailures({ from, to, gameIds, noStatsText, noScoreRaw }) {
   const stale = []
   const kinds = []
   if (!noStatsText) kinds.push("stats", "text")
@@ -243,18 +438,74 @@ function runFinishedRawFreshnessGate({ from, to, gameIds, noStatsText, noScoreRa
       if (gameIdsFilter && !gameIdsFilter.has(gameId)) continue
       if (!gameId || !/試合終了/.test(status)) continue
       const staleKinds = kinds.filter((kind) => rawMetaFetchedAtMs(kind, gameId) < scheduleFetchedAtMs)
-      if (staleKinds.length > 0) stale.push(`${gameId}:${staleKinds.join("+")}_raw_before_game_finished`)
+      if (staleKinds.length > 0) stale.push({ dateJst, gameId, staleKinds })
     }
   }
+  return stale
+}
+
+function printFinishedRawFreshnessFailures(stale) {
+  for (const item of stale) {
+    console.error(`  - ${item.gameId}:${item.staleKinds.join("+")}_raw_before_game_finished`)
+  }
+}
+
+function repairFinishedRawFreshnessFailures({ year, stale, dryRun }) {
+  const repairsByDate = new Map()
+  for (const item of stale) {
+    if (!repairsByDate.has(item.dateJst)) {
+      repairsByDate.set(item.dateJst, { ids: new Set(), kinds: new Set() })
+    }
+    const repair = repairsByDate.get(item.dateJst)
+    repair.ids.add(item.gameId)
+    for (const kind of item.staleKinds) repair.kinds.add(kind)
+  }
+  for (const [dateJst, repair] of repairsByDate) {
+    const idsSet = repair.ids
+    const ids = [...idsSet].sort().join(",")
+    if (repair.kinds.has("stats") || repair.kinds.has("text")) {
+      run(
+        `自己修復: 試合終了後の stats/text 強制再取得（${dateJst}・${idsSet.size}試合）`,
+        `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --game-ids ${ids} --force`,
+        { dryRun },
+      )
+    }
+    if (repair.kinds.has("score")) {
+      run(
+        `自己修復: 試合終了後の score raw 強制再取得（${dateJst}・${idsSet.size}試合）`,
+        `python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year ${year} --from-date ${dateJst} --to-date ${dateJst} --game-ids ${ids} --force --sleep 1.2`,
+        { dryRun },
+      )
+    }
+  }
+}
+
+function runFinishedRawFreshnessGate(args) {
+  const stale = collectFinishedRawFreshnessFailures(args)
   if (stale.length === 0) {
     console.log("\n[daily:npb-pipeline:v2] 終了済み試合 raw 鮮度ゲート OK\n")
     return
   }
   console.error("\n[daily:npb-pipeline:v2] 終了済み試合 raw 鮮度ゲート NG:")
-  for (const item of stale) console.error(`  - ${item}`)
-  console.error("  → 試合終了表示を確認する前に取得した raw が残っています。対象試合を再取得してください。\n")
-  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `finished_raw_freshness_gate NG ${stale.join(",")}`)
-  if (!dryRun) throw new Error("finished raw freshness gate failed")
+  printFinishedRawFreshnessFailures(stale)
+  console.error("  → 対象試合だけを試合終了後の raw で強制再取得し、鮮度ゲートを1回再判定します。\n")
+  const staleLabels = stale.map((item) => `${item.gameId}:${item.staleKinds.join("+")}_raw_before_game_finished`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `finished_raw_freshness_gate NG; auto_repair ${staleLabels.join(",")}`)
+
+  repairFinishedRawFreshnessFailures({ ...args, stale })
+  if (args.dryRun) return
+
+  const remaining = collectFinishedRawFreshnessFailures(args)
+  if (remaining.length === 0) {
+    console.log("\n[daily:npb-pipeline:v2] 終了済み試合 raw 自己修復完了・鮮度ゲート OK\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `finished_raw_freshness_gate auto_repair OK games=${stale.length}`)
+    return
+  }
+
+  console.error("\n[daily:npb-pipeline:v2] 終了済み試合 raw 自己修復後も鮮度ゲート NG:")
+  printFinishedRawFreshnessFailures(remaining)
+  console.error("  → 自動再取得は1回で停止しました。通信失敗や取得元の試合終了データを確認してください。\n")
+  throw new Error("finished raw freshness gate failed after one auto-repair")
 }
 
 let stepNo = 0
@@ -275,12 +526,23 @@ function run(label, command, opts = {}) {
     return
   }
   try {
-    execSync(command, { cwd: root, stdio: "inherit", shell: true, env: childEnv })
+    execSync(command, {
+      cwd: root,
+      stdio: "inherit",
+      shell: true,
+      env: childEnv,
+      timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
+    })
   } catch (e) {
     const elapsed = formatMs(Date.now() - startedAt)
     const code = e && typeof e.status === "number" ? e.status : 1
-    log(`← 失敗: ${label}（所要 ${elapsed}） exit=${code}`)
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `失敗: ${label} 所要=${elapsed} exit=${code}`)
+    const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
+    log(`← 失敗: ${label}（所要 ${elapsed}） exit=${code}${timedOut ? " timeout" : ""}`)
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `失敗: ${label} 所要=${elapsed} exit=${code}${timedOut ? " timeout=1" : ""}`,
+    )
     throw e
   }
   const elapsed = formatMs(Date.now() - startedAt)
@@ -299,35 +561,28 @@ function runTry(label, command, opts = {}) {
     return true
   }
   try {
-    execSync(command, { cwd: root, stdio: "inherit", shell: true, env: childEnv })
+    execSync(command, {
+      cwd: root,
+      stdio: "inherit",
+      shell: true,
+      env: childEnv,
+      timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
+    })
     const elapsed = formatMs(Date.now() - startedAt)
     log(`← 終了: ${label}（所要 ${elapsed}）`)
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了(try): ${label} 所要=${elapsed}`)
     return true
-  } catch {
+  } catch (e) {
     const elapsed = formatMs(Date.now() - startedAt)
-    log(`← 失敗: ${label}（所要 ${elapsed}）`)
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `失敗(try): ${label} 所要=${elapsed}`)
+    const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
+    log(`← 失敗: ${label}（所要 ${elapsed}）${timedOut ? " timeout" : ""}`)
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `失敗(try): ${label} 所要=${elapsed}${timedOut ? " timeout=1" : ""}`,
+    )
     return false
   }
-}
-
-function listGameIdsForDateRange(year, from, to) {
-  const idxPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
-  if (!fs.existsSync(idxPath)) return []
-  const idx = JSON.parse(fs.readFileSync(idxPath, "utf8"))
-  const byDate = idx?.byDate ?? {}
-  const out = []
-  for (const [day, ids] of Object.entries(byDate)) {
-    if (from && day < from) continue
-    if (to && day > to) continue
-    if (!Array.isArray(ids)) continue
-    for (const id of ids) {
-      const s = String(id ?? "").trim()
-      if (s) out.push(s)
-    }
-  }
-  return [...new Set(out)]
 }
 
 function isScheduleCancelledForGame(year, gameId) {
@@ -425,7 +680,12 @@ function checkScoreRawGate({ year, from, to, gameIds }) {
     `python -u scripts/gate_score_raw_complete_for_pipeline.py --year ${year}${dateArgs}${gameIdsArg}` +
     " --fail --emit-incomplete-csv"
   try {
-    const out = execSync(cmd, { cwd: root, encoding: "utf8", env: childEnv })
+    const out = execSync(cmd, {
+      cwd: root,
+      encoding: "utf8",
+      env: childEnv,
+      timeout: commandTimeoutMs("validate"),
+    })
     if (out) process.stdout.write(out)
     return { ok: true }
   } catch (e) {
@@ -568,26 +828,43 @@ function runStrictCanonicalValidation({ year, from, to, noStatsText, strictQuali
     return
   }
   const validateCmd = `npx tsx scripts/validate_phase2_canonical_nonempty.ts --year ${year} --fail`
+  const validateStartedAt = Date.now()
   const ok = runTry(
     "検証: canonical に打撃データが皆無の試合が残っていないこと（空だと個人打率が歪む）",
     validateCmd,
-    { dryRun },
+    { dryRun, timeoutKind: "validate" },
   )
   if (!ok) {
     console.warn("\n[daily:npb-pipeline:v2] 検証NG → 不足 raw の再取得と canonical 再生成を自動実行します（最大1回）。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `validate_phase2_canonical_nonempty NG → 自動リカバリ year=${year}`)
+    const reportPath = path.join(root, "_data", "derived", `validate_phase2_canonical_nonempty_${year}.json`)
+    try {
+      if (fs.statSync(reportPath).mtimeMs + 1000 < validateStartedAt) {
+        throw new Error("stale report")
+      }
+    } catch {
+      throw new Error(`canonical nonempty validation failed but current report was not produced: ${reportPath}`)
+    }
+    const report = readJsonOrNull(reportPath)
+    const badGameIds = Array.isArray(report?.bad)
+      ? [...new Set(report.bad.map((item) => String(item?.gameId ?? "").trim()).filter(Boolean))]
+      : []
+    if (badGameIds.length === 0) {
+      throw new Error(`canonical nonempty validation failed but no repairable gameIds were found in ${reportPath}`)
+    }
+    const gids = badGameIds.join(",")
+    console.warn(`[daily:npb-pipeline:v2] canonical 自動リカバリ対象: ${gids}`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `canonical targeted recovery gameIds=${gids}`)
     if (!noStatsText) {
-      const repairDate =
-        from && to ? ` --from ${from} --to ${to}` : from ? ` --from ${from}` : to ? ` --to ${to}` : ""
       run(
-        "Phase2a-repair（自動リカバリ）不完全な stats/text のみ再取得",
-        `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --only-incomplete${repairDate}`,
+        `Phase2a-repair（自動リカバリ・${badGameIds.length}試合）stats/text 強制再取得`,
+        `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --game-ids ${gids} --force`,
         { dryRun },
       )
     }
     run(
-      "Phase2b canonical 再生成（自動リカバリ・--force）",
-      `node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year ${year} --force`,
+      `Phase2b canonical 再生成（自動リカバリ・${badGameIds.length}試合）`,
+      `node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year ${year} --game-ids ${gids} --force`,
       { dryRun },
     )
     run(
@@ -609,7 +886,7 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
     `npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year ${year} --from ${from} --to ${to} --merge`,
     { dryRun },
   )
-  const gameIds = dryRun ? [] : listGameIdsForDateRange(year, from, to)
+  const gameIds = dryRun ? [] : targetGameIdsForArgs({ from, to, gameIds: [] })
   const phase1GameIdsArg = gameIds.length > 0 ? ` --game-ids ${gameIds.join(",")}` : ""
   run(
     "Phase1 試合ページ raw（トップ）",
@@ -620,6 +897,105 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
   runPhase2bCanonical({ year, from, to, forceCanonical, dryRun })
 }
 
+function readPhase4FailedGameIds(year, notBeforeMs, expectedTargetGameIds = []) {
+  const reportPath = path.join(root, "_data", "scraped_games", "_meta", `phase4_last_run_${year}.json`)
+  try {
+    if (fs.statSync(reportPath).mtimeMs + 1000 < notBeforeMs) return []
+  } catch {
+    return []
+  }
+  const report = readJsonOrNull(reportPath)
+  const expected = [...new Set(expectedTargetGameIds.map(String).filter(Boolean))].sort()
+  const actual = Array.isArray(report?.targetGameIds)
+    ? [...new Set(report.targetGameIds.map(String).filter(Boolean))].sort()
+    : []
+  if (expected.length > 0 && actual.join(",") !== expected.join(",")) return []
+  return Array.isArray(report?.failedGameIds)
+    ? [...new Set(report.failedGameIds.map(String).map((id) => id.trim()).filter(Boolean))]
+    : []
+}
+
+function runPhase4WithTargetedRetry({ year, targetArg, phase4Sleep, force, dryRun, label }) {
+  const forceArg = force ? " --force" : ""
+  const command = `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} ${targetArg} --sleep ${phase4Sleep || "1.2"}${forceArg}`
+  const targetIdsMatch = targetArg.match(/--game-ids\s+([0-9,]+)/)
+  const expectedTargetGameIds = targetIdsMatch
+    ? targetIdsMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
+    : []
+  if (dryRun) {
+    run(label, command, { dryRun })
+    return
+  }
+  const startedAt = Date.now()
+  if (runTry(label, command, { dryRun })) return
+
+  const failedGameIds = readPhase4FailedGameIds(year, startedAt, expectedTargetGameIds)
+  if (failedGameIds.length === 0) {
+    throw new Error("Phase4 failed but no current failedGameIds report was produced")
+  }
+  const gids = failedGameIds.join(",")
+  console.warn(`\n[daily:npb-pipeline:v2] Phase4失敗 → 該当${failedGameIds.length}試合だけを1回再試行します: ${gids}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `Phase4 targeted retry gameIds=${gids}`)
+  run(
+    `Phase4: 失敗試合のみ再試行（${failedGameIds.length}試合）`,
+    `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} --game-ids ${gids} --sleep ${phase4Sleep || "1.2"}${forceArg}`,
+    { dryRun },
+  )
+}
+
+function readPitchCoverageRepairGameIds({ year, from, to }) {
+  const command =
+    `node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year ${year}` +
+    ` --from-date ${from} --to-date ${to} --json`
+  const stdout = execSync(command, {
+    cwd: root,
+    encoding: "utf8",
+    env: childEnv,
+    timeout: commandTimeoutMs("validate"),
+  })
+  const report = JSON.parse(stdout)
+  const ids = [
+    ...(Array.isArray(report?.gaps?.score_raw_but_no_canonical_event_game_ids)
+      ? report.gaps.score_raw_but_no_canonical_event_game_ids
+      : []),
+    ...(Array.isArray(report?.gaps?.derived_not_merged_game_ids)
+      ? report.gaps.derived_not_merged_game_ids
+      : []),
+  ]
+  return [...new Set(ids.map(String).map((id) => id.trim()).filter(Boolean))]
+}
+
+function runPitchCoverageValidationWithRepair({ year, from, to, phase4Sleep, dryRun }) {
+  const validationCommand =
+    `node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year ${year}` +
+    ` --from-date ${from} --to-date ${to} --fail`
+  const label = "検証: pitch-by-pitch coverage"
+  if (runTry(label, validationCommand, { dryRun })) return
+  if (dryRun) return
+
+  const repairGameIds = readPitchCoverageRepairGameIds({ year, from, to })
+  if (repairGameIds.length === 0) {
+    throw new Error("pitch-by-pitch coverage failed but no repairable gameIds were found")
+  }
+  const gids = repairGameIds.join(",")
+  console.warn(`\n[daily:npb-pipeline:v2] coverage NG → 該当${repairGameIds.length}試合のPhase4を1回再実行します: ${gids}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `pitch coverage targeted repair gameIds=${gids}`)
+  runPhase4WithTargetedRetry({
+    year,
+    targetArg: `--game-ids ${gids}`,
+    phase4Sleep,
+    force: false,
+    dryRun,
+    label: `Phase4: coverage NG 試合のみ修復（${repairGameIds.length}試合）`,
+  })
+  run(
+    "Phase4: coverage修復後の resultSummaryJa 再補完",
+    "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
+    { dryRun },
+  )
+  run("検証: pitch-by-pitch coverage（修復後・再実行）", validationCommand, { dryRun })
+}
+
 function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate, yahooForce, strictQuality, phase4Sleep, dryRun }) {
   runScoreRawGate({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate, yahooForce, dryRun })
   const phase4Force = yahooForce ? " --force" : ""
@@ -628,29 +1004,31 @@ function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate,
     targetGameIds.length > 0
       ? `--game-ids ${targetGameIds.join(",")}`
       : `--from-date ${from} --to-date ${to}`
-  run(
-    targetGameIds.length > 0
+  runPhase4WithTargetedRetry({
+    year,
+    targetArg: phase4Target,
+    phase4Sleep,
+    force: Boolean(phase4Force),
+    dryRun,
+    label: targetGameIds.length > 0
       ? "Phase4: Yahoo 一球速報ログ復元 + canonical マージ（指定試合のみ）"
       : "Phase4: Yahoo 一球速報ログ復元 + canonical マージ",
-    `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} ${phase4Target} --sleep ${phase4Sleep || "1.2"}${phase4Force}`,
-    { dryRun },
-  )
+  })
   run(
     "Phase4: 実況テキストから resultSummaryJa 再補完",
     "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
     { dryRun },
   )
   if (strictQuality) {
-    run(
-      "検証: pitch-by-pitch coverage",
-      `node scripts/diag_pitch_by_pitch_coverage_all_games.mjs --year ${year} --from-date ${from} --to-date ${to} --fail`,
-      { dryRun },
-    )
+    runPitchCoverageValidationWithRepair({ year, from, to, phase4Sleep, dryRun })
   }
 }
 
 function runPhase19WithRetry({ dryRun }) {
   runTry("名簿: NPB 英字名更新（phase19 前）", "npm run roster:fetch-npb-en", { dryRun })
+  run("NPB公式: 2026完投・完封を更新（phase19 前）", "npm run npb:official-cg:fetch:2026", {
+    dryRun,
+  })
   try {
     run("ランキング JSON: phase19 pitching rankings", "npm run phase19:build:pitching-rankings", { dryRun })
   } catch (e) {
@@ -696,10 +1074,75 @@ function runPhase13ValidationWithRetry({
   )
 }
 
-function runFastDisplayPublishAndVerify({ year, dryRun }) {
+function runVsHandValidationWithRetry({
+  dryRun,
+  phase15BuildCommand = "npm run phase15:build:batting-splits",
+  affectedYahooIds = [],
+}) {
+  const validationCommand =
+    affectedYahooIds.length > 0
+      ? `npm run validate:vs-hand-vs-phase11 -- --only-yahoo-ids ${affectedYahooIds.join(",")}`
+      : "npm run validate:vs-hand-vs-phase11"
+  const validationLabel =
+    affectedYahooIds.length > 0
+      ? `検証: phase11 vs vs_hand P0（差分 ${affectedYahooIds.length}人）`
+      : "検証: phase11 vs vs_hand P0"
+  const ok = runTry(validationLabel, validationCommand, { dryRun })
+  if (ok) return
+
+  console.warn("\n[daily:npb-pipeline:v2] phase11 vs vs_hand 検証NG → Phase15を1回再生成して再検証します。\n")
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "validate vs_hand NG → phase15 rebuild retry")
+  run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", phase15BuildCommand, { dryRun })
+  run(
+    affectedYahooIds.length > 0
+      ? `検証: phase11 vs vs_hand P0（差分 ${affectedYahooIds.length}人・再実行）`
+      : "検証: phase11 vs vs_hand P0（再実行）",
+    validationCommand,
+    { dryRun },
+  )
+}
+
+function repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage, autoDeployProduction }) {
+  if (!autoDeployProduction) {
+    console.warn(
+      `\n[daily:npb-pipeline:v2] ${publishStage}: R2直が最新でも、本番 deploy は自動実行しません。必要なら --auto-deploy-production を付けて再実行してください。\n`,
+    )
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `${publishStage}: production stale but auto deploy disabled`,
+    )
+    return false
+  }
+  const r2Current = runTry(
+    `${publishStage}: R2直のみ再確認`,
+    `node scripts/verify_display_publish_after_upload.mjs --year ${year} --no-production`,
+    { dryRun },
+  )
+  if (!r2Current) return false
+
+  console.warn(
+    `\n[daily:npb-pipeline:v2] ${publishStage}: R2は最新ですが本番 /data が古いため、Vercel本番を自動デプロイします。\n`,
+  )
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: R2 current + production stale → Vercel production deploy`)
+  run(`${publishStage}: Vercel本番プロキシ再デプロイ`, "npm run deploy:vercel:prod", { dryRun })
+  run(
+    `${publishStage}: Vercel再デプロイ後の公開確認`,
+    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+    { dryRun },
+  )
+  return true
+}
+
+function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction }) {
+  if (dryRun) {
+    console.log("\n[daily:npb-pipeline:v2] --dry-run: fast publish / verify はスキップします。\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: fast publish in dry-run")
+    return
+  }
   run(
     "R2公開(1回目): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${dryRun ? " --dry-run" : ""}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}`,
     { dryRun: false },
   )
 
@@ -709,6 +1152,8 @@ function runFastDisplayPublishAndVerify({ year, dryRun }) {
     { dryRun },
   )
   if (verified) return
+
+  if (repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage: "公開1回目", autoDeployProduction })) return
 
   console.warn(
     "\n[daily:npb-pipeline:v2] 公開確認NG → VercelデプロイではなくR2アップロードを1回だけ再実行します。\n",
@@ -720,7 +1165,7 @@ function runFastDisplayPublishAndVerify({ year, dryRun }) {
   )
   run(
     "R2公開(1回目・再試行): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${dryRun ? " --dry-run" : ""}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}`,
     { dryRun: false },
   )
   run(
@@ -744,7 +1189,12 @@ function runFullDisplayPublishCommands({ fullOnly, dryRun, retry = false }) {
   )
 }
 
-function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun }) {
+function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction }) {
+  if (dryRun) {
+    console.log("\n[daily:npb-pipeline:v2] --dry-run: full publish / verify はスキップします。\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full publish in dry-run")
+    return
+  }
   runFullDisplayPublishCommands({ fullOnly, dryRun })
 
   const verified = runTry(
@@ -753,6 +1203,8 @@ function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun }) {
     { dryRun },
   )
   if (verified) return
+
+  if (repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage: "公開2回目", autoDeployProduction })) return
 
   console.warn(
     "\n[daily:npb-pipeline:v2] 2回目の公開確認NG → R2アップロードを1回だけ再実行します。\n",
@@ -781,6 +1233,7 @@ function runFastStage({
   dryRun,
   useAffectedPhase11 = true,
   skipPhase15 = false,
+  autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
@@ -801,6 +1254,7 @@ function runFastStage({
   run("検証: 出場成績 打数列 vs 末尾スロット", "npm run validate:appearance-slots-vs-line-ab:fail", { dryRun })
   run("検証: appearance_slots の CS と代走のみ SB", "npm run verify:cs-runner-events-appearance-slots", { dryRun })
   run("派生: phase17 period", "npm run phase17:build:period", { dryRun })
+  ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
   run("派生: phase7 pitcher period", "npm run phase7:build:pitcher-period", { dryRun })
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
@@ -824,20 +1278,47 @@ function runFastStage({
   }
   if (skipVsHandValidate) {
     console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
+  } else if (skipPhase15) {
+    console.log("\n[daily:npb-pipeline:v2] fast stage: phase15生成前のため vs_hand 検証をfull stageへ延期します。\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "defer: fast vs_hand validation until full stage")
   } else {
-    run("検証: phase11 vs vs_hand P0", "npm run validate:vs-hand-vs-phase11", { dryRun })
+    runVsHandValidationWithRetry({
+      dryRun,
+      phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
+      affectedYahooIds,
+    })
   }
 
   if (!noPublish) {
-    runFastDisplayPublishAndVerify({ year, dryRun })
+    runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction })
   }
   if (build) {
     run("本番ビルド（1回目後）", "npm run build:clean", { dryRun })
   }
 }
 
-function runFinalPrecomputedPublishStage({ year, noPublish, build, skipVsHandValidate, dryRun }) {
+function runFinalPrecomputedPublishStage({
+  year,
+  from,
+  to,
+  gameIds,
+  noPublish,
+  build,
+  skipVsHandValidate,
+  dryRun,
+  autoDeployProduction = false,
+}) {
+  const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
+  const affectedArg = onlyYahooIdsArg(affectedYahooIds)
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップ表示だけ最終再計算します。\n")
+  ensureBattingPeriodFresh({
+    year,
+    from,
+    to,
+    gameIds,
+    dryRun,
+    rebuildPitchingPeriod: true,
+  })
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
   run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
@@ -849,11 +1330,15 @@ function runFinalPrecomputedPublishStage({ year, noPublish, build, skipVsHandVal
   if (skipVsHandValidate) {
     console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
   } else {
-    run("検証: phase11 vs vs_hand P0", "npm run validate:vs-hand-vs-phase11", { dryRun })
+    runVsHandValidationWithRetry({
+      dryRun,
+      phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
+      affectedYahooIds,
+    })
   }
 
   if (!noPublish) {
-    runFastDisplayPublishAndVerify({ year, dryRun })
+    runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction })
   }
   if (build) {
     run("本番ビルド（finalize-precomputed 後）", "npm run build:clean", { dryRun })
@@ -872,6 +1357,7 @@ function runFullStage({
   skipPhase15 = false,
   skipRepeatedTopBuilds = false,
   validatePhase13AffectedOnly = false,
+  autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
@@ -922,10 +1408,10 @@ function runFullStage({
     run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
   }
   run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
-  run("検証: phase11 vs vs_hand P0", "npm run validate:vs-hand-vs-phase11", { dryRun })
+  runVsHandValidationWithRetry({ dryRun, phase15BuildCommand, affectedYahooIds })
 
   if (!noPublish) {
-    runFullDisplayPublishAndVerify({ year, fullOnly, dryRun })
+    runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction })
   }
   if (build) {
     run("本番ビルド（2回目後）", "npm run build:clean", { dryRun })
