@@ -79,6 +79,7 @@ export function usePitchingRankingTable({
           weekKey,
           initialViewModel.league,
           metricDef.label,
+          Boolean(teamCode),
         )
       : loadPitchingRankingJson(
           initialViewModel.season,

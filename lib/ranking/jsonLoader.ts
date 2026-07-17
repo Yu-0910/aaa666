@@ -177,10 +177,12 @@ async function fetchWeeklyBattingRankingJson(
   year: string,
   weekKey: string,
   season: string,
-  metric: string
+  metric: string,
+  useAllPlayers?: boolean
 ): Promise<Response> {
   const fileBase = sanitizeMetricForPath(metric)
-  const relative = `weekly/${year}/${weekKey}/${season}/${fileBase}.json`
+  const fileName = useAllPlayers ? `${fileBase}_all.json` : `${fileBase}.json`
+  const relative = `weekly/${year}/${weekKey}/${season}/${fileName}`
   if (process.env.NODE_ENV === 'development') {
     console.log(`[loadWeeklyRankingJson] Fetching: ${buildRankingFetchUrl(relative)}`)
   }
@@ -191,10 +193,12 @@ async function fetchWeeklyPitchingRankingJson(
   year: string,
   weekKey: string,
   season: string,
-  metric: string
+  metric: string,
+  useAllPlayers?: boolean
 ): Promise<Response> {
   const fileBase = sanitizeMetricForPath(metric)
-  const relative = `pitching/weekly/${year}/${weekKey}/${season}/${fileBase}.json`
+  const fileName = useAllPlayers ? `${fileBase}_all.json` : `${fileBase}.json`
+  const relative = `pitching/weekly/${year}/${weekKey}/${season}/${fileName}`
   if (process.env.NODE_ENV === 'development') {
     console.log(`[loadWeeklyPitchingRankingJson] Fetching: ${buildRankingFetchUrl(relative)}`)
   }
@@ -206,9 +210,10 @@ export async function loadWeeklyRankingJson(
   year: string,
   weekKey: string,
   season: string,
-  metric: string
+  metric: string,
+  useAllPlayers?: boolean
 ): Promise<unknown> {
-  const response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric)
+  const response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric, useAllPlayers)
   if (!response.ok) {
     throw new Error(`Failed to fetch weekly ranking data: ${response.status} ${response.statusText}`)
   }
@@ -220,9 +225,10 @@ export async function loadWeeklyPitchingRankingJson(
   year: string,
   weekKey: string,
   season: string,
-  metric: string
+  metric: string,
+  useAllPlayers?: boolean
 ): Promise<unknown> {
-  const response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric)
+  const response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric, useAllPlayers)
   if (!response.ok) {
     throw new Error(
       `Failed to fetch weekly pitching ranking data: ${response.status} ${response.statusText}`
