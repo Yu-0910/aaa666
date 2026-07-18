@@ -15,6 +15,7 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --complete
  *   node scripts/run_daily_npb_pipeline_v2.mjs --skip-fast-publish
  *   node scripts/run_daily_npb_pipeline_v2.mjs --finalize-precomputed
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --phase4-sleep 0.8
  */
 
@@ -96,6 +97,7 @@ function parseArgs(argv) {
     phase4Sleep: "1.2",
     skipScoreRawGate: false,
     skipVsHandValidate: false,
+    strictVsHandValidate: false,
     skipFastPublish: false,
     autoDeployProduction: false,
     noPublish: false,
@@ -130,6 +132,7 @@ function parseArgs(argv) {
     }
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
+    else if (a === "--strict-vs-hand-validate") out.strictVsHandValidate = true
     else if (a === "--skip-fast-publish") out.skipFastPublish = true
     else if (a === "--auto-deploy-production") out.autoDeployProduction = true
     else if (a === "--no-publish") out.noPublish = true
@@ -1078,6 +1081,7 @@ function runVsHandValidationWithRetry({
   dryRun,
   phase15BuildCommand = "npm run phase15:build:batting-splits",
   affectedYahooIds = [],
+  strictVsHandValidate = false,
 }) {
   const validationCommand =
     affectedYahooIds.length > 0
@@ -1093,13 +1097,22 @@ function runVsHandValidationWithRetry({
   console.warn("\n[daily:npb-pipeline:v2] phase11 vs vs_hand 検証NG → Phase15を1回再生成して再検証します。\n")
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "validate vs_hand NG → phase15 rebuild retry")
   run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", phase15BuildCommand, { dryRun })
-  run(
+  const retryOk = runTry(
     affectedYahooIds.length > 0
       ? `検証: phase11 vs vs_hand P0（差分 ${affectedYahooIds.length}人・再実行）`
       : "検証: phase11 vs vs_hand P0（再実行）",
     validationCommand,
     { dryRun },
   )
+  if (retryOk) return
+
+  const message =
+    "phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。"
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  if (strictVsHandValidate) {
+    throw new Error(`${message} --strict-vs-hand-validate 指定のため停止します。`)
+  }
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
 }
 
 function repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage, autoDeployProduction }) {
@@ -1230,6 +1243,7 @@ function runFastStage({
   noPublish,
   build,
   skipVsHandValidate,
+  strictVsHandValidate,
   dryRun,
   useAffectedPhase11 = true,
   skipPhase15 = false,
@@ -1286,6 +1300,7 @@ function runFastStage({
       dryRun,
       phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
       affectedYahooIds,
+      strictVsHandValidate,
     })
   }
 
@@ -1305,6 +1320,7 @@ function runFinalPrecomputedPublishStage({
   noPublish,
   build,
   skipVsHandValidate,
+  strictVsHandValidate,
   dryRun,
   autoDeployProduction = false,
 }) {
@@ -1334,6 +1350,7 @@ function runFinalPrecomputedPublishStage({
       dryRun,
       phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
       affectedYahooIds,
+      strictVsHandValidate,
     })
   }
 
@@ -1354,6 +1371,7 @@ function runFullStage({
   build,
   dryRun,
   fullOnly,
+  strictVsHandValidate,
   skipPhase15 = false,
   skipRepeatedTopBuilds = false,
   validatePhase13AffectedOnly = false,
@@ -1408,7 +1426,7 @@ function runFullStage({
     run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
   }
   run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
-  runVsHandValidationWithRetry({ dryRun, phase15BuildCommand, affectedYahooIds })
+  runVsHandValidationWithRetry({ dryRun, phase15BuildCommand, affectedYahooIds, strictVsHandValidate })
 
   if (!noPublish) {
     runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction })
