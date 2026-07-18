@@ -15,6 +15,7 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --complete
  *   node scripts/run_daily_npb_pipeline_v2.mjs --skip-fast-publish
  *   node scripts/run_daily_npb_pipeline_v2.mjs --finalize-precomputed
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase13-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --phase4-sleep 0.8
  */
@@ -117,6 +118,7 @@ function parseArgs(argv) {
     yahooForce: false,
     phase4Sleep: "1.2",
     skipScoreRawGate: false,
+    strictPhase13Validate: false,
     skipVsHandValidate: false,
     strictVsHandValidate: false,
     skipFastPublish: false,
@@ -152,6 +154,7 @@ function parseArgs(argv) {
       out.yahooForce = true
     }
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
+    else if (a === "--strict-phase13-validate") out.strictPhase13Validate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
     else if (a === "--strict-vs-hand-validate") out.strictVsHandValidate = true
     else if (a === "--skip-fast-publish") out.skipFastPublish = true
@@ -1131,6 +1134,7 @@ function runPhase13ValidationWithRetry({
   dryRun,
   phase13BuildCommand = "npm run phase13:build:context",
   affectedYahooIds = [],
+  strictPhase13Validate = false,
 }) {
   const validationCommand =
     affectedYahooIds.length > 0
@@ -1154,11 +1158,20 @@ function runPhase13ValidationWithRetry({
     "validate_phase13_context_vs_phase11 NG → phase13 rebuild retry",
   )
   run("派生: phase13 context（検証NG後の再生成）", phase13BuildCommand, { dryRun })
-  run(
+  const retryOk = runTry(
     "検証: phase13 対チーム vs Phase11（再実行）",
     validationCommand,
     { dryRun },
   )
+  if (retryOk) return
+
+  const message =
+    "phase13 対チーム vs Phase11 検証は再生成後もNGでした。ランキング/順位表/トップ表示とfull derived公開は継続し、個人ページ用 context 差分は後続調査対象としてログに残します。"
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  if (strictPhase13Validate) {
+    throw new Error(`${message} --strict-phase13-validate 指定のため停止します。`)
+  }
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
 }
 
 function runVsHandValidationWithRetry({
@@ -1476,6 +1489,7 @@ function runFullStage({
   build,
   dryRun,
   fullOnly,
+  strictPhase13Validate,
   strictVsHandValidate,
   skipPhase15 = false,
   skipRepeatedTopBuilds = false,
@@ -1500,6 +1514,7 @@ function runFullStage({
     dryRun,
     phase13BuildCommand,
     affectedYahooIds: validatePhase13AffectedOnly ? affectedYahooIds : [],
+    strictPhase13Validate,
   })
   run("派生: phase14 pitch", "npm run phase14:build:pitch", { dryRun })
   if (skipPhase15) {
