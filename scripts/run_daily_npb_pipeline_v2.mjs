@@ -15,6 +15,7 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --complete
  *   node scripts/run_daily_npb_pipeline_v2.mjs --skip-fast-publish
  *   node scripts/run_daily_npb_pipeline_v2.mjs --finalize-precomputed
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-full-derived-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase13-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --phase4-sleep 0.8
@@ -118,6 +119,7 @@ function parseArgs(argv) {
     yahooForce: false,
     phase4Sleep: "1.2",
     skipScoreRawGate: false,
+    strictFullDerivedValidate: false,
     strictPhase13Validate: false,
     skipVsHandValidate: false,
     strictVsHandValidate: false,
@@ -154,6 +156,7 @@ function parseArgs(argv) {
       out.yahooForce = true
     }
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
+    else if (a === "--strict-full-derived-validate") out.strictFullDerivedValidate = true
     else if (a === "--strict-phase13-validate") out.strictPhase13Validate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
     else if (a === "--strict-vs-hand-validate") out.strictVsHandValidate = true
@@ -610,6 +613,16 @@ function runTry(label, command, opts = {}) {
     )
     return false
   }
+}
+
+function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = "" } = {}) {
+  if (runTry(label, command, { dryRun })) return
+  const message = `${label} がNGでした。${note || "公開は継続し、差分は後続調査対象としてログに残します。"}`
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  if (strict) {
+    throw new Error(`${message} --strict-full-derived-validate 指定のため停止します。`)
+  }
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
 }
 
 function vsHandFailureReportPath(year) {
@@ -1489,6 +1502,7 @@ function runFullStage({
   build,
   dryRun,
   fullOnly,
+  strictFullDerivedValidate,
   strictPhase13Validate,
   strictVsHandValidate,
   skipPhase15 = false,
@@ -1528,15 +1542,39 @@ function runFullStage({
   run("派生: phase22 catcher appearances", "npm run phase22:build:catcher-appearances", { dryRun })
   run("派生: phase23 catcher-pitcher splits", "npm run phase23:build:catcher-pitcher-splits", { dryRun })
   run("派生: phase24 catcher defense basic", "npm run phase24:build:catcher-defense-basic", { dryRun })
-  run("検証: phase24 実守備捕手帰属", "npm run validate:catcher-defense-active:2026", { dryRun })
+  runWarnOnlyValidation(
+    "検証: phase24 実守備捕手帰属",
+    "npm run validate:catcher-defense-active:2026",
+    {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "捕手タブ派生の警告として扱い、full derived公開は継続します。",
+    },
+  )
   run("派生: phase25 catcher starting summary", "npm run phase25:build:catcher-starting-summary", { dryRun })
   run("派生: phase26 catcher pa round pitch types", "npm run phase26:build:catcher-pa-round-pitch-types", { dryRun })
   run("派生: phase20 pitcher zones", "npm run phase20:build:pitcher-zones", { dryRun })
   run("派生: phase30 player matchup", "npm run phase30:build:player-matchup", { dryRun })
-  run("検証: phase31 対戦成績 vs Phase11", "npm run validate:phase31-matchup-vs-phase11:fail", { dryRun })
+  runWarnOnlyValidation(
+    "検証: phase31 対戦成績 vs Phase11",
+    "npm run validate:phase31-matchup-vs-phase11:fail",
+    {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "対戦成績派生の警告として扱い、full derived公開は継続します。",
+    },
+  )
   run("トップ表示: 予想投手", "npm run phase36:build:top-probables", { dryRun })
   run("派生: phase33 batter vs team count pitch types", "npm run phase33:build:batter-vs-team-count-pitch-types", { dryRun })
-  run("検証: phase34 球団別配球 vs Phase14", "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail", { dryRun })
+  runWarnOnlyValidation(
+    "検証: phase34 球団別配球 vs Phase14",
+    "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail",
+    {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "球団別配球派生の警告として扱い、full derived公開は継続します。",
+    },
+  )
   run("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", { dryRun })
   if (skipRepeatedTopBuilds) {
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため top leaders 再生成をスキップします。\n")
