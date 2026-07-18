@@ -51,7 +51,12 @@ export async function GET(
       const pilot = resolvePilotPitcherNpbFromUrlSegment(decoded)
       if (pilot) npb = pilot
     }
-    if (!npb && /^\d+$/.test(decoded)) npb = decoded
+    let payload =
+      npb ? await loadPitcherSeasonPitchTypesAsync(year, npb) : null
+    if (!payload && /^\d+$/.test(decoded)) {
+      payload = await loadPitcherSeasonPitchTypesAsync(year, decoded)
+      if (payload) npb = decoded
+    }
 
     if (!npb) {
       return jsonDerivedResponse({
@@ -63,7 +68,6 @@ export async function GET(
       } satisfies PitcherSeasonPitchTypesApiResponse)
     }
 
-    let payload = await loadPitcherSeasonPitchTypesAsync(year, npb)
     if (!payload || needsPitchTypeSplitRefresh(payload)) {
       payload = buildPitcherSeasonPitchTypesLive(npb, year)
     }

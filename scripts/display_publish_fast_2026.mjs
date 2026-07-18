@@ -14,6 +14,7 @@
  *   - player_batter_vs_team_count_pitch_types
  *   - player_season_pitching_poc
  *   - player_season_pitching_period
+ *   - pitcher_season_pitch_types
  *
  * 用法:
  *   node scripts/display_publish_fast_2026.mjs --year 2026
@@ -118,6 +119,7 @@ function collectFastFiles(year) {
     "player_batter_vs_team_count_pitch_types",
     "player_season_pitching_poc",
     "player_season_pitching_period",
+    "pitcher_season_pitch_types",
   ]
   for (const category of derivedCategories) {
     const categoryRoot = path.join(ROOT, "_data", "derived", category, year)
