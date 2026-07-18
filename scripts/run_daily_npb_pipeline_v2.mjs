@@ -15,6 +15,8 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --complete
  *   node scripts/run_daily_npb_pipeline_v2.mjs --skip-fast-publish
  *   node scripts/run_daily_npb_pipeline_v2.mjs --finalize-precomputed
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-from "派生: phase14 pitch"
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-after "検証: phase13"
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-full-derived-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase13-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
@@ -127,6 +129,8 @@ function parseArgs(argv) {
     autoDeployProduction: false,
     noPublish: false,
     build: false,
+    resumeFrom: "",
+    resumeAfter: "",
     dryRun: false,
   }
   for (let i = 2; i < argv.length; i++) {
@@ -164,6 +168,8 @@ function parseArgs(argv) {
     else if (a === "--auto-deploy-production") out.autoDeployProduction = true
     else if (a === "--no-publish") out.noPublish = true
     else if (a === "--build") out.build = true
+    else if (a === "--resume-from" && argv[i + 1]) out.resumeFrom = String(argv[++i]).trim()
+    else if (a === "--resume-after" && argv[i + 1]) out.resumeAfter = String(argv[++i]).trim()
     else if (a === "--dry-run") out.dryRun = true
   }
   if (!out.from) out.from = todayJstYmd()
@@ -540,19 +546,119 @@ function runFinishedRawFreshnessGate(args) {
 
 let stepNo = 0
 let lastStep = ""
+let currentArgs = null
+let resumeState = {
+  mode: "",
+  token: "",
+  released: true,
+}
 
 function log(msg) {
   console.log(`[daily:npb-pipeline:v2] [${nowIsoLocal()}] #${++stepNo} ${msg}`)
 }
 
+function pipelineCheckpointPath() {
+  return path.join(root, "_data", "scraped_games", "_meta", "pipeline_checkpoint_v2.json")
+}
+
+function writePipelineCheckpoint(status, label, command = "", extra = {}) {
+  const checkpoint = {
+    status,
+    label,
+    command,
+    lastStep,
+    stepNo,
+    updatedAt: new Date().toISOString(),
+    args: currentArgs
+      ? {
+          year: currentArgs.year,
+          from: currentArgs.from,
+          to: currentArgs.to,
+          mode: currentArgs.prefetchOnly
+            ? "prefetch-only"
+            : currentArgs.fastOnly
+              ? "fast-only"
+              : currentArgs.fullOnly
+                ? "full-only"
+                : currentArgs.finalizePrecomputed
+                  ? "finalize-precomputed"
+                  : "all",
+          dryRun: Boolean(currentArgs.dryRun),
+          noPublish: Boolean(currentArgs.noPublish),
+        }
+      : null,
+    ...extra,
+  }
+  const p = pipelineCheckpointPath()
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(p, JSON.stringify(checkpoint, null, 2), "utf8")
+}
+
+function normalizeResumeText(value) {
+  return String(value ?? "").trim().toLowerCase()
+}
+
+function configureResume(args) {
+  const resumeFrom = String(args.resumeFrom ?? "").trim()
+  const resumeAfter = String(args.resumeAfter ?? "").trim()
+  if (resumeFrom && resumeAfter) {
+    throw new Error("--resume-from と --resume-after は同時指定できません")
+  }
+  const token = resumeFrom || resumeAfter
+  resumeState = {
+    mode: resumeFrom ? "from" : resumeAfter ? "after" : "",
+    token: normalizeResumeText(token),
+    released: !token,
+  }
+  if (token) {
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume ${resumeState.mode}: token=${token}`)
+    console.log(`\n[daily:npb-pipeline:v2] resume ${resumeState.mode}: "${token}" に一致する工程までスキップします。\n`)
+  }
+}
+
+function stepMatchesResumeToken(label, command) {
+  if (!resumeState.token) return false
+  const haystack = normalizeResumeText(`${label}\n${command}`)
+  return haystack.includes(resumeState.token)
+}
+
+function shouldSkipForResume(label, command) {
+  if (resumeState.released) return false
+  const matched = stepMatchesResumeToken(label, command)
+  if (!matched) {
+    log(`← スキップ: ${label}（resume-${resumeState.mode} 待機中）`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume skip: ${label}`)
+    writePipelineCheckpoint("skipped-resume", label, command, {
+      resumeMode: resumeState.mode,
+      resumeToken: resumeState.token,
+    })
+    return true
+  }
+  resumeState.released = true
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume hit: ${label}`)
+  if (resumeState.mode === "after") {
+    log(`← スキップ: ${label}（resume-after 一致工程）`)
+    writePipelineCheckpoint("skipped-resume-hit", label, command, {
+      resumeMode: resumeState.mode,
+      resumeToken: resumeState.token,
+    })
+    return true
+  }
+  console.log(`\n[daily:npb-pipeline:v2] resume-from 一致: ${label} から再開します。\n`)
+  return false
+}
+
 function run(label, command, opts = {}) {
   lastStep = label
+  if (shouldSkipForResume(label, command)) return
   const startedAt = Date.now()
   log(`→ 開始: ${label}`)
+  writePipelineCheckpoint("running", label, command)
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
+    writePipelineCheckpoint("skipped-dry-run", label, command)
     return
   }
   try {
@@ -573,21 +679,32 @@ function run(label, command, opts = {}) {
       "daily:npb-pipeline:v2",
       `失敗: ${label} 所要=${elapsed} exit=${code}${timedOut ? " timeout=1" : ""}`,
     )
+    writePipelineCheckpoint("failed", label, command, {
+      elapsed,
+      exitCode: code,
+      timedOut,
+      resumeFrom: label,
+      resumeAfterPrevious: true,
+    })
     throw e
   }
   const elapsed = formatMs(Date.now() - startedAt)
   log(`← 終了: ${label}（所要 ${elapsed}）`)
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了: ${label} 所要=${elapsed}`)
+  writePipelineCheckpoint("completed", label, command, { elapsed })
 }
 
 function runTry(label, command, opts = {}) {
   lastStep = label
+  if (shouldSkipForResume(label, command)) return true
   const startedAt = Date.now()
   log(`→ 開始: ${label}（失敗しても続行可）`)
+  writePipelineCheckpoint("running-try", label, command)
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run(try): ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
+    writePipelineCheckpoint("skipped-dry-run-try", label, command)
     return true
   }
   try {
@@ -601,6 +718,7 @@ function runTry(label, command, opts = {}) {
     const elapsed = formatMs(Date.now() - startedAt)
     log(`← 終了: ${label}（所要 ${elapsed}）`)
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了(try): ${label} 所要=${elapsed}`)
+    writePipelineCheckpoint("completed-try", label, command, { elapsed })
     return true
   } catch (e) {
     const elapsed = formatMs(Date.now() - startedAt)
@@ -611,6 +729,12 @@ function runTry(label, command, opts = {}) {
       "daily:npb-pipeline:v2",
       `失敗(try): ${label} 所要=${elapsed}${timedOut ? " timeout=1" : ""}`,
     )
+    writePipelineCheckpoint("failed-try", label, command, {
+      elapsed,
+      timedOut,
+      resumeFrom: label,
+      warningOnly: true,
+    })
     return false
   }
 }
@@ -1602,6 +1726,8 @@ function runFullStage({
 
 function main() {
   const args = parseArgs(process.argv)
+  currentArgs = args
+  configureResume(args)
   const modeCount = [args.prefetchOnly, args.fastOnly, args.fullOnly, args.finalizePrecomputed].filter(Boolean).length
   if (modeCount > 1) {
     console.error("[daily:npb-pipeline:v2] --prefetch-only / --fast-only / --full-only / --finalize-precomputed は同時指定できません")
@@ -1648,7 +1774,15 @@ function main() {
     })
   }
 
+  if (resumeState.token && !resumeState.released) {
+    throw new Error(`resume token did not match any step: ${resumeState.token}`)
+  }
+
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了 exit=0 lastStep=${lastStep || "-"}`)
+  writePipelineCheckpoint("pipeline-completed", lastStep || "-", "", {
+    resumeMode: resumeState.mode,
+    resumeToken: resumeState.token,
+  })
   console.log("\n[daily:npb-pipeline:v2] 完了。\n")
 }
 
