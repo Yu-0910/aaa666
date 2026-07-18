@@ -9,6 +9,7 @@
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --once --dry-run
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --endgame-poll-minutes 2
+ *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --date 2026-07-18 --auto-deploy-production
  */
 
 import fs from "node:fs"
@@ -40,6 +41,7 @@ function parseArgs(argv) {
     force: argv.includes("--force"),
     skipWaitForStart: argv.includes("--skip-wait-for-start"),
     partialPhase4: !argv.includes("--no-partial-phase4"),
+    autoDeployProduction: argv.includes("--auto-deploy-production"),
   }
 }
 
@@ -416,8 +418,8 @@ function checkLocalReady(year, dateJst) {
   }
 }
 
-function runPipelineV2(year, dateJst, dryRun) {
-  const cmd = `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --from ${dateJst} --to ${dateJst} --skip-prefetch --finalize-precomputed${dryRun ? " --dry-run" : ""}`
+function runPipelineV2(year, dateJst, dryRun, autoDeployProduction) {
+  const cmd = `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --from ${dateJst} --to ${dateJst} --skip-prefetch --finalize-precomputed${autoDeployProduction ? " --auto-deploy-production" : ""}${dryRun ? " --dry-run" : ""}`
   log(`v2 pipeline 実行: ${cmd}`)
   if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
 }
@@ -535,7 +537,7 @@ async function main() {
   }
 
   log(
-    `開始 year=${args.year} date=${dateJst} poll=${args.pollMinutes}min endgamePoll=${args.endgamePollMinutes}min deadline=翌${args.deadline} dryRun=${args.dryRun}`,
+    `開始 year=${args.year} date=${dateJst} poll=${args.pollMinutes}min endgamePoll=${args.endgamePollMinutes}min deadline=翌${args.deadline} dryRun=${args.dryRun} autoDeployProduction=${args.autoDeployProduction}`,
   )
   await waitUntilWatchStart(dateJst, args.skipWaitForStart)
 
@@ -563,7 +565,7 @@ async function main() {
       if (!args.dryRun) {
         writeLock(dateJst, { ranAt: new Date().toISOString(), reason: "all_data_ready" })
       }
-      runPipelineV2(args.year, dateJst, args.dryRun)
+      runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
       return
     }
 
@@ -593,7 +595,7 @@ async function main() {
         if (!args.dryRun) {
           writeLock(dateJst, { ranAt: new Date().toISOString(), reason: "all_data_ready_after_repair" })
         }
-        runPipelineV2(args.year, dateJst, args.dryRun)
+        runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
         return
       }
     }
@@ -626,7 +628,7 @@ async function main() {
           pending: readiness.pending,
         })
       }
-      runPipelineV2(args.year, dateJst, args.dryRun)
+      runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
       return
     }
 
