@@ -49,7 +49,7 @@ export function sortPitchingRankingRows({
   }
 
   let targetRows = scopedRows
-  if (canApply) {
+  if (canApply && !skipTeamQualifyingFilter) {
     targetRows = scopedRows.filter(passesQualifying)
   }
 

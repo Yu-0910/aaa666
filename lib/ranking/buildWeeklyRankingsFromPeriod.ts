@@ -197,10 +197,12 @@ export function buildWeeklyRankingsFromPeriod(
         )
         const teamGames = weekTeamGames[lg]
         const filtered = filterBattingRowsForQualifyingAtBuild(sorted, metricKey, year, lg, teamGames)
+        const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
         const fileBase = sanitizeMetricForPath(m.label)
         writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), "utf8")
-        battingFiles += 1
+        writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(allRanked, null, 2), "utf8")
+        battingFiles += 2
       }
     }
 
@@ -256,10 +258,12 @@ export function buildWeeklyRankingsFromPeriod(
         })
         const teamGames = weekTeamGames[lg]
         const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
+        const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
         const fileBase = sanitizeMetricForPath(m.label)
         writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), "utf8")
-        pitchingFiles += 1
+        writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(allRanked, null, 2), "utf8")
+        pitchingFiles += 2
       }
     }
 

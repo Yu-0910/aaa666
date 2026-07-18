@@ -114,7 +114,7 @@ export function sortBattingRankingRows({
   }
 
   let targetRows = scopedRows
-  if (applyQualifying) {
+  if (applyQualifying && !skipTeamQualifyingFilter) {
     targetRows = scopedRows.filter(rowPassesQualifying)
   }
 

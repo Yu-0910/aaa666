@@ -213,7 +213,10 @@ export async function loadWeeklyRankingJson(
   metric: string,
   useAllPlayers?: boolean
 ): Promise<unknown> {
-  const response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric, useAllPlayers)
+  let response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric, useAllPlayers)
+  if (useAllPlayers && response.status === 404) {
+    response = await fetchWeeklyBattingRankingJson(year, weekKey, season, metric, false)
+  }
   if (!response.ok) {
     throw new Error(`Failed to fetch weekly ranking data: ${response.status} ${response.statusText}`)
   }
@@ -228,7 +231,10 @@ export async function loadWeeklyPitchingRankingJson(
   metric: string,
   useAllPlayers?: boolean
 ): Promise<unknown> {
-  const response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric, useAllPlayers)
+  let response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric, useAllPlayers)
+  if (useAllPlayers && response.status === 404) {
+    response = await fetchWeeklyPitchingRankingJson(year, weekKey, season, metric, false)
+  }
   if (!response.ok) {
     throw new Error(
       `Failed to fetch weekly pitching ranking data: ${response.status} ${response.statusText}`
