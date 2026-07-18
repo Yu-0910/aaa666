@@ -12,6 +12,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
+import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -30,6 +31,8 @@ function argValue(name, fallback = "") {
 
 const YEAR = argValue("--year", "2026")
 const CHECK_PRODUCTION = !process.argv.includes("--no-production")
+const VERCEL_CLI =
+  process.env.TOPPAGE_VERCEL_CLI || (process.platform === "win32" ? "vercel.cmd" : "vercel")
 const R2_BASE = (
   process.env.RANKINGS_BASE_URL ||
   process.env.NEXT_PUBLIC_RANKINGS_BASE_URL ||
@@ -41,8 +44,49 @@ const SITE_BASE = (
   DEFAULT_SITE_BASE
 ).replace(/\/+$/, "")
 
+function vercelCliArgs(subcommandArgs) {
+  return [...subcommandArgs]
+}
+
 function readJson(relPath) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relPath), "utf8"))
+}
+
+function shellQuote(arg) {
+  return `"${String(arg).replace(/"/g, "\\\"")}"`
+}
+
+function extractFirstJsonPayload(text) {
+  const src = String(text || "")
+  const start = src.search(/[\[{]/)
+  if (start < 0) throw new Error("JSON payload not found in vercel curl output")
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+  let opener = ""
+
+  for (let i = start; i < src.length; i++) {
+    const ch = src[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (ch === "\\") escaped = true
+      else if (ch === "\"") inString = false
+      continue
+    }
+    if (ch === "\"") {
+      inString = true
+      continue
+    }
+    if (!opener && (ch === "{" || ch === "[")) opener = ch
+    if (ch === "{" || ch === "[") depth++
+    else if (ch === "}" || ch === "]") {
+      depth--
+      if (depth === 0) return src.slice(start, i + 1)
+    }
+  }
+
+  throw new Error("Incomplete JSON payload in vercel curl output")
 }
 
 async function fetchJson(label, url) {
@@ -58,6 +102,27 @@ async function fetchJson(label, url) {
     throw new Error(`${label} fetch failed: HTTP ${res.status} ${res.statusText} url=${url}${snippet ? ` body=${snippet}` : ""}`)
   }
   return await res.json()
+}
+
+function fetchProductionJsonViaVercelCurl(label, relPath) {
+  const cliArgs = vercelCliArgs(["curl", `/${relPath}`])
+  try {
+    const command = [VERCEL_CLI, ...cliArgs].map(shellQuote).join(" ")
+    const stdout = execSync(command, {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: process.env,
+      shell: true,
+      stdio: ["ignore", "pipe", "inherit"],
+      timeout: 180000,
+    })
+    return JSON.parse(extractFirstJsonPayload(stdout))
+  } catch (error) {
+    const detail = error?.stdout ? String(error.stdout).trim().slice(0, 240) : ""
+    throw new Error(
+      `${label} via vercel curl failed${detail ? ` body=${detail}` : ""}`,
+    )
+  }
 }
 
 function firstStandingSignature(json) {
@@ -116,7 +181,7 @@ async function verifyStandingsLeague(league) {
   assertSame(`R2 standings ${league}`, localSig, r2Sig)
 
   if (CHECK_PRODUCTION) {
-    const prod = await fetchJson(`production standings ${league}`, `${SITE_BASE}/${rel}`)
+    const prod = fetchProductionJsonViaVercelCurl(`production standings ${league}`, rel)
     const prodSig = firstStandingSignature(prod)
     assertSame(`production standings ${league}`, r2Sig, prodSig)
   }
@@ -131,7 +196,7 @@ async function verifyRankingLeague(league) {
   assertSame(`R2 rankings OPS ${league}`, firstRankingSignature(local), r2Sig)
 
   if (CHECK_PRODUCTION) {
-    const prod = await fetchJson(`production rankings OPS ${league}`, `${SITE_BASE}/${rel}`)
+    const prod = fetchProductionJsonViaVercelCurl(`production rankings OPS ${league}`, rel)
     const prodSig = firstRankingSignature(prod)
     assertSame(`production rankings OPS ${league}`, r2Sig, prodSig)
   }
@@ -146,7 +211,7 @@ async function verifyTopLeadersLeague(league) {
   assertSame(`R2 top-leaders batting ${league}`, topLeadersSignature(local), r2Sig)
 
   if (CHECK_PRODUCTION) {
-    const prod = await fetchJson(`production top-leaders batting ${league}`, `${SITE_BASE}/${rel}`)
+    const prod = fetchProductionJsonViaVercelCurl(`production top-leaders batting ${league}`, rel)
     const prodSig = topLeadersSignature(prod)
     assertSame(`production top-leaders batting ${league}`, r2Sig, prodSig)
   }
@@ -155,7 +220,7 @@ async function verifyTopLeadersLeague(league) {
 async function main() {
   console.log(`[verify-display-publish] year=${YEAR}`)
   console.log(`[verify-display-publish] R2=${R2_BASE}`)
-  if (CHECK_PRODUCTION) console.log(`[verify-display-publish] production=${SITE_BASE}`)
+  if (CHECK_PRODUCTION) console.log(`[verify-display-publish] production=${SITE_BASE} (verified via vercel curl)`)
 
   for (const league of ["CL", "PL"]) {
     await verifyStandingsLeague(league)

@@ -36,6 +36,27 @@ const childEnv = {
   TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD:
     process.env.TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD ?? "1",
 }
+const VERCEL_CLI = process.env.TOPPAGE_VERCEL_CLI || (process.platform === "win32" ? "vercel.cmd" : "vercel")
+
+function readVercelProjectMeta() {
+  const p = path.join(root, ".vercel", "project.json")
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8"))
+  } catch {
+    return null
+  }
+}
+
+function vercelScopePrefix() {
+  const projectMeta = readVercelProjectMeta()
+  const scope = String(process.env.VERCEL_SCOPE || projectMeta?.orgId || "").trim()
+  return scope ? ` --scope ${scope}` : ""
+}
+
+function extractFirstUrl(text) {
+  const match = String(text).match(/https:\/\/[^\s"]+/)
+  return match ? match[0] : ""
+}
 
 function nowIsoLocal() {
   const d = new Date()
@@ -588,6 +609,69 @@ function runTry(label, command, opts = {}) {
   }
 }
 
+function vsHandFailureReportPath(year) {
+  const ts = new Date().toISOString().replace(/[:.]/g, "-")
+  return path.join(root, "_data", "scraped_games", "_meta", `vs_hand_failure_${year}_${ts}.json`)
+}
+
+function writeVsHandFailureReport({ year, validationCommand, dryRun }) {
+  const reportPath = vsHandFailureReportPath(year)
+  if (dryRun) {
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `dry-run: vs_hand failure report path=${reportPath} cmd=${validationCommand} -- --report-json ${reportPath}`,
+    )
+    return reportPath
+  }
+  const reportCommand = `${validationCommand} -- --report-json "${reportPath}"`
+  try {
+    execSync(reportCommand, {
+      cwd: root,
+      stdio: "inherit",
+      shell: true,
+      env: childEnv,
+      timeout: commandTimeoutMs("validate"),
+    })
+  } catch {
+    // 検証失敗で exit 1 でも、report-json が出力されていれば十分。
+  }
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `vs_hand failure report=${reportPath}`)
+  return reportPath
+}
+
+function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
+  const scopePrefix = vercelScopePrefix()
+  const deployCommand = `${VERCEL_CLI}${scopePrefix} --prod --yes`
+  if (dryRun) {
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${publishStage} deploy cmd=${deployCommand}`)
+    return
+  }
+
+  const deployStdout = execSync(deployCommand, {
+    cwd: root,
+    encoding: "utf8",
+    env: childEnv,
+    stdio: ["ignore", "pipe", "inherit"],
+    timeout: commandTimeoutMs("publish"),
+  })
+  const deploymentUrl = extractFirstUrl(deployStdout)
+  if (!deploymentUrl) {
+    throw new Error(`${publishStage}: failed to capture Vercel deployment URL`)
+  }
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: vercel deployment url=${deploymentUrl}`)
+
+  const inspectCommand =
+    `${VERCEL_CLI}${scopePrefix} inspect ${deploymentUrl} --logs --wait --timeout=10m`
+  execSync(inspectCommand, {
+    cwd: root,
+    stdio: "inherit",
+    shell: true,
+    env: childEnv,
+    timeout: Math.max(commandTimeoutMs("publish"), 12 * 60 * 1000),
+  })
+}
+
 function isScheduleCancelledForGame(year, gameId) {
   const seasonIndexPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
   if (!fs.existsSync(seasonIndexPath)) return false
@@ -1078,6 +1162,7 @@ function runPhase13ValidationWithRetry({
 }
 
 function runVsHandValidationWithRetry({
+  year,
   dryRun,
   phase15BuildCommand = "npm run phase15:build:batting-splits",
   affectedYahooIds = [],
@@ -1106,8 +1191,9 @@ function runVsHandValidationWithRetry({
   )
   if (retryOk) return
 
+  const reportPath = writeVsHandFailureReport({ year, validationCommand, dryRun })
   const message =
-    "phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。"
+    `phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。report=${reportPath}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
   if (strictVsHandValidate) {
     throw new Error(`${message} --strict-vs-hand-validate 指定のため停止します。`)
@@ -1135,13 +1221,30 @@ function repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage, a
   if (!r2Current) return false
 
   console.warn(
-    `\n[daily:npb-pipeline:v2] ${publishStage}: R2は最新ですが本番 /data が古いため、Vercel本番を自動デプロイします。\n`,
-  )
-  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: R2 current + production stale → Vercel production deploy`)
-  run(`${publishStage}: Vercel本番プロキシ再デプロイ`, "npm run deploy:vercel:prod", { dryRun })
-  run(
-    `${publishStage}: Vercel再デプロイ後の公開確認`,
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+      `\n[daily:npb-pipeline:v2] ${publishStage}: R2は最新ですが本番 /data が古いため、Vercel本番を自動デプロイします。\n`,
+    )
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: R2 current + production stale → Vercel production deploy`)
+    if (dryRun) {
+      run(`${publishStage}: Vercel本番プロキシ再デプロイ`, "npm run deploy:vercel:prod", { dryRun })
+    } else {
+      lastStep = `${publishStage}: Vercel本番プロキシ再デプロイ`
+      const startedAt = Date.now()
+      log(`→ 開始: ${lastStep}`)
+      try {
+        deployProductionViaVercelAndWait({ publishStage, dryRun })
+      } catch (e) {
+        const elapsed = formatMs(Date.now() - startedAt)
+        log(`← 失敗: ${lastStep}（所要 ${elapsed}） exit=1`)
+        appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `失敗: ${lastStep} 所要=${elapsed} exit=1`)
+        throw e
+      }
+      const elapsed = formatMs(Date.now() - startedAt)
+      log(`← 終了: ${lastStep}（所要 ${elapsed}）`)
+      appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了: ${lastStep} 所要=${elapsed}`)
+    }
+    run(
+      `${publishStage}: Vercel再デプロイ後の公開確認`,
+      `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
     { dryRun },
   )
   return true
@@ -1297,6 +1400,7 @@ function runFastStage({
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "defer: fast vs_hand validation until full stage")
   } else {
     runVsHandValidationWithRetry({
+      year,
       dryRun,
       phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
       affectedYahooIds,
@@ -1347,6 +1451,7 @@ function runFinalPrecomputedPublishStage({
     console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
   } else {
     runVsHandValidationWithRetry({
+      year,
       dryRun,
       phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
       affectedYahooIds,
@@ -1426,7 +1531,13 @@ function runFullStage({
     run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
   }
   run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
-  runVsHandValidationWithRetry({ dryRun, phase15BuildCommand, affectedYahooIds, strictVsHandValidate })
+  runVsHandValidationWithRetry({
+    year,
+    dryRun,
+    phase15BuildCommand,
+    affectedYahooIds,
+    strictVsHandValidate,
+  })
 
   if (!noPublish) {
     runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction })
