@@ -81,6 +81,8 @@ export type PlateAppearance = {
 export type BattingLine = {
   yahooPlayerId: string
   playerName: string
+  teamName?: string
+  yahooTeamId?: string | null
   positionCell?: string
   avg?: string
   ab?: number
@@ -185,6 +187,8 @@ export type PickoffCatchMissInvestigation = {
 export type StatsPlayerRowV0 = {
   yahooPlayerId: string | null
   playerName: string
+  teamName?: string
+  yahooTeamId?: string | null
   cells: string[]
 }
 

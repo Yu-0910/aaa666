@@ -22,7 +22,7 @@ import { dedupePlateAppearancesByInningHalfOrder } from "@/lib/yahooGame/dedupeP
 import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
 import { collectStarterYahooIdByRankingShort } from "@/lib/yahooGame/nf3PitcherMetricsFromCanonical"
 import { inferPitcherTeamForNf3Line } from "@/lib/yahooGame/pitcherPocHelpers"
-import type { CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
+import type { BattingLine, CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
 import { ipStringToOuts } from "@/lib/ranking/ipBaseball"
 import {
   assignRanksAndGamesBehind,
@@ -173,6 +173,14 @@ function collectBatterIdsWithLinesInGame(doc: CanonicalGameDocument): Set<string
   return ids
 }
 
+function teamShortHintFromBattingLines(lines: BattingLine[]): string {
+  for (const line of lines) {
+    const fromTeamName = rosterTeamToRankingShort(String(line.teamName ?? "").trim())
+    if (fromTeamName) return fromTeamName
+  }
+  return ""
+}
+
 /** 出場成績行優先ハイブリッド（公式チーム打撃合算に合わせる） */
 function processGameBatting(
   buckets: Map<string, TeamBucket>,
@@ -180,7 +188,10 @@ function processGameBatting(
   projectRoot?: string,
 ): void {
   for (const bid of collectBatterIdsWithLinesInGame(doc)) {
-    const teamShort = batterTeamShortInGame(doc, bid)
+    const linesForBatter = (doc.domain?.battingLines ?? []).filter(
+      (line) => String(line.yahooPlayerId ?? "").trim() === bid,
+    )
+    const teamShort = teamShortHintFromBattingLines(linesForBatter) || batterTeamShortInGame(doc, bid)
     if (!teamShort) continue
     const bucket = buckets.get(teamShort)
     if (!bucket) continue

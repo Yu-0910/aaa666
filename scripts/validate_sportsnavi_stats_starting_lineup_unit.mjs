@@ -46,4 +46,29 @@ assert.equal(kikuchi.fieldingPosition, "二")
 const rows = parseSportsnaviStatsHtml(html)
 assert.ok(rows.length >= 18, `flat rows=${rows.length}`)
 
+const linklessHtml = readFileSync(
+  join(root, "_data/scraped_games/raw_sportsnavi_stats/2021038804.html"),
+  "utf8",
+)
+const linklessRows = parseSportsnaviStatsHtml(linklessHtml)
+const viciedo = linklessRows.find((r) => r.playerName === "ビシエド")
+assert.ok(viciedo, "linkless ビシエド row")
+assert.equal(viciedo.yahooPlayerId, "1600021")
+assert.deepEqual(viciedo.cells.slice(0, 14), [
+  "打",
+  "ビシエド",
+  ".261",
+  "1",
+  "1",
+  "1",
+  "2",
+  "0",
+  "0",
+  "0",
+  "0",
+  "0",
+  "0",
+  "1",
+])
+
 console.log("[validate:sportsnavi-stats-starting-lineup] OK")

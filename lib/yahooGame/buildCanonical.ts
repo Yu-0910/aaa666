@@ -91,6 +91,8 @@ function asStatsRows(rows: unknown[]): StatsPlayerRowV0[] {
     .map((r) => ({
       yahooPlayerId: r.yahooPlayerId != null ? String(r.yahooPlayerId) : null,
       playerName: String(r.playerName ?? ""),
+      teamName: r.teamName != null ? String(r.teamName) : undefined,
+      yahooTeamId: r.yahooTeamId != null ? String(r.yahooTeamId) : null,
       cells: Array.isArray(r.cells) ? r.cells.map(String) : [],
     }))
 }
@@ -114,7 +116,7 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
   if (!row.yahooPlayerId || row.cells.length < 12) return null
   const c = row.cells
   const p0 = c[0] ?? ""
-  if (p0 === "投" || p0 === "H" || p0 === "敗" || p0 === "勝") return null
+  if (p0 === "H" || p0 === "敗" || p0 === "勝") return null
   if (p0 === "" && isEraTwoDecimals(c[2] ?? "")) return null
   const avg = (c[2] ?? "").trim()
   const abRaw = c[3] ?? ""
@@ -123,6 +125,7 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
   if (ab > 15) return null
   const avgOk = avg === "-" || /^\.\d{3}$/.test(avg) || /^\d\.\d{3}$/.test(avg)
   if (!avgOk) return null
+  if (p0 === "投" && avg === "-" && ab === 0) return null
   const hOpt = parseCellInt(5, c)
   const hrOpt = parseCellInt(13, c)
   const raw23 = countExtraBaseHitsFromStatsRowTextCells(c)
@@ -130,6 +133,8 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
   const line: BattingLine = {
     yahooPlayerId: row.yahooPlayerId,
     playerName: row.playerName,
+    ...(row.teamName ? { teamName: row.teamName } : {}),
+    ...(row.yahooTeamId ? { yahooTeamId: row.yahooTeamId } : {}),
     positionCell: p0,
     avg,
     ab,
