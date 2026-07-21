@@ -111,6 +111,7 @@ export type PitchingSeasonAggYahoo = {
   hr: number
   so: number
   bb: number
+  ibb: number
   hbp: number
   bk: number
   r: number
@@ -142,6 +143,7 @@ export function sumPitchingSeasonAggYahoo(
     out.hr += a.hr
     out.so += a.so
     out.bb += a.bb
+    out.ibb += a.ibb
     out.hbp += a.hbp
     out.bk += a.bk
     out.r += a.r
@@ -171,6 +173,7 @@ export function emptyPitchingSeasonAggYahoo(): PitchingSeasonAggYahoo {
     hr: 0,
     so: 0,
     bb: 0,
+    ibb: 0,
     hbp: 0,
     bk: 0,
     r: 0,
@@ -322,7 +325,11 @@ export function aggregatePitchingSeasonByYahooPlayer(
       const tn = teamNameForYahooInDoc(doc, id)
       if (tn) {
         const pc = pitchersPerTeam.get(tn) ?? 0
-        if (pc === 1 && outs >= 21) {
+        // 完投は「先発投手が試合終了まで投げ切る」記録。
+        // canonical に救援投手行が欠けた試合があるため、単独登板かつ7回以上だけでは
+        // 7回を投げた通常の先発まで完投にしてしまう。2026ランキングでは、先発・
+        // 単独登板・9回（27アウト）以上をすべて満たす場合だけ完投とする。
+        if (starters.has(id) && pc === 1 && outs >= 27) {
           agg.completeGames += 1
           if ((merged.r ?? 0) === 0 && (merged.er ?? 0) === 0) agg.shutouts += 1
         }

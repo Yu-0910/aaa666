@@ -44,6 +44,14 @@ function avgAllowedFromPitching(agg: PitchingSeasonAggYahoo): number | null {
   return agg.h / abEst
 }
 
+function ipDisplayFromOuts(outs: number): string | null {
+  if (outs <= 0) return null
+  const whole = Math.floor(outs / 3)
+  const rem = outs % 3
+  if (rem === 0) return String(whole)
+  return `${whole} ${rem}/3`
+}
+
 export function battingMetricsFromAgg(agg: BattingSeasonAggYahoo): Pick<
   TeamStandingRow,
   | "ops"
@@ -108,9 +116,24 @@ export function pitchingMetricsFromAgg(
   | "k_bb_pct"
   | "qs_rate"
   | "hqs_rate"
+  | "ip"
+  | "so"
+  | "sv"
+  | "hld"
+  | "hp"
+  | "pitches"
+  | "bf"
+  | "h_allowed"
+  | "hr_allowed"
+  | "bb_allowed"
+  | "ibb_allowed"
+  | "hbp_allowed"
+  | "er"
+  | "whip"
 > {
   const bf = overall.bf
-  const bbPct = bf > 0 ? (overall.bb / bf) * 100 : null
+  const nonIntentionalBb = Math.max(0, overall.bb - overall.ibb)
+  const bbPct = bf > 0 ? (nonIntentionalBb / bf) * 100 : null
   /** 投手 K率（K/9）= 奪三振×9÷投球回。SO/BF ではない */
   const kPct = overall.ipOuts > 0 ? (overall.so * 27) / overall.ipOuts : null
   const kBbPct = bf > 0 ? ((overall.so - overall.bb) / bf) * 100 : null
@@ -132,6 +155,20 @@ export function pitchingMetricsFromAgg(
     k_bb_pct: kBbPct,
     qs_rate: qsRate,
     hqs_rate: hqsRate,
+    ip: ipDisplayFromOuts(overall.ipOuts),
+    so: overall.so,
+    sv: overall.sv,
+    hld: overall.hld,
+    hp: overall.hld,
+    pitches: overall.np,
+    bf: overall.bf,
+    h_allowed: overall.h,
+    hr_allowed: overall.hr,
+    bb_allowed: nonIntentionalBb,
+    ibb_allowed: overall.ibb,
+    hbp_allowed: overall.hbp,
+    er: overall.er,
+    whip: overall.ipOuts > 0 ? (overall.h + nonIntentionalBb) / (overall.ipOuts / 3) : null,
   }
 }
 
@@ -211,6 +248,20 @@ export function assignRanksAndGamesBehind(rows: StandingsRowDraft[]): TeamStandi
       k_bb_pct: row.k_bb_pct,
       qs_rate: row.qs_rate,
       hqs_rate: row.hqs_rate,
+      ip: row.ip,
+      so: row.so,
+      sv: row.sv,
+      hld: row.hld,
+      hp: row.hp,
+      pitches: row.pitches,
+      bf: row.bf,
+      h_allowed: row.h_allowed,
+      hr_allowed: row.hr_allowed,
+      bb_allowed: row.bb_allowed,
+      ibb_allowed: row.ibb_allowed,
+      hbp_allowed: row.hbp_allowed,
+      er: row.er,
+      whip: row.whip,
     }
   })
 }

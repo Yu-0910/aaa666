@@ -20,9 +20,11 @@ import {
 } from "@/lib/yahooGame/canonicalPitchingSeasonAgg"
 import { dedupePlateAppearancesByInningHalfOrder } from "@/lib/yahooGame/dedupePlateAppearances"
 import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
+import { rankingTeamShortsFromCanonicalGame } from "@/lib/yahooGame/aggregateTeamGamesFromCanonical"
 import { collectStarterYahooIdByRankingShort } from "@/lib/yahooGame/nf3PitcherMetricsFromCanonical"
 import { inferPitcherTeamForNf3Line } from "@/lib/yahooGame/pitcherPocHelpers"
 import type { BattingLine, CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
+import { isIntentionalWalkResultText } from "@/lib/baseballWalkResult"
 import { ipStringToOuts } from "@/lib/ranking/ipBaseball"
 import {
   assignRanksAndGamesBehind,
@@ -97,6 +99,7 @@ function applyPitchingLineToTeam(
   bucket: TeamBucket,
   merged: PitchingLine,
   isStarter: boolean,
+  intentionalWalks = 0,
 ): void {
   const outs = ipStringToOuts(merged.ip)
   if (outs === 0 && (merged.bf ?? 0) === 0) return
@@ -109,9 +112,14 @@ function applyPitchingLineToTeam(
   p.hr += merged.hr ?? 0
   p.so += merged.so ?? 0
   p.bb += merged.bb ?? 0
+  p.ibb += intentionalWalks
   p.hbp += merged.hbp ?? 0
   p.er += er
   p.np += merged.pitches ?? 0
+  if (merged.decision === "win") p.w += 1
+  else if (merged.decision === "loss") p.l += 1
+  else if (merged.decision === "hold") p.hld += 1
+  else if (merged.decision === "save") p.sv += 1
 
   const split = isStarter ? bucket.pitchingStarter : bucket.pitchingRelief
   split.ipOuts += outs
@@ -129,6 +137,32 @@ function applyPitchingLineToTeam(
   } else {
     p.gamesInRelief += 1
   }
+}
+
+function countIntentionalWalksAllowedByTeamFromBattingLines(
+  doc: CanonicalGameDocument,
+  teamShort: string,
+): number {
+  const sides = rankingTeamShortsFromCanonicalGame(doc)
+  if (sides.length !== 2) return 0
+  const [visitorShort, homeShort] = sides
+  let count = 0
+  for (const line of doc.domain?.battingLines ?? []) {
+    const batterId = String(line.yahooPlayerId ?? "").trim()
+    const battingTeam =
+      teamShortHintFromBattingLines([line]) || (batterId ? batterTeamShortInGame(doc, batterId) ?? "" : "")
+    const defenseTeam =
+      battingTeam === visitorShort
+        ? homeShort
+        : battingTeam === homeShort
+          ? visitorShort
+          : ""
+    if (defenseTeam !== teamShort) continue
+    for (const slot of line.appearancePaSlotsJa ?? []) {
+      if (isIntentionalWalkResultText(String(slot ?? ""))) count += 1
+    }
+  }
+  return count
 }
 
 function applyGameResult(
@@ -277,7 +311,10 @@ function processGamePitching(
 
   for (const teamShort of teamsSeenInGame) {
     const bucket = buckets.get(teamShort)
-    if (bucket) bucket.pitchingGames += 1
+    if (bucket) {
+      bucket.pitchingGames += 1
+      bucket.pitching.ibb += countIntentionalWalksAllowedByTeamFromBattingLines(docForPitchers, teamShort)
+    }
   }
 }
 

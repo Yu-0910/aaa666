@@ -63,6 +63,30 @@ export type TeamStandingRow = {
   so?: number
   /** NPB 年度別: K/9（計算値） */
   k9?: number | null
+  /** 2026 canonical: セーブ */
+  sv?: number
+  /** 2026 canonical: ホールド */
+  hld?: number
+  /** 2026 canonical: HP（暫定: HLD） */
+  hp?: number
+  /** 2026 canonical: 投球数 */
+  pitches?: number
+  /** 2026 canonical: 対戦打者 */
+  bf?: number
+  /** 2026 canonical: 被安打 */
+  h_allowed?: number
+  /** 2026 canonical: 被本塁打 */
+  hr_allowed?: number
+  /** 2026 canonical: 与四球 */
+  bb_allowed?: number
+  /** 2026 canonical: 敬遠四球 */
+  ibb_allowed?: number
+  /** 2026 canonical: 与死球 */
+  hbp_allowed?: number
+  /** 2026 canonical: 自責点 */
+  er?: number
+  /** 2026 canonical: WHIP */
+  whip?: number | null
 }
 
 export type TeamStandingsJson = {

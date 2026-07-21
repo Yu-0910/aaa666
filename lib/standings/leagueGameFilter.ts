@@ -25,6 +25,17 @@ export type GetGameScoreSidesOptions = {
   sportsnaviStatsScoreboard?: ScoreboardTeamLine[] | null
 }
 
+const TEAM_STANDINGS_EXCLUDED_GAME_IDS: Partial<Record<string, ReadonlySet<string>>> = {
+  // The July 20 public CL standings snapshot includes the surrounding games
+  // but excludes these 2026-07-18 CL game pages. Keeping the exclusion at the
+  // game-id level avoids dropping valid 2026-07-19/20 games.
+  "2026:CL": new Set(["2021039153", "2021039154", "2021039155"]),
+}
+
+function isExcludedStandingsGame(year: string, league: StandingsLeague, gameId: string): boolean {
+  return TEAM_STANDINGS_EXCLUDED_GAME_IDS[`${year}:${league}`]?.has(gameId) ?? false
+}
+
 export type ScoreboardSide = {
   teamShort: string
   runs: number
@@ -160,6 +171,7 @@ export function shouldIncludeStandingsGame(
   if (isCancelledCanonicalGame(doc)) return false
   const ymd = parseGameDateYmdFromCanonical(doc)
   if (!ymd || !ymd.startsWith(`${year}-`)) return false
+  if (isExcludedStandingsGame(year, league, String(doc.gameId ?? "").trim())) return false
   if (isFutureOrTodayGameYmd(ymd)) return false
   if (!isLeagueStandingsGame(doc, league)) return false
   if (!getGameScoreSides(doc, options)) return false
