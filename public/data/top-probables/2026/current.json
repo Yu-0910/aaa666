@@ -1,7 +1,7 @@
 {
   "schemaVersion": "top-probables-v1",
   "seasonYear": "2026",
-  "generatedAt": "2026-07-24T06:58:53.430Z",
+  "generatedAt": "2026-07-24T08:17:27.458Z",
   "asOfDateJst": "2026-07-24",
   "source": {
     "sportingNewsFetchedAt": "2026-07-11T06:40:03.138Z",
@@ -9,122 +9,6 @@
     "matchupDerivedPhase": "phase30"
   },
   "cards": [
-    {
-      "cardKey": "Bs-M",
-      "teamCodes": [
-        "Bs",
-        "M"
-      ],
-      "teamNames": [
-        "オリックス",
-        "ロッテ"
-      ],
-      "seriesStart": "2026-07-24",
-      "seriesEnd": "2026-07-26",
-      "games": [
-        {
-          "dateJst": "2026-07-24",
-          "gameId": "2021039188",
-          "homeTeamCode": "Bs",
-          "awayTeamCode": "M",
-          "homeProbable": {
-            "teamCode": "Bs",
-            "pitcherNameJa": "寺西成騎",
-            "pitcherNpbId": "61465150",
-            "pitcherPublicId": "61465150",
-            "source": "yahoo-schedule",
-            "topOpponentBatters": [
-              {
-                "opponentName": "池田 来翔",
-                "opponentNpbId": "21125155",
-                "opponentPublicId": "21125155",
-                "ops": "2.000",
-                "avg": "1.000",
-                "hr": 0,
-                "ab": 1
-              },
-              {
-                "opponentName": "Ｇ．ポランコ",
-                "opponentNpbId": "63065155",
-                "opponentPublicId": "63065155",
-                "ops": ".000",
-                "avg": ".000",
-                "hr": 0,
-                "ab": 1
-              },
-              {
-                "opponentName": "Ｎ．ソト",
-                "opponentNpbId": "03505136",
-                "opponentPublicId": "03505136",
-                "ops": ".000",
-                "avg": ".000",
-                "hr": 0,
-                "ab": 1
-              },
-              {
-                "opponentName": "佐藤 都志也",
-                "opponentNpbId": "71075151",
-                "opponentPublicId": "71075151",
-                "ops": ".000",
-                "avg": ".000",
-                "hr": 0,
-                "ab": 2
-              },
-              {
-                "opponentName": "山口 航輝",
-                "opponentNpbId": "91895138",
-                "opponentPublicId": "91895138",
-                "ops": ".000",
-                "avg": ".000",
-                "hr": 0,
-                "ab": 1
-              },
-              {
-                "opponentName": "寺地 隆成",
-                "opponentNpbId": "51455159",
-                "opponentPublicId": "51455159",
-                "ops": ".000",
-                "avg": ".000",
-                "hr": 0,
-                "ab": 1
-              }
-            ],
-            "seasonEra": "4.76",
-            "seasonWins": 3,
-            "seasonLosses": 2,
-            "seasonKbbPct": "12.0"
-          },
-          "awayProbable": {
-            "teamCode": "M",
-            "pitcherNameJa": "河村説人",
-            "pitcherNpbId": "61765153",
-            "pitcherPublicId": "61765153",
-            "source": "yahoo-schedule",
-            "topOpponentBatters": [],
-            "seasonEra": "3.21",
-            "seasonWins": 1,
-            "seasonLosses": 1,
-            "seasonKbbPct": "4.2"
-          }
-        },
-        {
-          "dateJst": "2026-07-25",
-          "gameId": "2021039194",
-          "homeTeamCode": "Bs",
-          "awayTeamCode": "M",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-07-26",
-          "gameId": "2021039200",
-          "homeTeamCode": "Bs",
-          "awayTeamCode": "M",
-          "homeProbable": null,
-          "awayProbable": null
-        }
-      ]
-    },
     {
       "cardKey": "C-S",
       "teamCodes": [
@@ -222,22 +106,6 @@
             "seasonLosses": 1,
             "seasonKbbPct": "13.0"
           }
-        },
-        {
-          "dateJst": "2026-07-25",
-          "gameId": "2021039189",
-          "homeTeamCode": "S",
-          "awayTeamCode": "C",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-07-26",
-          "gameId": "2021039195",
-          "homeTeamCode": "S",
-          "awayTeamCode": "C",
-          "homeProbable": null,
-          "awayProbable": null
         }
       ]
     },
@@ -393,22 +261,6 @@
             "seasonLosses": 5,
             "seasonKbbPct": "15.8"
           }
-        },
-        {
-          "dateJst": "2026-07-25",
-          "gameId": "2021039190",
-          "homeTeamCode": "D",
-          "awayTeamCode": "DB",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-07-26",
-          "gameId": "2021039196",
-          "homeTeamCode": "D",
-          "awayTeamCode": "DB",
-          "homeProbable": null,
-          "awayProbable": null
         }
       ]
     },
@@ -564,22 +416,6 @@
             "seasonLosses": 4,
             "seasonKbbPct": "19.8"
           }
-        },
-        {
-          "dateJst": "2026-07-25",
-          "gameId": "2021039191",
-          "homeTeamCode": "H",
-          "awayTeamCode": "G",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-07-26",
-          "gameId": "2021039197",
-          "homeTeamCode": "H",
-          "awayTeamCode": "G",
-          "homeProbable": null,
-          "awayProbable": null
         }
       ]
     },
@@ -735,67 +571,13 @@
             "seasonLosses": 0,
             "seasonKbbPct": "12.0"
           }
-        },
-        {
-          "dateJst": "2026-07-25",
-          "gameId": "2021039193",
-          "homeTeamCode": "L",
-          "awayTeamCode": "Hs",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-07-26",
-          "gameId": "2021039199",
-          "homeTeamCode": "L",
-          "awayTeamCode": "Hs",
-          "homeProbable": null,
-          "awayProbable": null
-        }
-      ]
-    },
-    {
-      "cardKey": "Bs-L",
-      "teamCodes": [
-        "Bs",
-        "L"
-      ],
-      "teamNames": [
-        "オリックス",
-        "西武"
-      ],
-      "seriesStart": "2026-07-31",
-      "seriesEnd": "2026-08-02",
-      "games": [
-        {
-          "dateJst": "2026-07-31",
-          "gameId": "2021039206",
-          "homeTeamCode": "L",
-          "awayTeamCode": "Bs",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-08-01",
-          "gameId": "2021039212",
-          "homeTeamCode": "L",
-          "awayTeamCode": "Bs",
-          "homeProbable": null,
-          "awayProbable": null
-        },
-        {
-          "dateJst": "2026-08-02",
-          "gameId": "2021039218",
-          "homeTeamCode": "L",
-          "awayTeamCode": "Bs",
-          "homeProbable": null,
-          "awayProbable": null
         }
       ]
     }
   ],
   "warnings": [
     "Sporting News スナップショットなし: 全セ",
-    "Sporting News スナップショットなし: 全パ"
+    "Sporting News スナップショットなし: 全パ",
+    "予想投手名が揃わない試合を非表示: 14件"
   ]
 }

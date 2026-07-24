@@ -119,6 +119,13 @@ async function buildProbableSlotForGame(
   return buildPitcherSlot(year, teamCode, opponentTeamCode, dateJst, snByTeam, warnings)
 }
 
+function hasBothProbablePitcherNames(game: TopProbablesGame): boolean {
+  return Boolean(
+    game.homeProbable?.pitcherNameJa?.trim() &&
+      game.awayProbable?.pitcherNameJa?.trim(),
+  )
+}
+
 export async function buildTopProbablesSnapshot(options: {
   year: string
   projectRoot?: string
@@ -161,6 +168,7 @@ export async function buildTopProbablesSnapshot(options: {
 
   const cards: TopProbablesCard[] = []
   const coveredGameIds = new Set<string>()
+  let hiddenMissingPitcherNameGames = 0
   for (const series of picked) {
     const futureGames = series.games.filter((g) => g.dateJst >= asOfDateJst)
     if (futureGames.length === 0) continue
@@ -190,16 +198,22 @@ export async function buildTopProbablesSnapshot(options: {
         projectRoot,
       )
 
-      games.push({
+      const game: TopProbablesGame = {
         dateJst: g.dateJst,
         gameId: g.gameId,
         homeTeamCode: g.homeTeamCode,
         awayTeamCode: g.awayTeamCode,
         homeProbable,
         awayProbable,
-      })
+      }
+      if (hasBothProbablePitcherNames(game)) {
+        games.push(game)
+      } else {
+        hiddenMissingPitcherNameGames++
+      }
       coveredGameIds.add(g.gameId)
     }
+    if (games.length === 0) continue
 
     const card: TopProbablesCard = {
       cardKey: series.cardKey,
@@ -263,7 +277,17 @@ export async function buildTopProbablesSnapshot(options: {
         },
       ],
     }
-    cards.push(enrichProbablesCard(projectRoot, year, card))
+    if (hasBothProbablePitcherNames(card.games[0]!)) {
+      cards.push(enrichProbablesCard(projectRoot, year, card))
+    } else {
+      hiddenMissingPitcherNameGames++
+    }
+  }
+
+  if (hiddenMissingPitcherNameGames > 0) {
+    warnings.push(
+      `予想投手名が揃わない試合を非表示: ${hiddenMissingPitcherNameGames}件`,
+    )
   }
 
   return {

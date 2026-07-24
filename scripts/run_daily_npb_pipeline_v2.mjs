@@ -1617,6 +1617,20 @@ function runFinalPrecomputedPublishStage({
   }
 }
 
+function runTopProbablesInputRefresh({ year, dryRun }) {
+  const asOfDate = todayJstYmd()
+  const tomorrowDate = addDaysYmd(asOfDate, 1)
+  run(
+    "Yahoo! 当日予告先発取得（予想投手用）",
+    `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${asOfDate}`,
+    { dryRun, timeoutKind: "network" },
+  )
+  run(
+    "Yahoo! 翌日予告先発取得（予想投手用）",
+    `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${tomorrowDate}`,
+    { dryRun, timeoutKind: "network" },
+  )
+}
 function runFullStage({
   year,
   from,
@@ -1688,6 +1702,7 @@ function runFullStage({
       note: "対戦成績派生の警告として扱い、full derived公開は継続します。",
     },
   )
+  runTopProbablesInputRefresh({ year, dryRun })
   run("トップ表示: 予想投手", "npm run phase36:build:top-probables", { dryRun })
   run("派生: phase33 batter vs team count pitch types", "npm run phase33:build:batter-vs-team-count-pitch-types", { dryRun })
   runWarnOnlyValidation(
