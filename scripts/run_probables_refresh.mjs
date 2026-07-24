@@ -7,7 +7,7 @@
  * - 2回目push用: 残り詳細成績/予想先発タブを生成・反映
  * - Sporting News ローテーション取得（以前の稼働方針）
  * - Sportsnavi 未来日程取得
- * - Yahoo! 日程ページから翌日の予告先発だけを明示取得
+ * - Yahoo! 日程ページから当日/翌日の予告先発を明示取得
  * - top-probables JSON 生成（Yahoo 予告先発フォールバック、短縮名→フルネーム/ID補正は lib 側）
  * - ローカル検証（フルネーム、NPB ID、英字名解決、成績欄の欠落確認）
  * - R2 反映 2回目: top-probables（予想先発タブ本体）と残り詳細成績
@@ -57,6 +57,23 @@ const childEnv = {
 function log(message) {
   const now = new Date().toISOString()
   console.log(`[probables:refresh] [${now}] ${message}`)
+}
+
+function addDaysYmd(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00+09:00`)
+  d.setUTCDate(d.getUTCDate() + days)
+  const y = d.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", year: "numeric" })
+  const m = d.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", month: "2-digit" })
+  const day = d.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", day: "2-digit" })
+  return `${y}-${m}-${day}`
+}
+
+function todayJstYmd() {
+  const now = new Date()
+  const y = now.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", year: "numeric" })
+  const m = now.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", month: "2-digit" })
+  const day = now.toLocaleString("en-CA", { timeZone: "Asia/Tokyo", day: "2-digit" })
+  return `${y}-${m}-${day}`
 }
 
 function run(label, command, args) {
@@ -522,11 +539,22 @@ function main() {
   if (skipFetch) {
     run("未来日程取得", "npx", ["tsx", "scripts/phase0_fetch_schedule_ahead.ts", "--year", year])
   }
+  const probablesAsOfDate = asOfDate ?? todayJstYmd()
+  run("Yahoo! 当日予告先発取得", "npx", [
+    "tsx",
+    "scripts/fetch_yahoo_schedule_probables.ts",
+    "--year",
+    year,
+    "--date",
+    probablesAsOfDate,
+  ])
   run("Yahoo! 翌日予告先発取得", "npx", [
     "tsx",
     "scripts/fetch_yahoo_schedule_probables.ts",
     "--year",
     year,
+    "--date",
+    addDaysYmd(probablesAsOfDate, 1),
   ])
 
   run("予想投手 JSON 生成", "npx", ["tsx", "scripts/phase36_build_top_probables.ts", "--year", year])

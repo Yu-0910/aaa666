@@ -98,12 +98,13 @@ async function buildProbableSlotForGame(
   teamCode: string,
   opponentTeamCode: string,
   dateJst: string,
+  asOfDateJst: string,
   tomorrowDate: string,
   snByTeam: Map<string, SportingNewsRotationSnapshot | null>,
   warnings: string[],
   projectRoot: string,
 ): Promise<TopProbablesPitcherSlot | null> {
-  if (dateJst === tomorrowDate) {
+  if (dateJst === asOfDateJst || dateJst === tomorrowDate) {
     return (
       (await buildYahooScheduleProbableSlot(
         year,
@@ -171,6 +172,7 @@ export async function buildTopProbablesSnapshot(options: {
         g.homeTeamCode,
         g.awayTeamCode,
         g.dateJst,
+        asOfDateJst,
         tomorrowDate,
         snByTeam,
         warnings,
@@ -181,6 +183,7 @@ export async function buildTopProbablesSnapshot(options: {
         g.awayTeamCode,
         g.homeTeamCode,
         g.dateJst,
+        asOfDateJst,
         tomorrowDate,
         snByTeam,
         warnings,
@@ -226,6 +229,7 @@ export async function buildTopProbablesSnapshot(options: {
       g.homeTeamCode,
       g.awayTeamCode,
       g.dateJst,
+      asOfDateJst,
       tomorrowDate,
       snByTeam,
       warnings,
@@ -236,6 +240,7 @@ export async function buildTopProbablesSnapshot(options: {
       g.awayTeamCode,
       g.homeTeamCode,
       g.dateJst,
+      asOfDateJst,
       tomorrowDate,
       snByTeam,
       warnings,
