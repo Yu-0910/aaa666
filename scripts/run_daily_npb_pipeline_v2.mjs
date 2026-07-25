@@ -1621,6 +1621,11 @@ function runTopProbablesInputRefresh({ year, dryRun }) {
   const asOfDate = todayJstYmd()
   const tomorrowDate = addDaysYmd(asOfDate, 1)
   run(
+    "Sporting News ローテーション取得（予想投手用）",
+    `npx tsx scripts/phase35_fetch_sportingnews_rotation.ts --year ${year}`,
+    { dryRun, timeoutKind: "network" },
+  )
+  run(
     "Yahoo! 当日予告先発取得（予想投手用）",
     `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${asOfDate}`,
     { dryRun, timeoutKind: "network" },

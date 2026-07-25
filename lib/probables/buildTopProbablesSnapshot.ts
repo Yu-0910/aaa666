@@ -153,8 +153,14 @@ export async function buildTopProbablesSnapshot(options: {
     teamCodeSet.add(card.teamCodes[0])
     teamCodeSet.add(card.teamCodes[1])
   }
-  for (const game of scheduleGames) {
-    if (game.dateJst < asOfDateJst) continue
+  const orphanGameCandidates = scheduleGames
+    .filter(
+      (g) =>
+        g.dateJst === asOfDateJst &&
+        !picked.some((card) => card.games.some((game) => game.gameId === g.gameId)),
+    )
+    .sort((a, b) => a.dateJst.localeCompare(b.dateJst) || a.gameId.localeCompare(b.gameId))
+  for (const game of orphanGameCandidates) {
     teamCodeSet.add(game.homeTeamCode)
     teamCodeSet.add(game.awayTeamCode)
   }
@@ -230,14 +236,7 @@ export async function buildTopProbablesSnapshot(options: {
     cards.push(enrichProbablesCard(projectRoot, year, card))
   }
 
-  const orphanGames = scheduleGames
-    .filter(
-      (g) =>
-        g.dateJst === asOfDateJst &&
-        !coveredGameIds.has(g.gameId),
-    )
-    .sort((a, b) => a.dateJst.localeCompare(b.dateJst) || a.gameId.localeCompare(b.gameId))
-  for (const g of orphanGames) {
+  for (const g of orphanGameCandidates.filter((game) => !coveredGameIds.has(game.gameId))) {
     const homeProbable = await buildProbableSlotForGame(
       year,
       g.homeTeamCode,
