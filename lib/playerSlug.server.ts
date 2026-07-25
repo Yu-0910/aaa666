@@ -128,20 +128,22 @@ function buildSlugIndex(): PlayerSlugIndex {
   const byNameKey = new Map<string, PlayerSlugEntry>()
   const byRomanKey = new Map<string, PlayerSlugEntry>()
   for (const entry of entries) {
-    bySlug.set(entry.slug, entry)
+    if (!bySlug.has(entry.slug)) bySlug.set(entry.slug, entry)
     const historicalOverride = historicalSlugOverrideById(entry.npbPlayerId)
     for (const legacySlug of historicalOverride?.legacySlugs ?? []) {
-      bySlug.set(legacySlug, entry)
+      if (!bySlug.has(legacySlug)) bySlug.set(legacySlug, entry)
     }
     const abbreviatedSlug = slugifyPlayerRomanName(abbreviatedRomanFromFull(entry.romanFull))
     if (abbreviatedSlug && !bySlug.has(abbreviatedSlug)) {
       bySlug.set(abbreviatedSlug, entry)
     }
-    byNpbId.set(entry.npbPlayerId, entry)
-    byNameKey.set(rosterNameMatchKey(entry.nameJa), entry)
-    byNameKey.set(compactPlayerName(entry.nameJa), entry)
+    if (!byNpbId.has(entry.npbPlayerId)) byNpbId.set(entry.npbPlayerId, entry)
+    const rosterNameKey = rosterNameMatchKey(entry.nameJa)
+    if (rosterNameKey && !byNameKey.has(rosterNameKey)) byNameKey.set(rosterNameKey, entry)
+    const compactNameKey = compactPlayerName(entry.nameJa)
+    if (compactNameKey && !byNameKey.has(compactNameKey)) byNameKey.set(compactNameKey, entry)
     const romanKey = compactPlayerName(entry.romanFull).toLowerCase()
-    if (romanKey) byRomanKey.set(romanKey, entry)
+    if (romanKey && !byRomanKey.has(romanKey)) byRomanKey.set(romanKey, entry)
   }
   cachedIndex = { entries, bySlug, byNpbId, byNameKey, byRomanKey }
   return cachedIndex
@@ -176,8 +178,6 @@ export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
     const aliased = getPlayerSlugEntryBySlug(aliasSlug)
     if (aliased) return aliased
   }
-  const historicalOverride = resolveHistoricalOverrideEntry(decoded)
-  if (historicalOverride) return historicalOverride
   const bySlug = getPlayerSlugEntryBySlug(decoded)
   if (bySlug) return bySlug
   if (/^\d+$/.test(decoded)) {
@@ -193,6 +193,8 @@ export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
     const byRoman = index.byRomanKey.get(romanKey)
     if (byRoman) return byRoman
   }
+  const historicalOverride = resolveHistoricalOverrideEntry(decoded)
+  if (historicalOverride) return historicalOverride
   return null
 }
 
