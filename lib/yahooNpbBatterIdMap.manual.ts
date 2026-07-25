@@ -30,9 +30,9 @@ export const MANUAL_YAHOO_TO_NPB: Record<string, string> = {
   "2107086": "37035159", // 牧野 憲伸（中日・育成）
   // 投手: 名簿に無い（または team/romanName 解決が外れる）Yahoo ID の暫定受け皿
   // NPB 公式IDが判明したら置き換える（verifyPitchingRankingRoster を通すため team/romanName 解決が目的）
-  "2103847": "2103847", // 大竹 風雅（ソフトバンク）
+  "2103847": "21325155", // 大竹 風雅（ソフトバンク）
   // 藤原 大翔（ソフトバンク・投）— 2026/5 支配下移行。名簿未収録時は Phase19 の team/romanName verify が落ちる
-  "2112130": "2112130",
+  "2112130": "01805159",
   // 庄司 陽斗（DeNA・投）— 2026/6 支配下復帰。NPB 81985159 / Yahoo 2112149
   "2112149": "81985159",
   // Ａ．アルメンタ（ソフトバンク・投）— NPB 33735155 / Yahoo 2105885（https://npb.jp/bis/players/33735155.html）

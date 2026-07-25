@@ -21,6 +21,7 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { findNpbIdForYahooBatting, parseRosterCsv, type RosterRow } from "../lib/yahooGame/rosterCsv"
 import { parsePaId, resolveNpbForPitcherLine, teamForYahooPlayerId } from "../lib/yahooGame/pitcherPocHelpers"
 import { collectPitcherYahooIdsFromPlateAppearance } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
+import { findRosterPlayerByPublicId } from "../lib/npbRoster"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -145,7 +146,8 @@ function main(): void {
 
   function add(yahoo: string, npb: string, source: string): void {
     const y = yahoo.trim()
-    const n = npb.trim().replace(/[^\d]/g, "")
+    const rawNpb = npb.trim().replace(/[^\d]/g, "")
+    const n = findRosterPlayerByPublicId(y)?.npb_player_id ?? rawNpb
     if (!/^\d+$/.test(y) || !n) return
     const prev = map.get(y)
     if (prev && prev !== n) {

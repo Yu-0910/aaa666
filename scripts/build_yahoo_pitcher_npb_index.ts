@@ -132,6 +132,22 @@ function main(): void {
       filledFromRoster++
     }
   }
+
+  let normalizedFromRoster = 0
+  for (const yid of Object.keys(map)) {
+    const roster = findRosterPlayerByPublicId(yid)
+    const canonicalNpb = roster?.npb_player_id?.trim()
+    if (canonicalNpb && canonicalNpb !== map[yid]) {
+      map[yid] = canonicalNpb
+      normalizedFromRoster++
+    }
+  }
+  if (normalizedFromRoster > 0) {
+    console.log(
+      `[build_yahoo_pitcher_npb_index] 既存 PoC 由来IDを名簿/手動マップで ${normalizedFromRoster} 件正規化`,
+    )
+  }
+
   if (filledFromRoster > 0) {
     console.log(
       `[build_yahoo_pitcher_npb_index] ランキング掲載・PoC 未登録を名簿で ${filledFromRoster} 件補完`,
