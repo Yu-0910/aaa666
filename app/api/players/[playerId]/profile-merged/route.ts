@@ -133,15 +133,17 @@ export async function GET(
   try {
     const { playerId } = context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim())
-    const rosterPlayer = findRosterPlayerByPublicId(decoded)
     const slugEntry = resolvePlayerSlugEntry(decoded)
+    const rosterPlayer = slugEntry
+      ? null
+      : findRosterPlayerByPublicId(decoded)
     const resolvedNpbId = /^\d+$/.test(decoded)
       ? resolveNpbPlayerIdFromPublicId(decoded)
       : null
     const nonRosterNpbId = resolveNonRosterNpbIdFromSlug(decoded)
     const npbId =
-      rosterPlayer?.npb_player_id ??
       slugEntry?.npbPlayerId ??
+      rosterPlayer?.npb_player_id ??
       resolvedNpbId ??
       nonRosterNpbId ??
       decoded

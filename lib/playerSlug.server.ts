@@ -100,6 +100,8 @@ function buildSlugIndex(): PlayerSlugIndex {
       if (!fileName.endsWith(".json")) continue
       const rawId = fileName.replace(/^npb_/, "").replace(/\.json$/i, "").trim()
       if (!/^\d+$/.test(rawId) || byKnownNpbId.has(rawId)) continue
+      const resolvedNpbId = resolveNpbPlayerIdFromPublicId(rawId)
+      if (resolvedNpbId !== rawId && byKnownNpbId.has(resolvedNpbId)) continue
       const merged =
         readDerivedJsonLocalSync<NonRosterMergedPayload>("player_profile", "merged", fileName) ?? null
       const meta =

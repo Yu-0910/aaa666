@@ -1,4 +1,5 @@
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import {
   decodePlayerPathSegment,
   jsonDerivedResponse,
@@ -8,6 +9,7 @@ import { loadPitcherSeasonPitchingPeriodPayloadFromRepoAsync } from "@/lib/pitch
 import { resolvePilotPitcherNpbFromUrlSegment } from "@/lib/pitcherSeasonPocPilotFallback"
 import type { PitcherSeasonPitchingPeriodApiResponse } from "@/lib/pitcherSeasonPocTypes"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
+import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
 
@@ -21,11 +23,16 @@ export async function GET(
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const year = yearFromRequest(request)
 
-    const roster = findRosterPlayerByPublicId(decoded)
-    let npb = roster?.npb_player_id?.trim() ?? ""
+    const slugEntry = resolvePlayerSlugEntry(decoded)
+    const roster = slugEntry ? null : findRosterPlayerByPublicId(decoded)
+    let npb = slugEntry?.npbPlayerId?.trim() ?? roster?.npb_player_id?.trim() ?? ""
     if (!npb) {
       const pilot = resolvePilotPitcherNpbFromUrlSegment(decoded)
       if (pilot) npb = pilot
+    }
+    if (!npb && /^\d+$/.test(decoded)) {
+      const resolved = resolveNpbPlayerIdFromPublicId(decoded)
+      if (resolved !== decoded) npb = resolved
     }
     // 名簿照合が外れるケースでも、URL セグメント自体が NPB player_id で派生ファイルが存在するなら直接読む。
     let payload =

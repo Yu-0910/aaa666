@@ -4,6 +4,7 @@
  */
 
 import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import {
   decodePlayerPathSegment,
   jsonDerivedResponse,
@@ -14,6 +15,7 @@ import { buildPitcherSeasonPitchTypesLive } from "@/lib/yahooGame/buildPitcherSe
 import { loadPitcherSeasonPitchTypesAsync } from "@/lib/yahooGame/loadPitcherSeasonPitchTypes"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 import { resolvePilotPitcherNpbFromUrlSegment } from "@/lib/pitcherSeasonPocPilotFallback"
+import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"
 
@@ -45,13 +47,23 @@ export async function GET(
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const year = yearFromRequest(request)
 
-    const roster = findRosterPlayerByPublicId(decoded)
-    let npb = roster?.npb_player_id?.trim() ?? ""
+    const slugEntry = resolvePlayerSlugEntry(decoded)
+    const roster = slugEntry ? null : findRosterPlayerByPublicId(decoded)
+    let npb = slugEntry?.npbPlayerId?.trim() ?? roster?.npb_player_id?.trim() ?? ""
     if (!npb) {
       const pilot = resolvePilotPitcherNpbFromUrlSegment(decoded)
       if (pilot) npb = pilot
     }
-    if (!npb && /^\d+$/.test(decoded)) npb = decoded
+    if (!npb && /^\d+$/.test(decoded)) {
+      const resolved = resolveNpbPlayerIdFromPublicId(decoded)
+      if (resolved !== decoded) npb = resolved
+    }
+    let payload =
+      npb ? await loadPitcherSeasonPitchTypesAsync(year, npb) : null
+    if (!payload && /^\d+$/.test(decoded)) {
+      payload = await loadPitcherSeasonPitchTypesAsync(year, decoded)
+      if (payload) npb = decoded
+    }
 
     if (!npb) {
       return jsonDerivedResponse({
@@ -63,7 +75,6 @@ export async function GET(
       } satisfies PitcherSeasonPitchTypesApiResponse)
     }
 
-    let payload = await loadPitcherSeasonPitchTypesAsync(year, npb)
     if (!payload || needsPitchTypeSplitRefresh(payload)) {
       payload = buildPitcherSeasonPitchTypesLive(npb, year)
     }
