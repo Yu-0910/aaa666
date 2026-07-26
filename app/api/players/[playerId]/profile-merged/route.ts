@@ -42,6 +42,18 @@ type NonRosterMetaRoman = {
 
 let nonRosterSlugToNpbIdCache: Map<string, string> | null = null
 
+function stripNonRosterPageKindForRosterPlayer(
+  payload: PlayerProfileMergedApiPayload,
+): PlayerProfileMergedApiPayload {
+  const meta = payload.meta
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return payload
+  const nextMeta = { ...(meta as Record<string, unknown>) }
+  if (nextMeta.page_kind === "career_only_non_roster") {
+    delete nextMeta.page_kind
+  }
+  return { ...payload, meta: nextMeta }
+}
+
 function abbreviatedRomanFromFull(romanFull: string): string {
   const slug = slugifyPlayerRomanName(romanFull)
   const tokens = slug.split("-").filter(Boolean)
@@ -134,9 +146,10 @@ export async function GET(
     const { playerId } = context.params instanceof Promise ? await context.params : context.params
     const decoded = decodePlayerPathSegment((playerId || "").trim())
     const slugEntry = resolvePlayerSlugEntry(decoded)
-    const rosterPlayer = slugEntry
-      ? null
-      : findRosterPlayerByPublicId(decoded)
+    const rosterPlayer =
+      (slugEntry?.npbPlayerId
+        ? findRosterPlayerByPublicId(slugEntry.npbPlayerId)
+        : null) ?? findRosterPlayerByPublicId(decoded)
     const resolvedNpbId = /^\d+$/.test(decoded)
       ? resolveNpbPlayerIdFromPublicId(decoded)
       : null
@@ -161,8 +174,11 @@ export async function GET(
     const domesticFa = await loadDomesticFaEstimateForPlayer(npbId, faSeasonYear)
     const meta = rosterPlayer ? null : await readMetaForRoman(npbId)
     const nameEnFull = rosterPlayer ? "" : resolveNonRosterNameEnFull(meta)
+    const effectivePayload = rosterPlayer
+      ? stripNonRosterPageKindForRosterPlayer(payload)
+      : payload
     const enriched: PlayerProfileMergedApiPayload = {
-      ...payload,
+      ...effectivePayload,
       ...(nameEnFull ? { name_en_full: nameEnFull } : {}),
       faEstimate: { seasonYear: faSeasonYear, domesticFa },
     }

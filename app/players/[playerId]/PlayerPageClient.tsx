@@ -712,8 +712,10 @@ export function PlayerPageClient({
   ])
   /** 2026 名簿外・マスタ成績あり選手: 通算成績タブ専用 UI */
   const isCareerOnlyNonRosterPage = useMemo(
-    () => String(profileMerged?.meta?.page_kind ?? "").trim() === "career_only_non_roster",
-    [profileMerged],
+    () =>
+      !isRosterPlayer &&
+      String(profileMerged?.meta?.page_kind ?? "").trim() === "career_only_non_roster",
+    [isRosterPlayer, profileMerged],
   )
   const nonRosterHasCareerStats =
     profileMergedSettled &&
