@@ -314,6 +314,40 @@ export const TEAM_CODE_TO_DISPLAY: Record<string, string> = {
 
 const TEAM_SHORT_TO_DISPLAY: Record<string, string> = {
   DeNA: "横浜",
+  "ＤｅＮＡ": "横浜",
+}
+
+function normalizeTeamNameForMatch(name: string): string {
+  return String(name ?? "")
+    .replace(/^vs_/, "")
+    .replace(/\s+/g, "")
+    .trim()
+}
+
+function resolvedTeamCodeForMatch(name: string): string {
+  const normalized = normalizeTeamNameForMatch(name)
+  if (!normalized) return ""
+  return teamCodeFromShort(normalized)
+}
+
+/** 個人ページの球団別表で使う表示名（DB は「横浜」）。 */
+export function playerVsTeamDisplayName(teamName: string): string {
+  const normalized = normalizeTeamNameForMatch(teamName)
+  if (!normalized) return ""
+  const code = resolvedTeamCodeForMatch(normalized)
+  return TEAM_CODE_TO_DISPLAY[code] ?? TEAM_SHORT_TO_DISPLAY[normalized] ?? normalized
+}
+
+/** 正式名・略称・vs_* を球団コードで突合する。 */
+export function playerVsTeamNamesMatch(displayTeam: string, sourceTeamName: string): boolean {
+  const displayCode = resolvedTeamCodeForMatch(displayTeam)
+  const sourceCode = resolvedTeamCodeForMatch(sourceTeamName)
+  if (displayCode && sourceCode && TEAM_CODE_TO_DISPLAY[displayCode] && TEAM_CODE_TO_DISPLAY[sourceCode]) {
+    return displayCode === sourceCode
+  }
+  const display = playerVsTeamDisplayName(displayTeam)
+  const source = playerVsTeamDisplayName(sourceTeamName)
+  return display !== "" && source !== "" && display === source
 }
 
 /** 順位表など狭い列向けの英字球団名（NPB 公式英字表記の愛称部分） */

@@ -27,6 +27,7 @@ import { STADIUM_VENUE_UI_ROWS_BATTING, formatPlayerPageStadiumDisplay } from "@
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { formatRankingStatDisplay } from "@/lib/formatStat"
 import { STARTER_FIELD_TABLE_KEYS } from "@/lib/yahooGame/starterFieldPositionFromStats"
+import { playerVsTeamNamesMatch } from "@/lib/standings/teamCodes"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 const PitchTypeChartLegend = dynamic(
@@ -531,26 +532,26 @@ export default function SeasonStatsPilot({
           {/* チーム別の対戦成績（12球団固定表示） */}
           {showPilotTab("basic") && (() => {
             const TEAM_ORDER = [
-              { label: "日本ハム", splitMatch: "北海道日本ハム" },
-              { label: "楽天", splitMatch: "楽天" },
-              { label: "西武", splitMatch: "西武" },
-              { label: "ロッテ", splitMatch: "ロッテ" },
-              { label: "オリックス", splitMatch: "オリックス" },
-              { label: "ソフトバンク", splitMatch: "ソフトバンク" },
-              { label: "巨人", splitMatch: "ジャイアンツ" },
-              { label: "ヤクルト", splitMatch: "ヤクルト" },
-              { label: "横浜", splitMatch: "DeNA" },
-              { label: "中日", splitMatch: "中日" },
-              { label: "阪神", splitMatch: "阪神" },
-              { label: "広島", splitMatch: "広島" },
+              { label: "日本ハム" },
+              { label: "楽天" },
+              { label: "西武" },
+              { label: "ロッテ" },
+              { label: "オリックス" },
+              { label: "ソフトバンク" },
+              { label: "巨人" },
+              { label: "ヤクルト" },
+              { label: "横浜" },
+              { label: "中日" },
+              { label: "阪神" },
+              { label: "広島" },
             ] as const
             const teamStatsMap = new Map(
               effectiveStats
                 .filter((r) => r.split_type === "vs_team")
                 .map((r) => [r.split_value, r])
             )
-            const findStats = (splitMatch: string) =>
-              Array.from(teamStatsMap.entries()).find(([k]) => k.includes(splitMatch))?.[1] ?? null
+            const findStats = (label: string) =>
+              Array.from(teamStatsMap.entries()).find(([k]) => playerVsTeamNamesMatch(label, k))?.[1] ?? null
 
             return (
               <>
@@ -601,7 +602,7 @@ export default function SeasonStatsPilot({
                     </thead>
                     <tbody>
                       {TEAM_ORDER.map((team) => {
-                        const row = findStats(team.splitMatch)
+                        const row = findStats(team.label)
                         const na = "—"
                         return (
                           <tr

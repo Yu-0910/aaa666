@@ -18,6 +18,7 @@ import {
   nf3RsaaRswinDisplay,
 } from "./nf3LeaguePitchingFallback"
 import { STADIUM_VENUE_UI_ROWS_PITCHER, formatPlayerPageStadiumDisplay } from "@/lib/stadiumVenueNormalize"
+import { playerVsTeamNamesMatch } from "@/lib/standings/teamCodes"
 import { fmtAvg } from "./yahooGame/pitcherPaResultCommon"
 import { ORDERED_PITCH_COUNT_KEYS } from "./yahooGame/pitchCountSim"
 
@@ -235,19 +236,14 @@ const TEAM_ROWS: Omit<TeamVsRow, "era" | "ip" | "wl" | "qs_pct" | "k_pct" | "k_b
     { team: "ソフトバンク" },
     { team: "巨人" },
     { team: "ヤクルト" },
-    { team: "ＤｅＮＡ" },
+    { team: "横浜" },
     { team: "中日" },
     { team: "阪神" },
     { team: "広島" },
   ]
 
 function teamRowMatchesOpponent(uiTeam: string, opponentName: string): boolean {
-  if (!opponentName) return false
-  if (uiTeam === opponentName) return true
-  if (opponentName.includes(uiTeam)) return true
-  if (uiTeam === "巨人" && opponentName.includes("読売ジャイアンツ")) return true
-  if (uiTeam === "ＤｅＮＡ" && opponentName.includes("DeNA")) return true
-  return false
+  return playerVsTeamNamesMatch(uiTeam, opponentName)
 }
 
 function findOpponentTeamSplitRow(
