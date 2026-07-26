@@ -6,6 +6,7 @@ import {
   historicalSlugOverrideByRoman,
 } from "@/lib/historicalPlayerSlugOverrides"
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
+import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
 
 export type PlayerPageSection =
   | "basic"
@@ -81,9 +82,16 @@ export function playerPagePath(slug: string, section: PlayerPageSection = "basic
 }
 
 export function playerPagePathSegment(link: PlayerLinkIds): string {
-  const rosterSlug =
-    CURRENT_ROSTER_PLAYER_SLUGS[String(link.npbPlayerId ?? "").trim()]
-  if (rosterSlug) return rosterSlug
+  const publicId = String(link.playerId ?? "").trim()
+  const npbIdCandidates = [
+    String(link.npbPlayerId ?? "").trim(),
+    MANUAL_YAHOO_TO_NPB[publicId]?.trim() ?? "",
+    publicId,
+  ].filter(Boolean)
+  for (const npbId of npbIdCandidates) {
+    const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId]
+    if (rosterSlug) return rosterSlug
+  }
   const currentRosterNameSlug =
     currentRosterSlugByName.get(rosterNameMatchKey(link.name ?? "")) ??
     currentRosterSlugByName.get(compactPlayerName(link.name ?? ""))
@@ -93,8 +101,10 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
   const historicalSlug =
     historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
   if (historicalSlug) return historicalSlug
-  const historicalIdSlug = historicalSlugOverrideById(link.npbPlayerId)?.slug
-  if (historicalIdSlug) return historicalIdSlug
+  for (const npbId of npbIdCandidates) {
+    const historicalIdSlug = historicalSlugOverrideById(npbId)?.slug
+    if (historicalIdSlug) return historicalIdSlug
+  }
   const slug = slugifyPlayerRomanName(link.romanName || "")
   if (slug) return slug
   return String(link.name ?? "")
