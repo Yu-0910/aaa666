@@ -81,8 +81,6 @@ export function playerPagePath(slug: string, section: PlayerPageSection = "basic
 }
 
 export function playerPagePathSegment(link: PlayerLinkIds): string {
-  const historicalIdSlug = historicalSlugOverrideById(link.npbPlayerId)?.slug
-  if (historicalIdSlug) return historicalIdSlug
   const rosterSlug =
     CURRENT_ROSTER_PLAYER_SLUGS[String(link.npbPlayerId ?? "").trim()]
   if (rosterSlug) return rosterSlug
@@ -95,6 +93,8 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
   const historicalSlug =
     historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
   if (historicalSlug) return historicalSlug
+  const historicalIdSlug = historicalSlugOverrideById(link.npbPlayerId)?.slug
+  if (historicalIdSlug) return historicalIdSlug
   const slug = slugifyPlayerRomanName(link.romanName || "")
   if (slug) return slug
   return String(link.name ?? "")
