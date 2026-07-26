@@ -62,8 +62,11 @@ export function formatPlayerRomanSlug(romanName: string): string {
 
 const currentRosterSlugByName = new Map<string, string>()
 const currentRosterSlugByRoman = new Map<string, string>()
+const currentRosterSlugByNpbId = new Map<string, string>()
 
 for (const entry of CURRENT_ROSTER_PLAYER_ENTRIES) {
+  const npbPlayerId = String(entry.npbPlayerId ?? "").trim()
+  if (npbPlayerId && entry.slug) currentRosterSlugByNpbId.set(npbPlayerId, entry.slug)
   const name = String(entry.nameJa ?? "").trim()
   if (name) {
     currentRosterSlugByName.set(rosterNameMatchKey(name), entry.slug)
@@ -89,7 +92,7 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
     publicId,
   ].filter(Boolean)
   for (const npbId of npbIdCandidates) {
-    const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId]
+    const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId] ?? currentRosterSlugByNpbId.get(npbId)
     if (rosterSlug) return rosterSlug
   }
   const currentRosterNameSlug =

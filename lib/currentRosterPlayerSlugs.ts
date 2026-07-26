@@ -626,6 +626,7 @@ export const CURRENT_ROSTER_PLAYER_SLUGS: Record<string, string> = {
   "71975155": "uta-sakaguchi",
   "71975159": "keisuke-sato",
   "73075159": "reyes-franmil",
+  "73075152": "garcia-dermis",
   "73175138": "yoshiaki-watanabe",
   "73175136": "tsuyoshi-yamasaki",
   "73175150": "taito-murakami",
