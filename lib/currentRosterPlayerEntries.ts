@@ -87,6 +87,7 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "51655157", nameJa: "長谷部 銀次", romanFull: "Hasebe Ginji", position: "投手", teamCode: "C", slug: "ginji-hasebe" },
   { npbPlayerId: "91995112", nameJa: "炭谷 銀仁朗", romanFull: "Sumitani Ginjiro", position: "捕手", teamCode: "L", slug: "ginjiro-sumitani" },
   { npbPlayerId: "21625135", nameJa: "松本 剛", romanFull: "Matsumoto Go", position: "外野手", teamCode: "G", slug: "go-matsumoto" },
+  { npbPlayerId: "73075152", nameJa: "Ｄ．ガルシア", romanFull: "Dermis Garcia", position: "外野手", teamCode: "H", slug: "garcia-dermis" },
   { npbPlayerId: "93095150", nameJa: "Ｏ．ゴンザレス", romanFull: "Oscar Gonzalez", position: "外野手", teamCode: "E", slug: "gonzalez-oscar" },
   { npbPlayerId: "21025152", nameJa: "鈴木 豪太", romanFull: "Suzuki Gota", position: "投手", teamCode: "Hs", slug: "gota-suzuki" },
   { npbPlayerId: "71575159", nameJa: "尾田 剛樹", romanFull: "Oda Gouki", position: "外野手", teamCode: "D", slug: "gouki-oda" },
