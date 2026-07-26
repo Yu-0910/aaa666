@@ -245,6 +245,7 @@ function teamRowMatchesOpponent(uiTeam: string, opponentName: string): boolean {
   if (!opponentName) return false
   if (uiTeam === opponentName) return true
   if (opponentName.includes(uiTeam)) return true
+  if (uiTeam === "巨人" && opponentName.includes("読売ジャイアンツ")) return true
   if (uiTeam === "ＤｅＮＡ" && opponentName.includes("DeNA")) return true
   return false
 }
