@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useLayoutEffect } from "react"
-import type { CSSProperties } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import dynamic from "next/dynamic"
 import type { BattingTotalRowSource } from "@/lib/seasonStatsPilot"
 import {
@@ -52,6 +52,8 @@ type Props = {
   headingStripeColor?: string
   /** 今季サブタブ固定レイアウト: タブ下余白と重複する先頭 mt を抑える */
   pinLayoutShell?: boolean
+  /** 基本成績タブの本文先頭に差し込む追加コンテンツ */
+  basicTopContent?: ReactNode
 }
 
 /** 球団別カラー（ランキングUIと同様） */
@@ -187,6 +189,7 @@ export default function SeasonStatsPilot({
   rosterPrimaryPositionLabel,
   headingStripeColor = "#FF4444",
   pinLayoutShell = false,
+  basicTopContent,
 }: Props) {
   const isMobile = layout === "mobile"
   const titleBase = isMobile ? "text-[1.625rem]" : "text-[1.125rem]"
@@ -361,6 +364,7 @@ export default function SeasonStatsPilot({
       )}
       {/* total 行が無いと従来は以下全体が非表示になり Phase17 のみのとき真っ白になる。通算・打撃指標だけ total に依存する。 */}
       <div className={blockWrap}>
+          {showPilotTab("basic") && basicTopContent}
           {totalRow && showPilotTab("basic") && (
             <>
           <PilotTotalRecordBlock

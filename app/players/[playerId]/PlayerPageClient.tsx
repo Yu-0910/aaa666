@@ -88,6 +88,7 @@ import {
   buildCareerHighBattingCards,
   careerHighBattingSeasonYear,
   formatCareerHighBattingHeading,
+  pickOpsBestCareerHighRow,
 } from "@/lib/playerCareerHighBatting"
 import {
   buildCareerHighPitchingFromRows,
@@ -108,6 +109,7 @@ import {
   splitBattingColumns,
   PITCHING_STAT_COLUMNS,
   splitPitchingColumns,
+  type CareerColumnDef,
   type CareerDisplayRow,
 } from "@/lib/playerCareerMergedDisplay"
 import {
@@ -174,6 +176,78 @@ function primaryTeamStripeKeyFromCareer(profile: ProfileMergedPayload | null): s
 }
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
+
+const SATO_TERUAKI_NAME_KEY = "佐藤輝明"
+
+const SATO_BASIC_CAREER_HIGH_COLUMNS: CareerColumnDef[] = [
+  { key: "ops", label: "OPS", kind: "slash3" },
+  { key: "avg", label: "打率", kind: "slash3" },
+  { key: "hr", label: "本塁打", kind: "int" },
+  { key: "rbi", label: "打点", kind: "int" },
+  { key: "isop", label: "IsoP", kind: "dec3" },
+  { key: "k_pct", label: "K%", kind: "pct1" },
+]
+
+function SatoBasicCareerHighTable({
+  rows,
+  titleClassName,
+  stripeColor,
+}: {
+  rows: CareerDisplayRow[]
+  titleClassName: string
+  stripeColor: string
+}) {
+  const bestRow = pickOpsBestCareerHighRow(rows)
+
+  return (
+    <section className="mb-7">
+      <h2
+        className={`${titleClassName} mb-3 pl-4`}
+        style={{
+          borderLeft: `6px solid ${stripeColor}`,
+          fontWeight: 900,
+        }}
+      >
+        基本成績
+      </h2>
+      <div className="overflow-hidden overflow-x-auto">
+        <table
+          className="w-full text-xs"
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            borderCollapse: "collapse",
+            border: "1px solid #555",
+            tableLayout: "fixed",
+          }}
+        >
+          <thead>
+            <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+              {SATO_BASIC_CAREER_HIGH_COLUMNS.map((col) => (
+                <th key={col.key} className="px-1 py-1.5 text-center text-[10px] font-bold latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              style={{
+                backgroundColor: "rgba(255,255,255,0.03)",
+                borderTop: "1px solid #333",
+              }}
+            >
+              {SATO_BASIC_CAREER_HIGH_COLUMNS.map((col) => (
+                <td key={col.key} className="px-1 py-2 text-center latin text-[14px] font-black tabular-nums border-l border-gray-500 first:border-l-0">
+                  {bestRow ? formatCareerCell(col, bestRow) : "—"}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
 
 export function PlayerPageClient({
   layout,
@@ -1185,6 +1259,20 @@ export function PlayerPageClient({
       ),
     [profileMerged],
   )
+  const showSatoBasicCareerHighTable = useMemo(() => {
+    const names = [
+      displayName,
+      profileMerged?.name_ja,
+      profileMerged?.profile?.name,
+      profileMerged?.profile?.name_ja,
+    ]
+    return names.some((name) => rosterNameMatchKey(String(name ?? "")) === SATO_TERUAKI_NAME_KEY)
+  }, [
+    displayName,
+    profileMerged?.name_ja,
+    profileMerged?.profile?.name,
+    profileMerged?.profile?.name_ja,
+  ])
   const careerHighPitching = useMemo(() => {
     if (!pitcherCareerPitchingTablePilot) {
       return { cards: [], seasonYear: null as number | null }
@@ -1574,6 +1662,15 @@ export function PlayerPageClient({
             rosterFielderShell={showFielderSeasonPilotUi}
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
+            basicTopContent={
+              showSatoBasicCareerHighTable && kikuchiSeasonDetailTab === "basic" ? (
+                <SatoBasicCareerHighTable
+                  rows={(profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]}
+                  titleClassName={tb}
+                  stripeColor={sectionStripeColor}
+                />
+              ) : null
+            }
           />
         )}
       </div>
