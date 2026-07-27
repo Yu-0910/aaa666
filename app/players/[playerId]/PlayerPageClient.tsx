@@ -34,6 +34,7 @@ import {
 } from "@/lib/playerPageAlias"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
+import { formatRankingStatDisplay } from "@/lib/formatStat"
 import {
   enrichCareerPitchingRow,
   enrichCareerPitchingRows,
