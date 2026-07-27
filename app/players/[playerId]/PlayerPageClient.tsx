@@ -179,9 +179,7 @@ function primaryTeamStripeKeyFromCareer(profile: ProfileMergedPayload | null): s
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
 
-const SATO_TERUAKI_NAME_KEY = "佐藤輝明"
-
-function SatoBasicCurrentSeasonCareerHighGrid({
+function FielderBasicCurrentSeasonCareerHighGrid({
   totalRow,
   titleClassName,
   stripeColor,
@@ -229,7 +227,7 @@ function SatoBasicCurrentSeasonCareerHighGrid({
       >
         基本成績
       </h2>
-      <CareerHighStatGrid cards={cards} isMobile={isMobile} className="sato-basic-career-high-grid mb-0" />
+      <CareerHighStatGrid cards={cards} isMobile={isMobile} className="fielder-basic-career-high-grid mb-0" />
     </section>
   )
 }
@@ -1244,20 +1242,8 @@ export function PlayerPageClient({
       ),
     [profileMerged],
   )
-  const showSatoBasicCareerHighTable = useMemo(() => {
-    const names = [
-      displayName,
-      profileMerged?.name_ja,
-      profileMerged?.profile?.name,
-      profileMerged?.profile?.name_ja,
-    ]
-    return names.some((name) => rosterNameMatchKey(String(name ?? "")) === SATO_TERUAKI_NAME_KEY)
-  }, [
-    displayName,
-    profileMerged?.name_ja,
-    profileMerged?.profile?.name,
-    profileMerged?.profile?.name_ja,
-  ])
+  const showRosterFielderBasicCareerHighGrid =
+    isRosterPlayer && rosterKnownFielder && showFielderSeasonPilotUi
   const careerHighPitching = useMemo(() => {
     if (!pitcherCareerPitchingTablePilot) {
       return { cards: [], seasonYear: null as number | null }
@@ -1648,8 +1634,8 @@ export function PlayerPageClient({
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
             renderBasicTopContent={(totalRow) =>
-              showSatoBasicCareerHighTable && kikuchiSeasonDetailTab === "basic" ? (
-                <SatoBasicCurrentSeasonCareerHighGrid
+              showRosterFielderBasicCareerHighGrid && kikuchiSeasonDetailTab === "basic" ? (
+                <FielderBasicCurrentSeasonCareerHighGrid
                   totalRow={totalRow}
                   titleClassName={tb}
                   stripeColor={sectionStripeColor}
