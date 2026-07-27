@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
 import SeasonStatsPilot from "@/app/components/SeasonStatsPilot"
+import { CareerHighStatGrid } from "@/app/components/player/CareerHighStatGrid"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import type { PitcherSeasonPocPayload, PitcherSeasonPitchingPeriodPayload } from "@/lib/pitcherSeasonPocTypes"
 import { ORDERED_PITCH_COUNT_KEYS } from "@/lib/yahooGame/pitchCountSim"
@@ -28,7 +29,7 @@ import {
   EMPTY_TEAM_VS_ROWS,
   EMPTY_STADIUM_VS_ROWS,
 } from "@/lib/pitcherSeasonPocUi"
-import { formatEra } from "@/lib/formatStat"
+import { formatEra, formatRankingStatDisplay } from "@/lib/formatStat"
 import { formatSlashStatDisplay, slashRate3FromCounts } from "@/lib/battingRateFormat"
 import {
   PitchTypeSplitViewsSection,
@@ -96,6 +97,48 @@ function orderCountPitchAbCells(cells: string[], abBeforeH: boolean): string[] {
   return [cells[1], cells[0], ...cells.slice(2)]
 }
 
+function pitcherCurrentSeasonBasicCards(
+  pitcherSeasonPocPayload: PitcherSeasonPocPayload | null,
+  pitcherSeasonPitchTypesPayload: PitcherSeasonPitchTypesPayload | null,
+) {
+  const na = "—"
+  const b = pitcherSeasonPocPayload?.basic
+  const wins =
+    b == null
+      ? na
+      : `${typeof b.winCount === "number" ? b.winCount : b.decision === "win" ? 1 : 0}-${
+          typeof b.lossCount === "number" ? b.lossCount : b.decision === "loss" ? 1 : 0
+        }`
+  const fastballRow = pitcherSeasonPitchTypesPayload?.rows.find((row) =>
+    /ストレート|直球|fastball/i.test(row.pitch_type),
+  )
+  const fastballAvgSpeed =
+    fastballRow?.avg_speed_kmh != null && Number.isFinite(fastballRow.avg_speed_kmh)
+      ? fastballRow.avg_speed_kmh.toFixed(1)
+      : na
+
+  return [
+    { title: "防御率", value: b ? formatEra(b.era) : na, year: "" },
+    { title: "勝敗", value: wins, year: "" },
+    {
+      title: "K-BB％",
+      value: b && b.bf > 0 ? formatRankingStatDisplay("K-BB％", ((b.so - b.bb) / b.bf) * 100) : na,
+      year: "",
+    },
+    {
+      title: "K％",
+      value: b && b.bf > 0 ? formatRankingStatDisplay("K％", (b.so / b.bf) * 100) : na,
+      year: "",
+    },
+    {
+      title: "BB％",
+      value: b && b.bf > 0 ? formatRankingStatDisplay("BB％", (b.bb / b.bf) * 100) : na,
+      year: "",
+    },
+    { title: "ストレート平均球速", value: fastballAvgSpeed, year: "" },
+  ]
+}
+
 export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyProps) {
   const {
     tb,
@@ -129,6 +172,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
 
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
+  const pitcherBasicCards = useMemo(
+    () => pitcherCurrentSeasonBasicCards(pitcherSeasonPocPayload, pitcherSeasonPitchTypesPayload),
+    [pitcherSeasonPocPayload, pitcherSeasonPitchTypesPayload],
+  )
 
   const pitcherPocTeamTable = useMemo(
     () =>
@@ -215,6 +262,12 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                     >
                       基本成績
                     </h2>
+
+                    <CareerHighStatGrid
+                      cards={pitcherBasicCards}
+                      isMobile={isMobile}
+                      className="pitcher-basic-career-high-grid mb-4"
+                    />
 
                     <div className="overflow-hidden overflow-x-auto mb-4">
                       <table

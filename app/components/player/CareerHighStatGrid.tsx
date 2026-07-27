@@ -37,6 +37,7 @@ export function CareerHighStatGrid({
       {cards.map((stat) => (
         <div
           key={stat.title}
+          data-career-high-card-title={stat.title}
           className="overflow-hidden"
           style={{
             containerType: "inline-size",

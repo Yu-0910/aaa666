@@ -275,14 +275,22 @@
     height: calc(0.17em + 0.6156em) !important;
   }
 
+  .player-page-fonts .pitcher-basic-career-high-grid [data-career-high-label-shell] {
+    padding-top: 0.17em !important;
+    height: calc(0.17em + 0.6156em) !important;
+  }
+
   .player-page-fonts .fielder-basic-career-high-grid [data-career-high-label-bg],
-  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-label-wrap] {
+  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-label-wrap],
+  .player-page-fonts .pitcher-basic-career-high-grid [data-career-high-label-bg],
+  .player-page-fonts .pitcher-basic-career-high-grid [data-career-high-label-wrap] {
     top: 0.17em !important;
     width: min(3.9468em, 83.6%) !important;
     height: 0.6156em !important;
   }
 
-  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-label] {
+  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-label],
+  .player-page-fonts .pitcher-basic-career-high-grid [data-career-high-label] {
     font-family: var(--font-inter), "Inter", sans-serif !important;
     font-size: 0.46903em !important;
     font-weight: 900 !important;
@@ -290,13 +298,33 @@
     transform: translateY(0.06em) !important;
   }
 
-  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-value] {
+  .player-page-fonts .fielder-basic-career-high-grid [data-career-high-value],
+  .player-page-fonts .pitcher-basic-career-high-grid [data-career-high-value] {
     font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif !important;
     font-size: 1.44572em !important;
     font-weight: 900 !important;
     letter-spacing: 0.032em !important;
     line-height: 1 !important;
     font-variant-numeric: tabular-nums !important;
+  }
+
+  .player-page-fonts
+    .pitcher-basic-career-high-grid
+    [data-career-high-card-title="ストレート平均球速"]
+    [data-career-high-label-bg],
+  .player-page-fonts
+    .pitcher-basic-career-high-grid
+    [data-career-high-card-title="ストレート平均球速"]
+    [data-career-high-label-wrap] {
+    width: min(5.2em, 96%) !important;
+  }
+
+  .player-page-fonts
+    .pitcher-basic-career-high-grid
+    [data-career-high-card-title="ストレート平均球速"]
+    [data-career-high-label] {
+    font-size: 0.35em !important;
+    letter-spacing: 0.02em !important;
   }
 
   /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 狭い幅でも縮むよう下限を抑え、親より狭いときは横スクロール */
