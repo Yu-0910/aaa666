@@ -270,6 +270,35 @@
     font-size: calc(1.3em * 1.15) !important;
   }
 
+  .player-page-fonts .sato-basic-career-high-grid [data-career-high-label-shell] {
+    padding-top: 0.17em !important;
+    height: calc(0.17em + 0.43092em) !important;
+  }
+
+  .player-page-fonts .sato-basic-career-high-grid [data-career-high-label-bg],
+  .player-page-fonts .sato-basic-career-high-grid [data-career-high-label-wrap] {
+    top: 0.17em !important;
+    width: min(3.9468em, 83.6%) !important;
+    height: 0.43092em !important;
+  }
+
+  .player-page-fonts .sato-basic-career-high-grid [data-career-high-label] {
+    font-family: var(--font-inter), "Inter", sans-serif !important;
+    font-size: 0.32832em !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.05em !important;
+    transform: translateY(0.06em) !important;
+  }
+
+  .player-page-fonts .sato-basic-career-high-grid [data-career-high-value] {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif !important;
+    font-size: 1.012em !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.032em !important;
+    line-height: 1 !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
   /* 2025 TOP 打撃・上4指標（OPS/打率/本塁打/打点）: 狭い幅でも縮むよう下限を抑え、親より狭いときは横スクロール */
   .batting-top-2025-four-metrics {
     width: 100%;

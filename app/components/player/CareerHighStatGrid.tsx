@@ -51,6 +51,7 @@ export function CareerHighStatGrid({
           }}
         >
           <div
+            data-career-high-label-shell
             className="latin tabular-nums tracking-tight"
             style={{
               position: "relative",
@@ -63,6 +64,7 @@ export function CareerHighStatGrid({
           >
             <div
               aria-hidden
+              data-career-high-label-bg
               style={{
                 position: "absolute",
                 left: "50%",
@@ -74,6 +76,7 @@ export function CareerHighStatGrid({
               }}
             />
             <div
+              data-career-high-label-wrap
               className="absolute z-[1] flex items-center justify-center"
               style={{
                 left: "50%",
@@ -84,6 +87,7 @@ export function CareerHighStatGrid({
               }}
             >
               <span
+                data-career-high-label
                 className="font-light leading-none whitespace-nowrap"
                 style={{
                   color: "#000000",
@@ -113,6 +117,7 @@ export function CareerHighStatGrid({
               }}
             >
               <div
+                data-career-high-value
                 className="font-black leading-none"
                 style={{
                   flexShrink: 0,

@@ -229,7 +229,7 @@ function SatoBasicCurrentSeasonCareerHighGrid({
       >
         基本成績
       </h2>
-      <CareerHighStatGrid cards={cards} isMobile={isMobile} className="mb-0" />
+      <CareerHighStatGrid cards={cards} isMobile={isMobile} className="sato-basic-career-high-grid mb-0" />
     </section>
   )
 }
