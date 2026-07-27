@@ -88,14 +88,16 @@ import {
   buildCareerHighBattingCards,
   careerHighBattingSeasonYear,
   formatCareerHighBattingHeading,
-  pickOpsBestCareerHighRow,
 } from "@/lib/playerCareerHighBatting"
 import {
   buildCareerHighPitchingFromRows,
   formatCareerHighPitchingHeading,
 } from "@/lib/playerCareerHighPitching"
 import { resolvePitcherPocYahooGameId } from "@/lib/yahooGame/pitcherPocDefaults"
-import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
+import {
+  DERIVED_SEASON_YEAR_DEFAULT,
+  type SeasonStatsRow,
+} from "@/lib/seasonStatsPilotShared"
 import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
 import CareerBattingTableRankingStyle from "@/app/components/player/CareerBattingTableRankingStyle"
@@ -109,7 +111,6 @@ import {
   splitBattingColumns,
   PITCHING_STAT_COLUMNS,
   splitPitchingColumns,
-  type CareerColumnDef,
   type CareerDisplayRow,
 } from "@/lib/playerCareerMergedDisplay"
 import {
@@ -179,25 +180,42 @@ const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieCha
 
 const SATO_TERUAKI_NAME_KEY = "佐藤輝明"
 
-const SATO_BASIC_CAREER_HIGH_COLUMNS: CareerColumnDef[] = [
-  { key: "ops", label: "OPS", kind: "slash3" },
-  { key: "avg", label: "打率", kind: "slash3" },
-  { key: "hr", label: "本塁打", kind: "int" },
-  { key: "rbi", label: "打点", kind: "int" },
-  { key: "isop", label: "IsoP", kind: "dec3" },
-  { key: "k_pct", label: "K%", kind: "pct1" },
-]
-
-function SatoBasicCareerHighTable({
-  rows,
+function SatoBasicCurrentSeasonCareerHighGrid({
+  totalRow,
   titleClassName,
   stripeColor,
+  isMobile,
 }: {
-  rows: CareerDisplayRow[]
+  totalRow: SeasonStatsRow | null
   titleClassName: string
   stripeColor: string
+  isMobile: boolean
 }) {
-  const bestRow = pickOpsBestCareerHighRow(rows)
+  const na = "—"
+  const cards = [
+    { title: "OPS", value: totalRow ? formatSlashStatDisplay(totalRow.ops) : na, year: "" },
+    { title: "打率", value: totalRow ? formatSlashStatDisplay(totalRow.avg) : na, year: "" },
+    {
+      title: "本塁打",
+      value: totalRow ? formatRankingStatDisplay("本塁打", totalRow.hr) : na,
+      year: "",
+    },
+    {
+      title: "打点",
+      value: totalRow ? formatRankingStatDisplay("打点", totalRow.rbi) : na,
+      year: "",
+    },
+    {
+      title: "IsoP",
+      value: totalRow ? formatRankingStatDisplay("IsoP", totalRow.isop) : na,
+      year: "",
+    },
+    {
+      title: "K%",
+      value: totalRow ? formatRankingStatDisplay("K%", totalRow.k_pct) : na,
+      year: "",
+    },
+  ]
 
   return (
     <section className="mb-7">
@@ -210,41 +228,7 @@ function SatoBasicCareerHighTable({
       >
         基本成績
       </h2>
-      <div className="overflow-hidden overflow-x-auto">
-        <table
-          className="w-full text-xs"
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            borderCollapse: "collapse",
-            border: "1px solid #555",
-            tableLayout: "fixed",
-          }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-              {SATO_BASIC_CAREER_HIGH_COLUMNS.map((col) => (
-                <th key={col.key} className="px-1 py-1.5 text-center text-[10px] font-bold latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              style={{
-                backgroundColor: "rgba(255,255,255,0.03)",
-                borderTop: "1px solid #333",
-              }}
-            >
-              {SATO_BASIC_CAREER_HIGH_COLUMNS.map((col) => (
-                <td key={col.key} className="px-1 py-2 text-center latin text-[14px] font-black tabular-nums border-l border-gray-500 first:border-l-0">
-                  {bestRow ? formatCareerCell(col, bestRow) : "—"}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <CareerHighStatGrid cards={cards} isMobile={isMobile} className="mb-0" />
     </section>
   )
 }
@@ -1662,12 +1646,13 @@ export function PlayerPageClient({
             rosterFielderShell={showFielderSeasonPilotUi}
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
-            basicTopContent={
+            renderBasicTopContent={(totalRow) =>
               showSatoBasicCareerHighTable && kikuchiSeasonDetailTab === "basic" ? (
-                <SatoBasicCareerHighTable
-                  rows={(profileMerged?.career_batting?.rows ?? []) as CareerDisplayRow[]}
+                <SatoBasicCurrentSeasonCareerHighGrid
+                  totalRow={totalRow}
                   titleClassName={tb}
                   stripeColor={sectionStripeColor}
+                  isMobile={isMobile}
                 />
               ) : null
             }
