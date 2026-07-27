@@ -269,6 +269,16 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       className="pitcher-basic-career-high-grid mb-4"
                     />
 
+                    <h2
+                      className={pitcherSeasonFirstH2Class}
+                      style={{
+                        borderLeft: `6px solid ${sectionStripeColor}`,
+                        fontWeight: 900,
+                      }}
+                    >
+                      詳細成績
+                    </h2>
+
                     <div className="overflow-hidden overflow-x-auto mb-4">
                       <table
                         className="text-xs"
