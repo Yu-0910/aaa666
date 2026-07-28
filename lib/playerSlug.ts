@@ -112,6 +112,19 @@ export function playerPagePath(slug: string, section: PlayerPageSection = "basic
 }
 
 export function playerPagePathSegment(link: PlayerLinkIds): string {
+  const knownSegment = playerPagePathSegmentKnown(link)
+  if (knownSegment) return knownSegment
+  const slug = slugifyPlayerRomanName(link.romanName || "")
+  if (slug) return slug
+  return String(link.name ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .trim() || "unknown-player"
+}
+
+export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   const publicId = String(link.playerId ?? "").trim()
   const npbIdCandidates = [
     String(link.npbPlayerId ?? "").trim(),
@@ -135,14 +148,7 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
     const historicalIdSlug = historicalSlugOverrideById(npbId)?.slug
     if (historicalIdSlug) return historicalIdSlug
   }
-  const slug = slugifyPlayerRomanName(link.romanName || "")
-  if (slug) return slug
-  return String(link.name ?? "")
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .trim() || "unknown-player"
+  return null
 }
 
 export function playerPageHref(
@@ -150,6 +156,14 @@ export function playerPageHref(
   section: PlayerPageSection = "basic",
 ): string {
   return playerPagePath(playerPagePathSegment(link), section)
+}
+
+export function playerPageHrefKnown(
+  link: PlayerLinkIds,
+  section: PlayerPageSection = "basic",
+): string | null {
+  const segment = playerPagePathSegmentKnown(link)
+  return segment ? playerPagePath(segment, section) : null
 }
 
 export function resolvePlayerPageSectionFromLegacyTab(tab: string | null | undefined): PlayerPageSection {

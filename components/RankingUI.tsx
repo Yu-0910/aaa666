@@ -17,7 +17,7 @@ import type { MetricDefinition, RankingViewModel, RankingRow } from '@/lib/ranki
 import { formatRomanNameForRanking } from '@/lib/ranking/formatRomanNameForRanking'
 import { rankingTeamStripeColor } from '@/lib/ranking/teamStripeColor'
 import { formatStat } from '@/lib/formatStat'
-import { playerPageHref } from '@/lib/playerPageHref'
+import { playerPageHrefKnown } from '@/lib/playerPageHref'
 import { usesRanking2025CompactTableUi } from '@/lib/ranking/rankingUiVariant'
 import { withOfficialRomanOverride } from '@/lib/playerOfficialRomanOverrides'
 import { dedupeRankingRowsForDisplay } from '@/lib/ranking/dedupeRankingRows'
@@ -460,19 +460,30 @@ export default function RankingUI({
                                 className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05]"
                                 style={{ height: playerNameBlockHeight }}
                               >
-                                <Link
-                                  href={playerPageHref({
+                                {(() => {
+                                  const href = playerPageHrefKnown({
                                     npbPlayerId: row.npbPlayerId,
                                     playerId: row.playerId,
                                     name: row.name,
                                     romanName: romanNameForUrl,
-                                  })}
-                                  className="block truncate"
-                                >
-                                  <span className="text-white hover:text-[#ffff44] text-[13px] font-semibold truncate">
-                                    {row.name.replace(/\s+/g, '')}
-                                  </span>
-                                </Link>
+                                  })
+                                  const nameNode = (
+                                    <span className="text-white text-[13px] font-semibold truncate">
+                                      {row.name.replace(/\s+/g, '')}
+                                    </span>
+                                  )
+                                  return href ? (
+                                    <Link href={href} className="block truncate">
+                                      <span className="text-white hover:text-[#ffff44] text-[13px] font-semibold truncate">
+                                        {row.name.replace(/\s+/g, '')}
+                                      </span>
+                                    </Link>
+                                  ) : (
+                                    <span className="block truncate" data-player-link-state="unresolved">
+                                      {nameNode}
+                                    </span>
+                                  )
+                                })()}
                                 {hasRomanName && (
                                   <span className="text-[10px] text-gray-400 latin truncate line-clamp-1">
                                     {formatRomanNameForRanking(romanName, { nameJa: row.name })}

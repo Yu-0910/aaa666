@@ -1488,6 +1488,15 @@ function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProd
   )
 }
 
+function runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun }) {
+  const ids = Array.isArray(gameIds) ? gameIds.map(String).filter(Boolean) : []
+  const gameIdsArg = ids.length > 0 ? ` --game-ids ${ids.join(",")}` : ""
+  run(
+    "未知選手手続き: 2回目公開後の検出・分類",
+    `npx tsx scripts/resolve_unknown_players_after_publish.ts --year ${year} --from ${from} --to ${to}${gameIdsArg}`,
+    { dryRun },
+  )
+}
 function runFastStage({
   year,
   from,
@@ -1738,6 +1747,7 @@ function runFullStage({
 
   if (!noPublish) {
     runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction })
+    runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {
     run("本番ビルド（2回目後）", "npm run build:clean", { dryRun })
