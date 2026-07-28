@@ -39,6 +39,8 @@ export const MANUAL_YAHOO_TO_NPB: Record<string, string> = {
   "2105885": "33735155",
   // 森脇 亮介（西武・投）— 2026/7/3 取り込み時に Yahoo ID のみで掲載され、phase19 の team/romanName verify が落ちる
   "1800085": "71875138",
+  // 西舘 昂汰（ヤクルト・投）— 2026/7 支配下復帰後の Yahoo ID を NPB 公式IDへ解決する
+  "1950494": "11615159",
 
   // 2026 打撃ランキング: 名簿に未収録の Yahoo ID の暫定受け皿（league/team 解決用）
   // NPB 公式IDが判明したら置き換える

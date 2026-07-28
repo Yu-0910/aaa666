@@ -112,6 +112,7 @@ export const CURRENT_ROSTER_PLAYER_SLUGS: Record<string, string> = {
   "11515155": "hidetaka-okadome",
   "11515157": "makoto-kadowaki",
   "11515159": "ryo-ohyama",
+  "11615159": "kota-nishidate",
   "11615134": "hiroki-hasegawa",
   "11615155": "isami-nomura",
   "11615157": "seiya-hashimoto",

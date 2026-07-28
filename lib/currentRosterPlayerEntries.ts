@@ -280,6 +280,7 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "41645159", nameJa: "平山 功太", romanFull: "Hirayama Kota", position: "内野手", teamCode: "G", slug: "kota-hirayama" },
   { npbPlayerId: "91195138", nameJa: "石橋 康太", romanFull: "Ishibashi Kota", position: "捕手", teamCode: "D", slug: "kota-ishibashi" },
   { npbPlayerId: "81285132", nameJa: "中川 皓太", romanFull: "Nakagawa Kota", position: "投手", teamCode: "G", slug: "kota-nakagawa" },
+  { npbPlayerId: "11615159", nameJa: "西舘 昂汰", romanFull: "Nishidate Kota", position: "投手", teamCode: "S", slug: "kota-nishidate" },
   { npbPlayerId: "91295150", nameJa: "荘司 宏太", romanFull: "Shoji Kota", position: "投手", teamCode: "S", slug: "kota-shoji" },
   { npbPlayerId: "01205155", nameJa: "達 孝太", romanFull: "Tatsu Kota", position: "投手", teamCode: "F", slug: "kota-tatsu" },
   { npbPlayerId: "73375157", nameJa: "矢澤 宏太", romanFull: "Yazawa Kota", position: "投手", teamCode: "F", slug: "kota-yazawa" },
