@@ -60,9 +60,34 @@ export function formatPlayerRomanSlug(romanName: string): string {
     .join("-")
 }
 
+function romanShortCandidatesFromFull(romanName: string): string[] {
+  const normalized = String(romanName ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.'’]/g, " ")
+    .replace(/[^A-Za-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const tokens = normalized.split(" ").filter(Boolean)
+  if (tokens.length < 2) return []
+  const first = tokens[0]!
+  const last = tokens[tokens.length - 1]!
+  const candidates = new Set<string>()
+  if (first && last) {
+    candidates.add(`${first.slice(0, 1).toUpperCase()}.${last}`)
+    candidates.add(`${last.slice(0, 1).toUpperCase()}.${first}`)
+  }
+  return [...candidates]
+}
+
 const currentRosterSlugByName = new Map<string, string>()
 const currentRosterSlugByRoman = new Map<string, string>()
 const currentRosterSlugByNpbId = new Map<string, string>()
+
+function setCurrentRosterRomanSlug(romanName: string, slug: string): void {
+  const romanSlug = slugifyPlayerRomanName(romanName)
+  if (romanSlug && !currentRosterSlugByRoman.has(romanSlug)) currentRosterSlugByRoman.set(romanSlug, slug)
+}
 
 for (const entry of CURRENT_ROSTER_PLAYER_ENTRIES) {
   const npbPlayerId = String(entry.npbPlayerId ?? "").trim()
@@ -72,8 +97,10 @@ for (const entry of CURRENT_ROSTER_PLAYER_ENTRIES) {
     currentRosterSlugByName.set(rosterNameMatchKey(name), entry.slug)
     currentRosterSlugByName.set(compactPlayerName(name), entry.slug)
   }
-  const romanSlug = slugifyPlayerRomanName(entry.romanFull)
-  if (romanSlug) currentRosterSlugByRoman.set(romanSlug, entry.slug)
+  setCurrentRosterRomanSlug(entry.romanFull, entry.slug)
+  for (const romanShort of romanShortCandidatesFromFull(entry.romanFull)) {
+    setCurrentRosterRomanSlug(romanShort, entry.slug)
+  }
 }
 
 export function playerPagePath(slug: string, section: PlayerPageSection = "basic"): string {

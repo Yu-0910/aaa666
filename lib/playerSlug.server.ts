@@ -51,14 +51,24 @@ type NonRosterMetaRoman = {
   roman?: { name_en_full?: string; name_en_short?: string }
 }
 
-function abbreviatedRomanFromFull(romanFull: string): string {
-  const slug = slugifyPlayerRomanName(romanFull)
-  const parts = slug.split("-").filter(Boolean)
-  if (parts.length < 2) return ""
-  const given = parts[0] ?? ""
-  const surname = parts[parts.length - 1] ?? ""
-  if (!given || !surname) return ""
-  return `${surname}-${given[0]}`
+function romanShortCandidatesFromFull(romanFull: string): string[] {
+  const normalized = String(romanFull ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.'’]/g, " ")
+    .replace(/[^A-Za-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const tokens = normalized.split(" ").filter(Boolean)
+  if (tokens.length < 2) return []
+  const first = tokens[0]!
+  const last = tokens[tokens.length - 1]!
+  const candidates = new Set<string>()
+  if (first && last) {
+    candidates.add(`${first.slice(0, 1).toUpperCase()}.${last}`)
+    candidates.add(`${last.slice(0, 1).toUpperCase()}.${first}`)
+  }
+  return [...candidates]
 }
 
 function entryFromHistoricalOverride(override: HistoricalPlayerSlugOverride): PlayerSlugEntry {
@@ -133,9 +143,9 @@ function buildSlugIndex(): PlayerSlugIndex {
     for (const legacySlug of historicalOverride?.legacySlugs ?? []) {
       if (!bySlug.has(legacySlug)) bySlug.set(legacySlug, entry)
     }
-    const abbreviatedSlug = slugifyPlayerRomanName(abbreviatedRomanFromFull(entry.romanFull))
-    if (abbreviatedSlug && !bySlug.has(abbreviatedSlug)) {
-      bySlug.set(abbreviatedSlug, entry)
+    for (const romanShort of romanShortCandidatesFromFull(entry.romanFull)) {
+      const shortSlug = slugifyPlayerRomanName(romanShort)
+      if (shortSlug && !bySlug.has(shortSlug)) bySlug.set(shortSlug, entry)
     }
     if (!byNpbId.has(entry.npbPlayerId)) byNpbId.set(entry.npbPlayerId, entry)
     const rosterNameKey = rosterNameMatchKey(entry.nameJa)
