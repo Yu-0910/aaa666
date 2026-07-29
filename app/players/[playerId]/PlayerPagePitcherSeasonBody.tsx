@@ -793,7 +793,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                       {formatEra(row.era)}
                                     </td>
                                     <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                      —
+                                      {`${Number(row.wins ?? 0)}-${Number(row.losses ?? 0)}`}
                                     </td>
                                     <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
                                       {row.ip}
@@ -808,7 +808,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                       {row.whip != null ? row.whip.toFixed(3) : "—"}
                                     </td>
                                     <td className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                      —
+                                      {`${Number(row.wins ?? 0)}-${Number(row.losses ?? 0)}`}
                                     </td>
                                   </tr>
                                 ))

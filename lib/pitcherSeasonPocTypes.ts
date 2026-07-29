@@ -95,7 +95,7 @@ export type PitcherSeasonPocPayload = {
     /**
      * phase_pitcher_poc1: canonical 試合単位で集計（無い場合は旧 JSON）。
      * 先発判定は pitchingLines のチーム内先頭行。QS は先発のみ 6回以上・自責3以下。
-     * 完投は当該試合でチームに当該投手のみかつ7回以上（21 outs）の参考値。
+     * 完投は先発・チーム内単独登板・9回以上（27 outs）を満たす場合の値。
      */
     gamesAppeared?: number
     gamesStarted?: number
@@ -259,6 +259,8 @@ export type PitcherSeasonPitchingPeriodRow = {
   split_value: string
   split_label: string
   g: number
+  wins?: number
+  losses?: number
   ip: string
   ipOuts: number
   era: number | null

@@ -1,6 +1,6 @@
 /**
  * Phase 7 週間行 → 投手ランキング JSON 1 行（Phase 28）
- * 勝利・セーブ等は週次 JSON に無いため 0（週間は登板実績ベース指標が主）
+ * 勝敗は Phase 7 の期間別 pitchingLines.decision 集計を使う。
  */
 
 import type { PitcherSeasonPitchingPeriodRow } from "@/lib/pitcherSeasonPocTypes"
@@ -15,6 +15,8 @@ export function buildPitchingRankingRowFromPeriodRow(
   const team = meta.team.trim()
   const bf = row.bf
   const ipDec = row.ipOuts / 3
+  const wins = row.wins ?? 0
+  const losses = row.losses ?? 0
   const kPct = bf > 0 ? (row.so / bf) * 100 : 0
   const bbPct = bf > 0 ? (row.bb / bf) * 100 : 0
   const kBbPct = bf > 0 ? ((row.so - row.bb) / bf) * 100 : 0
@@ -35,8 +37,8 @@ export function buildPitchingRankingRowFromPeriodRow(
     era: row.era ?? 0,
     whip: row.whip ?? 0,
     k_bb_pct: kBbPct,
-    w: 0,
-    l: 0,
+    w: wins,
+    l: losses,
     hld: 0,
     sv: 0,
     hp: 0,
@@ -44,7 +46,7 @@ export function buildPitchingRankingRowFromPeriodRow(
     gs: 0,
     cg: 0,
     sho: 0,
-    wpct: 0,
+    wpct: wins + losses > 0 ? wins / (wins + losses) : 0,
     ip: ipDec,
     bf,
     np: row.pitches,

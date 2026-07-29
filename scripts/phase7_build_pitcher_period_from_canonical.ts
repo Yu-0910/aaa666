@@ -17,7 +17,6 @@ import {
   readdirSync,
   readFileSync,
   unlinkSync,
-  writeFileSync,
 } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
@@ -36,20 +35,36 @@ import {
 } from "../lib/yahooGame/pitcherPocHelpers"
 import { parseRosterCsv } from "../lib/yahooGame/rosterCsv"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyNpbIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
+  let onlyNpbIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+      onlyNpbIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, from, to, onlyNpbIds }
 }
 
 function ipToOuts(ip: string | undefined): number {
@@ -77,6 +92,8 @@ function outsToIpDisplay(outs: number): string {
 type MergedPitching = {
   yahooPlayerId: string
   playerName: string
+  wins: number
+  losses: number
   outs: number
   bf: number
   h: number
@@ -104,6 +121,8 @@ function mergePitchingLines(lines: PitchingLine[]): Map<string, MergedPitching> 
       m = {
         yahooPlayerId: yid,
         playerName: pl.playerName,
+        wins: 0,
+        losses: 0,
         outs: 0,
         bf: 0,
         h: 0,
@@ -118,6 +137,8 @@ function mergePitchingLines(lines: PitchingLine[]): Map<string, MergedPitching> 
       }
       byYahoo.set(yid, m)
     }
+    if (pl.decision === "win") m.wins += 1
+    else if (pl.decision === "loss") m.losses += 1
     m.outs += ipToOuts(pl.ip)
     m.bf += pl.bf ?? 0
     m.h += pl.h ?? 0
@@ -135,6 +156,8 @@ function mergePitchingLines(lines: PitchingLine[]): Map<string, MergedPitching> 
 
 type LineAgg = {
   gameIds: Set<string>
+  wins: number
+  losses: number
   outs: number
   bf: number
   h: number
@@ -151,6 +174,8 @@ type LineAgg = {
 function emptyLineAgg(): LineAgg {
   return {
     gameIds: new Set(),
+    wins: 0,
+    losses: 0,
     outs: 0,
     bf: 0,
     h: 0,
@@ -167,6 +192,8 @@ function emptyLineAgg(): LineAgg {
 
 function addLineAgg(a: LineAgg, m: MergedPitching, gameId: string): void {
   a.gameIds.add(gameId)
+  a.wins += m.wins
+  a.losses += m.losses
   a.outs += m.outs
   a.bf += m.bf
   a.h += m.h
@@ -211,6 +238,10 @@ function monthLabel(mk: string): string {
   return `${parseInt(m[2], 10)}月`
 }
 
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
 function lineAggToRow(
   split_type: "calendar_month" | "calendar_week",
   split_value: string,
@@ -228,6 +259,8 @@ function lineAggToRow(
     split_value,
     split_label,
     g: line.gameIds.size,
+    wins: line.wins,
+    losses: line.losses,
     ip: outsToIpDisplay(line.outs),
     ipOuts: line.outs,
     era,
@@ -247,18 +280,24 @@ function lineAggToRow(
 }
 
 function main(): void {
-  const { year } = parseArgs()
+  const { year, from, to, onlyNpbIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase7] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
   const rosterPath = join(projectRoot, "_data", `npb_roster_${year}.csv`)
   if (!existsSync(rosterPath)) {
     console.error("[phase7] missing roster:", rosterPath)
     process.exit(1)
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase7] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
   }
+  const targetNpbIds = onlyNpbIds ? [...onlyNpbIds] : null
+  const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
 
   const byNpbMonthLine = new Map<string, Map<string, LineAgg>>()
   const byNpbWeekLine = new Map<string, Map<string, LineAgg>>()
@@ -304,6 +343,8 @@ function main(): void {
   for (const doc of docs) {
     const ymd = parseGameDateYmdFromCanonical(doc)
     if (!ymd || ymd.slice(0, 4) !== year) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
     const mk = monthKeyFromYmd(ymd)
     const wk = tuesdayWeekKeyFromYmd(ymd)
     if (!wk) continue
@@ -329,6 +370,7 @@ function main(): void {
       const hit = resolveNpbForPitcherLine(roster, doc, lineLike)
       if (!hit) continue
       const npb = hit.npbPlayerId
+      if (targetNpbIdSet && !targetNpbIdSet.has(npb)) continue
 
       const mm = ensureLineMap(byNpbMonthLine, npb)
       const ma = mm.get(mk) ?? emptyLineAgg()
@@ -347,6 +389,7 @@ function main(): void {
       if (!pid) continue
       const npb = npbForYahooPitcher(doc, pid)
       if (!npb) continue
+      if (targetNpbIdSet && !targetNpbIdSet.has(npb)) continue
 
       const res = lastPitchResult(pa)
       const pMonth = ensurePaMap(byNpbMonthPa, npb)
@@ -365,6 +408,8 @@ function main(): void {
   mkdirSync(outDir, { recursive: true })
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("npb_") && f.endsWith(".json")) {
+      const npbId = f.replace(/^npb_/, "").replace(/\.json$/, "")
+      if (targetNpbIds && !targetNpbIds.includes(npbId)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -374,7 +419,7 @@ function main(): void {
   }
 
   const npbIds = new Set<string>([...byNpbMonthLine.keys(), ...byNpbWeekLine.keys()])
-  const sortedNpb = [...npbIds].sort()
+  const sortedNpb = (targetNpbIds ?? [...npbIds]).slice().sort()
 
   let written = 0
   for (const npb of sortedNpb) {
@@ -424,11 +469,13 @@ function main(): void {
       },
       rows,
     }
-    writeFileSync(join(outDir, `npb_${npb}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(join(outDir, `npb_${npb}.json`), payload)
     written++
   }
 
-  console.log(`[phase7] wrote ${written} files → ${outDir}`)
+  console.log(
+    `[phase7] wrote ${written} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()
