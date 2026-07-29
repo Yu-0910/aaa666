@@ -649,7 +649,7 @@ export function pitcherPocMetricRow2(pp: PitcherSeasonPocPayload): string[] {
 
   return [
     goAo,
-    "—",
+    pp.nf3Metrics?.enGoRate ?? "—",
     ipr,
     nhbPctStr,
     fip,

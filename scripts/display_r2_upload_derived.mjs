@@ -118,6 +118,7 @@ const DERIVED_CATEGORIES_BASE = [
   'player_season_batting_vs_hand',
   'player_season_pitching_poc',
   'player_season_pitching_period',
+  'pitcher_nf3_metrics',
   'player_pitch_from_canonical',
   'pitcher_zone_from_canonical',
   'player_catcher_appearances',

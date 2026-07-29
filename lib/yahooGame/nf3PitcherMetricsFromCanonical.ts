@@ -4,6 +4,8 @@
  */
 
 import type { CanonicalGameDocument, PitchingLine, PlateAppearance } from "./types"
+import { buildEstimatedErByPaId } from "./estimatedErByPaIdFromTextPbp"
+import { injectTeamsFromTextPbpIfMissing } from "./inferTeamsFromTextPbp"
 import {
   comparePlateAppearances,
   inferPitcherTeamForNf3Line,
@@ -127,9 +129,10 @@ export function runSupportPointsForStarter(
   yahooPitcherId: string,
   pitcherTeamName: string
 ): number | null {
-  const board = doc.game?.scoreboard ?? []
+  const enriched = injectTeamsFromTextPbpIfMissing(doc)
+  const board = enriched.game?.scoreboard ?? []
   if (board.length < 1) return null
-  const pas = (doc.domain?.plateAppearances ?? []).filter(
+  const pas = (enriched.domain?.plateAppearances ?? []).filter(
     (p) => (p.yahooPitcherId ?? "").trim() === yahooPitcherId
   )
   if (pas.length === 0) return null
@@ -138,24 +141,44 @@ export function runSupportPointsForStarter(
   const lastOrder = halfOrderFromPa(lastPa)
   if (lastOrder < 0) return null
 
-  const teamRow = board.find((r) => (r.teamName ?? "").trim() === pitcherTeamName.trim())
-  if (!teamRow) return null
+  const pitcherTeamKey = teamRankingShortFromGameTeamName(pitcherTeamName)
+  const teamRow = board.find(
+    (r) => teamRankingShortFromGameTeamName((r.teamName ?? "").trim()) === pitcherTeamKey
+  )
 
   const visitorRow = board[0]
   const homeRow = board[1]
   if (!visitorRow || !homeRow) return null
 
-  const isVisitor = (visitorRow.teamName ?? "").trim() === pitcherTeamName.trim()
-  const innings = (teamRow.innings ?? []).map(parseInningCell)
+  const visitorKey = teamRankingShortFromGameTeamName((visitorRow.teamName ?? "").trim())
+  const homeKey = teamRankingShortFromGameTeamName((homeRow.teamName ?? "").trim())
+  const isVisitor = visitorKey === pitcherTeamKey
+  const isHome = homeKey === pitcherTeamKey
+  if (!isVisitor && !isHome) return null
+
+  const innings = (teamRow?.innings ?? []).map(parseInningCell)
+  if (innings.some((runs) => runs > 0)) {
+    let total = 0
+    for (let inn = 1; inn <= innings.length; inn++) {
+      const runs = innings[inn - 1] ?? 0
+      if (runs === 0) continue
+      // ビジター打線の得点は各回「表」、ホーム打線は各回「裏」。半順序は parsePaId と同じ inning*2+half（表=0,裏=1）。
+      const offensiveHalfOrder = isVisitor ? inn * 2 + 0 : inn * 2 + 1
+      // その攻撃があった時点までにマウンドにいたとみなす: 最後の投球がその攻撃半より後なら援護に含める
+      if (lastOrder >= offensiveHalfOrder) total += runs
+    }
+    return total
+  }
 
   let total = 0
-  for (let inn = 1; inn <= innings.length; inn++) {
-    const runs = innings[inn - 1] ?? 0
-    if (runs === 0) continue
-    // ビジター打線の得点は各回「表」、ホーム打線は各回「裏」。半順序は parsePaId と同じ inning*2+half（表=0,裏=1）。
-    const offensiveHalfOrder = isVisitor ? inn * 2 + 0 : inn * 2 + 1
-    // その攻撃があった時点までにマウンドにいたとみなす: 最後の投球がその攻撃半より後なら援護に含める
-    if (lastOrder >= offensiveHalfOrder) total += runs
+  const estimatedRunsByPaId = buildEstimatedErByPaId(enriched)
+  const offensiveHalf = isVisitor ? 0 : 1
+  const allPas = [...(enriched.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
+  for (const pa of allPas) {
+    const parsed = parsePaId(pa.paId)
+    if (!parsed || parsed.half !== offensiveHalf) continue
+    if (halfOrderFromPa(pa) > lastOrder) continue
+    total += estimatedRunsByPaId.get(pa.paId) ?? 0
   }
   return total
 }

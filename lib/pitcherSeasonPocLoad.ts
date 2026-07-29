@@ -2,7 +2,6 @@
  * Phase 1 派生: `_data/derived/player_season_pitching_poc/{year}/npb_{id}.json` を読む（サーバー専用）
  */
 
-import fs from "fs"
 import path from "path"
 import {
   fetchDerivedJsonServer,
@@ -34,16 +33,23 @@ function nf3EnGoRateDisplay(
   return ((runSupportPointsSum * 9) / ipInnings).toFixed(2)
 }
 
-function nf3MetricsPath(projectRoot: string, year: string): string {
-  const safeYear = String(year).replace(/[^\d]/g, "") || "2026"
-  return path.join(
-    projectRoot,
-    "_data",
-    "derived",
-    "pitcher_nf3_metrics",
-    safeYear,
-    "aggregate_by_npb.json"
-  )
+type Nf3AggregatePayload = {
+  byNpbPlayerId?: Record<
+    string,
+    {
+      reliefAppearances?: number
+      nhbCount?: number
+      reliefIpOutsSum?: number
+      reliefRunsSum?: number
+      starterGames?: number
+      runSupportPointsSum?: number
+      starterIpOutsSum?: number
+    }
+  >
+}
+
+function safeYearSegment(year: string): string {
+  return String(year).replace(/[^\d]/g, "") || "2026"
 }
 
 /**
@@ -55,59 +61,54 @@ function mergeNf3MetricsFromAggregate(
   year: string,
   npbPlayerId: string
 ): PitcherSeasonPocPayload {
-  const p = nf3MetricsPath(projectRoot, year)
-  if (!fs.existsSync(p)) return payload
   try {
-    const raw = fs.readFileSync(p, "utf8")
-    const j = JSON.parse(raw) as {
-      byNpbPlayerId?: Record<
-        string,
-        {
-          reliefAppearances?: number
-          nhbCount?: number
-          reliefIpOutsSum?: number
-          reliefRunsSum?: number
-          starterGames?: number
-          runSupportPointsSum?: number
-          starterIpOutsSum?: number
-        }
-      >
-    }
-    const row = j.byNpbPlayerId?.[npbPlayerId]
-    if (!row) return payload
-
-    const reliefAppearances = Number(row.reliefAppearances ?? 0)
-    const nhbCount = Number(row.nhbCount ?? 0)
-    const reliefIpOutsSum = Number(row.reliefIpOutsSum ?? 0)
-    const reliefRunsSum = Number(row.reliefRunsSum ?? 0)
-    const starterGames = Number(row.starterGames ?? 0)
-    const runSupportPointsSum = Number(row.runSupportPointsSum ?? 0)
-    const starterIpOutsSum = Number(row.starterIpOutsSum ?? 0)
-    const nhbPct =
-      reliefAppearances > 0
-        ? `${((nhbCount / reliefAppearances) * 100).toFixed(1)}%`
-        : "—"
-    const ipr = nf3IprFromReliefIpRuns(reliefIpOutsSum, reliefRunsSum)
-    const enGoRate = nf3EnGoRateDisplay(
-      starterGames,
-      runSupportPointsSum,
-      starterIpOutsSum
+    const safeYear = safeYearSegment(year)
+    const j = readDerivedJsonLocalSync<Nf3AggregatePayload>(
+      "pitcher_nf3_metrics",
+      safeYear,
+      "aggregate_by_npb.json"
     )
-
-    return {
-      ...payload,
-      nf3Metrics: {
-        reliefAppearances,
-        nhbCount,
-        reliefIpOutsSum,
-        reliefRunsSum,
-        nhbPct,
-        ipr,
-        enGoRate,
-      },
-    }
+    return mergeNf3MetricsRow(payload, j?.byNpbPlayerId?.[npbPlayerId])
   } catch {
     return payload
+  }
+}
+
+function mergeNf3MetricsRow(
+  payload: PitcherSeasonPocPayload,
+  row: NonNullable<Nf3AggregatePayload["byNpbPlayerId"]>[string] | undefined
+): PitcherSeasonPocPayload {
+  if (!row) return payload
+
+  const reliefAppearances = Number(row.reliefAppearances ?? 0)
+  const nhbCount = Number(row.nhbCount ?? 0)
+  const reliefIpOutsSum = Number(row.reliefIpOutsSum ?? 0)
+  const reliefRunsSum = Number(row.reliefRunsSum ?? 0)
+  const starterGames = Number(row.starterGames ?? 0)
+  const runSupportPointsSum = Number(row.runSupportPointsSum ?? 0)
+  const starterIpOutsSum = Number(row.starterIpOutsSum ?? 0)
+  const nhbPct =
+    reliefAppearances > 0
+      ? `${((nhbCount / reliefAppearances) * 100).toFixed(1)}%`
+      : "—"
+  const ipr = nf3IprFromReliefIpRuns(reliefIpOutsSum, reliefRunsSum)
+  const enGoRate = nf3EnGoRateDisplay(
+    starterGames,
+    runSupportPointsSum,
+    starterIpOutsSum
+  )
+
+  return {
+    ...payload,
+    nf3Metrics: {
+      reliefAppearances,
+      nhbCount,
+      reliefIpOutsSum,
+      reliefRunsSum,
+      nhbPct,
+      ipr,
+      enGoRate,
+    },
   }
 }
 
@@ -203,6 +204,22 @@ function enrichPitcherSeasonPocPayload(
   return mergeNf3MetricsFromAggregate(withCoreCounts, projectRoot, year, npbPlayerId)
 }
 
+async function enrichPitcherSeasonPocPayloadAsync(
+  payload: PitcherSeasonPocPayload,
+  projectRoot: string,
+  year: string,
+  npbPlayerId: string
+): Promise<PitcherSeasonPocPayload> {
+  const withCoreCounts = mergeSeasonCoreCountsFromCanonical(payload, projectRoot)
+  const safeYear = safeYearSegment(year)
+  const aggregate = await fetchDerivedJsonServer<Nf3AggregatePayload>(
+    "pitcher_nf3_metrics",
+    safeYear,
+    "aggregate_by_npb.json"
+  )
+  return mergeNf3MetricsRow(withCoreCounts, aggregate?.byNpbPlayerId?.[npbPlayerId])
+}
+
 export function pitcherSeasonPocFilePath(
   projectRoot: string,
   year: string,
@@ -273,11 +290,11 @@ export async function loadPitcherSeasonPocPayloadFromRepoAsync(
 ): Promise<PitcherSeasonPocPayload | null> {
   const root = getProjectRoot()
   const direct = await loadPitcherSeasonPocPayloadAsync(year, npbPlayerId)
-  if (direct) return enrichPitcherSeasonPocPayload(direct, root, year, npbPlayerId)
+  if (direct) return enrichPitcherSeasonPocPayloadAsync(direct, root, year, npbPlayerId)
   const altNpb = PILOT_DERIVED_FALLBACK_NPB[npbPlayerId]
   if (!altNpb) return null
   const base = await loadPitcherSeasonPocPayloadAsync(year, altNpb)
   if (!base) return null
   const shelled = withPilotPitcherPocFallbackShell(base, npbPlayerId)
-  return enrichPitcherSeasonPocPayload(shelled, root, year, npbPlayerId)
+  return enrichPitcherSeasonPocPayloadAsync(shelled, root, year, npbPlayerId)
 }
