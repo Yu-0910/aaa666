@@ -1633,6 +1633,7 @@ export function PlayerPageClient({
             rosterFielderShell={showFielderSeasonPilotUi}
             rosterPrimaryPositionLabel={rosterMatchedPosition || undefined}
             headingStripeColor={sectionStripeColor}
+            animatePitchCharts={animatePitchCharts}
             renderBasicTopContent={(totalRow) =>
               showRosterFielderBasicCareerHighGrid && kikuchiSeasonDetailTab === "basic" ? (
                 <FielderBasicCurrentSeasonCareerHighGrid

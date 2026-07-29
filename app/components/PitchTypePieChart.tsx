@@ -74,6 +74,8 @@ const PCT_LABEL_MIN = 3
 /** ドーナツの配置起点（0時方向＝グラフ上部）・時計回り */
 const PIE_START_ANGLE = 90
 const PIE_END_ANGLE = PIE_START_ANGLE - 360
+const PIE_ANIMATION_DURATION_MS = 900
+const PIE_ANIMATION_EASING = "ease-out"
 /**
  * 対左・対右見出し（CHART_SCALE とは独立）。
  * compact 時 1.0 ≒ 11px。0.1 刻みだと丸めで数 px しか変わらないことがある。
@@ -357,6 +359,9 @@ export default function PitchTypePieChart({
   const data = chartRows.map((r) => ({ name: r.pitch_type, value: r.pct }))
   const colorOrder =
     pitchTypeColorOrder ?? rows.map((r) => r.pitch_type)
+  const animationKey = isAnimationActive
+    ? chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
+    : "static"
   const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
   const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
   const chartSide =
@@ -394,6 +399,7 @@ export default function PitchTypePieChart({
       <ResponsiveContainer width="100%" height={chartHeight}>
         <PieChart>
           <Pie
+            key={animationKey}
             data={data}
             cx="50%"
             cy="50%"
@@ -407,6 +413,9 @@ export default function PitchTypePieChart({
             label={renderDonutPctLabel(compact, insideTextScale)}
             labelLine={false}
             isAnimationActive={isAnimationActive}
+            animationBegin={0}
+            animationDuration={PIE_ANIMATION_DURATION_MS}
+            animationEasing={PIE_ANIMATION_EASING}
           >
             {chartRows.map((row) => {
               const ci = colorIndexForPitchType(row.pitch_type, colorOrder)

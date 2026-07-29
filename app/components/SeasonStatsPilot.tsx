@@ -52,6 +52,8 @@ type Props = {
   headingStripeColor?: string
   /** 今季サブタブ固定レイアウト: タブ下余白と重複する先頭 mt を抑える */
   pinLayoutShell?: boolean
+  /** 球種情報タブ初回表示時のみ円グラフアニメーションを再生 */
+  animatePitchCharts?: boolean
   /** 基本成績タブの本文先頭に差し込む追加コンテンツ */
   renderBasicTopContent?: (totalRow: SeasonStatsRow | null) => ReactNode
 }
@@ -189,6 +191,7 @@ export default function SeasonStatsPilot({
   rosterPrimaryPositionLabel,
   headingStripeColor = "#FF4444",
   pinLayoutShell = false,
+  animatePitchCharts = true,
   renderBasicTopContent,
 }: Props) {
   const isMobile = layout === "mobile"
@@ -831,6 +834,7 @@ export default function SeasonStatsPilot({
                             centerStats={centerStatsForPitcherHand(item.key)}
                             pitchTypeColorOrder={pitchTypeColorOrder}
                             compact
+                            isAnimationActive={animatePitchCharts}
                           />
                         ) : null
                       )}
