@@ -30,6 +30,7 @@ type Props = {
   rows: TeamCatcherStatsRow[]
   sortKey: TeamCatcherSortKey
   year: string
+  teamCode: string
   onSortChange: (key: TeamCatcherSortKey) => void
 }
 
@@ -41,6 +42,7 @@ export default function TeamCatcherStatsTable({
   rows,
   sortKey,
   year,
+  teamCode,
   onSortChange,
 }: Props) {
   const compactTableUi = usesRanking2025CompactTableUi(year)
@@ -180,7 +182,7 @@ export default function TeamCatcherStatsTable({
           <tbody>
             {rows.map((row, idx) => {
               const hasRomanName = row.romanName && row.romanName.trim()
-              const stripe = rankingTeamStripeColor(row.teamCode)
+              const stripe = rankingTeamStripeColor(row.teamCode || teamCode)
               const isEvenRank = (row.rank ?? idx + 1) % 2 === 0
               const rowBg = isEvenRank ? "#292929" : "#1f1f1f"
 

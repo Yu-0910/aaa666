@@ -111,6 +111,7 @@ export default function TeamCatcherStatsPageClient({
           rows={sortedRows}
           sortKey={sortKey}
           year={year}
+          teamCode={teamCode}
           onSortChange={handleSortChange}
         />
       )}
