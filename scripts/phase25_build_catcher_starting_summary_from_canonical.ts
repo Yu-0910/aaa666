@@ -18,12 +18,13 @@ import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import type { CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
 import { primaryCatcherYahooIdByFieldingTeam } from "@/lib/yahooGame/activeCatcherFromCanonical"
+import { collectStarterYahooIdByRankingShort } from "@/lib/yahooGame/nf3PitcherMetricsFromCanonical"
 import { teamsRoughlyMatch } from "@/lib/yahooGame/startingCatcherFromCanonical"
-import { inferPitcherTeamForNf3Line } from "@/lib/yahooGame/pitcherPocHelpers"
 import { rosterTeamToRankingShort } from "@/lib/yahooGame/canonicalPitchingSeasonAgg"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
+import { teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
 import type { CatcherStartingSummaryDerived } from "@/lib/catcherStartingSummary"
 import {
   getGameScoreSides,
@@ -65,12 +66,19 @@ function qsFlagsFromStarter(line: PitchingLine | null): { qs: boolean; hqs: bool
   return { qs, hqs, sqs }
 }
 
-function starterPitcherLineForTeam(doc: CanonicalGameDocument, teamName: string): PitchingLine | null {
-  const lines = doc.domain?.pitchingLines ?? []
-  const forTeam = lines.filter(
-    (pl) => inferPitcherTeamForNf3Line(doc, (pl.yahooPlayerId ?? "").trim()) === teamName,
+function starterPitcherLineForTeam(
+  doc: CanonicalGameDocument,
+  teamName: string,
+  starterYahooIdByTeamShort: Map<string, string>,
+): PitchingLine | null {
+  const teamShort = teamRankingShortFromGameTeamName(teamName) || rosterTeamToRankingShort(teamName)
+  const starterYahooId = starterYahooIdByTeamShort.get(teamShort)
+  if (!starterYahooId) return null
+  return (
+    (doc.domain?.pitchingLines ?? []).find(
+      (pl) => (pl.yahooPlayerId ?? "").trim() === starterYahooId,
+    ) ?? null
   )
-  return forTeam.length > 0 ? forTeam[0]! : null
 }
 
 function findTeamScoreSide(teamName: string, sides: ScoreboardSide[]): ScoreboardSide | null {
@@ -105,6 +113,7 @@ function main() {
     if (!sides || sides.length < 2) continue
 
     const primaryByTeam = primaryCatcherYahooIdByFieldingTeam(doc)
+    const starterYahooIdByTeamShort = collectStarterYahooIdByRankingShort(doc)
     for (const t of doc.game.teams ?? []) {
       const teamName = (t.teamName ?? "").trim()
       if (!teamName) continue
@@ -132,7 +141,7 @@ function main() {
         }
       }
 
-      const starter = starterPitcherLineForTeam(doc, teamName)
+      const starter = starterPitcherLineForTeam(doc, teamName, starterYahooIdByTeamShort)
       const flags = qsFlagsFromStarter(starter)
       if (flags.qs) agg.qs += 1
       if (flags.hqs) agg.hqs += 1
