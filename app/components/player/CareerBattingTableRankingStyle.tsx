@@ -36,7 +36,7 @@ function buildCareerRankingTableMetrics(scaleMultiplier: number) {
   const PAD_HEADER_Y = s(12)
   const ROW_MIN_H = s(32)
   const YEAR_AGE_NUDGE_Y = s(1.5)
-  const METRIC_VALUE_NUDGE_Y = Math.round(2 * scaleMultiplier * 10) / 10
+  const METRIC_VALUE_NUDGE_Y = Math.round(0.6 * scaleMultiplier * 10) / 10
 
   const headerLabelStyle: CSSProperties = {
     fontSize: FONT_HEADER,
