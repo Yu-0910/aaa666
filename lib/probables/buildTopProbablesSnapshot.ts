@@ -3,6 +3,7 @@ import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import {
   detectThreeGameSeriesFromGames,
+  MAX_PROBABLES_CARDS,
   pickRecentThreeGameSeriesCards,
 } from "@/lib/probables/detectThreeGameSeries"
 import { enrichProbablesCard } from "@/lib/probables/enrichProbablesCard"
@@ -237,6 +238,7 @@ export async function buildTopProbablesSnapshot(options: {
   }
 
   for (const g of orphanGameCandidates.filter((game) => !coveredGameIds.has(game.gameId))) {
+    if (cards.length >= MAX_PROBABLES_CARDS) break
     const homeProbable = await buildProbableSlotForGame(
       year,
       g.homeTeamCode,
