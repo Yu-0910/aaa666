@@ -21,6 +21,15 @@ const LOWER_IS_BETTER_METRICS = new Set<StandingsMetricKey>([
   "era_starter",
   "era_relief",
   "avg_allowed",
+  "h_allowed",
+  "hr_allowed",
+  "bb_allowed",
+  "hbp_allowed",
+  "ibb_allowed",
+  "er",
+  "whip",
+  "hr_wpo_avg",
+  "hr_wpo_hr",
   "bb_pct_pitch",
 ])
 
