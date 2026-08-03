@@ -3,6 +3,7 @@
  */
 
 import type { PitchingSeasonAggYahoo } from "@/lib/yahooGame/canonicalPitchingSeasonAgg"
+import type { BattingSeasonAggYahoo } from "@/lib/yahooGame/canonicalBattingSeasonAgg"
 import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 import type { TeamStandingRow } from "@/lib/standings/types"
 
@@ -57,6 +58,7 @@ export function battingMetricsFromAgg(agg: BattingSeasonAggYahoo): Pick<
   | "ops"
   | "avg"
   | "hr"
+  | "sb"
   | "h"
   | "singles"
   | "doubles"
@@ -85,6 +87,7 @@ export function battingMetricsFromAgg(agg: BattingSeasonAggYahoo): Pick<
     ops,
     avg,
     hr: agg.hr,
+    sb: agg.sb,
     h: agg.h,
     singles: h1,
     doubles: agg.h2,
@@ -200,16 +203,16 @@ export function assignRanksAndGamesBehind(rows: StandingsRowDraft[]): TeamStandi
     return teamCodeFromShort(a.teamShort).localeCompare(teamCodeFromShort(b.teamShort))
   })
 
-  const leader = sorted[0]
-  if (!leader) return []
+  if (!sorted[0]) return []
 
   return sorted.map((row, idx) => {
     const pct = pctFromCounts(row.w, row.l)
+    const previous = sorted[idx - 1]
     const gb =
       idx === 0
         ? "—"
-        : leader
-          ? computeGamesBehind(leader, row)
+        : previous
+          ? computeGamesBehind(previous, row)
           : "—"
 
     return {
@@ -222,10 +225,12 @@ export function assignRanksAndGamesBehind(rows: StandingsRowDraft[]): TeamStandi
       t: row.t,
       pct,
       gb,
+      remaining: row.remaining,
       runs: row.runs,
       ops: row.ops,
       avg: row.avg,
       hr: row.hr,
+      sb: row.sb,
       h: row.h,
       singles: row.singles,
       doubles: row.doubles,
@@ -238,6 +243,7 @@ export function assignRanksAndGamesBehind(rows: StandingsRowDraft[]): TeamStandi
       bb_pct: row.bb_pct,
       k_pct: row.k_pct,
       era: row.era,
+      e: row.e,
       runs_allowed: row.runs_allowed,
       era_starter: row.era_starter,
       era_relief: row.era_relief,

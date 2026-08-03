@@ -57,6 +57,7 @@ type TeamBucket = {
   pitchingRelief: TeamPitchingSplitCounts
   /** 投手成績が集計された試合数（QS率の母数＝公式の試合数に合わせる） */
   pitchingGames: number
+  errors: number
 }
 
 function leagueTeamShorts(league: StandingsLeague): readonly string[] {
@@ -71,6 +72,7 @@ function emptyTeamBucket(): TeamBucket {
     pitchingStarter: emptyPitchingSplit(),
     pitchingRelief: emptyPitchingSplit(),
     pitchingGames: 0,
+    errors: 0,
   }
 }
 
@@ -195,6 +197,35 @@ function applyGameResult(
   } else {
     if (bucketA) bucketA.record.t += 1
     if (bucketB) bucketB.record.t += 1
+  }
+}
+
+function parseScoreboardInt(raw: string | undefined): number | null {
+  const s = String(raw ?? "").trim()
+  if (!s || s === "—" || s === "-") return null
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function applyGameErrors(
+  buckets: Map<string, TeamBucket>,
+  doc: CanonicalGameDocument,
+  scoreOptions?: GetGameScoreSidesOptions,
+): void {
+  const sides = getGameScoreSides(doc, scoreOptions)
+  if (!sides) return
+  const board =
+    doc.game?.scoreboard && doc.game.scoreboard.length >= 2
+      ? doc.game.scoreboard
+      : scoreOptions?.sportsnaviStatsScoreboard
+  if (!board || board.length < 2) return
+
+  for (const [idx, side] of sides.entries()) {
+    const bucket = buckets.get(side.teamShort)
+    if (!bucket) continue
+    const byTeam = board.find((row) => rosterTeamToRankingShort(String(row.teamName ?? "").trim()) === side.teamShort)
+    const errors = parseScoreboardInt(byTeam?.errors ?? board[idx]?.errors)
+    if (errors !== null) bucket.errors += errors
   }
 }
 
@@ -335,9 +366,11 @@ function bucketToRowDraft(short: string, bucket: TeamBucket): StandingsRowDraft 
     w,
     l,
     t,
+    remaining: Math.max(0, 143 - (w + l + t)),
     pct: null,
     runs,
     runs_allowed,
+    e: bucket.errors,
     ...batting,
     ...pitching,
   }
@@ -369,7 +402,9 @@ export function aggregateTeamStandingsFromCanonical(
   )
 
   for (const doc of games) {
-    applyGameResult(buckets, doc, scoreOptionsForGame(projectRoot, doc))
+    const scoreOptions = scoreOptionsForGame(projectRoot, doc)
+    applyGameResult(buckets, doc, scoreOptions)
+    applyGameErrors(buckets, doc, scoreOptions)
     processGameBatting(buckets, doc, projectRoot || undefined)
     processGamePitching(buckets, doc)
   }

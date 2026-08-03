@@ -22,6 +22,8 @@ export type TeamStandingRow = {
   t: number
   pct: number | null
   gb: string
+  /** 2026 canonical: 残試合（143 - 試合数） */
+  remaining?: number
   runs: number
   ops: number | null
   avg: number | null
@@ -55,6 +57,8 @@ export type TeamStandingRow = {
   rbi?: number
   /** NPB 年度別: 盗塁 */
   sb?: number
+  /** 2026 canonical: 失策 */
+  e?: number
   /** NPB 年度別: 完封勝 */
   sho?: number
   /** NPB 年度別: 投球回（表示用。例: "1182.2"） */

@@ -295,12 +295,11 @@ export function teamShortFromCode(code: string): string {
 
 /**
  * 個人ページ「チーム別の対戦成績」（SeasonStatsPilot TEAM_ORDER）と同じ表記。
- * 内部略称 DeNA は表示「横浜」。
  */
 export const TEAM_CODE_TO_DISPLAY: Record<string, string> = {
   H: "阪神",
   G: "巨人",
-  DB: "横浜",
+  DB: "DeNA",
   C: "広島",
   D: "中日",
   S: "ヤクルト",
@@ -313,8 +312,8 @@ export const TEAM_CODE_TO_DISPLAY: Record<string, string> = {
 }
 
 const TEAM_SHORT_TO_DISPLAY: Record<string, string> = {
-  DeNA: "横浜",
-  "ＤｅＮＡ": "横浜",
+  DeNA: "DeNA",
+  "ＤｅＮＡ": "DeNA",
 }
 
 function normalizeTeamNameForMatch(name: string): string {
