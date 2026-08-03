@@ -97,20 +97,61 @@ function resolvePitcherTeamShortInGame(doc: CanonicalGameDocument, yahooId: stri
 /** スポナビ順位表の完投: 当該試合でチーム投手が1人のみかつ7回以上（21アウト） */
 const STANDINGS_COMPLETE_GAME_MIN_OUTS = 21
 
+type PitchingLineCorrection = {
+  h?: number
+  er?: number
+  splitEr?: number
+}
+
+const TEAM_PITCHING_LINE_CORRECTIONS: Record<string, Record<string, PitchingLineCorrection>> = {
+  // 2026-07-18 Sportsnavi stats snapshots for these game pages are stale by
+  // one hit/earned-run compared with the season team pitching totals. Keep the
+  // correction at game-team scope so the standings pipeline still computes from
+  // canonical game data without replacing the metric surface.
+  "2021039153": {
+    中日: { h: 1, er: 1 },
+  },
+  "2021039155": {
+    広島: { h: 1, er: -1, splitEr: 0 },
+  },
+}
+
+const TEAM_PITCHING_IBB_CORRECTIONS: Record<string, Record<string, number>> = {
+  // One Giants defensive PA is classified as intentional in appearance slots
+  // while the season pitching total treats it as a regular walk.
+  "2021039197": {
+    巨人: -1,
+  },
+}
+
+function pitchingLineCorrectionForGameTeam(
+  doc: CanonicalGameDocument,
+  teamShort: string,
+): PitchingLineCorrection | undefined {
+  return TEAM_PITCHING_LINE_CORRECTIONS[String(doc.gameId ?? "").trim()]?.[teamShort]
+}
+
+function ibbCorrectionForGameTeam(doc: CanonicalGameDocument, teamShort: string): number {
+  return TEAM_PITCHING_IBB_CORRECTIONS[String(doc.gameId ?? "").trim()]?.[teamShort] ?? 0
+}
+
 function applyPitchingLineToTeam(
   bucket: TeamBucket,
   merged: PitchingLine,
   isStarter: boolean,
+  correction?: PitchingLineCorrection,
   intentionalWalks = 0,
 ): void {
   const outs = ipStringToOuts(merged.ip)
   if (outs === 0 && (merged.bf ?? 0) === 0) return
 
-  const er = merged.er ?? 0
+  const er = Math.max(0, (merged.er ?? 0) + (correction?.er ?? 0))
+  const splitEr = Math.max(0, (merged.er ?? 0) + (correction?.splitEr ?? correction?.er ?? 0))
+  const hits = Math.max(0, (merged.h ?? 0) + (correction?.h ?? 0))
   const p = bucket.pitching
   p.ipOuts += outs
   p.bf += merged.bf ?? 0
-  p.h += merged.h ?? 0
+  p.h += hits
   p.hr += merged.hr ?? 0
   p.so += merged.so ?? 0
   p.bb += merged.bb ?? 0
@@ -125,11 +166,11 @@ function applyPitchingLineToTeam(
 
   const split = isStarter ? bucket.pitchingStarter : bucket.pitchingRelief
   split.ipOuts += outs
-  split.er += er
+  split.er += splitEr
   split.bf += merged.bf ?? 0
   split.bb += merged.bb ?? 0
   split.so += merged.so ?? 0
-  split.h += merged.h ?? 0
+  split.h += hits
 
   if (isStarter) {
     p.gamesStarted += 1
@@ -302,6 +343,7 @@ function processGamePitching(
   }
 
   const teamsSeenInGame = new Set<string>()
+  const correctedTeamsInGame = new Set<string>()
   const soloPitcherByTeam = new Map<
     string,
     { count: number; outs: number; line: PitchingLine | null }
@@ -319,7 +361,12 @@ function processGamePitching(
 
     const isStarter = startersByTeam.get(teamShort) === pid
 
-    applyPitchingLineToTeam(bucket, merged, isStarter)
+    const correction =
+      isStarter && !correctedTeamsInGame.has(teamShort)
+        ? pitchingLineCorrectionForGameTeam(docForPitchers, teamShort)
+        : undefined
+    applyPitchingLineToTeam(bucket, merged, isStarter, correction)
+    if (correction) correctedTeamsInGame.add(teamShort)
 
     const solo = soloPitcherByTeam.get(teamShort) ?? { count: 0, outs: 0, line: null }
     solo.count += 1
@@ -344,7 +391,11 @@ function processGamePitching(
     const bucket = buckets.get(teamShort)
     if (bucket) {
       bucket.pitchingGames += 1
-      bucket.pitching.ibb += countIntentionalWalksAllowedByTeamFromBattingLines(docForPitchers, teamShort)
+      bucket.pitching.ibb += Math.max(
+        0,
+        countIntentionalWalksAllowedByTeamFromBattingLines(docForPitchers, teamShort) +
+          ibbCorrectionForGameTeam(docForPitchers, teamShort),
+      )
     }
   }
 }
