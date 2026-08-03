@@ -113,7 +113,7 @@ function parseCellInt(i: number, c: string[]): number | undefined {
 
 /** 出場成績の打者行（投・H・敗・勝・先頭空＋防御率行は除外） */
 export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine | null {
-  if (!row.yahooPlayerId || row.cells.length < 12) return null
+  if ((!row.yahooPlayerId && !row.playerName) || row.cells.length < 12) return null
   const c = row.cells
   const p0 = c[0] ?? ""
   if (p0 === "H" || p0 === "敗" || p0 === "勝") return null
@@ -131,7 +131,7 @@ export function inferBattingLineFromStatsRow(row: StatsPlayerRowV0): BattingLine
   const raw23 = countExtraBaseHitsFromStatsRowTextCells(c)
   const capped = capExtraBaseHitsToHitLineTotal(raw23.h2, raw23.h3, hOpt ?? 0, hrOpt ?? 0)
   const line: BattingLine = {
-    yahooPlayerId: row.yahooPlayerId,
+    ...(row.yahooPlayerId ? { yahooPlayerId: row.yahooPlayerId } : {}),
     playerName: row.playerName,
     ...(row.teamName ? { teamName: row.teamName } : {}),
     ...(row.yahooTeamId ? { yahooTeamId: row.yahooTeamId } : {}),

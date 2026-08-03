@@ -47,6 +47,7 @@ import {
   PL_TEAM_SHORTS,
   teamDisplayNameFromShort,
 } from "@/lib/standings/teamCodes"
+import { overlayPhase11TeamBattingMetrics } from "@/lib/standings/phase11TeamBattingOverlay"
 import type { StandingsLeague, TeamStandingRow } from "@/lib/standings/types"
 
 type TeamBucket = {
@@ -287,12 +288,60 @@ function teamShortHintFromBattingLines(lines: BattingLine[]): string {
   return ""
 }
 
+function isSupplementOnlyBattingLine(line: BattingLine): boolean {
+  return (
+    (line.ab ?? 0) === 0 &&
+    (line.h ?? 0) === 0 &&
+    (line.hr ?? 0) === 0 &&
+    (line.bb ?? 0) === 0 &&
+    (line.hbp ?? 0) === 0 &&
+    (line.sh ?? 0) === 0 &&
+    (line.so ?? 0) === 0 &&
+    ((line.r ?? 0) > 0 || (line.rbi ?? 0) > 0 || (line.sb ?? 0) > 0 || (line.e ?? 0) > 0)
+  )
+}
+
+function applyDirectBattingLineToTeam(
+  bucket: TeamBucket,
+  line: BattingLine,
+  gameId: string,
+): void {
+  const h = line.h ?? 0
+  const h2 = line.h2 ?? 0
+  const h3 = line.h3 ?? 0
+  const hr = line.hr ?? 0
+  const h1 = Math.max(0, h - h2 - h3 - hr)
+
+  bucket.batting.gameIds.add(gameId)
+  bucket.batting.ab += line.ab ?? 0
+  bucket.batting.r += line.r ?? 0
+  bucket.batting.h += h
+  bucket.batting.h2 += h2
+  bucket.batting.h3 += h3
+  bucket.batting.hr += hr
+  bucket.batting.rbi += line.rbi ?? 0
+  bucket.batting.so += line.so ?? 0
+  bucket.batting.bb += line.bb ?? 0
+  bucket.batting.hbp += line.hbp ?? 0
+  bucket.batting.sh += line.sh ?? 0
+  bucket.batting.sb += line.sb ?? 0
+  bucket.batting.e += line.e ?? 0
+  bucket.batting.pa +=
+    (line.ab ?? 0) +
+    (line.bb ?? 0) +
+    (line.hbp ?? 0) +
+    (line.sh ?? 0)
+  bucket.batting.tb += h1 + 2 * h2 + 3 * h3 + 4 * hr
+}
+
 /** 出場成績行優先ハイブリッド（公式チーム打撃合算に合わせる） */
 function processGameBatting(
   buckets: Map<string, TeamBucket>,
   doc: CanonicalGameDocument,
   projectRoot?: string,
 ): void {
+  const gameId = String(doc.gameId ?? "").trim()
+
   for (const bid of collectBatterIdsWithLinesInGame(doc)) {
     const linesForBatter = (doc.domain?.battingLines ?? []).filter(
       (line) => String(line.yahooPlayerId ?? "").trim() === bid,
@@ -305,11 +354,27 @@ function processGameBatting(
       projectRoot,
       skipRisp: true,
     })
-    if (!gameAgg) continue
-    mergeBattingSeasonAggYahoo(bucket.batting, gameAgg)
+    if (gameAgg) {
+      mergeBattingSeasonAggYahoo(bucket.batting, gameAgg)
+    } else {
+      for (const line of linesForBatter) {
+        if (isSupplementOnlyBattingLine(line)) {
+          applyDirectBattingLineToTeam(bucket, line, gameId)
+        }
+      }
+    }
   }
 
-  const gameId = String(doc.gameId ?? "").trim()
+  for (const line of doc.domain?.battingLines ?? []) {
+    if (String(line.yahooPlayerId ?? "").trim()) continue
+    const teamShort = teamShortHintFromBattingLines([line])
+    if (!teamShort) continue
+    const bucket = buckets.get(teamShort)
+    if (!bucket) continue
+    if (!isSupplementOnlyBattingLine(line) && (line.ab ?? 0) === 0 && (line.h ?? 0) === 0) continue
+    applyDirectBattingLineToTeam(bucket, line, gameId)
+  }
+
   const pas = dedupePlateAppearancesByInningHalfOrder(doc.domain?.plateAppearances ?? [], gameId)
   if (pas.length === 0) return
 
@@ -467,7 +532,8 @@ export function aggregateTeamStandingsFromCanonical(
     drafts.push(bucketToRowDraft(short, bucket))
   }
 
-  return assignRanksAndGamesBehind(drafts)
+  const ranked = assignRanksAndGamesBehind(drafts)
+  return overlayPhase11TeamBattingMetrics(ranked, docs, year, league, projectRoot)
 }
 
 export function aggregateTeamStandingsByLeagueFromCanonical(
