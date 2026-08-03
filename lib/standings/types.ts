@@ -61,8 +61,6 @@ export type TeamStandingRow = {
   e?: number
   /** NPB 年度別: 完封勝 */
   sho?: number
-  /** 2026 canonical: 無四球 */
-  no_walks?: number
   /** NPB 年度別: 投球回（表示用。例: "1182.2"） */
   ip?: string | null
   /** NPB 年度別: 奪三振 */
@@ -93,18 +91,6 @@ export type TeamStandingRow = {
   er?: number
   /** 2026 canonical: WHIP */
   whip?: number | null
-  /** 2026 canonical: 先発援護点 */
-  support_runs?: number
-  /** 2026 canonical: 援護率 */
-  support_rate?: number | null
-  /** 2026 canonical: HR-WPO 打者数 */
-  hr_wpo_bf?: number
-  /** 2026 canonical: HR-WPO 被安打 */
-  hr_wpo_h?: number
-  /** 2026 canonical: HR-WPO 被打率 */
-  hr_wpo_avg?: number | null
-  /** 2026 canonical: HR-WPO 被本塁打 */
-  hr_wpo_hr?: number
 }
 
 export type TeamStandingsJson = {

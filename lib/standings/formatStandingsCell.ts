@@ -34,14 +34,11 @@ export function formatStandingsCell(key: StandingsMetricKey, row: TeamStandingRo
     case "isod":
     case "isop":
     case "avg_allowed":
-    case "hr_wpo_avg":
       return stripLeadingZeroDecimal(value.toFixed(3))
     case "era":
     case "era_starter":
     case "era_relief":
     case "k9":
-    case "support_rate":
-    case "whip":
       return value.toFixed(2)
     case "bb_pct":
     case "k_pct":
