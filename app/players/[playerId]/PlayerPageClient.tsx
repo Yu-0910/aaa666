@@ -654,6 +654,7 @@ export function PlayerPageClient({
     isFielderRegistrationPosition(rosterMatchedPosition, {
       rosterNpbPlayerId: rosterMatchedNpbId,
     })
+  const useRosterFielderPcTableCss = rosterKnownFielder
   const rosterKnownCatcher =
     isRosterPlayer && isCatcherRegistrationPosition(rosterMatchedPosition)
   const hasMergedPitchingFromProfile =
@@ -1542,7 +1543,12 @@ export function PlayerPageClient({
     mergedSalaryTotalPlain,
     mergedFaDisplay,
     profileMerged,
-    tableClassName: isItoDaiyaPage ? "player-page-profile-table" : undefined,
+    tableClassName: [
+      isItoDaiyaPage ? "player-page-profile-table" : "",
+      useRosterFielderPcTableCss ? "roster-fielder-profile-table" : "",
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined,
     showFinancialFields: isRosterPlayer,
   }
 
@@ -1613,6 +1619,7 @@ export function PlayerPageClient({
             loading={batterVsTeamPitchDerived.loading}
             settled={batterVsTeamPitchDerived.settled}
             payload={batterVsTeamPitchDerived.payload}
+            twoColumnTeamLayout={useRosterFielderPcTableCss}
           />
         ) : kikuchiSeasonDetailTab === "matchup" ? (
           <PlayerPageMatchupBody
@@ -1652,7 +1659,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}`}
+      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}`}
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}
@@ -1756,7 +1763,7 @@ export function PlayerPageClient({
               >
             {/* Team Color Bar */}
             <div
-              className="w-1.5 h-12 flex-shrink-0"
+              className="player-page-team-color-bar w-1.5 h-12 flex-shrink-0"
               style={{ backgroundColor: sectionStripeColor }}
             />
             {/* Player Info */}
@@ -1784,7 +1791,7 @@ export function PlayerPageClient({
                     (displayRomanName && displayRomanName.trim() ? displayRomanName.trim() : null)
                   : nonRosterRomanFull || fromRoster || null
                 return romanToShow ? (
-                  <span className="latin text-sm text-gray-400 leading-tight mt-0.5">
+                  <span className="player-page-roman-name latin text-sm text-gray-400 leading-tight mt-0.5">
                     {romanToShow}
                   </span>
                 ) : null
@@ -2028,6 +2035,15 @@ export function PlayerPageClient({
             sectionStripeColor={sectionStripeColor}
             showSalaryColumn={isRosterPlayer}
             careerTableScaleMultiplier={CAREER_TABLE_SCALE_MULTIPLIER}
+            careerHighBattingGridClassName={
+              useRosterFielderPcTableCss ? "fielder-basic-career-high-grid mb-12" : undefined
+            }
+            careerBattingTableClassName={
+              useRosterFielderPcTableCss ? "roster-fielder-career-batting-fit-table" : undefined
+            }
+            careerBattingTableShellClassName={
+              useRosterFielderPcTableCss ? "roster-fielder-career-batting-fit-shell" : undefined
+            }
           />
         )}
           </>
