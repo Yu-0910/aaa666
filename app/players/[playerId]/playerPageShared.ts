@@ -216,13 +216,17 @@ export function isTakahashiHarutoPlayerPage(input: ItoDaiyaPageDetectionInput): 
   const romanHit = romanKeys.some((k) => compactPlayerName(displayRomanName || "") === k)
   const idHit = (v: string) =>
     v === TAKAHASHI_HARUTO_NPB_ID || v === TAKAHASHI_HARUTO_YAHOO_PITCHER_ID
+  const slugHit = (v: string) => v === "haruto-takahashi"
   return (
     nameHit ||
     romanHit ||
     idHit(playerSegmentCore) ||
     idHit(playerIdNormalized) ||
+    slugHit(playerSegmentCore) ||
+    slugHit(playerIdNormalized) ||
     rosterMatchedNpbId.trim() === TAKAHASHI_HARUTO_NPB_ID ||
     idHit(pathSeg) ||
+    slugHit(pathSeg) ||
     nameKeys.some((k) => rosterNameMatchKey(pathSeg) === k)
   )
 }

@@ -89,6 +89,8 @@ export type PlayerPagePitcherSeasonBodyProps = {
   animatePitchCharts?: boolean
   /** 伊藤大海: カウント別投球成績の打数・被安打列レイアウト */
   isItoDaiyaPage?: boolean
+  /** 髙橋遥人: PC版の投手表倍率パイロット */
+  pitcherPcTableCssPilot?: boolean
 }
 
 /** カウント別投球成績: 打数・被安打セルの表示順（伊藤は打数→被安打） */
@@ -168,6 +170,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     onPitchTypeVsHandPanelToggle,
     animatePitchCharts = true,
     isItoDaiyaPage = false,
+    pitcherPcTableCssPilot = false,
   } = props
 
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
@@ -266,7 +269,11 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                     <CareerHighStatGrid
                       cards={pitcherBasicCards}
                       isMobile={isMobile}
-                      className="pitcher-basic-career-high-grid mb-4"
+                      className={
+                        pitcherPcTableCssPilot
+                          ? "fielder-basic-career-high-grid takahashi-haruto-basic-stat-grid mb-4"
+                          : "pitcher-basic-career-high-grid mb-4"
+                      }
                     />
 
                     <h2
@@ -982,7 +989,13 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         return { avgAgainst: cells[5], kBbPct: cells[2] }
                       }
                       return (
-                        <div className="mb-4 w-full">
+                        <div
+                          className={
+                            pitcherPcTableCssPilot
+                              ? "season-pitch-chart-panel mb-4 w-full"
+                              : "mb-4 w-full"
+                          }
+                        >
                           <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
                             {leftRows.length > 0 ? (
                               <PitchTypePieChart

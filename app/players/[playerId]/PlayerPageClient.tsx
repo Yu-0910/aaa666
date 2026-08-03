@@ -124,6 +124,7 @@ import {
   FIELDER_PILOT_HEADING_SCALE,
   FIELDER_PILOT_SECTION_STRIPE_PX,
   isItoDaiyaPlayerPage,
+  isTakahashiHarutoPlayerPage,
   kMinusBbPctOfBf,
   parseBirthDateJa,
   pctOfBf,
@@ -649,6 +650,14 @@ export function PlayerPageClient({
     isPitcherRegistrationPosition(rosterMatchedPosition, {
       rosterNpbPlayerId: rosterMatchedNpbId,
     })
+  const isTakahashiHarutoPage = isTakahashiHarutoPlayerPage({
+    pathname,
+    playerIdNormalized,
+    playerSegmentCore,
+    displayName,
+    displayRomanName,
+    rosterMatchedNpbId,
+  })
   const rosterKnownFielder =
     isRosterPlayer &&
     isFielderRegistrationPosition(rosterMatchedPosition, {
@@ -1546,6 +1555,7 @@ export function PlayerPageClient({
     tableClassName: [
       isItoDaiyaPage ? "player-page-profile-table" : "",
       useRosterFielderPcTableCss ? "roster-fielder-profile-table" : "",
+      isTakahashiHarutoPage ? "takahashi-haruto-pitcher-profile-table" : "",
     ]
       .filter(Boolean)
       .join(" ") || undefined,
@@ -1597,6 +1607,7 @@ export function PlayerPageClient({
         onPitchTypeVsHandPanelToggle={togglePitchTypeVsHandPanel}
         animatePitchCharts={animatePitchCharts}
         isItoDaiyaPage={isItoDaiyaPage}
+        pitcherPcTableCssPilot={isTakahashiHarutoPage}
       />
     </div>
   )
@@ -1659,7 +1670,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}`}
+      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}
