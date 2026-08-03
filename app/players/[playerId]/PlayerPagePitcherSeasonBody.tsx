@@ -271,7 +271,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       isMobile={isMobile}
                       className={
                         pitcherPcTableCssPilot
-                          ? "fielder-basic-career-high-grid takahashi-haruto-basic-stat-grid mb-4"
+                          ? "fielder-basic-career-high-grid takahashi-haruto-basic-stat-grid roster-pitcher-basic-stat-grid mb-4"
                           : "pitcher-basic-career-high-grid mb-4"
                       }
                     />

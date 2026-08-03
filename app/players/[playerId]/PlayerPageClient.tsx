@@ -663,6 +663,7 @@ export function PlayerPageClient({
     isFielderRegistrationPosition(rosterMatchedPosition, {
       rosterNpbPlayerId: rosterMatchedNpbId,
     })
+  const useRosterPitcherPcTableCss = rosterKnownPitcher && !isTakahashiHarutoPage
   const useRosterFielderPcTableCss = rosterKnownFielder
   const rosterKnownCatcher =
     isRosterPlayer && isCatcherRegistrationPosition(rosterMatchedPosition)
@@ -1555,6 +1556,7 @@ export function PlayerPageClient({
     tableClassName: [
       isItoDaiyaPage ? "player-page-profile-table" : "",
       useRosterFielderPcTableCss ? "roster-fielder-profile-table" : "",
+      useRosterPitcherPcTableCss ? "roster-pitcher-profile-table" : "",
       isTakahashiHarutoPage ? "takahashi-haruto-pitcher-profile-table" : "",
     ]
       .filter(Boolean)
@@ -1607,7 +1609,7 @@ export function PlayerPageClient({
         onPitchTypeVsHandPanelToggle={togglePitchTypeVsHandPanel}
         animatePitchCharts={animatePitchCharts}
         isItoDaiyaPage={isItoDaiyaPage}
-        pitcherPcTableCssPilot={isTakahashiHarutoPage}
+        pitcherPcTableCssPilot={isTakahashiHarutoPage || useRosterPitcherPcTableCss}
       />
     </div>
   )
@@ -1670,7 +1672,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
+      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${useRosterPitcherPcTableCss ? " roster-pitcher-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
       style={{
         background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
       }}

@@ -328,7 +328,8 @@
   }
 
   @media (min-width: 768px) {
-    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css {
+    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css,
+    .player-page-fonts.roster-pitcher-pc-table-css {
       --pitcher-pc-table-scale: 1.12;
       --pitcher-pc-card-scale: 1.12;
       --pitcher-pc-profile-scale: 1.12;
@@ -336,6 +337,9 @@
     }
 
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
+      .player-season-tab-numerics
+      .overflow-x-auto:has(> table),
+    .player-page-fonts.roster-pitcher-pc-table-css
       .player-season-tab-numerics
       .overflow-x-auto:has(> table) {
       width: 100% !important;
@@ -348,6 +352,10 @@
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
       .player-season-tab-numerics
       .pitcher-season-career-high-numerics
+      .season-pitch-chart-panel,
+    .player-page-fonts.roster-pitcher-pc-table-css
+      .player-season-tab-numerics
+      .pitcher-season-career-high-numerics
       .season-pitch-chart-panel {
       width: 100% !important;
       max-width: 430px !important;
@@ -357,7 +365,9 @@
     }
 
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
-      .fielder-basic-career-high-grid.takahashi-haruto-basic-stat-grid {
+      .fielder-basic-career-high-grid.takahashi-haruto-basic-stat-grid,
+    .player-page-fonts.roster-pitcher-pc-table-css
+      .fielder-basic-career-high-grid.roster-pitcher-basic-stat-grid {
       width: 100% !important;
       max-width: 430px !important;
       margin-left: 0 !important;
@@ -366,32 +376,42 @@
     }
 
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
-      .fielder-basic-career-high-grid.takahashi-haruto-basic-stat-grid {
+      .fielder-basic-career-high-grid.takahashi-haruto-basic-stat-grid,
+    .player-page-fonts.roster-pitcher-pc-table-css
+      .fielder-basic-career-high-grid.roster-pitcher-basic-stat-grid {
       container-type: inline-size;
     }
 
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
       .fielder-basic-career-high-grid.takahashi-haruto-basic-stat-grid
+      [data-career-high-value],
+    .player-page-fonts.roster-pitcher-pc-table-css
+      .fielder-basic-career-high-grid.roster-pitcher-basic-stat-grid
       [data-career-high-value] {
       font-size: 1.012em !important;
     }
 
     .player-page-fonts.takahashi-haruto-pitcher-pc-table-css
-      .takahashi-haruto-pitcher-profile-table {
+      .takahashi-haruto-pitcher-profile-table,
+    .player-page-fonts.roster-pitcher-pc-table-css
+      .roster-pitcher-profile-table {
       zoom: var(--pitcher-pc-profile-scale);
       transform-origin: top left;
     }
 
-    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-team-color-bar {
+    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-team-color-bar,
+    .player-page-fonts.roster-pitcher-pc-table-css .player-page-team-color-bar {
       width: calc(0.375rem * var(--pitcher-pc-name-scale)) !important;
       height: calc(3rem * var(--pitcher-pc-name-scale)) !important;
     }
 
-    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-display-name {
+    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-display-name,
+    .player-page-fonts.roster-pitcher-pc-table-css .player-page-display-name {
       font-size: calc(1.5rem * var(--pitcher-pc-name-scale)) !important;
     }
 
-    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-roman-name {
+    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-roman-name,
+    .player-page-fonts.roster-pitcher-pc-table-css .player-page-roman-name {
       font-size: calc(0.875rem * var(--pitcher-pc-name-scale)) !important;
     }
 
