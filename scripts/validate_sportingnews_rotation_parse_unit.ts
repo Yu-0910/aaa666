@@ -11,6 +11,7 @@ import {
 } from "@/lib/sportingNews/rotationParse"
 
 const TIGERS_FIXTURE = `<h2>2026年阪神タイガースの先発ローテーション投手予想</h2><table><tbody><tr><td>6月14日（日）</td><td>西勇輝</td><td>オリックス</td></tr><tr><td>6月15日（月）</td><td> </td><td> </td></tr><tr><td>6月16日（火）</td><td>才木浩人</td><td>西武</td></tr><tr><td>6月17日（水）</td><td>大竹耕太郎</td><td>楽天</td></tr><tr><td>6月18日（木）</td><td> </td><td> </td></tr><tr><td>6月19日（金）</td><td>村上頌樹</td><td>DeNA</td></tr><tr><td>6月20日（土）</td><td>髙橋遥人</td><td>DeNA</td></tr></tbody></table><h2>2026年阪神タイガースの開幕ローテーション投手候補</h2><table><thead><tr><th>投手名</th><th>2025成績</th></tr></thead><tbody><tr><td>村上頌樹</td><td>26試</td></tr></tbody></table>`
+const WEEKDAY_COLUMN_FIXTURE = `<h2>2026年阪神タイガースの先発ローテーション投手予想</h2><table><tbody><tr><th>日付</th><th>曜日</th><th>投手名</th><th>相手</th></tr><tr><td>8月4日（火）</td><td>火</td><td>村上頌樹</td><td>DeNA</td></tr><tr><td>8月5日（水）</td><td>水</td><td>大竹耕太郎</td><td>DeNA</td></tr></tbody></table>`
 
 assert.deepEqual(parseJapaneseScheduleDateCell("6月14日（日）", "2026"), {
   dateJst: "2026-06-14",
@@ -32,6 +33,14 @@ assert.equal(parsed.rows[2]!.pitcherNameJa, "才木浩人")
 assert.equal(parsed.rows[2]!.opponentTeamCode, "L")
 
 assert.equal(parsed.rows[5]!.opponentTeamCode, "DB")
+
+const parsedWithWeekdayColumn = parseSportingNewsRotationHtml(WEEKDAY_COLUMN_FIXTURE, "2026")
+assert.equal(parsedWithWeekdayColumn.rows.length, 2)
+assert.equal(parsedWithWeekdayColumn.rows[0]!.dateJst, "2026-08-04")
+assert.equal(parsedWithWeekdayColumn.rows[0]!.pitcherNameJa, "村上頌樹")
+assert.equal(parsedWithWeekdayColumn.rows[0]!.opponentTeamShort, "DeNA")
+assert.equal(parsedWithWeekdayColumn.rows[0]!.opponentTeamCode, "DB")
+assert.equal(parsedWithWeekdayColumn.rows[1]!.pitcherNameJa, "大竹耕太郎")
 
 const root = getProjectRoot()
 const configPath = path.join(root, "_data", "config", "sportingnews_rotation_urls_2026.json")

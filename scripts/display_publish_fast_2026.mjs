@@ -9,25 +9,25 @@
  * - 個人ページ「今季の成績」タブで使う最小派生
  *   - player_season_batting
  *   - player_season_batting_period
- *   - player_pitch_from_canonical
  *   - player_season_batting_count
- *   - player_batter_vs_team_count_pitch_types
  *   - player_season_pitching_poc
- *   - player_season_pitching_period
  *
  * 用法:
  *   node scripts/display_publish_fast_2026.mjs --year 2026
+ *   node scripts/display_publish_fast_2026.mjs --year 2026 --player-ids 1000035,91095136
  *   node scripts/display_publish_fast_2026.mjs --year 2026 --dry-run
  */
 
 import fs from "node:fs"
 import path from "node:path"
+import crypto from "node:crypto"
 import { fileURLToPath } from "node:url"
-import { HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import { HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, "..")
 const DRY_RUN = process.argv.includes("--dry-run")
+const FORCE_UPLOAD = process.argv.includes("--force-upload")
 const CONCURRENCY = Math.max(1, Number(process.env.FAST_PUBLISH_CONCURRENCY || 8))
 const UPLOAD_TIMEOUT_MS = Math.max(5000, Number(process.env.FAST_PUBLISH_UPLOAD_TIMEOUT_MS || 45000))
 const RETRIES = Math.max(1, Number(process.env.FAST_PUBLISH_RETRIES || 3))
@@ -35,6 +35,12 @@ const yearArg =
   process.argv.find((a) => a.startsWith("--year="))?.split("=")[1] ??
   (process.argv.includes("--year") ? process.argv[process.argv.indexOf("--year") + 1] : null)
 const YEAR = (yearArg?.trim() || "2026")
+const playerIdsArg =
+  process.argv.find((a) => a.startsWith("--player-ids="))?.split("=")[1] ??
+  (process.argv.includes("--player-ids") ? process.argv[process.argv.indexOf("--player-ids") + 1] : null)
+const PLAYER_IDS = playerIdsArg
+  ? playerIdsArg.split(",").map((s) => s.trim()).filter(Boolean)
+  : null
 
 function loadDotEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return false
@@ -66,6 +72,44 @@ function walkJsonFiles(dir, acc = []) {
     else if (ent.isFile() && ent.name.endsWith(".json")) acc.push(p)
   }
   return acc
+}
+
+function matchesPlayerFilter(rel, ids) {
+  if (!ids?.length) return true
+  const base = path.basename(rel, ".json")
+  return ids.some((id) => {
+    if (base === id || base === `yahoo_${id}` || base === `npb_${id}`) return true
+    return base.endsWith(`_${id}`)
+  })
+}
+
+function contentHashes(body) {
+  return {
+    md5: crypto.createHash("md5").update(body).digest("hex"),
+    sha256: crypto.createHash("sha256").update(body).digest("hex"),
+  }
+}
+
+function normalizeEtag(etag) {
+  return String(etag ?? "").replace(/^"|"$/g, "").toLowerCase()
+}
+
+async function shouldUploadObject(client, bucket, key, hashes) {
+  if (FORCE_UPLOAD) return true
+  try {
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+    const remoteSha256 =
+      head.Metadata?.sha256 || head.Metadata?.["content-sha256"] || head.Metadata?.["x-amz-meta-sha256"]
+    if (remoteSha256 && String(remoteSha256).toLowerCase() === hashes.sha256) return false
+    const etag = normalizeEtag(head.ETag)
+    if (etag && !etag.includes("-") && etag === hashes.md5) return false
+    return true
+  } catch (e) {
+    const status = e?.$metadata?.httpStatusCode
+    const name = e?.name || e?.Code
+    if (status === 404 || name === "NotFound" || name === "NoSuchKey") return true
+    throw e
+  }
 }
 
 function loadEnv() {
@@ -113,16 +157,14 @@ function collectFastFiles(year) {
   const derivedCategories = [
     "player_season_batting",
     "player_season_batting_period",
-    "player_pitch_from_canonical",
     "player_season_batting_count",
-    "player_batter_vs_team_count_pitch_types",
     "player_season_pitching_poc",
-    "player_season_pitching_period",
   ]
   for (const category of derivedCategories) {
     const categoryRoot = path.join(ROOT, "_data", "derived", category, year)
     for (const f of walkJsonFiles(categoryRoot)) {
       const rel = path.relative(categoryRoot, f).replace(/\\/g, "/")
+      if (PLAYER_IDS && !matchesPlayerFilter(rel, PLAYER_IDS)) continue
       files.push({ local: f, key: `data/derived/${category}/${year}/${rel}` })
     }
   }
@@ -145,6 +187,10 @@ async function uploadWithRetry(client, bucket, file) {
   for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
     try {
       const body = fs.readFileSync(file.local)
+      const hashes = contentHashes(body)
+      if (!(await shouldUploadObject(client, bucket, file.key, hashes))) {
+        return "skipped"
+      }
       await sendWithTimeout(
         client,
         new PutObjectCommand({
@@ -152,10 +198,11 @@ async function uploadWithRetry(client, bucket, file) {
           Key: file.key,
           Body: body,
           ContentType: "application/json",
+          Metadata: { sha256: hashes.sha256 },
         }),
         UPLOAD_TIMEOUT_MS,
       )
-      return
+      return "uploaded"
     } catch (e) {
       lastError = e
       const msg = e?.name === "AbortError" ? `timeout ${UPLOAD_TIMEOUT_MS}ms` : e?.message || String(e)
@@ -170,16 +217,20 @@ async function uploadWithRetry(client, bucket, file) {
 
 async function uploadAll(client, bucket, files) {
   let nextIndex = 0
-  let ok = 0
+  let uploaded = 0
+  let skipped = 0
+  let processed = 0
   async function worker(workerId) {
     while (nextIndex < files.length) {
       const index = nextIndex
       nextIndex += 1
       const file = files[index]
-      await uploadWithRetry(client, bucket, file)
-      ok += 1
-      if (ok % 50 === 0 || ok === files.length) {
-        console.log(`  uploaded ${ok}/${files.length}...`)
+      const result = await uploadWithRetry(client, bucket, file)
+      if (result === "skipped") skipped += 1
+      else uploaded += 1
+      processed += 1
+      if (processed % 50 === 0 || processed === files.length) {
+        console.log(`  checked ${processed}/${files.length} (uploaded=${uploaded}, skipped=${skipped})...`)
       }
     }
   }
@@ -187,13 +238,14 @@ async function uploadAll(client, bucket, files) {
   const workerCount = Math.min(CONCURRENCY, files.length)
   console.log(`Uploading: concurrency=${workerCount}, timeout=${UPLOAD_TIMEOUT_MS}ms, retries=${RETRIES}`)
   await Promise.all(Array.from({ length: workerCount }, (_, i) => worker(i + 1)))
-  return ok
+  return { uploaded, skipped, processed }
 }
 
 async function main() {
   console.log(`=== Fast publish ${DRY_RUN ? "(dry-run) " : ""}year=${YEAR} ===`)
 
   const files = collectFastFiles(YEAR)
+  if (PLAYER_IDS?.length) console.log(`Filter: player-ids=${PLAYER_IDS.join(",")} (derived only)`)
   console.log(`JSON files: ${files.length}`)
   if (files.length === 0) {
     throw new Error(`No fast-publish files found for year=${YEAR}`)
@@ -217,9 +269,9 @@ async function main() {
   await sendWithTimeout(client, new HeadBucketCommand({ Bucket: bucket }), UPLOAD_TIMEOUT_MS)
   console.log(`Bucket OK: ${bucket}`)
 
-  const ok = await uploadAll(client, bucket, files)
+  const { uploaded, skipped, processed } = await uploadAll(client, bucket, files)
 
-  console.log(`Done: ${ok} uploaded`)
+  console.log(`Done: checked=${processed} uploaded=${uploaded} skipped=${skipped}`)
 }
 
 main().catch((e) => {

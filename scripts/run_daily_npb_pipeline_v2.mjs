@@ -15,6 +15,7 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --complete
  *   node scripts/run_daily_npb_pipeline_v2.mjs --skip-fast-publish
  *   node scripts/run_daily_npb_pipeline_v2.mjs --finalize-precomputed
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-from-checkpoint
  *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-from "派生: phase14 pitch"
  *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-after "検証: phase13"
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-full-derived-validate
@@ -27,10 +28,14 @@ import fs from "node:fs"
 import path from "node:path"
 import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
+let runSummary = null
+let runSummaryPath = ""
+let runSummaryLatestPath = ""
+let currentRunId = ""
 
 const childEnv = {
   ...process.env,
@@ -63,9 +68,32 @@ function extractFirstUrl(text) {
 }
 
 function nowIsoLocal() {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  return formatJstTimestamp().replace(" JST", "")
+}
+
+function jstFileStamp(date = new Date()) {
+  return formatJstTimestamp(date).replace(/[: ]/g, "-")
+}
+
+function compactJstStamp(date = new Date()) {
+  return formatJstTimestamp(date)
+    .replace(" JST", "")
+    .replace(/[-: ]/g, "")
+}
+
+function deriveMode(args) {
+  if (args.prefetchOnly) return "prefetch-only"
+  if (args.fastOnly) return "fast-only"
+  if (args.fullOnly) return "full-only"
+  if (args.finalizePrecomputed) return "finalize-precomputed"
+  return "all"
+}
+
+function buildRunId(args) {
+  const explicit = String(args.runId || "").trim()
+  if (explicit) return explicit
+  const mode = deriveMode(args).replace(/[^a-z0-9]+/gi, "-")
+  return `${args.from}_${compactJstStamp()}_pid${process.pid}_${mode}`
 }
 
 function todayJstYmd() {
@@ -79,6 +107,15 @@ function todayJstYmd() {
 
 function defaultSeasonStart(year) {
   return `${year}-03-27`
+}
+
+function topProbablesAsOfDateForWindow() {
+  return todayJstYmd()
+}
+
+function topProbablesBuildCommand({ year, from, to }) {
+  const asOfDate = topProbablesAsOfDateForWindow({ from, to })
+  return `npx tsx scripts/phase36_build_top_probables.ts --year ${year} --as-of ${asOfDate}`
 }
 
 function formatMs(ms) {
@@ -129,20 +166,36 @@ function parseArgs(argv) {
     autoDeployProduction: false,
     noPublish: false,
     build: false,
+    resumeFromCheckpoint: false,
+    forceRunLock: false,
+    runId: "",
+    triggerReason: "",
+    triggerDetail: "",
     resumeFrom: "",
     resumeAfter: "",
     dryRun: false,
+    fromExplicit: false,
+    toExplicit: false,
+    gameIdsExplicit: false,
+    phase4SleepExplicit: false,
   }
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     if (a === "--year" && argv[i + 1]) out.year = String(argv[++i]).trim()
-    else if (a === "--from" && argv[i + 1]) out.from = String(argv[++i]).trim()
-    else if (a === "--to" && argv[i + 1]) out.to = String(argv[++i]).trim()
+    else if (a === "--from" && argv[i + 1]) {
+      out.from = String(argv[++i]).trim()
+      out.fromExplicit = true
+    }
+    else if (a === "--to" && argv[i + 1]) {
+      out.to = String(argv[++i]).trim()
+      out.toExplicit = true
+    }
     else if (a === "--game-ids" && argv[i + 1]) {
       out.gameIds = String(argv[++i])
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
+      out.gameIdsExplicit = true
     }
     else if (a === "--prefetch-only") out.prefetchOnly = true
     else if (a === "--fast-only") out.fastOnly = true
@@ -154,7 +207,10 @@ function parseArgs(argv) {
     else if (a === "--no-strict-quality") out.strictQuality = false
     else if (a === "--force-canonical") out.forceCanonical = true
     else if (a === "--yahoo-force") out.yahooForce = true
-    else if (a === "--phase4-sleep" && argv[i + 1]) out.phase4Sleep = String(argv[++i]).trim()
+    else if (a === "--phase4-sleep" && argv[i + 1]) {
+      out.phase4Sleep = String(argv[++i]).trim()
+      out.phase4SleepExplicit = true
+    }
     else if (a === "--complete") {
       out.forceCanonical = true
       out.yahooForce = true
@@ -168,6 +224,11 @@ function parseArgs(argv) {
     else if (a === "--auto-deploy-production") out.autoDeployProduction = true
     else if (a === "--no-publish") out.noPublish = true
     else if (a === "--build") out.build = true
+    else if (a === "--resume-from-checkpoint") out.resumeFromCheckpoint = true
+    else if (a === "--force-run-lock") out.forceRunLock = true
+    else if (a === "--run-id" && argv[i + 1]) out.runId = String(argv[++i]).trim()
+    else if (a === "--trigger-reason" && argv[i + 1]) out.triggerReason = String(argv[++i]).trim()
+    else if (a === "--trigger-detail" && argv[i + 1]) out.triggerDetail = String(argv[++i]).trim()
     else if (a === "--resume-from" && argv[i + 1]) out.resumeFrom = String(argv[++i]).trim()
     else if (a === "--resume-after" && argv[i + 1]) out.resumeAfter = String(argv[++i]).trim()
     else if (a === "--dry-run") out.dryRun = true
@@ -184,6 +245,30 @@ function readJsonOrNull(filePath) {
   } catch {
     return null
   }
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+function writeTextFileWithRetrySync(filePath, body) {
+  let lastError = null
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      fs.writeFileSync(filePath, body, "utf8")
+      return
+    } catch (e) {
+      lastError = e
+      const code = String(e?.code || "")
+      if (!["UNKNOWN", "EBUSY", "EPERM", "EACCES"].includes(code) || attempt === 6) break
+      sleepSync(100 * attempt)
+    }
+  }
+  throw lastError
+}
+
+function writeJsonFileWithRetrySync(filePath, payload) {
+  writeTextFileWithRetrySync(filePath, JSON.stringify(payload, null, 2))
 }
 
 function parseIsoMs(value) {
@@ -228,6 +313,79 @@ function gameIdsForDate(dateJst) {
   return games.map((g) => String(g?.gameId ?? "").trim()).filter(Boolean)
 }
 
+function scheduleStatusMapForDate(dateJst) {
+  const snapPath = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date", `${dateJst}.json`)
+  const snap = readJsonOrNull(snapPath)
+  const map = new Map()
+  const byId = snap?.scheduleStatusByGameId && typeof snap.scheduleStatusByGameId === "object"
+    ? snap.scheduleStatusByGameId
+    : {}
+  for (const [gameId, status] of Object.entries(byId)) {
+    const id = String(gameId || "").trim()
+    if (id) map.set(id, String(status || "").trim())
+  }
+  for (const game of Array.isArray(snap?.games) ? snap.games : []) {
+    const gameId = String(game?.gameId ?? "").trim()
+    if (!gameId || map.has(gameId)) continue
+    const status = String(game?.statusText ?? game?.gameState ?? "").trim()
+    if (status) map.set(gameId, status)
+  }
+  for (const gameId of gameIdsForDate(dateJst)) {
+    if (!map.has(gameId)) map.set(gameId, "")
+  }
+  return map
+}
+
+function scheduleAllFinishedForDate(dateJst) {
+  const statusMap = scheduleStatusMapForDate(dateJst)
+  if (statusMap.size === 0) return false
+  for (const status of statusMap.values()) {
+    if (!/試合終了|試合中止|ノーゲーム/.test(String(status || ""))) return false
+  }
+  return true
+}
+
+let cancelledScheduleGameIdSet = null
+function cancelledScheduleGameIds() {
+  if (cancelledScheduleGameIdSet) return cancelledScheduleGameIdSet
+  const ids = new Set()
+  const dir = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date")
+  try {
+    for (const file of fs.readdirSync(dir)) {
+      if (!/^\d{4}-\d{2}-\d{2}\.json$/.test(file)) continue
+      const snap = readJsonOrNull(path.join(dir, file))
+      const byId = snap?.scheduleStatusByGameId && typeof snap.scheduleStatusByGameId === "object"
+        ? snap.scheduleStatusByGameId
+        : {}
+      for (const [gameId, status] of Object.entries(byId)) {
+        if (/試合中止|ノーゲーム/.test(String(status || ""))) ids.add(String(gameId))
+      }
+      for (const game of Array.isArray(snap?.games) ? snap.games : []) {
+        const gameId = String(game?.gameId ?? "").trim()
+        const status = String(game?.statusText ?? game?.gameState ?? "").trim()
+        if (gameId && /試合中止|ノーゲーム/.test(status)) ids.add(gameId)
+      }
+    }
+  } catch {
+    // schedule snapshot が無い環境では保険フィルタを無効化する
+  }
+  cancelledScheduleGameIdSet = ids
+  return cancelledScheduleGameIdSet
+}
+
+function nonCancelledGameIds(gameIds) {
+  const cancelledIds = cancelledScheduleGameIds()
+  return [...new Set((gameIds ?? []).map(String).map((id) => id.trim()).filter(Boolean))]
+    .filter((id) => !cancelledIds.has(id))
+    .sort()
+}
+
+function unfinishedScheduleLabelsForDate(dateJst) {
+  return [...scheduleStatusMapForDate(dateJst).entries()]
+    .filter(([, status]) => !/試合終了|試合中止|ノーゲーム/.test(String(status || "")))
+    .map(([gameId, status]) => `${gameId}:${status || "status_unknown"}`)
+}
+
 function collectYahooBatterIdsForGames(gameIds) {
   const ids = new Set()
   for (const gameId of gameIds) {
@@ -249,6 +407,44 @@ function collectYahooBatterIdsForGames(gameIds) {
   return [...ids].sort()
 }
 
+function readYahooPitcherToNpbMap() {
+  const p = path.join(root, "_data", "scraped_games", "derived", "yahoo_pitcher_to_npb.json")
+  const payload = readJsonOrNull(p)
+  const map = payload?.map && typeof payload.map === "object" ? payload.map : {}
+  return new Map(
+    Object.entries(map)
+      .map(([yahooId, npbId]) => [String(yahooId).trim(), String(npbId ?? "").trim()])
+      .filter(([yahooId, npbId]) => yahooId && npbId),
+  )
+}
+
+function collectNpbPitcherIdsForGames(gameIds) {
+  const yahooToNpb = readYahooPitcherToNpbMap()
+  const yahooIds = new Set()
+  const npbIds = new Set()
+  for (const gameId of gameIds) {
+    const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+    const doc = readJsonOrNull(canonicalPath)
+    for (const line of doc?.domain?.pitchingLines ?? []) {
+      const yahooId = String(line?.yahooPlayerId ?? "").trim()
+      if (yahooId) yahooIds.add(yahooId)
+    }
+    for (const pa of doc?.domain?.plateAppearances ?? []) {
+      const yahooId = String(pa?.yahooPitcherId ?? "").trim()
+      if (yahooId) yahooIds.add(yahooId)
+      for (const pitch of pa?.pitchEvents ?? []) {
+        const pitchYahooId = String(pitch?.yahooPitcherId ?? "").trim()
+        if (pitchYahooId) yahooIds.add(pitchYahooId)
+      }
+    }
+  }
+  for (const yahooId of yahooIds) {
+    const npbId = yahooToNpb.get(String(yahooId))
+    if (npbId) npbIds.add(npbId)
+  }
+  return [...npbIds].sort()
+}
+
 function affectedYahooBatterIdsForDateRange(from, to) {
   const gameIds = new Set()
   for (const dateJst of eachDateYmd(from, to)) {
@@ -264,6 +460,55 @@ function targetGameIdsForArgs({ from, to, gameIds }) {
     for (const gameId of gameIdsForDate(dateJst)) ids.add(gameId)
   }
   return [...ids].sort()
+}
+
+function phase10PitchRowsCountForGame(gameId) {
+  const phase10Path = path.join(root, "_data", "scraped_games", "derived", `${gameId}_phase10_restored.json`)
+  const phase10 = readJsonOrNull(phase10Path)
+  return Array.isArray(phase10?.pitchRows) ? phase10.pitchRows.length : 0
+}
+
+function canonicalDomainPitchEventCountForGame(gameId) {
+  const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+  const canonical = readJsonOrNull(canonicalPath)
+  return Array.isArray(canonical?.domain?.pitchEvents) ? canonical.domain.pitchEvents.length : 0
+}
+
+function collectPhase4ConsistencyFailures(args) {
+  const failures = []
+  for (const gameId of nonCancelledGameIds(targetGameIdsForArgs(args))) {
+    const pitchRows = phase10PitchRowsCountForGame(gameId)
+    if (pitchRows <= 0) continue
+    const pitchEvents = canonicalDomainPitchEventCountForGame(gameId)
+    if (pitchEvents !== pitchRows) {
+      failures.push({ gameId, pitchRows, pitchEvents })
+    }
+  }
+  return failures
+}
+
+function ensurePhase4ConsistencyGate(args) {
+  if (args.dryRun) return
+  const failures = collectPhase4ConsistencyFailures(args)
+  if (failures.length === 0) {
+    console.log("\n[daily:npb-pipeline:v2] Phase4 一球反映 gate OK\n")
+    return
+  }
+  const ids = failures.map((f) => f.gameId)
+  const detail = failures.map((f) => `${f.gameId}:pitchEvents=${f.pitchEvents}/pitchRows=${f.pitchRows}`).join(",")
+  const recommendedNextCommand =
+    `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${args.year} --game-ids ${ids.join(",")} --sleep ${args.phase4Sleep || "1.2"} --force`
+  const message =
+    `phase4 consistency gate failed: ${detail}. ` +
+    `canonical domain.pitchEvents が restored pitchRows と一致していません。recommendedNextCommand="${recommendedNextCommand}"`
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `phase4_consistency_gate NG ${detail}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "phase4_consistency_gate",
+    message,
+    failures,
+    recommendedNextCommand,
+  })
+  throw new Error(message)
 }
 
 function affectedYahooBatterIdsForArgs(args) {
@@ -435,6 +680,14 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     "daily:npb-pipeline:v2",
     `phase17 period stale reason=${before.reason || "-"} source=${before.periodSourceCount} canonical=${before.currentCanonicalCount}`,
   )
+  pushRunSummaryEvent("repairs", {
+    kind: "phase17_period_rebuild",
+    reason: before.reason || "-",
+    periodSourceCount: before.periodSourceCount,
+    canonicalCount: before.currentCanonicalCount,
+    staleTargetGameIds: before.staleTargetGameIds,
+    missingTargetGameIds: before.missingTargetGameIds,
+  })
 
   run("派生: phase17 period（鮮度NGのため再生成）", "npm run phase17:build:period", { dryRun })
   if (rebuildPitchingPeriod) {
@@ -453,6 +706,377 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   }
   console.log(
     `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, canonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
+  )
+}
+
+function derivedFileMtimeMsForYahooIds(year, category, yahooIds) {
+  const dir = path.join(root, "_data", "derived", category, year)
+  const mtimes = new Map()
+  for (const yahooId of yahooIds) {
+    const file = path.join(dir, `yahoo_${yahooId}.json`)
+    try {
+      mtimes.set(String(yahooId), fs.statSync(file).mtimeMs)
+    } catch {
+      mtimes.set(String(yahooId), 0)
+    }
+  }
+  return mtimes
+}
+
+function derivedFileMtimeMsForNpbIds(year, category, npbIds) {
+  const dir = path.join(root, "_data", "derived", category, year)
+  const mtimes = new Map()
+  for (const npbId of npbIds) {
+    const file = path.join(dir, `npb_${npbId}.json`)
+    try {
+      mtimes.set(String(npbId), fs.statSync(file).mtimeMs)
+    } catch {
+      mtimes.set(String(npbId), 0)
+    }
+  }
+  return mtimes
+}
+
+function derivedCategoryFreshnessReport({ year, category, yahooIds, canonicalThresholdMs }) {
+  const uniqueYahooIds = [...new Set((yahooIds || []).map(String).filter(Boolean))].sort()
+  if (uniqueYahooIds.length === 0) {
+    return {
+      ok: true,
+      category,
+      affectedCount: 0,
+      missingYahooIds: [],
+      staleYahooIds: [],
+      latestDerivedMs: 0,
+    }
+  }
+
+  const mtimes = derivedFileMtimeMsForYahooIds(year, category, uniqueYahooIds)
+  const missingYahooIds = []
+  const staleYahooIds = []
+  let latestDerivedMs = 0
+
+  for (const yahooId of uniqueYahooIds) {
+    const mtimeMs = mtimes.get(String(yahooId)) || 0
+    if (mtimeMs <= 0) {
+      missingYahooIds.push(String(yahooId))
+      continue
+    }
+    latestDerivedMs = Math.max(latestDerivedMs, mtimeMs)
+    if (canonicalThresholdMs > 0 && mtimeMs + 1000 < canonicalThresholdMs) {
+      staleYahooIds.push(String(yahooId))
+    }
+  }
+
+  return {
+    ok: missingYahooIds.length === 0 && staleYahooIds.length === 0,
+    category,
+    affectedCount: uniqueYahooIds.length,
+    missingYahooIds,
+    staleYahooIds,
+    latestDerivedMs,
+    canonicalThresholdMs,
+  }
+}
+
+function derivedNpbCategoryFreshnessReport({ year, category, npbIds, canonicalThresholdMs }) {
+  const uniqueNpbIds = [...new Set((npbIds || []).map(String).filter(Boolean))].sort()
+  if (uniqueNpbIds.length === 0) {
+    return {
+      ok: true,
+      category,
+      affectedCount: 0,
+      missingNpbIds: [],
+      staleNpbIds: [],
+      missingYahooIds: [],
+      staleYahooIds: [],
+      latestDerivedMs: 0,
+      idKind: "npb",
+    }
+  }
+
+  const mtimes = derivedFileMtimeMsForNpbIds(year, category, uniqueNpbIds)
+  const missingNpbIds = []
+  const staleNpbIds = []
+  let latestDerivedMs = 0
+
+  for (const npbId of uniqueNpbIds) {
+    const mtimeMs = mtimes.get(String(npbId)) || 0
+    if (mtimeMs <= 0) {
+      missingNpbIds.push(String(npbId))
+      continue
+    }
+    latestDerivedMs = Math.max(latestDerivedMs, mtimeMs)
+    if (canonicalThresholdMs > 0 && mtimeMs + 1000 < canonicalThresholdMs) {
+      staleNpbIds.push(String(npbId))
+    }
+  }
+
+  return {
+    ok: missingNpbIds.length === 0 && staleNpbIds.length === 0,
+    category,
+    affectedCount: uniqueNpbIds.length,
+    missingNpbIds,
+    staleNpbIds,
+    missingYahooIds: missingNpbIds,
+    staleYahooIds: staleNpbIds,
+    latestDerivedMs,
+    canonicalThresholdMs,
+    idKind: "npb",
+  }
+}
+
+function buildCheckpointInputSnapshot(args = currentArgs) {
+  if (!args?.year || !args?.from || !args?.to) return null
+  const gameIds = targetGameIdsForArgs(args)
+  const yahooIds = collectYahooBatterIdsForGames(gameIds)
+  const npbPitcherIds = collectNpbPitcherIdsForGames(gameIds)
+  const targetCanonicalLatestMs = gameIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const phase17 = battingPeriodFreshnessReport({ year: args.year, gameIds })
+  const categories = ["player_season_batting", "player_season_batting_count", "player_season_batting_context", "player_season_batting_splits"]
+  const derived = Object.fromEntries(
+    categories.map((category) => [
+      category,
+      derivedCategoryFreshnessReport({
+        year: args.year,
+        category,
+        yahooIds,
+        canonicalThresholdMs: targetCanonicalLatestMs,
+      }),
+    ]),
+  )
+  derived.player_season_pitching_poc = derivedNpbCategoryFreshnessReport({
+    year: args.year,
+    category: "player_season_pitching_poc",
+    npbIds: npbPitcherIds,
+    canonicalThresholdMs: targetCanonicalLatestMs,
+  })
+
+  return {
+    year: String(args.year),
+    from: String(args.from),
+    to: String(args.to),
+    gameIds,
+    yahooIdsCount: yahooIds.length,
+    npbPitcherIdsCount: npbPitcherIds.length,
+    targetCanonicalLatestMs,
+    phase17: {
+      ok: Boolean(phase17.ok),
+      reason: phase17.reason || "",
+      generatedAt: phase17.generatedAt || "",
+      generatedAtMs: parseIsoMs(phase17.generatedAt),
+      periodSourceCount: Number(phase17.periodSourceCount || 0),
+      currentCanonicalCount: Number(phase17.currentCanonicalCount || 0),
+      missingTargetGameIds: phase17.missingTargetGameIds || [],
+      staleTargetGameIds: phase17.staleTargetGameIds || [],
+    },
+    derived,
+  }
+}
+
+function checkpointInputFreshnessStatus(savedSnapshot, currentSnapshot) {
+  if (!savedSnapshot || !currentSnapshot) {
+    return {
+      stale: false,
+      reasons: [],
+    }
+  }
+
+  const reasons = []
+  if (String(savedSnapshot.year || "") !== String(currentSnapshot.year || "")) reasons.push("year_changed")
+  if (String(savedSnapshot.from || "") !== String(currentSnapshot.from || "")) reasons.push("from_changed")
+  if (String(savedSnapshot.to || "") !== String(currentSnapshot.to || "")) reasons.push("to_changed")
+  if (Number(currentSnapshot.targetCanonicalLatestMs || 0) > Number(savedSnapshot.targetCanonicalLatestMs || 0) + 1000) {
+    reasons.push("canonical_newer_than_checkpoint")
+  }
+  if (Number(currentSnapshot.yahooIdsCount || 0) !== Number(savedSnapshot.yahooIdsCount || 0)) {
+    reasons.push("affected_yahoo_ids_changed")
+  }
+  if (Number(currentSnapshot.npbPitcherIdsCount || 0) !== Number(savedSnapshot.npbPitcherIdsCount || 0)) {
+    reasons.push("affected_npb_pitcher_ids_changed")
+  }
+
+  const categories = new Set([
+    ...Object.keys(savedSnapshot.derived || {}),
+    ...Object.keys(currentSnapshot.derived || {}),
+  ])
+  for (const category of categories) {
+    const saved = savedSnapshot.derived?.[category] || {}
+    const current = currentSnapshot.derived?.[category] || {}
+    if (Number(current.latestDerivedMs || 0) > Number(saved.latestDerivedMs || 0) + 1000) {
+      reasons.push(`${category}_newer_than_checkpoint`)
+    }
+    if ((current.missingYahooIds || []).length > 0 || (current.staleYahooIds || []).length > 0) {
+      reasons.push(`${category}_stale_now`)
+    }
+  }
+
+  if ((currentSnapshot.phase17?.missingTargetGameIds || []).length > 0) reasons.push("phase17_missing_target_games")
+  if ((currentSnapshot.phase17?.staleTargetGameIds || []).length > 0) reasons.push("phase17_stale_target_games")
+
+  return {
+    stale: reasons.length > 0,
+    reasons: [...new Set(reasons)],
+  }
+}
+
+function fallbackResumeStepIdForMode(mode) {
+  switch (String(mode || "").trim()) {
+    case "finalize-precomputed":
+    case "fast-only":
+      return "npm:phase11:build:batting"
+    case "full-only":
+    case "all":
+      return "npm:phase:pitcher-poc1"
+    default:
+      return ""
+  }
+}
+
+function checkpointStatusMeansStepAlreadySucceeded(status) {
+  const value = String(status || "").trim()
+  return (
+    value === "completed" ||
+    value === "completed-try" ||
+    value === "completed-intermediate" ||
+    value === "completed-final" ||
+    value === "completed-prefetch" ||
+    value === "completed-deadline-force" ||
+    value === "completed-dry-run"
+  )
+}
+
+function restoreCheckpointRunOptions(args, checkpointArgs) {
+  if (!checkpointArgs || typeof checkpointArgs !== "object") return
+
+  if (!args.gameIdsExplicit && Array.isArray(checkpointArgs.gameIds)) {
+    args.gameIds = checkpointArgs.gameIds.map((v) => String(v || "").trim()).filter(Boolean)
+  }
+  if (!args.phase4SleepExplicit && checkpointArgs.phase4Sleep) {
+    args.phase4Sleep = String(checkpointArgs.phase4Sleep).trim()
+  }
+
+  const restoreTrueFlags = [
+    "dryRun",
+    "skipPrefetch",
+    "noStatsText",
+    "noScoreRaw",
+    "forceCanonical",
+    "yahooForce",
+    "skipScoreRawGate",
+    "strictFullDerivedValidate",
+    "strictPhase13Validate",
+    "skipVsHandValidate",
+    "strictVsHandValidate",
+    "skipFastPublish",
+    "noPublish",
+    "autoDeployProduction",
+    "build",
+  ]
+  for (const key of restoreTrueFlags) {
+    if (checkpointArgs[key] === true) args[key] = true
+  }
+
+  if (checkpointArgs.strictQuality === false) {
+    args.strictQuality = false
+  }
+}
+
+function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
+  const targetIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
+  const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const phase11Command = `npm run phase11:build:batting${onlyYahooIdsArg(affectedYahooIds)}`
+  const categoryPlans = [
+    {
+      category: "player_season_batting",
+      command: phase11Command,
+      rebuildLabel: "派生: phase11 batting（鮮度NGのため再生成）",
+    },
+    {
+      category: "player_season_batting_count",
+      command: "npm run phase16:build:batting-count",
+      rebuildLabel: "派生: phase16 batting count（鮮度NGのため再生成）",
+    },
+  ]
+
+  for (const plan of categoryPlans) {
+    const report = derivedCategoryFreshnessReport({
+      year,
+      category: plan.category,
+      yahooIds: affectedYahooIds,
+      canonicalThresholdMs,
+    })
+    if (report.ok) continue
+
+    console.warn(`\n[daily:npb-pipeline:v2] ${plan.category} 鮮度 NG → 再生成します:`)
+    console.warn(
+      `  affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
+    )
+    if (report.missingYahooIds.length > 0) {
+      console.warn(`  missingYahooIds=${report.missingYahooIds.slice(0, 20).join(",")}`)
+    }
+    if (report.staleYahooIds.length > 0) {
+      console.warn(`  staleYahooIds=${report.staleYahooIds.slice(0, 20).join(",")}`)
+    }
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `${plan.category} stale affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
+    )
+    pushRunSummaryEvent("repairs", {
+      kind: `${plan.category}_rebuild`,
+      affectedCount: report.affectedCount,
+      missingYahooIds: report.missingYahooIds.slice(0, 20),
+      staleYahooIds: report.staleYahooIds.slice(0, 20),
+    })
+    run(plan.rebuildLabel, plan.command, { dryRun })
+  }
+}
+
+function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
+  const targetIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
+  const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const report = derivedCategoryFreshnessReport({
+    year,
+    category: "player_season_batting_splits",
+    yahooIds: affectedYahooIds,
+    canonicalThresholdMs,
+  })
+  if (report.ok) {
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `player_season_batting_splits fresh affected=${report.affectedCount}`,
+    )
+    return
+  }
+
+  console.warn("\n[daily:npb-pipeline:v2] player_season_batting_splits 鮮度 NG → 最終公開前に再生成します:")
+  console.warn(
+    `  affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
+  )
+  if (report.missingYahooIds.length > 0) {
+    console.warn(`  missingYahooIds=${report.missingYahooIds.slice(0, 20).join(",")}`)
+  }
+  if (report.staleYahooIds.length > 0) {
+    console.warn(`  staleYahooIds=${report.staleYahooIds.slice(0, 20).join(",")}`)
+  }
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `player_season_batting_splits stale affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
+  )
+  pushRunSummaryEvent("repairs", {
+    kind: "player_season_batting_splits_rebuild_before_final_publish",
+    affectedCount: report.affectedCount,
+    missingYahooIds: report.missingYahooIds.slice(0, 20),
+    staleYahooIds: report.staleYahooIds.slice(0, 20),
+  })
+  run(
+    "派生: phase15 batting splits（最終公開前の鮮度NG再生成）",
+    `npm run phase15:build:batting-splits${onlyYahooIdsArg(affectedYahooIds)}`,
+    { dryRun },
   )
 }
 
@@ -527,6 +1151,10 @@ function runFinishedRawFreshnessGate(args) {
   console.error("  → 対象試合だけを試合終了後の raw で強制再取得し、鮮度ゲートを1回再判定します。\n")
   const staleLabels = stale.map((item) => `${item.gameId}:${item.staleKinds.join("+")}_raw_before_game_finished`)
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `finished_raw_freshness_gate NG; auto_repair ${staleLabels.join(",")}`)
+  pushRunSummaryEvent("repairs", {
+    kind: "finished_raw_freshness_gate_auto_repair",
+    stale,
+  })
 
   repairFinishedRawFreshnessFailures({ ...args, stale })
   if (args.dryRun) return
@@ -547,10 +1175,293 @@ function runFinishedRawFreshnessGate(args) {
 let stepNo = 0
 let lastStep = ""
 let currentArgs = null
+let lastStepId = ""
 let resumeState = {
   mode: "",
   token: "",
+  stepId: "",
+  stepIdVariants: [],
   released: true,
+}
+
+function summaryDir() {
+  const dir = path.join(root, "_data", "scraped_games", "_meta")
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+function pipelineRunLockPath(args) {
+  const from = String(args?.from || "unknown").trim() || "unknown"
+  const to = String(args?.to || from).trim() || from
+  return path.join(summaryDir(), `pipeline_run_v2_${from}_${to}.lock`)
+}
+
+function readPipelineRunLock(args) {
+  return readJsonOrNull(pipelineRunLockPath(args))
+}
+
+function writePipelineRunLock(args, payload) {
+  const p = pipelineRunLockPath(args)
+  writeJsonFileWithRetrySync(p, {
+    ...payload,
+    updatedAtJst: formatJstTimestamp(),
+  })
+}
+
+function isProcessAlive(pid) {
+  const n = Number(pid)
+  if (!Number.isInteger(n) || n <= 0) return false
+  try {
+    process.kill(n, 0)
+    return true
+  } catch (e) {
+    if (e?.code === "EPERM") return true
+    return false
+  }
+}
+
+function describeStalePipelineRunLock(existing) {
+  const pid = Number(existing?.pid)
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return "running lock has no valid pid"
+  }
+  if (!isProcessAlive(pid)) {
+    return `running lock pid is not alive: pid=${pid}`
+  }
+  return ""
+}
+
+function acquirePipelineRunLock(args) {
+  const existing = readPipelineRunLock(args)
+  const existingState = String(existing?.state || "").trim()
+  let staleReason = ""
+  if (!args.forceRunLock && existingState.startsWith("running")) {
+    staleReason = describeStalePipelineRunLock(existing)
+    if (!staleReason) return { acquired: false, existing }
+  }
+  const payload = {
+    schemaVersion: "pipeline-run-v2-lock-1",
+    state: args.dryRun ? "running-dry-run" : "running",
+    runId: currentRunId,
+    pid: process.pid,
+    year: args.year,
+    from: args.from,
+    to: args.to,
+    mode: deriveMode(args),
+    startedAtJst: formatJstTimestamp(),
+    forceRunLock: Boolean(args.forceRunLock),
+  }
+  writePipelineRunLock(args, payload)
+  return { acquired: true, payload, replaced: Boolean(existing), staleReason, staleExisting: staleReason ? existing : null }
+}
+
+function initRunSummary(args) {
+  currentRunId = buildRunId(args)
+  runSummaryPath = path.join(summaryDir(), `pipeline_v2_run_summary_${currentRunId}.json`)
+  runSummaryLatestPath = path.join(summaryDir(), "pipeline_v2_run_summary_latest.json")
+  runSummary = {
+    schemaVersion: "pipeline-v2-run-summary-1",
+    runId: currentRunId,
+    status: "running",
+    startedAtJst: formatJstTimestamp(),
+    args: {
+      runId: currentRunId,
+      year: args.year,
+      from: args.from,
+      to: args.to,
+      gameIds: Array.isArray(args.gameIds) ? args.gameIds.slice() : [],
+      mode: deriveMode(args),
+      dryRun: Boolean(args.dryRun),
+      skipPrefetch: Boolean(args.skipPrefetch),
+      noStatsText: Boolean(args.noStatsText),
+      noScoreRaw: Boolean(args.noScoreRaw),
+      strictQuality: Boolean(args.strictQuality),
+      forceCanonical: Boolean(args.forceCanonical),
+      yahooForce: Boolean(args.yahooForce),
+      phase4Sleep: String(args.phase4Sleep || ""),
+      skipScoreRawGate: Boolean(args.skipScoreRawGate),
+      strictFullDerivedValidate: Boolean(args.strictFullDerivedValidate),
+      strictPhase13Validate: Boolean(args.strictPhase13Validate),
+      skipVsHandValidate: Boolean(args.skipVsHandValidate),
+      strictVsHandValidate: Boolean(args.strictVsHandValidate),
+      skipFastPublish: Boolean(args.skipFastPublish),
+      noPublish: Boolean(args.noPublish),
+      autoDeployProduction: Boolean(args.autoDeployProduction),
+      build: Boolean(args.build),
+    },
+    trigger: {
+      reason: String(args.triggerReason || "").trim(),
+      detail: String(args.triggerDetail || "").trim(),
+    },
+    progressState: args.noPublish ? "running_no_publish" : "running_before_publish",
+    progressMessage: args.noPublish
+      ? "公開なしで実行中。R2/production の反映完了判定には使わない。"
+      : "実行中。まだ公開完了とは判定しない。",
+    publishProgress: {
+      fastPublish: "not_started",
+      fastVerify: "not_started",
+      fullPublish: "not_started",
+      fullVerify: "not_started",
+      finalState: "not_complete",
+      finalMessage: args.noPublish
+        ? "noPublish=true のため公開工程は対象外。"
+        : "公開工程は未完了。",
+    },
+    completedSteps: [],
+    warnings: [],
+    repairs: [],
+    retries: [],
+    publishes: [],
+    notes: [],
+  }
+  writeRunSummary()
+}
+
+function writeRunSummary() {
+  if (!runSummary) return
+  const payload = {
+    ...runSummary,
+    updatedAtJst: formatJstTimestamp(),
+  }
+  if (runSummaryPath) writeJsonFileWithRetrySync(runSummaryPath, payload)
+  if (runSummaryLatestPath) writeJsonFileWithRetrySync(runSummaryLatestPath, payload)
+}
+
+function pushRunSummaryEvent(key, event, { limit = 120 } = {}) {
+  if (!runSummary) return
+  const next = Array.isArray(runSummary[key]) ? runSummary[key].slice() : []
+  next.push({
+    atJst: formatJstTimestamp(),
+    ...event,
+  })
+  if (next.length > limit) next.splice(0, next.length - limit)
+  runSummary[key] = next
+  writeRunSummary()
+}
+
+function setRunProgress(progressState, progressMessage, publishPatch = {}) {
+  if (!runSummary) return
+  runSummary.progressState = progressState
+  runSummary.progressMessage = progressMessage
+  runSummary.publishProgress = {
+    ...(runSummary.publishProgress ?? {}),
+    ...publishPatch,
+  }
+  writeRunSummary()
+}
+
+function progressPatchForStep(stepId, phase, ok = null) {
+  const id = String(stepId || "").trim()
+  const state = phase === "start" ? "running" : ok ? "completed" : "failed"
+  if (id === "publish-fast-display") return { fastPublish: state }
+  if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+    return { fullPublish: state }
+  }
+  if (id === "verify-display-publish-fast") return { fastVerify: state }
+  if (id === "verify-display-publish-full") return { fullVerify: state }
+  if (id === "verify-display-publish") {
+    return { fastVerify: state }
+  }
+  return null
+}
+
+function updateProgressForStepStart(label, stepId) {
+  const patch = progressPatchForStep(stepId, "start")
+  if (!patch) return
+  const id = String(stepId || "").trim()
+  if (id === "publish-fast-display") {
+    setRunProgress(
+      "publishing_fast",
+      "1回目公開を実行中。球場別など full derived はまだ本番反映完了と判定しない。",
+      { ...patch, finalState: "not_complete", finalMessage: "1回目公開中。2回目公開は未完了。" },
+    )
+  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+    setRunProgress(
+      "publishing_full",
+      "2回目公開を実行中。player_season_batting_context（球場別）を含む詳細派生を反映中。",
+      { ...patch, finalState: "not_complete", finalMessage: "2回目公開中。公開確認は未完了。" },
+    )
+  } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
+    const isSecondVerify = id === "verify-display-publish-full" || /2回目/.test(String(label || ""))
+    setRunProgress(
+      isSecondVerify ? "verifying_full_publish" : "verifying_fast_publish",
+      isSecondVerify
+        ? "2回目公開後の確認中。ここが OK になるまで当日最終公開完了とは判定しない。"
+        : "1回目公開後の確認中。OK でも full derived の公開完了とは判定しない。",
+      {
+        ...(isSecondVerify ? { fullVerify: "running" } : { fastVerify: "running" }),
+        finalState: "not_complete",
+        finalMessage: isSecondVerify ? "2回目公開確認中。" : "1回目公開確認中。2回目公開は未完了。",
+      },
+    )
+  }
+}
+
+function updateProgressForStepSuccess(label, stepId) {
+  const patch = progressPatchForStep(stepId, "success", true)
+  if (!patch) return
+  const id = String(stepId || "").trim()
+  if (id === "publish-fast-display") {
+    setRunProgress(
+      "fast_publish_uploaded",
+      "1回目公開のアップロード完了。球場別など full derived はまだ2回目公開待ち。",
+      { ...patch, finalState: "not_complete", finalMessage: "1回目公開のみ完了。2回目公開は未完了。" },
+    )
+  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+    setRunProgress(
+      "full_publish_uploaded",
+      "2回目公開のアップロード完了。球場別を含む詳細派生は R2 へ送信済み、公開確認待ち。",
+      { ...patch, finalState: "not_complete", finalMessage: "2回目公開アップロード完了、確認待ち。" },
+    )
+  } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
+    const isSecondVerify = id === "verify-display-publish-full" || /2回目/.test(String(label || ""))
+    setRunProgress(
+      isSecondVerify ? "full_publish_verified" : "fast_publish_verified",
+      isSecondVerify
+        ? "2回目公開確認 OK。球場別を含む当日最終公開まで確認済み。"
+        : "1回目公開確認 OK。これは途中公開の確認で、2回目公開完了ではない。",
+      {
+        ...(isSecondVerify ? { fullVerify: "completed" } : { fastVerify: "completed" }),
+        finalState: isSecondVerify ? "complete" : "not_complete",
+        finalMessage: isSecondVerify
+          ? "2回目公開確認まで完了。"
+          : "1回目公開確認のみ完了。2回目公開は未完了。",
+      },
+    )
+  }
+}
+
+function updateProgressForStepFailure(label, stepId, message = "") {
+  const patch = progressPatchForStep(stepId, "failure", false)
+  if (!patch) return
+  const id = String(stepId || "").trim()
+  const suffix = message ? ` message=${message}` : ""
+  if (id === "publish-fast-display") {
+    setRunProgress(
+      "failed_fast_publish",
+      `1回目公開で失敗。2回目公開は未実行。${suffix}`.trim(),
+      { ...patch, finalState: "failed_before_full_publish", finalMessage: "1回目公開で停止。2回目公開未実行。" },
+    )
+  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+    setRunProgress(
+      "failed_full_publish",
+      `2回目公開で失敗。球場別を含む詳細派生の本番反映は完了扱いにしない。${suffix}`.trim(),
+      { ...patch, finalState: "failed_full_publish", finalMessage: "2回目公開で停止。" },
+    )
+  } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
+    const isSecondVerify = id === "verify-display-publish-full" || /2回目/.test(String(label || ""))
+    setRunProgress(
+      isSecondVerify ? "failed_full_publish_verify" : "failed_fast_publish_verify",
+      isSecondVerify
+        ? `2回目公開後の確認で失敗。球場別を含む当日最終公開は未確認。${suffix}`.trim()
+        : `1回目公開後の確認で失敗。2回目公開は未実行。${suffix}`.trim(),
+      {
+        ...(isSecondVerify ? { fullVerify: "failed" } : { fastVerify: "failed" }),
+        finalState: isSecondVerify ? "failed_full_verify" : "failed_before_full_publish",
+        finalMessage: isSecondVerify ? "2回目公開確認で停止。" : "1回目公開確認で停止。2回目公開未実行。",
+      },
+    )
+  }
 }
 
 function log(msg) {
@@ -561,178 +1472,433 @@ function pipelineCheckpointPath() {
   return path.join(root, "_data", "scraped_games", "_meta", "pipeline_checkpoint_v2.json")
 }
 
+function pipelineCheckpointRunPath(runId = currentRunId) {
+  const safeRunId = String(runId || "").trim()
+  if (!safeRunId) return pipelineCheckpointPath()
+  return path.join(root, "_data", "scraped_games", "_meta", `pipeline_checkpoint_v2_${safeRunId}.json`)
+}
+
 function writePipelineCheckpoint(status, label, command = "", extra = {}) {
+  const inputSnapshot =
+    Object.prototype.hasOwnProperty.call(extra, "inputSnapshot") ? extra.inputSnapshot : buildCheckpointInputSnapshot()
   const checkpoint = {
+    runId: currentRunId,
     status,
     label,
     command,
     lastStep,
     stepNo,
-    updatedAt: new Date().toISOString(),
+    updatedAtJst: formatJstTimestamp(),
     args: currentArgs
       ? {
+          runId: currentRunId,
           year: currentArgs.year,
           from: currentArgs.from,
           to: currentArgs.to,
-          mode: currentArgs.prefetchOnly
-            ? "prefetch-only"
-            : currentArgs.fastOnly
-              ? "fast-only"
-              : currentArgs.fullOnly
-                ? "full-only"
-                : currentArgs.finalizePrecomputed
-                  ? "finalize-precomputed"
-                  : "all",
+          gameIds: Array.isArray(currentArgs.gameIds) ? currentArgs.gameIds.slice() : [],
+          mode: deriveMode(currentArgs),
           dryRun: Boolean(currentArgs.dryRun),
+          skipPrefetch: Boolean(currentArgs.skipPrefetch),
+          noStatsText: Boolean(currentArgs.noStatsText),
+          noScoreRaw: Boolean(currentArgs.noScoreRaw),
+          strictQuality: Boolean(currentArgs.strictQuality),
+          forceCanonical: Boolean(currentArgs.forceCanonical),
+          yahooForce: Boolean(currentArgs.yahooForce),
+          phase4Sleep: String(currentArgs.phase4Sleep || ""),
+          skipScoreRawGate: Boolean(currentArgs.skipScoreRawGate),
+          strictFullDerivedValidate: Boolean(currentArgs.strictFullDerivedValidate),
+          strictPhase13Validate: Boolean(currentArgs.strictPhase13Validate),
+          skipVsHandValidate: Boolean(currentArgs.skipVsHandValidate),
+          strictVsHandValidate: Boolean(currentArgs.strictVsHandValidate),
+          skipFastPublish: Boolean(currentArgs.skipFastPublish),
           noPublish: Boolean(currentArgs.noPublish),
+          autoDeployProduction: Boolean(currentArgs.autoDeployProduction),
+          build: Boolean(currentArgs.build),
         }
       : null,
+    inputSnapshot,
+    progressState: runSummary?.progressState ?? null,
+    progressMessage: runSummary?.progressMessage ?? null,
+    publishProgress: runSummary?.publishProgress ?? null,
     ...extra,
   }
-  const p = pipelineCheckpointPath()
-  fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(p, JSON.stringify(checkpoint, null, 2), "utf8")
+  const latestPath = pipelineCheckpointPath()
+  const runPath = pipelineCheckpointRunPath()
+  fs.mkdirSync(path.dirname(latestPath), { recursive: true })
+  writeJsonFileWithRetrySync(runPath, checkpoint)
+  writeJsonFileWithRetrySync(latestPath, checkpoint)
 }
 
 function normalizeResumeText(value) {
   return String(value ?? "").trim().toLowerCase()
 }
 
+function normalizeStepIdText(value) {
+  return normalizeResumeText(value)
+    .replace(/・再試行後/g, "")
+    .replace(/・再試行/g, "")
+    .replace(/\(再実行\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function commandCoreStepId(command) {
+  const cmd = normalizeResumeText(command).replace(/\s+/g, " ")
+  let match = cmd.match(/^npm run ([^\s]+)/)
+  if (match) return `npm:${match[1]}`
+  match = cmd.match(/^node scripts\/([^\s]+)/)
+  if (match) return `node:${match[1].replace(/\.(mjs|js)$/g, "")}`
+  match = cmd.match(/^python(?: -u)? scripts\/([^\s]+)/)
+  if (match) return `py:${match[1].replace(/\.py$/g, "")}`
+  match = cmd.match(/^npx tsx scripts\/([^\s]+)/)
+  if (match) return `tsx:${match[1].replace(/\.(ts|tsx)$/g, "")}`
+  return ""
+}
+
+function inferStepId(label, command = "") {
+  const core = commandCoreStepId(command)
+  const labelNorm = normalizeStepIdText(label)
+  if (core === "node:verify_display_publish_after_upload") {
+    if (labelNorm.includes("1回目")) return "verify-display-publish-fast"
+    if (labelNorm.includes("2回目")) return "verify-display-publish-full"
+    if (normalizeResumeText(command).includes("--no-production")) return "verify-display-publish-r2-only"
+  }
+  if (core === "node:display_publish_fast_2026") return "publish-fast-display"
+  if (core === "npm:display:r2:upload:full-display-delta:2026") return "publish-full-display-delta"
+  if (core === "npm:display:r2:upload:derived:2026") return "publish-full-derived"
+  if (core === "npm:display:r2:upload:derived:2026:daily-full") return "publish-daily-full-derived"
+  if (core) return core
+  const fallback = labelNorm.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "")
+  return `label:${fallback || "unknown"}`
+}
+
+function stepIdVariants(value) {
+  const base = normalizeResumeText(value)
+  if (!base) return []
+  const variants = new Set([base])
+  variants.add(base.replace(/-retry-after$/g, ""))
+  variants.add(base.replace(/-retry$/g, ""))
+  return [...variants].filter(Boolean)
+}
+
+function resumeTokenVariants(value) {
+  const base = normalizeResumeText(value)
+  if (!base) return []
+  const variants = new Set([base])
+  variants.add(base.replace(/・再試行後/g, ""))
+  variants.add(base.replace(/・再試行/g, ""))
+  variants.add(base.replace(/\(1回目・再試行後\)/g, "(1回目)"))
+  variants.add(base.replace(/\(2回目・再試行後\)/g, "(2回目)"))
+  variants.add(base.replace(/\s+/g, " "))
+  return [...variants].filter(Boolean)
+}
+
 function configureResume(args) {
   const resumeFrom = String(args.resumeFrom ?? "").trim()
   const resumeAfter = String(args.resumeAfter ?? "").trim()
+  const resumeFromStepId = String(args.resumeFromStepId ?? "").trim()
+  const resumeAfterStepId = String(args.resumeAfterStepId ?? "").trim()
   if (resumeFrom && resumeAfter) {
     throw new Error("--resume-from と --resume-after は同時指定できません")
   }
   const token = resumeFrom || resumeAfter
+  const stepId = resumeFromStepId || resumeAfterStepId
   resumeState = {
-    mode: resumeFrom ? "from" : resumeAfter ? "after" : "",
+    mode: resumeFrom ? "from" : resumeAfter ? "after" : resumeFromStepId ? "from" : resumeAfterStepId ? "after" : "",
     token: normalizeResumeText(token),
-    released: !token,
+    tokenVariants: resumeTokenVariants(token),
+    stepId: normalizeResumeText(stepId),
+    stepIdVariants: stepIdVariants(stepId),
+    released: !(token || stepId),
   }
-  if (token) {
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume ${resumeState.mode}: token=${token}`)
-    console.log(`\n[daily:npb-pipeline:v2] resume ${resumeState.mode}: "${token}" に一致する工程までスキップします。\n`)
+  if (token || stepId) {
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `resume ${resumeState.mode}: token=${token || "-"} stepId=${stepId || "-"}`,
+    )
+    console.log(
+      `\n[daily:npb-pipeline:v2] resume ${resumeState.mode}: "${token || stepId}" に一致する工程までスキップします。\n`,
+    )
   }
 }
 
-function stepMatchesResumeToken(label, command) {
+function applyResumeFromCheckpoint(args) {
+  if (!args.resumeFromCheckpoint) return args
+  if (args.resumeFrom || args.resumeAfter) {
+    throw new Error("--resume-from-checkpoint と --resume-from / --resume-after は同時指定できません")
+  }
+
+  const checkpoint = readJsonOrNull(pipelineCheckpointPath())
+  if (!checkpoint) {
+    throw new Error("checkpoint が見つかりません。先に通常実行するか、_data/scraped_games/_meta/pipeline_checkpoint_v2.json を確認してください")
+  }
+
+  const checkpointArgs = checkpoint.args ?? {}
+  const resumeLabel = String(checkpoint.resumeFrom || checkpoint.label || "").trim()
+  const resumeStepId = String(
+    checkpoint.resumeFromStepId || checkpoint.stepId || inferStepId(resumeLabel, checkpoint.command || ""),
+  ).trim()
+  if (!resumeLabel) {
+    throw new Error("checkpoint に resume 対象の工程名がありません")
+  }
+
+  if (!args.fromExplicit && checkpointArgs.from) args.from = String(checkpointArgs.from).trim()
+  if (!args.toExplicit && checkpointArgs.to) args.to = String(checkpointArgs.to).trim()
+  if (checkpointArgs.year) args.year = String(checkpointArgs.year).trim()
+  if (checkpoint.runId) args.runId = String(checkpoint.runId).trim()
+  restoreCheckpointRunOptions(args, checkpointArgs)
+
+  const checkpointMode = String(checkpointArgs.mode || "").trim()
+  const checkpointStatus = String(checkpoint.status || "").trim()
+  args.prefetchOnly = checkpointMode === "prefetch-only"
+  args.fastOnly = checkpointMode === "fast-only"
+  args.fullOnly = checkpointMode === "full-only"
+  args.finalizePrecomputed = checkpointMode === "finalize-precomputed"
+  const currentSnapshot = buildCheckpointInputSnapshot(args)
+  const freshness = checkpointInputFreshnessStatus(checkpoint.inputSnapshot, currentSnapshot)
+  if (freshness.stale) {
+    const fallbackStepId = fallbackResumeStepIdForMode(checkpointMode)
+    args.resumeFrom = ""
+    args.resumeFromStepId = fallbackStepId
+    args.resumeAfter = ""
+    args.resumeAfterStepId = ""
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `checkpoint stale -> rewind stepId=${fallbackStepId || "-"} reasons=${freshness.reasons.join(",")}`,
+    )
+    console.warn(
+      `\n[daily:npb-pipeline:v2] checkpoint は古い入力を指しているため、そのまま再開しません。 reasons=${freshness.reasons.join(",")}\n`,
+    )
+    if (fallbackStepId) {
+      console.warn(
+        `[daily:npb-pipeline:v2] 安全側へ巻き戻します: ${resumeLabel} / ${resumeStepId || "-"} → ${fallbackStepId}\n`,
+      )
+    }
+  } else {
+    const resumeAfterCompletedStep = checkpointStatusMeansStepAlreadySucceeded(checkpointStatus)
+    if (resumeAfterCompletedStep) {
+      args.resumeFrom = ""
+      args.resumeFromStepId = ""
+      args.resumeAfter = resumeLabel
+      args.resumeAfterStepId = resumeStepId
+      console.log(
+        `\n[daily:npb-pipeline:v2] checkpoint の工程は成功済みのため、同じ工程は再実行せず次から再開します: ${resumeLabel} / ${resumeStepId || "-"}\n`,
+      )
+    } else {
+      args.resumeFrom = resumeLabel
+      args.resumeFromStepId = resumeStepId
+      args.resumeAfter = ""
+      args.resumeAfterStepId = ""
+    }
+  }
+
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `resume-from-checkpoint status=${checkpoint.status || ""} label=${resumeLabel} stepId=${resumeStepId || "-"} from=${args.from} to=${args.to} mode=${checkpointMode || "all"} autoDeployProduction=${args.autoDeployProduction ? "true" : "false"} actualResumeMode=${args.resumeAfterStepId || args.resumeAfter ? "after" : "from"} actualResumeStepId=${args.resumeAfterStepId || args.resumeFromStepId || "-"}`,
+  )
+  console.log(
+    `\n[daily:npb-pipeline:v2] checkpoint から再開します: ${resumeLabel} / ${args.resumeAfterStepId || args.resumeFromStepId || resumeStepId || "-"} (${args.from}〜${args.to}, mode=${checkpointMode || "all"}, autoDeployProduction=${args.autoDeployProduction ? "true" : "false"})\n`,
+  )
+  return args
+}
+
+function stepMatchesResumeToken(label, command, stepId = "") {
+  const normalizedStepId = normalizeResumeText(stepId)
+  if (resumeState.stepId) {
+    const variants = Array.isArray(resumeState.stepIdVariants) && resumeState.stepIdVariants.length > 0
+      ? resumeState.stepIdVariants
+      : [resumeState.stepId]
+    if (variants.some((token) => normalizedStepId === token)) return true
+  }
   if (!resumeState.token) return false
   const haystack = normalizeResumeText(`${label}\n${command}`)
-  return haystack.includes(resumeState.token)
+  const variants = Array.isArray(resumeState.tokenVariants) && resumeState.tokenVariants.length > 0
+    ? resumeState.tokenVariants
+    : [resumeState.token]
+  return variants.some((token) => haystack.includes(token))
 }
 
-function shouldSkipForResume(label, command) {
+function shouldSkipForResume(label, command, stepId) {
   if (resumeState.released) return false
-  const matched = stepMatchesResumeToken(label, command)
+  const matched = stepMatchesResumeToken(label, command, stepId)
   if (!matched) {
     log(`← スキップ: ${label}（resume-${resumeState.mode} 待機中）`)
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume skip: ${label}`)
     writePipelineCheckpoint("skipped-resume", label, command, {
+      stepId,
       resumeMode: resumeState.mode,
       resumeToken: resumeState.token,
+      resumeStepId: resumeState.stepId,
     })
     return true
   }
   resumeState.released = true
-  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume hit: ${label}`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `resume hit: ${label} stepId=${stepId || "-"}`)
   if (resumeState.mode === "after") {
     log(`← スキップ: ${label}（resume-after 一致工程）`)
     writePipelineCheckpoint("skipped-resume-hit", label, command, {
+      stepId,
       resumeMode: resumeState.mode,
       resumeToken: resumeState.token,
+      resumeStepId: resumeState.stepId,
     })
     return true
   }
-  console.log(`\n[daily:npb-pipeline:v2] resume-from 一致: ${label} から再開します。\n`)
+  console.log(`\n[daily:npb-pipeline:v2] resume-from 一致: ${label} / ${stepId || "-"} から再開します。\n`)
   return false
+}
+
+function transientCommandRetryEligible(label, command, opts = {}) {
+  if (opts.transientRetry === false) return false
+  const text = `${label}\n${command}`.toLowerCase()
+  if (/deploy|vercel|publish|upload|verify|validate|gate|検証|公開|本番/.test(text)) return false
+  return /phase|ranking|rankings|ランキング|派生|補完|取得|backfill|enrich|build:yahoo/.test(text)
+}
+
+function execPipelineStepWithRetry(label, command, opts = {}) {
+  const maxAttempts = transientCommandRetryEligible(label, command, opts) ? 3 : 1
+  let lastError = null
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      execSync(command, {
+        cwd: root,
+        stdio: "inherit",
+        shell: true,
+        env: childEnv,
+        timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
+      })
+      return { attempts: attempt }
+    } catch (e) {
+      lastError = e
+      const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
+      if (timedOut || attempt >= maxAttempts) break
+      const waitMs = attempt === 1 ? 5000 : 15000
+      const message = `一時的なファイル open 失敗の可能性があるため再試行します: ${label} attempt=${attempt + 1}/${maxAttempts} wait=${Math.round(waitMs / 1000)}s`
+      console.warn(`\n[daily:npb-pipeline:v2] ${message}\n`)
+      appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `retry_transient_step ${message}`)
+      pushRunSummaryEvent("retries", {
+        kind: "transient_step_retry",
+        label,
+        command,
+        attempt: attempt + 1,
+        maxAttempts,
+        waitMs,
+        message: String(e?.message ?? e),
+      })
+      sleepSync(waitMs)
+    }
+  }
+  throw lastError
 }
 
 function run(label, command, opts = {}) {
   lastStep = label
-  if (shouldSkipForResume(label, command)) return
+  const stepId = String(opts.stepId || inferStepId(label, command)).trim()
+  lastStepId = stepId
+  if (shouldSkipForResume(label, command, stepId)) return
   const startedAt = Date.now()
   log(`→ 開始: ${label}`)
-  writePipelineCheckpoint("running", label, command)
+  updateProgressForStepStart(label, stepId)
+  writePipelineCheckpoint("running", label, command, { stepId })
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
-    writePipelineCheckpoint("skipped-dry-run", label, command)
+    writePipelineCheckpoint("skipped-dry-run", label, command, { stepId })
     return
   }
+  let execResult = { attempts: 1 }
   try {
-    execSync(command, {
-      cwd: root,
-      stdio: "inherit",
-      shell: true,
-      env: childEnv,
-      timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
-    })
+    execResult = execPipelineStepWithRetry(label, command, opts)
   } catch (e) {
     const elapsed = formatMs(Date.now() - startedAt)
     const code = e && typeof e.status === "number" ? e.status : 1
     const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
     log(`← 失敗: ${label}（所要 ${elapsed}） exit=${code}${timedOut ? " timeout" : ""}`)
+    updateProgressForStepFailure(label, stepId, e?.message || String(e))
     appendPipelineBulkLog(
       root,
       "daily:npb-pipeline:v2",
       `失敗: ${label} 所要=${elapsed} exit=${code}${timedOut ? " timeout=1" : ""}`,
     )
     writePipelineCheckpoint("failed", label, command, {
+      stepId,
       elapsed,
       exitCode: code,
       timedOut,
       resumeFrom: label,
+      resumeFromStepId: stepId,
       resumeAfterPrevious: true,
     })
     throw e
   }
   const elapsed = formatMs(Date.now() - startedAt)
   log(`← 終了: ${label}（所要 ${elapsed}）`)
-  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了: ${label} 所要=${elapsed}`)
-  writePipelineCheckpoint("completed", label, command, { elapsed })
+  updateProgressForStepSuccess(label, stepId)
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `完了: ${label} 所要=${elapsed}${execResult.attempts > 1 ? ` attempts=${execResult.attempts}` : ""}`,
+  )
+  pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, attempts: execResult.attempts })
+  writePipelineCheckpoint("completed", label, command, { stepId, elapsed, attempts: execResult.attempts })
 }
 
 function runTry(label, command, opts = {}) {
   lastStep = label
-  if (shouldSkipForResume(label, command)) return true
+  const stepId = String(opts.stepId || inferStepId(label, command)).trim()
+  lastStepId = stepId
+  if (shouldSkipForResume(label, command, stepId)) return true
   const startedAt = Date.now()
   log(`→ 開始: ${label}（失敗しても続行可）`)
-  writePipelineCheckpoint("running-try", label, command)
+  updateProgressForStepStart(label, stepId)
+  writePipelineCheckpoint("running-try", label, command, { stepId })
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run(try): ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
-    writePipelineCheckpoint("skipped-dry-run-try", label, command)
+    writePipelineCheckpoint("skipped-dry-run-try", label, command, { stepId })
     return true
   }
   try {
-    execSync(command, {
-      cwd: root,
-      stdio: "inherit",
-      shell: true,
-      env: childEnv,
-      timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
-    })
+    const execResult = execPipelineStepWithRetry(label, command, opts)
     const elapsed = formatMs(Date.now() - startedAt)
     log(`← 終了: ${label}（所要 ${elapsed}）`)
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了(try): ${label} 所要=${elapsed}`)
-    writePipelineCheckpoint("completed-try", label, command, { elapsed })
+    updateProgressForStepSuccess(label, stepId)
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `完了(try): ${label} 所要=${elapsed}${execResult.attempts > 1 ? ` attempts=${execResult.attempts}` : ""}`,
+    )
+    pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, tryMode: true, attempts: execResult.attempts })
+    writePipelineCheckpoint("completed-try", label, command, { stepId, elapsed, attempts: execResult.attempts })
     return true
   } catch (e) {
     const elapsed = formatMs(Date.now() - startedAt)
     const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
     log(`← 失敗: ${label}（所要 ${elapsed}）${timedOut ? " timeout" : ""}`)
+    updateProgressForStepFailure(label, stepId, e?.message || String(e))
     appendPipelineBulkLog(
       root,
       "daily:npb-pipeline:v2",
       `失敗(try): ${label} 所要=${elapsed}${timedOut ? " timeout=1" : ""}`,
     )
+    pushRunSummaryEvent("retries", {
+      label,
+      elapsed,
+      command,
+      result: "failed-try",
+      timedOut,
+    })
     writePipelineCheckpoint("failed-try", label, command, {
+      stepId,
       elapsed,
       timedOut,
       resumeFrom: label,
+      resumeFromStepId: stepId,
       warningOnly: true,
     })
     return false
@@ -743,6 +1909,13 @@ function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = 
   if (runTry(label, command, { dryRun })) return
   const message = `${label} がNGでした。${note || "公開は継続し、差分は後続調査対象としてログに残します。"}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "warn_only_validation",
+    label,
+    command,
+    strict,
+    message,
+  })
   if (strict) {
     throw new Error(`${message} --strict-full-derived-validate 指定のため停止します。`)
   }
@@ -777,6 +1950,11 @@ function writeVsHandFailureReport({ year, validationCommand, dryRun }) {
     // 検証失敗で exit 1 でも、report-json が出力されていれば十分。
   }
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `vs_hand failure report=${reportPath}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "vs_hand_failure_report",
+    reportPath,
+    validationCommand,
+  })
   return reportPath
 }
 
@@ -800,6 +1978,11 @@ function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
     throw new Error(`${publishStage}: failed to capture Vercel deployment URL`)
   }
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: vercel deployment url=${deploymentUrl}`)
+  pushRunSummaryEvent("publishes", {
+    kind: "vercel_production_deploy",
+    publishStage,
+    deploymentUrl,
+  })
 
   const inspectCommand =
     `${VERCEL_CLI}${scopePrefix} inspect ${deploymentUrl} --logs --wait --timeout=10m`
@@ -1073,11 +2256,25 @@ function runStrictCanonicalValidation({ year, from, to, noStatsText, strictQuali
       throw new Error(`canonical nonempty validation failed but current report was not produced: ${reportPath}`)
     }
     const report = readJsonOrNull(reportPath)
-    const badGameIds = Array.isArray(report?.bad)
+    const badGameIdsRaw = Array.isArray(report?.bad)
       ? [...new Set(report.bad.map((item) => String(item?.gameId ?? "").trim()).filter(Boolean))]
       : []
+    const badGameIds = nonCancelledGameIds(badGameIdsRaw)
+    const ignoredCancelledGameIds = badGameIdsRaw.filter((id) => !badGameIds.includes(id))
+    if (ignoredCancelledGameIds.length > 0) {
+      console.warn(
+        `[daily:npb-pipeline:v2] canonical 自動リカバリ対象から中止/ノーゲームを除外: ${ignoredCancelledGameIds.join(",")}`,
+      )
+      pushRunSummaryEvent("warnings", {
+        kind: "canonical_nonempty_cancelled_games_ignored",
+        gameIds: ignoredCancelledGameIds,
+      })
+    }
     if (badGameIds.length === 0) {
-      throw new Error(`canonical nonempty validation failed but no repairable gameIds were found in ${reportPath}`)
+      console.warn(
+        `[daily:npb-pipeline:v2] canonical nonempty NG は中止/ノーゲームのみだったため repair をスキップします: ${reportPath}`,
+      )
+      return
     }
     const gids = badGameIds.join(",")
     console.warn(`[daily:npb-pipeline:v2] canonical 自動リカバリ対象: ${gids}`)
@@ -1122,6 +2319,7 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
   )
   runPhase2FetchBlock({ year, from, to, noStatsText, noScoreRaw, dryRun })
   runPhase2bCanonical({ year, from, to, forceCanonical, dryRun })
+  runScheduleAheadBestEffort({ year, dryRun })
 }
 
 function readPhase4FailedGameIds(year, notBeforeMs, expectedTargetGameIds = []) {
@@ -1138,7 +2336,7 @@ function readPhase4FailedGameIds(year, notBeforeMs, expectedTargetGameIds = []) 
     : []
   if (expected.length > 0 && actual.join(",") !== expected.join(",")) return []
   return Array.isArray(report?.failedGameIds)
-    ? [...new Set(report.failedGameIds.map(String).map((id) => id.trim()).filter(Boolean))]
+    ? nonCancelledGameIds(report.failedGameIds)
     : []
 }
 
@@ -1189,7 +2387,7 @@ function readPitchCoverageRepairGameIds({ year, from, to }) {
       ? report.gaps.derived_not_merged_game_ids
       : []),
   ]
-  return [...new Set(ids.map(String).map((id) => id.trim()).filter(Boolean))]
+  return nonCancelledGameIds(ids)
 }
 
 function runPitchCoverageValidationWithRepair({ year, from, to, phase4Sleep, dryRun }) {
@@ -1224,9 +2422,23 @@ function runPitchCoverageValidationWithRepair({ year, from, to, phase4Sleep, dry
 }
 
 function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate, yahooForce, strictQuality, phase4Sleep, dryRun }) {
-  runScoreRawGate({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate, yahooForce, dryRun })
+  const requestedTargetGameIds = Array.isArray(gameIds) ? gameIds.map(String).filter(Boolean) : []
+  const targetGameIds = requestedTargetGameIds.length > 0 ? nonCancelledGameIds(requestedTargetGameIds) : []
+  if (requestedTargetGameIds.length > 0 && targetGameIds.length === 0) {
+    console.log("\n[daily:npb-pipeline:v2] Phase4 対象は中止/ノーゲームのみのためスキップします。\n")
+    return
+  }
+  runScoreRawGate({
+    year,
+    from,
+    to,
+    gameIds: requestedTargetGameIds.length > 0 ? targetGameIds : gameIds,
+    noScoreRaw,
+    skipScoreRawGate,
+    yahooForce,
+    dryRun,
+  })
   const phase4Force = yahooForce ? " --force" : ""
-  const targetGameIds = Array.isArray(gameIds) ? gameIds.filter(Boolean) : []
   const phase4Target =
     targetGameIds.length > 0
       ? `--game-ids ${targetGameIds.join(",")}`
@@ -1262,6 +2474,10 @@ function runPhase19WithRetry({ dryRun }) {
     console.warn(
       "\n[daily:npb-pipeline:v2] phase19 失敗 → 名簿再取得後に1回だけ再試行します。\n",
     )
+    pushRunSummaryEvent("retries", {
+      kind: "phase19_rebuild_retry",
+      message: "phase19 pitching rankings failed once and was retried after roster refresh.",
+    })
     runTry("名簿: NPB 英字名再取得", "npm run roster:fetch-npb-en", { dryRun })
     run("ランキング JSON: phase19 pitching rankings（再試行）", "npm run phase19:build:pitching-rankings", { dryRun })
   }
@@ -1294,6 +2510,10 @@ function runPhase13ValidationWithRetry({
     "daily:npb-pipeline:v2",
     "validate_phase13_context_vs_phase11 NG → phase13 rebuild retry",
   )
+  pushRunSummaryEvent("retries", {
+    kind: "phase13_validation_retry",
+    affectedYahooIdsCount: affectedYahooIds.length,
+  })
   run("派生: phase13 context（検証NG後の再生成）", phase13BuildCommand, { dryRun })
   const retryOk = runTry(
     "検証: phase13 対チーム vs Phase11（再実行）",
@@ -1305,6 +2525,11 @@ function runPhase13ValidationWithRetry({
   const message =
     "phase13 対チーム vs Phase11 検証は再生成後もNGでした。ランキング/順位表/トップ表示とfull derived公開は継続し、個人ページ用 context 差分は後続調査対象としてログに残します。"
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "phase13_validation_failed_after_retry",
+    affectedYahooIdsCount: affectedYahooIds.length,
+    message,
+  })
   if (strictPhase13Validate) {
     throw new Error(`${message} --strict-phase13-validate 指定のため停止します。`)
   }
@@ -1331,6 +2556,10 @@ function runVsHandValidationWithRetry({
 
   console.warn("\n[daily:npb-pipeline:v2] phase11 vs vs_hand 検証NG → Phase15を1回再生成して再検証します。\n")
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "validate vs_hand NG → phase15 rebuild retry")
+  pushRunSummaryEvent("retries", {
+    kind: "vs_hand_validation_retry",
+    affectedYahooIdsCount: affectedYahooIds.length,
+  })
   run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", phase15BuildCommand, { dryRun })
   const retryOk = runTry(
     affectedYahooIds.length > 0
@@ -1345,62 +2574,163 @@ function runVsHandValidationWithRetry({
   const message =
     `phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。report=${reportPath}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "vs_hand_validation_failed_after_retry",
+    affectedYahooIdsCount: affectedYahooIds.length,
+    message,
+    reportPath,
+  })
   if (strictVsHandValidate) {
     throw new Error(`${message} --strict-vs-hand-validate 指定のため停止します。`)
   }
   console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
 }
 
-function repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage, autoDeployProduction }) {
-  if (!autoDeployProduction) {
-    console.warn(
-      `\n[daily:npb-pipeline:v2] ${publishStage}: R2直が最新でも、本番 deploy は自動実行しません。必要なら --auto-deploy-production を付けて再実行してください。\n`,
-    )
-    appendPipelineBulkLog(
-      root,
-      "daily:npb-pipeline:v2",
-      `${publishStage}: production stale but auto deploy disabled`,
-    )
-    return false
-  }
+function repairStaleProductionProxyIfR2IsCurrent({
+  year,
+  dryRun,
+  publishStage,
+  autoDeployProduction,
+  scope = "full",
+  samplePlayerYahooId = "",
+  sampleDerivedCategories = [],
+}) {
   const r2Current = runTry(
     `${publishStage}: R2直のみ再確認`,
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year} --no-production`,
+    verifyCommandArgs({
+      year,
+      scope,
+      noProduction: true,
+      samplePlayerYahooId,
+      sampleDerivedCategories,
+    }),
     { dryRun },
   )
   if (!r2Current) return false
 
+  if (!autoDeployProduction) {
+    const allowProductionStale =
+      String(process.env.TOPPAGE_ALLOW_PRODUCTION_STALE || "").trim() === "1"
+    console.warn(
+      `\n[daily:npb-pipeline:v2] ${publishStage}: R2は最新ですが本番 /data が古いままです。--auto-deploy-production 付きで本番プロキシを再デプロイしてください。\n`,
+    )
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `${publishStage}: R2 current + production stale; auto deploy disabled${allowProductionStale ? "; explicitly allowed" : ""}`,
+    )
+    pushRunSummaryEvent("warnings", {
+      kind: "production_stale_only",
+      publishStage,
+      message: `${publishStage}: R2 is current but production is stale; auto deploy disabled${allowProductionStale ? "; explicitly allowed" : ""}`,
+    })
+    setRunProgress(
+      allowProductionStale ? "production_stale_allowed" : "failed_production_stale",
+      allowProductionStale
+        ? `${publishStage}: R2は最新。本番 /data は古いが TOPPAGE_ALLOW_PRODUCTION_STALE=1 のため継続。`
+        : `${publishStage}: R2は最新だが本番 /data が古いため、最終完了扱いにしない。`,
+      {
+        finalState: allowProductionStale ? "production_stale_allowed" : "failed_production_stale",
+        finalMessage: allowProductionStale
+          ? "R2公開は完了。本番 /data は古いまま許可済み。"
+          : "--auto-deploy-production 付きで本番プロキシを再デプロイしてください。",
+      },
+    )
+    if (allowProductionStale) return true
+    throw new Error(
+      `${publishStage}: R2は最新ですが本番 /data が古いままです。--auto-deploy-production 付きで再実行してください。`,
+    )
+  }
+
   console.warn(
       `\n[daily:npb-pipeline:v2] ${publishStage}: R2は最新ですが本番 /data が古いため、Vercel本番を自動デプロイします。\n`,
     )
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: R2 current + production stale → Vercel production deploy`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `${publishStage}: R2 current + production stale → Vercel production deploy`)
+    pushRunSummaryEvent("publishes", {
+      kind: "production_stale_triggered_vercel_deploy",
+      publishStage,
+    })
     if (dryRun) {
       run(`${publishStage}: Vercel本番プロキシ再デプロイ`, "npm run deploy:vercel:prod", { dryRun })
     } else {
       lastStep = `${publishStage}: Vercel本番プロキシ再デプロイ`
       const startedAt = Date.now()
       log(`→ 開始: ${lastStep}`)
+      setRunProgress(
+        "deploying_production_proxy",
+        `${publishStage}: R2は最新。本番プロキシの再デプロイ中。`,
+        { finalState: "not_complete", finalMessage: `${publishStage}: Vercel再デプロイ中。` },
+      )
       try {
         deployProductionViaVercelAndWait({ publishStage, dryRun })
       } catch (e) {
         const elapsed = formatMs(Date.now() - startedAt)
         log(`← 失敗: ${lastStep}（所要 ${elapsed}） exit=1`)
+        setRunProgress(
+          "failed_production_proxy_deploy",
+          `${publishStage}: R2は最新だが、本番プロキシ再デプロイに失敗。`,
+          { finalState: "failed_production_proxy_deploy", finalMessage: `${publishStage}: Vercel再デプロイ失敗。` },
+        )
         appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `失敗: ${lastStep} 所要=${elapsed} exit=1`)
         throw e
       }
       const elapsed = formatMs(Date.now() - startedAt)
       log(`← 終了: ${lastStep}（所要 ${elapsed}）`)
+      setRunProgress(
+        "production_proxy_deployed",
+        `${publishStage}: 本番プロキシ再デプロイ完了。公開確認待ち。`,
+        { finalState: "not_complete", finalMessage: `${publishStage}: Vercel再デプロイ完了、確認待ち。` },
+      )
       appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了: ${lastStep} 所要=${elapsed}`)
     }
     run(
       `${publishStage}: Vercel再デプロイ後の公開確認`,
-      `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+      verifyCommandArgs({
+        year,
+        scope,
+        samplePlayerYahooId,
+        sampleDerivedCategories,
+      }),
     { dryRun },
   )
   return true
 }
 
-function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction }) {
+function verifyCommandArgs({ year, scope = "full", noProduction = false, samplePlayerYahooId = "", sampleDerivedCategories = [] }) {
+  const parts = [`node scripts/verify_display_publish_after_upload.mjs --year ${year} --scope ${scope}`]
+  if (noProduction) parts.push("--no-production")
+  if (samplePlayerYahooId) parts.push(`--sample-player-yahoo-id ${samplePlayerYahooId}`)
+  if (Array.isArray(sampleDerivedCategories) && sampleDerivedCategories.length > 0) {
+    parts.push(`--sample-derived-categories ${sampleDerivedCategories.join(",")}`)
+  }
+  return parts.join(" ")
+}
+
+function playerIdsCliArg(playerIds) {
+  const ids = [...new Set((playerIds ?? []).map(String).map((s) => s.trim()).filter(Boolean))].sort()
+  return ids.length > 0 ? ` --player-ids ${ids.join(",")}` : ""
+}
+
+function affectedDisplayPlayerIdsForArgs(args) {
+  return [
+    ...affectedYahooBatterIdsForArgs(args),
+    ...collectNpbPitcherIdsForGames(targetGameIdsForArgs(args)),
+  ]
+}
+
+function runFastDisplayDependencyPublish({ year, dryRun, label, playerIds = [] }) {
+  run(label, `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`, {
+    dryRun: dryRun ? true : false,
+  })
+}
+
+function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+  const fastDerivedCategories = [
+    "player_season_batting",
+    "player_season_batting_period",
+    "player_season_batting_count",
+    "player_season_pitching_poc",
+  ]
   if (dryRun) {
     console.log("\n[daily:npb-pipeline:v2] --dry-run: fast publish / verify はスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: fast publish in dry-run")
@@ -1408,18 +2738,33 @@ function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction }) 
   }
   run(
     "R2公開(1回目): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`,
     { dryRun: false },
   )
 
   const verified = runTry(
-    "公開確認(1回目): R2直 + 本番 /data standings/rankings/top-leaders",
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+    "公開確認(1回目): 主要表示 + 週次 + 選手成績",
+    verifyCommandArgs({
+      year,
+      scope: "fast",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fastDerivedCategories,
+    }),
     { dryRun },
   )
   if (verified) return
 
-  if (repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage: "公開1回目", autoDeployProduction })) return
+  if (
+    repairStaleProductionProxyIfR2IsCurrent({
+      year,
+      dryRun,
+      publishStage: "公開1回目",
+      autoDeployProduction,
+      scope: "fast",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fastDerivedCategories,
+    })
+  ) return
 
   console.warn(
     "\n[daily:npb-pipeline:v2] 公開確認NG → VercelデプロイではなくR2アップロードを1回だけ再実行します。\n",
@@ -1429,20 +2774,50 @@ function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction }) 
     "daily:npb-pipeline:v2",
     `verify_display_publish_after_upload NG → R2 fast publish retry year=${year}`,
   )
+  pushRunSummaryEvent("retries", {
+    kind: "fast_publish_retry",
+    year,
+  })
   run(
     "R2公開(1回目・再試行): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`,
     { dryRun: false },
   )
-  run(
-    "公開確認(1回目・再試行後): R2直 + 本番 /data standings/rankings/top-leaders",
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+  const retryVerified = runTry(
+    "公開確認(1回目・再試行後): 主要表示 + 週次 + 選手成績",
+    verifyCommandArgs({
+      year,
+      scope: "fast",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fastDerivedCategories,
+    }),
     { dryRun },
   )
+  if (retryVerified) return
+  if (
+    repairStaleProductionProxyIfR2IsCurrent({
+      year,
+      dryRun,
+      publishStage: "公開1回目・再試行後",
+      autoDeployProduction,
+      scope: "fast",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fastDerivedCategories,
+    })
+  ) return
+  throw new Error("fast publish verification failed after retry")
 }
 
-function runFullDisplayPublishCommands({ fullOnly, dryRun, retry = false }) {
+function runFullDisplayPublishCommands({ year, fullOnly, dryRun, retry = false, includeFastDependencies = false, playerIds = [] }) {
   const suffix = retry ? "・再試行" : ""
+  if (includeFastDependencies) {
+    runFastDisplayDependencyPublish({
+      year,
+      dryRun: false,
+      label: `R2公開(2回目${suffix}): fast display dependencies`,
+      playerIds,
+    })
+  }
   run(
     `R2公開(2回目${suffix}): full display delta`,
     "npm run display:r2:upload:full-display-delta:2026",
@@ -1450,27 +2825,51 @@ function runFullDisplayPublishCommands({ fullOnly, dryRun, retry = false }) {
   )
   run(
     fullOnly ? `R2公開(2回目${suffix}): full derived` : `R2公開(2回目${suffix}): daily full derived`,
-    fullOnly ? "npm run display:r2:upload:derived:2026" : "npm run display:r2:upload:derived:2026:daily-full",
+    fullOnly
+      ? "npm run display:r2:upload:derived:2026"
+      : `node scripts/display_r2_upload_derived.mjs --year ${year} --exclude player_profile,player_season_batting,player_season_batting_period,player_season_batting_count,player_season_pitching_poc${playerIdsCliArg(playerIds)}`,
     { dryRun },
   )
 }
 
-function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction }) {
+function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+  const fullDerivedCategories = [
+    "player_season_batting",
+    "player_season_batting_context",
+    "player_season_batting_splits",
+    "player_season_batting_count",
+    "player_season_batting_period",
+  ]
   if (dryRun) {
     console.log("\n[daily:npb-pipeline:v2] --dry-run: full publish / verify はスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full publish in dry-run")
     return
   }
-  runFullDisplayPublishCommands({ fullOnly, dryRun })
+  runFullDisplayPublishCommands({ year, fullOnly, dryRun, playerIds })
 
   const verified = runTry(
-    "公開確認(2回目): R2直 + 本番 /data standings/rankings/top-leaders",
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+    "公開確認(2回目): 主要表示 + 週次 + 選手成績",
+    verifyCommandArgs({
+      year,
+      scope: "full",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fullDerivedCategories,
+    }),
     { dryRun },
   )
   if (verified) return
 
-  if (repairStaleProductionProxyIfR2IsCurrent({ year, dryRun, publishStage: "公開2回目", autoDeployProduction })) return
+  if (
+    repairStaleProductionProxyIfR2IsCurrent({
+      year,
+      dryRun,
+      publishStage: "公開2回目",
+      autoDeployProduction,
+      scope: "full",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fullDerivedCategories,
+    })
+  ) return
 
   console.warn(
     "\n[daily:npb-pipeline:v2] 2回目の公開確認NG → R2アップロードを1回だけ再実行します。\n",
@@ -1480,12 +2879,34 @@ function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProd
     "daily:npb-pipeline:v2",
     `verify_display_publish_after_upload NG → R2 full publish retry year=${year}`,
   )
-  runFullDisplayPublishCommands({ fullOnly, dryRun, retry: true })
-  run(
-    "公開確認(2回目・再試行後): R2直 + 本番 /data standings/rankings/top-leaders",
-    `node scripts/verify_display_publish_after_upload.mjs --year ${year}`,
+  pushRunSummaryEvent("retries", {
+    kind: "full_publish_retry",
+    year,
+  })
+  runFullDisplayPublishCommands({ year, fullOnly, dryRun, retry: true, includeFastDependencies: true, playerIds })
+  const retryVerified = runTry(
+    "公開確認(2回目・再試行後): 主要表示 + 週次 + 選手成績",
+    verifyCommandArgs({
+      year,
+      scope: "full",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fullDerivedCategories,
+    }),
     { dryRun },
   )
+  if (retryVerified) return
+  if (
+    repairStaleProductionProxyIfR2IsCurrent({
+      year,
+      dryRun,
+      publishStage: "公開2回目・再試行後",
+      autoDeployProduction,
+      scope: "full",
+      samplePlayerYahooId,
+      sampleDerivedCategories: fullDerivedCategories,
+    })
+  ) return
+  throw new Error("full publish verification failed after retry")
 }
 
 function runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun }) {
@@ -1497,6 +2918,110 @@ function runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds,
     { dryRun },
   )
 }
+
+function parseTriggerDetail(detail) {
+  const raw = String(detail || "").trim()
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function isPastWindowFinalizable(args) {
+  const from = String(args?.from || "").trim()
+  const to = String(args?.to || "").trim()
+  if (!from || !to) return false
+  const today = todayJstYmd()
+  return from < today && to < today
+}
+
+function ensurePublishWindowHasFinalSchedule(args) {
+  if (args.dryRun || args.noPublish || args.prefetchOnly) return
+  const triggerReason = String(args.triggerReason || "").trim()
+  if (triggerReason === "deadline_force") return
+  const triggerDetail = parseTriggerDetail(args.triggerDetail)
+  if (triggerDetail?.allGamesFinished === true) return
+
+  const today = todayJstYmd()
+  const blocked = []
+  for (const dateJst of eachDateYmd(args.from, args.to)) {
+    if (dateJst < today) continue
+    if (scheduleAllFinishedForDate(dateJst)) continue
+    blocked.push({
+      dateJst,
+      unfinished: unfinishedScheduleLabelsForDate(dateJst),
+    })
+  }
+  if (blocked.length === 0) return
+
+  const detail = blocked
+    .map((item) => `${item.dateJst}[${item.unfinished.length ? item.unfinished.join(",") : "schedule_missing_or_not_final"}]`)
+    .join(" ")
+  const message =
+    `publish blocked because schedule is not final for current/future date(s): ${detail}. ` +
+    `監視スクリプトで全試合終了を待つか、公開しない場合は --no-publish を指定してください。`
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `publish_final_schedule_gate NG ${detail}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "publish_final_schedule_gate",
+    message,
+    blocked,
+  })
+  throw new Error(message)
+}
+
+function classifyPipelineCompletion(args) {
+  const mode = deriveMode(args)
+  if (args.dryRun) {
+    return {
+      status: "completed-dry-run",
+      logLabel: "dry-run完了",
+      consoleLabel: "dry-run完了。",
+    }
+  }
+  if (mode === "prefetch-only") {
+    return {
+      status: "completed-prefetch",
+      logLabel: "事前取得完了",
+      consoleLabel: "事前取得完了。",
+    }
+  }
+  if (mode === "fast-only") {
+    return {
+      status: "completed-intermediate",
+      logLabel: "途中更新完了",
+      consoleLabel: "途中更新完了。",
+    }
+  }
+
+  const triggerReason = String(args.triggerReason || "").trim()
+  const triggerDetail = parseTriggerDetail(args.triggerDetail)
+  const allGamesFinished = triggerDetail?.allGamesFinished === true
+  const pastWindowFinalizable = isPastWindowFinalizable(args)
+
+  if (triggerReason === "deadline_force") {
+    return {
+      status: "completed-deadline-force",
+      logLabel: "期限到達のため暫定完了",
+      consoleLabel: "期限到達のため暫定完了。",
+    }
+  }
+  if (allGamesFinished || pastWindowFinalizable) {
+    return {
+      status: "completed-final",
+      logLabel: "当日最終完了",
+      consoleLabel: "当日最終完了。",
+    }
+  }
+  return {
+    status: "completed-intermediate",
+    logLabel: "途中更新完了",
+    consoleLabel: "途中更新完了。",
+  }
+}
+
 function runFastStage({
   year,
   from,
@@ -1513,6 +3038,7 @@ function runFastStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   if (affectedYahooIds.length > 0) {
     console.log(
       `\n[daily:npb-pipeline:v2] 差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
@@ -1537,6 +3063,9 @@ function runFastStage({
   run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
   run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings", { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
+  runScheduleAheadBestEffort({ year, dryRun })
+  runTopProbablesInputRefresh({ year, from, to, dryRun })
+  run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
   run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
   run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
@@ -1568,7 +3097,13 @@ function runFastStage({
   }
 
   if (!noPublish) {
-    runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction })
+    runFastDisplayPublishAndVerify({
+      year,
+      dryRun,
+      autoDeployProduction,
+      samplePlayerYahooId: affectedYahooIds[0] || "",
+      playerIds: affectedDisplayPlayerIds,
+    })
   }
   if (build) {
     run("本番ビルド（1回目後）", "npm run build:clean", { dryRun })
@@ -1589,7 +3124,9 @@ function runFinalPrecomputedPublishStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップ表示だけ最終再計算します。\n")
+  ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun })
   ensureBattingPeriodFresh({
     year,
     from,
@@ -1606,6 +3143,7 @@ function runFinalPrecomputedPublishStage({
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
   run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
   run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
+  ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun })
   if (skipVsHandValidate) {
     console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
   } else {
@@ -1619,15 +3157,37 @@ function runFinalPrecomputedPublishStage({
   }
 
   if (!noPublish) {
-    runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction })
+    runFastDisplayPublishAndVerify({
+      year,
+      dryRun,
+      autoDeployProduction,
+      samplePlayerYahooId: affectedYahooIds[0] || "",
+      playerIds: affectedDisplayPlayerIds,
+    })
   }
   if (build) {
     run("本番ビルド（finalize-precomputed 後）", "npm run build:clean", { dryRun })
   }
 }
 
-function runTopProbablesInputRefresh({ year, dryRun }) {
-  const asOfDate = todayJstYmd()
+function runScheduleAheadBestEffort({ year, dryRun }) {
+  const label = "Phase0 未来日程（今日+14日・三連戦検出用）"
+  const command = `npx tsx scripts/phase0_fetch_schedule_ahead.ts --year ${year}`
+  const ok = runTry(label, command, { dryRun })
+  if (ok) return
+  const message =
+    "Phase0 未来日程の更新に失敗しましたが、当日分の full 派生・公開は継続します。必要なら phase0:fetch:schedule-ahead を単独再実行してください。"
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warn: schedule ahead failed; continue full stage year=${year}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "schedule_ahead_failed_continue",
+    message,
+    command,
+  })
+}
+
+function runTopProbablesInputRefresh({ year, from, to, dryRun }) {
+  const asOfDate = topProbablesAsOfDateForWindow({ from, to })
   const tomorrowDate = addDaysYmd(asOfDate, 1)
   run(
     "Sporting News ローテーション取得（予想投手用）",
@@ -1645,6 +3205,7 @@ function runTopProbablesInputRefresh({ year, dryRun }) {
     { dryRun, timeoutKind: "network" },
   )
 }
+
 function runFullStage({
   year,
   from,
@@ -1664,6 +3225,7 @@ function runFullStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   const phase13BuildCommand = `npm run phase13:build:context${affectedArg}`
   const phase15BuildCommand = `npm run phase15:build:batting-splits${affectedArg}`
   if (affectedYahooIds.length > 0) {
@@ -1671,9 +3233,9 @@ function runFullStage({
       `\n[daily:npb-pipeline:v2] full差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
     )
   }
-  run("Phase0 未来日程（今日+14日・三連戦検出用）", `npx tsx scripts/phase0_fetch_schedule_ahead.ts --year ${year}`, {
-    dryRun,
-  })
+  runScheduleAheadBestEffort({ year, dryRun })
+  run("派生: phase:pitcher-poc1", "npm run phase:pitcher-poc1", { dryRun })
+  run("派生: phase7 pitcher period", "npm run phase7:build:pitcher-period", { dryRun })
   run("派生: phase6 pitcher-catcher splits", "npm run phase6:build:pitcher-catcher-splits", { dryRun })
   run("派生: phase13 context", phase13BuildCommand, { dryRun })
   runPhase13ValidationWithRetry({
@@ -1716,8 +3278,8 @@ function runFullStage({
       note: "対戦成績派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  runTopProbablesInputRefresh({ year, dryRun })
-  run("トップ表示: 予想投手", "npm run phase36:build:top-probables", { dryRun })
+  runTopProbablesInputRefresh({ year, from, to, dryRun })
+  run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
   run("派生: phase33 batter vs team count pitch types", "npm run phase33:build:batter-vs-team-count-pitch-types", { dryRun })
   runWarnOnlyValidation(
     "検証: phase34 球団別配球 vs Phase14",
@@ -1746,7 +3308,14 @@ function runFullStage({
   })
 
   if (!noPublish) {
-    runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction })
+    runFullDisplayPublishAndVerify({
+      year,
+      fullOnly,
+      dryRun,
+      autoDeployProduction,
+      samplePlayerYahooId: affectedYahooIds[0] || "",
+      playerIds: affectedDisplayPlayerIds,
+    })
     runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {
@@ -1755,8 +3324,44 @@ function runFullStage({
 }
 
 function main() {
-  const args = parseArgs(process.argv)
+  const args = applyResumeFromCheckpoint(parseArgs(process.argv))
   currentArgs = args
+  initRunSummary(args)
+  const lockResult = acquirePipelineRunLock(args)
+  if (!lockResult.acquired) {
+    const existing = lockResult.existing || {}
+    const message =
+      `同じ日付範囲の pipeline が既に実行中です。` +
+      ` from=${existing.from || args.from} to=${existing.to || args.to}` +
+      ` mode=${existing.mode || "-"}` +
+      ` runId=${existing.runId || "-"}` +
+      ` startedAtJst=${existing.startedAtJst || "-"}`
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `duplicate_run_blocked ${message}`)
+    runSummary.status = "blocked-duplicate-run"
+    runSummary.failedAtJst = formatJstTimestamp()
+    runSummary.lastStep = lastStep || "-"
+    pushRunSummaryEvent("warnings", {
+      kind: "duplicate_run_blocked",
+      message,
+      existing,
+    })
+    writeRunSummary()
+    throw new Error(message)
+  }
+  if (lockResult.staleReason) {
+    const message =
+      `stale pipeline lock を置き換えて続行します。 reason=${lockResult.staleReason}` +
+      ` previousRunId=${lockResult.staleExisting?.runId || "-"}` +
+      ` previousStartedAtJst=${lockResult.staleExisting?.startedAtJst || "-"}`
+    console.warn(`\n[daily:npb-pipeline:v2] ${message}\n`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `stale_run_lock_replaced ${message}`)
+    pushRunSummaryEvent("warnings", {
+      kind: "stale_run_lock_replaced",
+      message,
+      existing: lockResult.staleExisting,
+    })
+    writeRunSummary()
+  }
   configureResume(args)
   const modeCount = [args.prefetchOnly, args.fastOnly, args.fullOnly, args.finalizePrecomputed].filter(Boolean).length
   if (modeCount > 1) {
@@ -1767,8 +3372,19 @@ function main() {
   appendPipelineBulkLog(
     root,
     "daily:npb-pipeline:v2",
-    `開始 year=${args.year} from=${args.from} to=${args.to} mode=${args.prefetchOnly ? "prefetch-only" : args.fastOnly ? "fast-only" : args.fullOnly ? "full-only" : args.finalizePrecomputed ? "finalize-precomputed" : "all"}`,
+    `開始 year=${args.year} from=${args.from} to=${args.to} mode=${args.prefetchOnly ? "prefetch-only" : args.fastOnly ? "fast-only" : args.fullOnly ? "full-only" : args.finalizePrecomputed ? "finalize-precomputed" : "all"} trigger=${args.triggerReason || "manual"}${args.triggerDetail ? ` detail=${args.triggerDetail}` : ""}`,
   )
+  if (args.triggerReason || args.triggerDetail) {
+    console.log(
+      `\n[daily:npb-pipeline:v2] 起動理由: ${args.triggerReason || "manual"}${args.triggerDetail ? ` / ${args.triggerDetail}` : ""}\n`,
+    )
+    pushRunSummaryEvent("notes", {
+      kind: "trigger_reason",
+      reason: args.triggerReason || "manual",
+      detail: args.triggerDetail || "",
+    })
+  }
+  ensurePublishWindowHasFinalSchedule(args)
 
   if (args.prefetchOnly) {
     runPrefetchStage(args)
@@ -1776,20 +3392,24 @@ function main() {
     if (!args.skipPrefetch) runPrefetchStage(args)
     runFinishedRawFreshnessGate(args)
     runPhase4Stage(args)
+    ensurePhase4ConsistencyGate(args)
     runStrictCanonicalValidation(args)
     runFastStage(args)
   } else if (args.fullOnly) {
+    ensurePhase4ConsistencyGate(args)
     runFullStage(args)
   } else if (args.finalizePrecomputed) {
     if (!args.skipPrefetch) runPrefetchStage(args)
     runFinishedRawFreshnessGate(args)
     runPhase4Stage(args)
+    ensurePhase4ConsistencyGate(args)
     runStrictCanonicalValidation(args)
     runFinalPrecomputedPublishStage(args)
   } else {
     if (!args.skipPrefetch) runPrefetchStage(args)
     runFinishedRawFreshnessGate(args)
     runPhase4Stage(args)
+    ensurePhase4ConsistencyGate(args)
     runStrictCanonicalValidation(args)
     runFastStage({
       ...args,
@@ -1804,16 +3424,84 @@ function main() {
     })
   }
 
-  if (resumeState.token && !resumeState.released) {
-    throw new Error(`resume token did not match any step: ${resumeState.token}`)
+  if ((resumeState.token || resumeState.stepId) && !resumeState.released) {
+    throw new Error(`resume target did not match any step: token=${resumeState.token || "-"} stepId=${resumeState.stepId || "-"}`)
   }
 
-  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了 exit=0 lastStep=${lastStep || "-"}`)
-  writePipelineCheckpoint("pipeline-completed", lastStep || "-", "", {
+  const completion = classifyPipelineCompletion(args)
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `${completion.logLabel} exit=0 lastStep=${lastStep || "-"} runId=${currentRunId}`,
+  )
+  runSummary.status = completion.status
+  runSummary.completedAtJst = formatJstTimestamp()
+  runSummary.lastStep = lastStep || "-"
+  runSummary.completion = {
+    ...completion,
+    runId: currentRunId,
+  }
+  if (completion.status === "completed-final") {
+    runSummary.progressState = "completed_final"
+    runSummary.progressMessage = "当日最終完了。2回目公開と公開確認まで完了した状態として扱う。"
+    runSummary.publishProgress = {
+      ...(runSummary.publishProgress ?? {}),
+      finalState: "complete",
+      finalMessage: "当日最終公開完了。球場別を含む詳細派生も確認済み。",
+    }
+  } else if (completion.status === "completed-intermediate") {
+    runSummary.progressState = "completed_intermediate"
+    runSummary.progressMessage = "途中更新完了。1回目公開までの可能性があるため、球場別を含む最終公開完了とは判定しない。"
+    runSummary.publishProgress = {
+      ...(runSummary.publishProgress ?? {}),
+      finalState: "intermediate_only",
+      finalMessage: "途中公開完了。2回目公開完了の証拠ではない。",
+    }
+  } else if (completion.status === "completed-prefetch") {
+    runSummary.progressState = "completed_prefetch_only"
+    runSummary.progressMessage = "事前取得のみ完了。公開完了とは判定しない。"
+    runSummary.publishProgress = {
+      ...(runSummary.publishProgress ?? {}),
+      finalState: "not_published",
+      finalMessage: "prefetch-only のため公開なし。",
+    }
+  } else if (completion.status === "completed-deadline-force") {
+    runSummary.progressState = "completed_deadline_force"
+    runSummary.progressMessage = "期限到達の暫定完了。最終公開完了かは publishProgress と公開確認結果を見る。"
+    runSummary.publishProgress = {
+      ...(runSummary.publishProgress ?? {}),
+      finalState: runSummary.publishProgress?.finalState ?? "deadline_force",
+      finalMessage: runSummary.publishProgress?.finalMessage ?? "期限到達の暫定完了。",
+    }
+  } else if (completion.status === "completed-dry-run") {
+    runSummary.progressState = "completed_dry_run"
+    runSummary.progressMessage = "dry-run 完了。実データ公開は行っていない。"
+    runSummary.publishProgress = {
+      ...(runSummary.publishProgress ?? {}),
+      finalState: "not_published",
+      finalMessage: "dry-run のため公開なし。",
+    }
+  }
+  writeRunSummary()
+  writePipelineCheckpoint(completion.status, lastStep || "-", "", {
+    stepId: lastStepId || inferStepId(lastStep || "-", ""),
     resumeMode: resumeState.mode,
     resumeToken: resumeState.token,
+    resumeStepId: resumeState.stepId,
   })
-  console.log("\n[daily:npb-pipeline:v2] 完了。\n")
+  writePipelineRunLock(args, {
+    schemaVersion: "pipeline-run-v2-lock-1",
+    state: completion.status,
+    runId: currentRunId,
+    pid: process.pid,
+    year: args.year,
+    from: args.from,
+    to: args.to,
+    mode: deriveMode(args),
+    startedAtJst: runSummary.startedAtJst,
+    completedAtJst: formatJstTimestamp(),
+  })
+  console.log(`\n[daily:npb-pipeline:v2] ${completion.consoleLabel}\n`)
 }
 
 try {
@@ -1824,6 +3512,45 @@ try {
     "daily:npb-pipeline:v2",
     `異常終了 exit=1 lastStep=${lastStep || "-"} message=${String(e?.message ?? e)}`,
   )
+  if (runSummary) {
+    runSummary.status = "failed"
+    runSummary.failedAtJst = formatJstTimestamp()
+    runSummary.lastStep = lastStep || "-"
+    if (!runSummary.progressState || !String(runSummary.progressState).startsWith("failed")) {
+      runSummary.progressState = "failed"
+      runSummary.progressMessage =
+        `異常終了。lastStep=${lastStep || "-"}。公開完了判定は publishProgress.finalState を確認する。`
+      runSummary.publishProgress = {
+        ...(runSummary.publishProgress ?? {}),
+        finalState: runSummary.publishProgress?.finalState ?? "failed_unknown_publish_state",
+        finalMessage:
+          runSummary.publishProgress?.finalMessage ??
+          "異常終了。公開工程の到達状況を completedSteps と publishProgress で確認する。",
+      }
+    }
+    pushRunSummaryEvent("warnings", {
+      kind: "pipeline_failed",
+      message: String(e?.message ?? e),
+      lastStep: lastStep || "-",
+    })
+    writeRunSummary()
+  }
+  if (currentArgs) {
+    writePipelineRunLock(currentArgs, {
+      schemaVersion: "pipeline-run-v2-lock-1",
+      state: "failed",
+      runId: currentRunId,
+      pid: process.pid,
+      year: currentArgs.year,
+      from: currentArgs.from,
+      to: currentArgs.to,
+      mode: deriveMode(currentArgs),
+      startedAtJst: runSummary?.startedAtJst || formatJstTimestamp(),
+      failedAtJst: formatJstTimestamp(),
+      lastStep: lastStep || "-",
+      message: String(e?.message ?? e),
+    })
+  }
   console.error("[daily:npb-pipeline:v2] failed:", e?.message || e)
   process.exit(1)
 }

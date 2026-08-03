@@ -2,11 +2,15 @@
 /**
  * R2 upload 後の公開確認ゲート。
  *
- * - local public/data と R2 直の standings / rankings / top-leaders を比較する
- * - 本番 /data プロキシが R2 と同じ standings / rankings / top-leaders を返すか確認する
+ * - local public/data と R2 直の standings / rankings / top-leaders / top-probables を比較する
+ * - weekly current-week / weekly rankings / weekly top-leaders も比較する
+ * - 任意指定があれば選手成績 derived も比較する（derived は local ↔ R2）
+ * - 本番 /data プロキシが R2 と同じデータを返すか確認する
  *
  * 用法:
  *   node scripts/verify_display_publish_after_upload.mjs --year 2026
+ *   node scripts/verify_display_publish_after_upload.mjs --year 2026 --scope fast
+ *   node scripts/verify_display_publish_after_upload.mjs --year 2026 --scope full
  *   node scripts/verify_display_publish_after_upload.mjs --year 2026 --no-production
  */
 
@@ -30,7 +34,20 @@ function argValue(name, fallback = "") {
 }
 
 const YEAR = argValue("--year", "2026")
+const SCOPE = argValue("--scope", "full").toLowerCase()
 const CHECK_PRODUCTION = !process.argv.includes("--no-production")
+const SAMPLE_PLAYER_YAHOO_ID = argValue("--sample-player-yahoo-id", "")
+const DEFAULT_SAMPLE_DERIVED_CATEGORIES =
+  SCOPE === "fast"
+    ? "player_season_batting,player_season_batting_period,player_season_batting_count,player_season_pitching_poc"
+    : "player_season_batting,player_season_batting_context,player_season_batting_splits,player_season_batting_count,player_season_batting_period"
+const SAMPLE_DERIVED_CATEGORIES = argValue(
+  "--sample-derived-categories",
+  DEFAULT_SAMPLE_DERIVED_CATEGORIES,
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
 const VERCEL_CLI =
   process.env.TOPPAGE_VERCEL_CLI || (process.platform === "win32" ? "vercel.cmd" : "vercel")
 const R2_BASE = (
@@ -43,6 +60,7 @@ const SITE_BASE = (
   process.env.PHASE0_SITE_BASE_URL ||
   DEFAULT_SITE_BASE
 ).replace(/\/+$/, "")
+const CHECK_TOP_PROBABLES = SCOPE !== "fast" && !process.argv.includes("--skip-top-probables")
 
 function vercelCliArgs(subcommandArgs) {
   return [...subcommandArgs]
@@ -162,13 +180,122 @@ function topLeadersSignature(json) {
   }
 }
 
-function assertSame(label, a, b) {
+function topProbablesSignature(json) {
+  const row = Array.isArray(json?.games) ? json.games[0] : Array.isArray(json) ? json[0] : null
+  return {
+    date: String(json?.dateJst ?? json?.date ?? ""),
+    gameId: String(row?.gameId ?? ""),
+    awayTeam: String(row?.awayTeamShort ?? row?.awayTeam ?? ""),
+    homeTeam: String(row?.homeTeamShort ?? row?.homeTeam ?? ""),
+    awayPitcher: String(row?.awayProbable?.name ?? row?.awayPitcher?.name ?? row?.awayPitcher ?? ""),
+    homePitcher: String(row?.homeProbable?.name ?? row?.homePitcher?.name ?? row?.homePitcher ?? ""),
+  }
+}
+
+function weeklyCurrentWeekSignature(json) {
+  return {
+    calendarWeekKey: String(json?.calendarWeekKey ?? ""),
+    weekKey: String(json?.weekKey ?? ""),
+    isFallbackWeek: Boolean(json?.isFallbackWeek),
+    availableWeekKeys: Array.isArray(json?.availableWeekKeys) ? json.availableWeekKeys.map(String) : [],
+    generatedAt: String(json?.generatedAt ?? ""),
+  }
+}
+
+function playerSeasonBattingSignature(json) {
+  const stats = json?.stats ?? json?.season ?? json ?? {}
+  return {
+    playerId: String(json?.playerId ?? json?.yahooPlayerId ?? stats?.playerId ?? ""),
+    team: String(json?.team ?? stats?.team ?? ""),
+    games: Number(stats?.g ?? stats?.games ?? NaN),
+    pa: Number(stats?.pa ?? NaN),
+    ab: Number(stats?.ab ?? NaN),
+    h: Number(stats?.h ?? NaN),
+    hr: Number(stats?.hr ?? NaN),
+    avg: Number(stats?.avg ?? NaN),
+  }
+}
+
+function derivedEnvelopeSignature(json) {
+  return {
+    schemaVersion: String(json?.schemaVersion ?? ""),
+    seasonYear: String(json?.seasonYear ?? json?.year ?? ""),
+    yahooBatterId: String(json?.yahooBatterId ?? json?.playerId ?? ""),
+    generatedAt: String(json?.generatedAt ?? ""),
+    sourceCanonicalGames: Array.isArray(json?.source?.canonicalGames) ? json.source.canonicalGames.length : 0,
+  }
+}
+
+class VerifyMismatchError extends Error {
+  constructor(message, failureClass, details = {}) {
+    super(message)
+    this.name = "VerifyMismatchError"
+    this.failureClass = failureClass
+    this.details = details
+  }
+}
+
+function assertSame(label, a, b, options = {}) {
   const aj = JSON.stringify(a)
   const bj = JSON.stringify(b)
   if (aj !== bj) {
-    throw new Error(`${label} mismatch\n  expected(R2/local)=${aj}\n  actual(production/R2)=${bj}`)
+    const expectedLabel = String(options.expectedLabel || "expected")
+    const actualLabel = String(options.actualLabel || "actual")
+    const failureClass = String(options.failureClass || "verify_mismatch")
+    throw new VerifyMismatchError(
+      `${label} mismatch\n  expected(${expectedLabel})=${aj}\n  actual(${actualLabel})=${bj}`,
+      failureClass,
+      {
+        label,
+        expected: a,
+        actual: b,
+        expectedLabel,
+        actualLabel,
+      },
+    )
   }
   console.log(`[verify-display-publish] OK ${label}: ${aj}`)
+}
+
+function assertLocalMatchesR2(label, localSig, r2Sig) {
+  assertSame(label, localSig, r2Sig, {
+    expectedLabel: "local",
+    actualLabel: "R2",
+    failureClass: "local_vs_r2_failed",
+  })
+}
+
+function assertProductionMatchesR2(label, localSig, r2Sig, productionSig) {
+  const localJson = JSON.stringify(localSig)
+  const r2Json = JSON.stringify(r2Sig)
+  const productionJson = JSON.stringify(productionSig)
+  if (r2Json === productionJson) {
+    console.log(`[verify-display-publish] OK ${label}: ${r2Json}`)
+    return
+  }
+  const failureClass = localJson === r2Json ? "production_stale_only" : "r2_vs_production_failed"
+  assertSame(label, r2Sig, productionSig, {
+    expectedLabel: "R2",
+    actualLabel: "production",
+    failureClass,
+  })
+}
+
+async function verifyWeeklyCurrentWeek() {
+  const rel = `data/rankings/weekly/${YEAR}/current-week.json`
+  console.log(`[verify-display-publish] check ${rel}`)
+  const local = readJson(`public/${rel}`)
+  const r2 = await fetchJson("R2 weekly current week", `${R2_BASE}/${rel}`)
+  const r2Sig = weeklyCurrentWeekSignature(r2)
+  const localSig = weeklyCurrentWeekSignature(local)
+  assertLocalMatchesR2("R2 weekly current week", localSig, r2Sig)
+
+  if (CHECK_PRODUCTION) {
+    const prod = fetchProductionJsonViaVercelCurl("production weekly current week", rel)
+    const prodSig = weeklyCurrentWeekSignature(prod)
+    assertProductionMatchesR2("production weekly current week", localSig, r2Sig, prodSig)
+  }
+  return r2
 }
 
 async function verifyStandingsLeague(league) {
@@ -178,12 +305,12 @@ async function verifyStandingsLeague(league) {
   const r2 = await fetchJson(`R2 standings ${league}`, `${R2_BASE}/${rel}`)
   const localSig = firstStandingSignature(local)
   const r2Sig = firstStandingSignature(r2)
-  assertSame(`R2 standings ${league}`, localSig, r2Sig)
+  assertLocalMatchesR2(`R2 standings ${league}`, localSig, r2Sig)
 
   if (CHECK_PRODUCTION) {
     const prod = fetchProductionJsonViaVercelCurl(`production standings ${league}`, rel)
     const prodSig = firstStandingSignature(prod)
-    assertSame(`production standings ${league}`, r2Sig, prodSig)
+    assertProductionMatchesR2(`production standings ${league}`, localSig, r2Sig, prodSig)
   }
 }
 
@@ -193,12 +320,29 @@ async function verifyRankingLeague(league) {
   const local = readJson(`public/${rel}`)
   const r2 = await fetchJson(`R2 rankings OPS ${league}`, `${R2_BASE}/${rel}`)
   const r2Sig = firstRankingSignature(r2)
-  assertSame(`R2 rankings OPS ${league}`, firstRankingSignature(local), r2Sig)
+  const localSig = firstRankingSignature(local)
+  assertLocalMatchesR2(`R2 rankings OPS ${league}`, localSig, r2Sig)
 
   if (CHECK_PRODUCTION) {
     const prod = fetchProductionJsonViaVercelCurl(`production rankings OPS ${league}`, rel)
     const prodSig = firstRankingSignature(prod)
-    assertSame(`production rankings OPS ${league}`, r2Sig, prodSig)
+    assertProductionMatchesR2(`production rankings OPS ${league}`, localSig, r2Sig, prodSig)
+  }
+}
+
+async function verifyWeeklyRankingLeague(weekKey, league) {
+  const rel = `data/rankings/weekly/${YEAR}/${weekKey}/${league}/OPS.json`
+  console.log(`[verify-display-publish] check ${rel}`)
+  const local = readJson(`public/${rel}`)
+  const r2 = await fetchJson(`R2 weekly rankings OPS ${weekKey} ${league}`, `${R2_BASE}/${rel}`)
+  const r2Sig = firstRankingSignature(r2)
+  const localSig = firstRankingSignature(local)
+  assertLocalMatchesR2(`R2 weekly rankings OPS ${weekKey} ${league}`, localSig, r2Sig)
+
+  if (CHECK_PRODUCTION) {
+    const prod = fetchProductionJsonViaVercelCurl(`production weekly rankings OPS ${weekKey} ${league}`, rel)
+    const prodSig = firstRankingSignature(prod)
+    assertProductionMatchesR2(`production weekly rankings OPS ${weekKey} ${league}`, localSig, r2Sig, prodSig)
   }
 }
 
@@ -208,24 +352,98 @@ async function verifyTopLeadersLeague(league) {
   const local = readJson(`public/${rel}`)
   const r2 = await fetchJson(`R2 top-leaders batting ${league}`, `${R2_BASE}/${rel}`)
   const r2Sig = topLeadersSignature(r2)
-  assertSame(`R2 top-leaders batting ${league}`, topLeadersSignature(local), r2Sig)
+  const localSig = topLeadersSignature(local)
+  assertLocalMatchesR2(`R2 top-leaders batting ${league}`, localSig, r2Sig)
 
   if (CHECK_PRODUCTION) {
     const prod = fetchProductionJsonViaVercelCurl(`production top-leaders batting ${league}`, rel)
     const prodSig = topLeadersSignature(prod)
-    assertSame(`production top-leaders batting ${league}`, r2Sig, prodSig)
+    assertProductionMatchesR2(`production top-leaders batting ${league}`, localSig, r2Sig, prodSig)
   }
 }
 
+async function verifyWeeklyTopLeadersLeague(weekKey, league) {
+  const rel = `data/top-leaders/weekly/${YEAR}/${weekKey}/${league}/batting.json`
+  console.log(`[verify-display-publish] check ${rel}`)
+  const local = readJson(`public/${rel}`)
+  const r2 = await fetchJson(`R2 weekly top-leaders batting ${weekKey} ${league}`, `${R2_BASE}/${rel}`)
+  const r2Sig = topLeadersSignature(r2)
+  const localSig = topLeadersSignature(local)
+  assertLocalMatchesR2(`R2 weekly top-leaders batting ${weekKey} ${league}`, localSig, r2Sig)
+
+  if (CHECK_PRODUCTION) {
+    const prod = fetchProductionJsonViaVercelCurl(`production weekly top-leaders batting ${weekKey} ${league}`, rel)
+    const prodSig = topLeadersSignature(prod)
+    assertProductionMatchesR2(`production weekly top-leaders batting ${weekKey} ${league}`, localSig, r2Sig, prodSig)
+  }
+}
+
+async function verifyTopProbables() {
+  const rel = `data/top-probables/${YEAR}/current.json`
+  console.log(`[verify-display-publish] check ${rel}`)
+  const local = readJson(`public/${rel}`)
+  const r2 = await fetchJson("R2 top-probables current", `${R2_BASE}/${rel}`)
+  const r2Sig = topProbablesSignature(r2)
+  const localSig = topProbablesSignature(local)
+  assertLocalMatchesR2("R2 top-probables current", localSig, r2Sig)
+
+  if (CHECK_PRODUCTION) {
+    const prod = fetchProductionJsonViaVercelCurl("production top-probables current", rel)
+    const prodSig = topProbablesSignature(prod)
+    assertProductionMatchesR2("production top-probables current", localSig, r2Sig, prodSig)
+  }
+}
+
+async function verifyDerivedSampleCategory(category, yahooId, signatureFn = derivedEnvelopeSignature) {
+  const rel = `data/derived/${category}/${YEAR}/yahoo_${yahooId}.json`
+  const localRel = `_data/derived/${category}/${YEAR}/yahoo_${yahooId}.json`
+  if (!fs.existsSync(path.join(ROOT, localRel))) {
+    console.warn(`[verify-display-publish] skip sample player stats: local file missing ${localRel}`)
+    return
+  }
+  console.log(`[verify-display-publish] check ${rel}`)
+  const local = readJson(localRel)
+  const r2 = await fetchJson(`R2 ${category} ${yahooId}`, `${R2_BASE}/${rel}`)
+  const r2Sig = signatureFn(r2)
+  assertSame(`R2 ${category} ${yahooId}`, signatureFn(local), r2Sig)
+}
+
+function signatureForDerivedCategory(category) {
+  if (category === "player_season_batting") return playerSeasonBattingSignature
+  return derivedEnvelopeSignature
+}
+
 async function main() {
-  console.log(`[verify-display-publish] year=${YEAR}`)
+  console.log(`[verify-display-publish] year=${YEAR} scope=${SCOPE}`)
   console.log(`[verify-display-publish] R2=${R2_BASE}`)
   if (CHECK_PRODUCTION) console.log(`[verify-display-publish] production=${SITE_BASE} (verified via vercel curl)`)
+
+  const weeklyCurrent = await verifyWeeklyCurrentWeek()
+  const weeklyWeekKey = String(weeklyCurrent?.weekKey ?? "")
+  if (!weeklyWeekKey) {
+    throw new Error(`weekly current week is missing weekKey for ${YEAR}`)
+  }
 
   for (const league of ["CL", "PL"]) {
     await verifyStandingsLeague(league)
     await verifyRankingLeague(league)
     await verifyTopLeadersLeague(league)
+    await verifyWeeklyRankingLeague(weeklyWeekKey, league)
+    await verifyWeeklyTopLeadersLeague(weeklyWeekKey, league)
+  }
+  if (CHECK_TOP_PROBABLES) {
+    await verifyTopProbables()
+  } else {
+    console.log("[verify-display-publish] skip top-probables for fast scope")
+  }
+  if (SAMPLE_PLAYER_YAHOO_ID) {
+    for (const category of SAMPLE_DERIVED_CATEGORIES) {
+      await verifyDerivedSampleCategory(
+        category,
+        SAMPLE_PLAYER_YAHOO_ID,
+        signatureForDerivedCategory(category),
+      )
+    }
   }
 
   console.log("[verify-display-publish] OK")
@@ -233,8 +451,11 @@ async function main() {
 
 main().catch((e) => {
   console.error("[verify-display-publish] failed:", e?.message || e)
+  if (e?.failureClass) {
+    console.error(`[verify-display-publish] failureClass=${e.failureClass}`)
+  }
   console.error(
-    `[verify-display-publish] checked paths include: data/rankings/${YEAR}/{CL,PL}/OPS.json and data/top-leaders/${YEAR}/{CL,PL}/batting.json`,
+    `[verify-display-publish] checked paths include: data/rankings/${YEAR}/{CL,PL}/OPS.json, data/rankings/weekly/${YEAR}/current-week.json, data/rankings/weekly/${YEAR}/<weekKey>/{CL,PL}/OPS.json, data/top-leaders/${YEAR}/{CL,PL}/batting.json, data/top-leaders/weekly/${YEAR}/<weekKey>/{CL,PL}/batting.json, data/top-probables/${YEAR}/current.json, data/derived/player_season_batting*`,
   )
   console.error(
     "Hint: first rerun the R2 upload with: npm run display:publish:fast:2026. If R2 is OK but production stays stale, then deploy the proxy/app.",

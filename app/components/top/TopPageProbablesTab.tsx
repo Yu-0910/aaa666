@@ -912,7 +912,6 @@ function ProbablesCard({
           </div>
           <div className="text-[10px] text-gray-400 latin tabular-nums">
             {formatDateLabel(displayCard.seriesStart)} 〜 {formatDateLabel(displayCard.seriesEnd)}
-            （苦手な打者のOPS／打率／HR）
           </div>
         </div>
       </div>

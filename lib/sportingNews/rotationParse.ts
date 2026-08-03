@@ -2,6 +2,7 @@ import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 import type { SportingNewsRotationRow } from "@/lib/sportingNews/types"
 
 const EMPTY_PITCHER_MARKERS = new Set(["", "ー", "―", "－", "-", "—", "未定", " ", "\u00a0"])
+const WEEKDAY_CELL_RE = /^[月火水木金土日]$/
 
 function stripHtmlToText(fragment: string): string {
   return fragment
@@ -19,6 +20,23 @@ function normalizeCellText(raw: string): string {
 function isEmptyPitcherCell(text: string): boolean {
   const t = text.trim()
   return EMPTY_PITCHER_MARKERS.has(t)
+}
+
+function pickPitcherAndOpponentCells(cells: string[]): {
+  pitcherRaw: string
+  opponentRaw: string
+} {
+  const body = cells.slice(1)
+  if (WEEKDAY_CELL_RE.test(body[0] ?? "")) {
+    return {
+      pitcherRaw: body[1] ?? "",
+      opponentRaw: body[2] ?? "",
+    }
+  }
+  return {
+    pitcherRaw: body[0] ?? "",
+    opponentRaw: body[1] ?? "",
+  }
 }
 
 /** `6月14日（日）` → `{ month: 6, day: 14 }` */
@@ -83,8 +101,7 @@ function parseTableRows(tableHtml: string, seasonYear: string): {
       continue
     }
 
-    const pitcherRaw = cells[1] ?? ""
-    const opponentRaw = cells[2] ?? ""
+    const { pitcherRaw, opponentRaw } = pickPitcherAndOpponentCells(cells)
     const pitcherNameJa = isEmptyPitcherCell(pitcherRaw) ? null : pitcherRaw
     const opponentTeamShort = isEmptyPitcherCell(opponentRaw) ? null : opponentRaw
     const opponentTeamCode =
