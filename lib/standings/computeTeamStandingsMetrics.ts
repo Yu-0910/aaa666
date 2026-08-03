@@ -268,22 +268,6 @@ export function assignRanksAndGamesBehind(rows: StandingsRowDraft[]): TeamStandi
       hbp_allowed: row.hbp_allowed,
       er: row.er,
       whip: row.whip,
-      support_runs: row.support_runs,
-      support_rate: row.support_rate,
-      no_walks: row.no_walks,
-      sho: row.sho,
-      hr_wpo_bf: row.hr_wpo_bf,
-      hr_wpo_h: row.hr_wpo_h,
-      hr_wpo_avg: row.hr_wpo_avg,
-      hr_wpo_hr: row.hr_wpo_hr,
     }
   })
-}
-
-export function rerankTeamStandingRows(rows: TeamStandingRow[]): TeamStandingRow[] {
-  const drafts: StandingsRowDraft[] = rows.map(({ rank: _rank, gb: _gb, team: _team, pct: _pct, ...row }) => ({
-    ...row,
-    teamShort: row.teamName,
-  }))
-  return assignRanksAndGamesBehind(drafts)
 }
