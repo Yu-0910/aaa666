@@ -10,10 +10,15 @@
  *   public/data/standings/{year}/{CL|PL}.json
  */
 
-import { mkdirSync, writeFileSync } from "fs"
+import { mkdirSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import { aggregateTeamStandingsByLeagueFromCanonical } from "@/lib/standings/aggregateTeamStandingsFromCanonical"
+import { rerankTeamStandingRows } from "@/lib/standings/computeTeamStandingsMetrics"
+import {
+  applyBaseballDataTeamPitchingRows,
+  loadBaseballDataTeamPitchingSnapshot,
+} from "@/lib/standings/baseballDataTeamPitching"
 import {
   derivedTeamStandingsRelPath,
   publicTeamStandingsRelPath,
@@ -24,6 +29,7 @@ import {
   type TeamStandingsJson,
 } from "@/lib/standings/types"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { writeTextFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -42,7 +48,7 @@ function parseArgs(): { year: string } {
 
 function writeStandingsJson(absPath: string, payload: TeamStandingsJson): void {
   mkdirSync(dirname(absPath), { recursive: true })
-  writeFileSync(absPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
+  writeTextFileWithRetrySync(absPath, `${JSON.stringify(payload, null, 2)}\n`)
 }
 
 function buildPayload(
@@ -69,7 +75,10 @@ function main(): void {
   const byLeague = aggregateTeamStandingsByLeagueFromCanonical(docs, year, { projectRoot })
 
   for (const league of ["CL", "PL"] as const) {
-    const rows = byLeague[league]
+    const snapshot = loadBaseballDataTeamPitchingSnapshot(projectRoot, year, league)
+    const rows = snapshot
+      ? rerankTeamStandingRows(applyBaseballDataTeamPitchingRows(byLeague[league], snapshot.rows))
+      : byLeague[league]
     const payload = buildPayload(year, league, rows)
 
     for (const row of rows) {
