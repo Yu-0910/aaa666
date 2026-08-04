@@ -47,7 +47,6 @@ import {
   PL_TEAM_SHORTS,
   teamDisplayNameFromShort,
 } from "@/lib/standings/teamCodes"
-import { overlayPhase11TeamBattingMetrics } from "@/lib/standings/phase11TeamBattingOverlay"
 import type { StandingsLeague, TeamStandingRow } from "@/lib/standings/types"
 
 type TeamBucket = {
@@ -532,8 +531,7 @@ export function aggregateTeamStandingsFromCanonical(
     drafts.push(bucketToRowDraft(short, bucket))
   }
 
-  const ranked = assignRanksAndGamesBehind(drafts)
-  return overlayPhase11TeamBattingMetrics(ranked, docs, year, league, projectRoot)
+  return assignRanksAndGamesBehind(drafts)
 }
 
 export function aggregateTeamStandingsByLeagueFromCanonical(
