@@ -2931,6 +2931,24 @@ function runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds,
   )
 }
 
+function runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun }) {
+  const ok = runTry(
+    "NPB公式記録訂正: 2回目公開後の公式サイト観察",
+    `npm run npb-official-corrections:observe -- --year ${year}`,
+    { dryRun, timeoutKind: "network" },
+  )
+  if (ok) return
+  const message =
+    "NPB公式サイトの訂正告知観察に失敗。公開後の警告として扱うが、次回実行前に npb-official-corrections:observe を確認する。"
+  console.warn(`\n[daily:npb-pipeline:v2] ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "npb_official_correction_observation_failed",
+    year,
+    message,
+  })
+}
+
 function parseTriggerDetail(detail) {
   const raw = String(detail || "").trim()
   if (!raw) return null
@@ -3344,6 +3362,7 @@ function runFullStage({
       samplePlayerYahooId: affectedYahooIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
+    runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun })
     runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "npb-official-record-correction-observation-v1",
+  "year": "2026",
+  "observedAt": "2026-08-04T08:19:33.836Z",
+  "sourceListUrls": [
+    "https://npb.jp/news/npb_stats.html",
+    "https://npb.jp/news/npb_stats.html?page=2",
+    "https://npb.jp/news/npb_stats.html?page=3",
+    "https://npb.jp/news/npb_stats.html?page=4",
+    "https://npb.jp/news/npb_stats.html?page=5",
+    "https://npb.jp/news/npb_stats.html?page=6",
+    "https://npb.jp/news/npb_stats.html?page=7",
+    "https://npb.jp/news/npb_stats.html?page=8"
+  ],
+  "requiredRegenerationSurfaces": [
+    "公式訂正設定: _data/official_record_corrections/2026/corrections.json",
+    "該当試合 canonical JSON: _data/scraped_games/canonical/{gameId}.json",
+    "個人打撃ページ: phase11, phase13, phase15, phase16, phase17",
+    "個人投手ページ: phase:pitcher-poc1, phase7, phase14, phase25（投手成績・投球内容に影響する場合）",
+    "ランキングページ: phase12 batting rankings, phase19 pitching rankings, phase28 weekly rankings",
+    "順位表指標: phase29 team standings",
+    "トップ表示: top-leaders, top-weekly-leaders",
+    "その他 canonical 由来の派生: 捕手系 phase22-26, 対戦 phase30, 配球/カウント/状況別 phase20/33/34（訂正内容が影響する場合）",
+    "本番公開: display:r2:upload:2026 と display:r2:upload:derived:2026、公開確認"
+  ],
+  "observed": [
+    {
+      "publishedDate": "2026-07-16",
+      "title": "パシフィック・リーグ 公式記録の訂正に関するお知らせ（7/14 F-H）",
+      "url": "https://npb.jp/news/detail/20260716_01.html",
+      "configured": true
+    },
+    {
+      "publishedDate": "2026-07-01",
+      "title": "セントラル・リーグ 公式記録の訂正に関するお知らせ（6/27 C-T）",
+      "url": "https://npb.jp/news/detail/20260701_02.html",
+      "configured": true
+    },
+    {
+      "publishedDate": "2026-04-27",
+      "title": "セントラル・リーグ 公式記録の訂正に関するお知らせ（4/22 G-D）",
+      "url": "https://npb.jp/news/detail/20260427_04.html",
+      "configured": true
+    }
+  ],
+  "unconfigured": []
+}

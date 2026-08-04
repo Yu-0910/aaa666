@@ -141,6 +141,8 @@
     "phase4:merge:phase10:all": "tsx scripts/batch_merge_phase10_into_all_canonical.ts",
     "npb-official-corrections:apply": "tsx scripts/apply_npb_official_record_corrections.ts --year 2026 --write",
     "npb-official-corrections:audit": "tsx scripts/apply_npb_official_record_corrections.ts --year 2026",
+    "npb-official-corrections:observe": "tsx scripts/watch_npb_official_record_corrections.ts --year 2026",
+    "npb-official-corrections:observe:strict": "tsx scripts/watch_npb_official_record_corrections.ts --year 2026 --fail-on-unconfigured",
     "official-corrections:repair-from-pa": "tsx scripts/repair_official_record_corrections_from_pa.ts --year 2026 --write",
     "official-corrections:audit-from-pa": "tsx scripts/repair_official_record_corrections_from_pa.ts --year 2026",
     "rebuild:batting-cs-from-score-2026": "npm run verify:cs-runner-events-appearance-slots && npm run phase11:build:batting && npm run validate:appearance-slots-vs-line-ab:fail && npm run phase12:build:rankings",
