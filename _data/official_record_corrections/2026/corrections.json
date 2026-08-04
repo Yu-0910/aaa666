@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "npb-official-record-corrections-v1",
+  "year": "2026",
+  "source": "NPB official news",
+  "corrections": [
+    {
+      "id": "npb-20260427-04-2021038750",
+      "publishedDate": "2026-04-27",
+      "gameDate": "2026-04-22",
+      "gameId": "2021038750",
+      "title": "セントラル・リーグ 公式記録の訂正に関するお知らせ（4/22 G-D）",
+      "url": "https://npb.jp/news/detail/20260427_04.html",
+      "notes": "2回裏、B.ダルベックの一塁手失策出塁を三塁内野安打へ訂正。打点、阿部失策、櫻井被安打・自責点も訂正。",
+      "batting": [
+        {
+          "yahooPlayerId": "1561820",
+          "playerName": "ダルベック",
+          "set": { "h": 2, "rbi": 2 },
+          "replaceSlots": { "from": "一失", "to": "三安" }
+        },
+        {
+          "yahooPlayerId": "1500078",
+          "playerName": "阿部 寿樹",
+          "set": { "e": 0 }
+        }
+      ],
+      "pitching": [
+        {
+          "yahooPlayerId": "2100410",
+          "playerName": "櫻井 頼之介",
+          "set": { "h": 7, "er": 4 }
+        }
+      ]
+    },
+    {
+      "id": "npb-20260701-02-2021039058",
+      "publishedDate": "2026-07-01",
+      "gameDate": "2026-06-27",
+      "gameId": "2021039058",
+      "title": "セントラル・リーグ 公式記録の訂正に関するお知らせ（6/27 C-T）",
+      "url": "https://npb.jp/news/detail/20260701_02.html",
+      "notes": "4回表、髙寺望夢の一塁野選を投手内野安打へ訂正。打点・自責点変更なし。",
+      "batting": [
+        {
+          "yahooPlayerId": "2000057",
+          "playerName": "髙寺 望夢",
+          "set": { "h": 4 },
+          "replaceSlots": { "from": "一野選", "to": "投安" }
+        }
+      ],
+      "pitching": [
+        {
+          "yahooPlayerId": "1600123",
+          "playerName": "床田 寛樹",
+          "set": { "h": 7 }
+        }
+      ]
+    },
+    {
+      "id": "npb-20260716-01-2021039136",
+      "publishedDate": "2026-07-16",
+      "gameDate": "2026-07-14",
+      "gameId": "2021039136",
+      "title": "パシフィック・リーグ 公式記録の訂正に関するお知らせ（7/14 F-H）",
+      "url": "https://npb.jp/news/detail/20260716_01.html",
+      "notes": "7回裏の失策者をR.オスナからJ.ダウンズへ訂正。チーム失策計は変更なし。",
+      "batting": [
+        {
+          "yahooPlayerId": "2101257",
+          "playerName": "ダウンズ",
+          "set": { "e": 1 }
+        }
+      ],
+      "pitching": []
+    }
+  ]
+}

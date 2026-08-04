@@ -520,6 +520,10 @@ function onlyYahooIdsArg(ids) {
   return ids.length > 0 ? ` -- --only-yahoo-ids ${ids.join(",")}` : ""
 }
 
+function onlyNpbIdsArg(ids) {
+  return ids.length > 0 ? ` -- --only-npb-ids ${ids.join(",")}` : ""
+}
+
 function canonicalJsonFiles() {
   const dir = path.join(root, "_data", "scraped_games", "canonical")
   if (!fs.existsSync(dir)) return []
@@ -652,6 +656,8 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
 
 function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitchingPeriod = false }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const before = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (before.ok) {
     console.log(
@@ -689,11 +695,17 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     missingTargetGameIds: before.missingTargetGameIds,
   })
 
-  run("派生: phase17 period（鮮度NGのため再生成）", "npm run phase17:build:period", { dryRun })
+  run(
+    "派生: phase17 period（鮮度NGのため再生成）",
+    `npm run phase17:build:period${onlyYahooIdsArg(affectedYahooIds)}`,
+    { dryRun },
+  )
   if (rebuildPitchingPeriod) {
-    run("派生: phase7 pitcher period（phase17再生成に合わせて再生成）", "npm run phase7:build:pitcher-period", {
-      dryRun,
-    })
+    run(
+      "派生: phase7 pitcher period（phase17再生成に合わせて再生成）",
+      `npm run phase7:build:pitcher-period${onlyNpbIdsArg(affectedNpbPitcherIds)}`,
+      { dryRun },
+    )
   }
 
   if (dryRun) return
@@ -3038,14 +3050,18 @@ function runFastStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   if (affectedYahooIds.length > 0) {
     console.log(
       `\n[daily:npb-pipeline:v2] 差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
     )
   }
+  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
+  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
   run("派生: enrich:text-play-headlines", "npm run enrich:text-play-headlines", { dryRun })
-  run("派生: phase:pitcher-poc1", "npm run phase:pitcher-poc1", { dryRun })
+  run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
   run(
     useAffectedPhase11 && affectedYahooIds.length > 0
       ? `派生: phase11 batting（差分 ${affectedYahooIds.length}人）`
@@ -3055,12 +3071,15 @@ function runFastStage({
   )
   run("検証: 出場成績 打数列 vs 末尾スロット", "npm run validate:appearance-slots-vs-line-ab:fail", { dryRun })
   run("検証: appearance_slots の CS と代走のみ SB", "npm run verify:cs-runner-events-appearance-slots", { dryRun })
-  run("派生: phase17 period", "npm run phase17:build:period", { dryRun })
+  run("派生: phase17 period", `npm run phase17:build:period${affectedArg}`, { dryRun })
   ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
-  run("派生: phase7 pitcher period", "npm run phase7:build:pitcher-period", { dryRun })
+  run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
   run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
+  if (useAffectedPhase11 && affectedYahooIds.length > 0) {
+    run("派生: phase11 batting（順位表用・全件）", "npm run phase11:build:batting", { dryRun })
+  }
   run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings", { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   runScheduleAheadBestEffort({ year, dryRun })
@@ -3124,8 +3143,12 @@ function runFinalPrecomputedPublishStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップ表示だけ最終再計算します。\n")
+  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
+  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
   ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun })
   ensureBattingPeriodFresh({
     year,
@@ -3138,6 +3161,7 @@ function runFinalPrecomputedPublishStage({
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
   run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
+  run("派生: phase11 batting（順位表用・全件）", "npm run phase11:build:batting", { dryRun })
   run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings", { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
@@ -3225,6 +3249,8 @@ function runFullStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   const phase13BuildCommand = `npm run phase13:build:context${affectedArg}`
   const phase15BuildCommand = `npm run phase15:build:batting-splits${affectedArg}`
@@ -3233,10 +3259,12 @@ function runFullStage({
       `\n[daily:npb-pipeline:v2] full差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
     )
   }
+  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
+  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
   runScheduleAheadBestEffort({ year, dryRun })
-  run("派生: phase:pitcher-poc1", "npm run phase:pitcher-poc1", { dryRun })
-  run("派生: phase7 pitcher period", "npm run phase7:build:pitcher-period", { dryRun })
-  run("派生: phase6 pitcher-catcher splits", "npm run phase6:build:pitcher-catcher-splits", { dryRun })
+  run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
+  run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
+  run("派生: phase6 pitcher-catcher splits", `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`, { dryRun })
   run("派生: phase13 context", phase13BuildCommand, { dryRun })
   runPhase13ValidationWithRetry({
     dryRun,
@@ -3244,15 +3272,15 @@ function runFullStage({
     affectedYahooIds: validatePhase13AffectedOnly ? affectedYahooIds : [],
     strictPhase13Validate,
   })
-  run("派生: phase14 pitch", "npm run phase14:build:pitch", { dryRun })
+  run("派生: phase14 pitch", `npm run phase14:build:pitch${affectedArg}`, { dryRun })
   if (skipPhase15) {
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため phase15 batting splits をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full phase15 batting splits (already built in fast stage)")
   } else {
     run("派生: phase15 batting splits", phase15BuildCommand, { dryRun })
   }
-  run("派生: phase16 batting count", "npm run phase16:build:batting-count", { dryRun })
-  run("派生: pitcher season pitch types", "npm run phase25:build:pitcher-season-pitch-types", { dryRun })
+  run("派生: phase16 batting count", `npm run phase16:build:batting-count${affectedArg}`, { dryRun })
+  run("派生: pitcher season pitch types", `npm run phase25:build:pitcher-season-pitch-types${affectedNpbPitcherArg}`, { dryRun })
   run("派生: phase22 catcher appearances", "npm run phase22:build:catcher-appearances", { dryRun })
   run("派生: phase23 catcher-pitcher splits", "npm run phase23:build:catcher-pitcher-splits", { dryRun })
   run("派生: phase24 catcher defense basic", "npm run phase24:build:catcher-defense-basic", { dryRun })
@@ -3267,7 +3295,7 @@ function runFullStage({
   )
   run("派生: phase25 catcher starting summary", "npm run phase25:build:catcher-starting-summary", { dryRun })
   run("派生: phase26 catcher pa round pitch types", "npm run phase26:build:catcher-pa-round-pitch-types", { dryRun })
-  run("派生: phase20 pitcher zones", "npm run phase20:build:pitcher-zones", { dryRun })
+  run("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, { dryRun })
   run("派生: phase30 player matchup", "npm run phase30:build:player-matchup", { dryRun })
   runWarnOnlyValidation(
     "検証: phase31 対戦成績 vs Phase11",
@@ -3280,7 +3308,7 @@ function runFullStage({
   )
   runTopProbablesInputRefresh({ year, from, to, dryRun })
   run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
-  run("派生: phase33 batter vs team count pitch types", "npm run phase33:build:batter-vs-team-count-pitch-types", { dryRun })
+  run("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, { dryRun })
   runWarnOnlyValidation(
     "検証: phase34 球団別配球 vs Phase14",
     "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail",
