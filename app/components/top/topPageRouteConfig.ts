@@ -32,7 +32,7 @@ export const TOP_PAGE_ROUTE_CONFIGS: Record<TopPageRouteKey, TopPageRouteConfig>
     title: "プロ野球 今週の成績ランキング 2026 | Short-Stop",
     description:
       "2026年プロ野球の今週の打撃成績・投手成績ランキングを掲載。週間OPS、打率、本塁打、防御率などを確認できます。",
-    canonical: "https://short-stop.jp/npb-weekly-stats",
+    canonical: "https://short-stop.jp/weekly-stats",
   },
   probables: {
     key: "probables",
@@ -42,7 +42,7 @@ export const TOP_PAGE_ROUTE_CONFIGS: Record<TopPageRouteKey, TopPageRouteConfig>
     title: "プロ野球 予想先発 2026 | Short-Stop",
     description:
       "2026年プロ野球の予想先発投手を掲載。各カードの先発予想や投手成績を確認できます。",
-    canonical: "https://short-stop.jp/npb-probable-pitchers",
+    canonical: "https://short-stop.jp/probable-pitchers",
   },
   news: {
     key: "news",
@@ -52,7 +52,7 @@ export const TOP_PAGE_ROUTE_CONFIGS: Record<TopPageRouteKey, TopPageRouteConfig>
     title: "プロ野球 最新情報 2026 | Short-Stop",
     description:
       "2026年プロ野球の最新情報を掲載。選手成績、試合情報、ランキング更新情報を確認できます。",
-    canonical: "https://short-stop.jp/npb-news",
+    canonical: "https://short-stop.jp/news",
   },
   standings: {
     key: "standings",
@@ -62,7 +62,7 @@ export const TOP_PAGE_ROUTE_CONFIGS: Record<TopPageRouteKey, TopPageRouteConfig>
     title: "プロ野球 順位表 2026 | Short-Stop",
     description:
       "2026年プロ野球のセ・リーグ、パ・リーグ順位表を掲載。勝敗、勝率、ゲーム差などを確認できます。",
-    canonical: "https://short-stop.jp/npb-standings",
+    canonical: "https://short-stop.jp/standings",
   },
 }
 

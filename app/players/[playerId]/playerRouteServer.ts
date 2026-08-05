@@ -45,10 +45,6 @@ function buildFallbackEntry(rawPlayerId: string): PlayerSlugEntry {
   }
 }
 
-function advancedPageUsesDedicatedContent(_resolved: PlayerRouteResolved): boolean {
-  return false
-}
-
 function resolveAudienceForEntry(entry: PlayerSlugEntry): "pitcher" | "fielder" | "catcher" {
   if (isPitcherRegistrationPosition(entry.position, { rosterNpbPlayerId: entry.npbPlayerId })) {
     return "pitcher"
@@ -140,9 +136,8 @@ export function resolvePlayerRouteOrRedirect(options: {
 }
 
 export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): Metadata {
-  const advancedIsDuplicate =
-    resolved.pageSection === "advanced" && !advancedPageUsesDedicatedContent(resolved)
-  const canonicalSection = advancedIsDuplicate ? "basic" : resolved.pageSection
+  const indexesAsDedicatedPage = resolved.pageSection === "basic"
+  const canonicalSection = indexesAsDedicatedPage ? resolved.pageSection : "basic"
   return {
     title: playerPageSectionTitle(resolved.entry.nameJa, resolved.pageSection),
     description: playerPageSectionDescription(resolved.entry.nameJa, resolved.pageSection),
@@ -152,12 +147,12 @@ export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): M
         canonicalSection as PlayerPageTabUrlSegment,
       )}`,
     },
-    robots: advancedIsDuplicate
-      ? {
+    robots: indexesAsDedicatedPage
+      ? undefined
+      : {
           index: false,
           follow: true,
-        }
-      : undefined,
+        },
   }
 }
 

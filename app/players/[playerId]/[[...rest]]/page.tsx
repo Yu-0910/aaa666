@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
+import { loadPlayerProfileMergedForInitialHtml } from "@/lib/playerProfileMergedServer"
 import PlayerPageRoot from "../PlayerPageRoot"
+import PlayerInitialHtmlSnapshot from "../PlayerInitialHtmlSnapshot"
 import { metadataForResolvedPlayerRoute, resolvePlayerRouteOrRedirect } from "../playerRouteServer"
 
 export async function generateMetadata({
@@ -39,11 +41,18 @@ export default async function PlayerPage({
     rest: resolvedParams.rest,
     searchParams: resolvedSearch,
   })
+  const profileMerged = await loadPlayerProfileMergedForInitialHtml({
+    playerId: resolved.entry.slug || resolvedParams.playerId,
+    npbPlayerId: resolved.entry.npbPlayerId,
+  })
   return (
-    <PlayerPageRoot
-      pageSection={resolved.pageSection}
-      initialDisplayName={resolved.entry.nameJa}
-      initialDisplayRomanName={resolved.entry.romanFull || null}
-    />
+    <>
+      <PlayerInitialHtmlSnapshot entry={resolved.entry} profileMerged={profileMerged} />
+      <PlayerPageRoot
+        pageSection={resolved.pageSection}
+        initialDisplayName={resolved.entry.nameJa}
+        initialDisplayRomanName={resolved.entry.romanFull || null}
+      />
+    </>
   )
 }

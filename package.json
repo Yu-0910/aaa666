@@ -48,6 +48,7 @@
     "test:roster-catcher": "tsx scripts/validate_roster_catcher_tab_unit.ts --fail",
     "validate:batting-phase11-vs-batting-lines": "tsx scripts/validate_phase11_vs_batting_lines_totals.ts --year 2026",
     "validate:batting-rate-round": "tsx scripts/verify_batting_rate_round.ts",
+    "audit:adsense": "node scripts/audit_adsense_readiness.mjs",
     "audit:season-2026-missing": "tsx scripts/audit_season_2026_missing.ts",
     "audit:vs-hand-full": "tsx scripts/audit_vs_hand_full.ts --year 2026",
     "audit:vs-hand-full:fail": "tsx scripts/audit_vs_hand_full.ts --year 2026 --fail",
