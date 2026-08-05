@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038898",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "36196a46b508fb1ed5abe536ea3db8884187d874e886fd62a710b99974e60bb1",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年5月23日 横浜DeNAベイスターズvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1349,6 +1349,27 @@
           "中飛",
           "",
           ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1600021",
+        "playerName": "ビシエド",
+        "cells": [
+          "打",
+          "ビシエド",
+          ".000",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "投ゴロ"
         ]
       }
     ],
@@ -8728,6 +8749,29 @@
           "中飛",
           "",
           ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1600021",
+        "playerName": "ビシエド",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "打",
+        "avg": ".000",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "official_correction_missing_stats_row",
+        "appearancePaSlotsJa": [
+          "投ゴロ"
         ]
       }
     ],

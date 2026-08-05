@@ -18,6 +18,13 @@ type CorrectionTarget = {
   playerName?: string
   set?: SetMap
   replaceSlots?: { from: string; to: string }
+  addBattingLine?: {
+    teamName?: string
+    yahooTeamId?: string
+    positionCell?: string
+    avg?: string
+    appearancePaSlotsJa?: string[]
+  }
 }
 type Correction = {
   id: string
@@ -111,10 +118,76 @@ function refreshExtraBaseFields(line: any): void {
   if (hr > 0 || typeof line.hr === "number") line.hr = hr
 }
 
+function statValue(target: CorrectionTarget, key: string): number {
+  return Number(target.set?.[key] ?? 0)
+}
+
+function createStatsRow(target: CorrectionTarget): any {
+  const added = target.addBattingLine ?? {}
+  return {
+    yahooPlayerId: target.yahooPlayerId,
+    playerName: target.playerName ?? target.yahooPlayerId,
+    cells: [
+      added.positionCell ?? "",
+      target.playerName ?? target.yahooPlayerId,
+      added.avg ?? "-",
+      String(statValue(target, "ab")),
+      String(statValue(target, "r")),
+      String(statValue(target, "h")),
+      String(statValue(target, "rbi")),
+      String(statValue(target, "so")),
+      String(statValue(target, "bb")),
+      String(statValue(target, "hbp")),
+      String(statValue(target, "sh")),
+      String(statValue(target, "sb")),
+      String(statValue(target, "e")),
+      String(statValue(target, "hr")),
+      ...(added.appearancePaSlotsJa ?? []),
+    ],
+  }
+}
+
+function createBattingLine(target: CorrectionTarget): any {
+  const added = target.addBattingLine ?? {}
+  const line: any = {
+    yahooPlayerId: target.yahooPlayerId,
+    playerName: target.playerName ?? target.yahooPlayerId,
+    teamName: added.teamName,
+    yahooTeamId: added.yahooTeamId,
+    positionCell: added.positionCell ?? "",
+    avg: added.avg ?? "-",
+    ab: statValue(target, "ab"),
+    r: statValue(target, "r"),
+    h: statValue(target, "h"),
+    rbi: statValue(target, "rbi"),
+    so: statValue(target, "so"),
+    bb: statValue(target, "bb"),
+    hbp: statValue(target, "hbp"),
+    sh: statValue(target, "sh"),
+    sb: statValue(target, "sb"),
+    e: statValue(target, "e"),
+    hr: statValue(target, "hr"),
+    inferredFrom: "official_correction_missing_stats_row",
+    appearancePaSlotsJa: added.appearancePaSlotsJa ?? [],
+  }
+  refreshExtraBaseFields(line)
+  return line
+}
+
 function applyBattingCorrection(doc: any, target: CorrectionTarget): string[] {
   const changes: string[] = []
-  const rows = Array.isArray(doc?.game?.statsPlayerLinkedRows) ? doc.game.statsPlayerLinkedRows : []
-  const row = rows.find((r: any) => String(r?.yahooPlayerId ?? "").trim() === target.yahooPlayerId)
+  if (!doc.game || typeof doc.game !== "object") doc.game = {}
+  if (!doc.domain || typeof doc.domain !== "object") doc.domain = {}
+  if (!Array.isArray(doc.game.statsPlayerLinkedRows)) doc.game.statsPlayerLinkedRows = []
+  if (!Array.isArray(doc.domain.battingLines)) doc.domain.battingLines = []
+
+  const rows = doc.game.statsPlayerLinkedRows
+  let row = rows.find((r: any) => String(r?.yahooPlayerId ?? "").trim() === target.yahooPlayerId)
+  if (!row && target.addBattingLine) {
+    row = createStatsRow(target)
+    rows.push(row)
+    changes.push(`stats row added ${target.playerName ?? target.yahooPlayerId}`)
+  }
   if (row?.cells && target.replaceSlots) {
     if (replaceSlotsInCells(row.cells, target.replaceSlots.from, target.replaceSlots.to)) {
       changes.push(`stats slots ${target.playerName ?? target.yahooPlayerId}: ${target.replaceSlots.from}->${target.replaceSlots.to}`)
@@ -131,8 +204,13 @@ function applyBattingCorrection(doc: any, target: CorrectionTarget): string[] {
     }
   }
 
-  const lines = Array.isArray(doc?.domain?.battingLines) ? doc.domain.battingLines : []
-  const line = lines.find((l: any) => String(l?.yahooPlayerId ?? "").trim() === target.yahooPlayerId)
+  const lines = doc.domain.battingLines
+  let line = lines.find((l: any) => String(l?.yahooPlayerId ?? "").trim() === target.yahooPlayerId)
+  if (!line && target.addBattingLine) {
+    line = createBattingLine(target)
+    lines.push(line)
+    changes.push(`line added ${target.playerName ?? target.yahooPlayerId}`)
+  }
   if (line && target.replaceSlots) {
     if (replaceSlotsInLine(line, target.replaceSlots.from, target.replaceSlots.to)) {
       changes.push(`line slots ${target.playerName ?? target.yahooPlayerId}: ${target.replaceSlots.from}->${target.replaceSlots.to}`)

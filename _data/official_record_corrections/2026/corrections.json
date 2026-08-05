@@ -72,6 +72,54 @@
         }
       ],
       "pitching": []
+    },
+    {
+      "id": "sportsnavi-pa-20260523-db-viciedo-missing-row-2021038898",
+      "publishedDate": "2026-08-05",
+      "gameDate": "2026-05-23",
+      "gameId": "2021038898",
+      "title": "Sportsnavi PA確認: DeNAビシエドの出場成績行欠落（5/23 DB-S）",
+      "url": "https://baseball.yahoo.co.jp/npb/game/2021038898/text",
+      "notes": "8回裏、代打ビシエドの投ゴロがテキスト/PAには存在する一方、canonicalの出場成績行とbattingLinesに存在しないため、PA由来の最小行を追加する。",
+      "batting": [
+        {
+          "yahooPlayerId": "1600021",
+          "playerName": "ビシエド",
+          "set": { "ab": 1, "r": 0, "h": 0, "rbi": 0, "so": 0, "bb": 0, "hbp": 0, "sh": 0, "sb": 0, "e": 0, "hr": 0 },
+          "addBattingLine": {
+            "teamName": "DeNA",
+            "yahooTeamId": "3",
+            "positionCell": "打",
+            "avg": ".000",
+            "appearancePaSlotsJa": [ "投ゴロ" ]
+          }
+        }
+      ],
+      "pitching": []
+    },
+    {
+      "id": "sportsnavi-pa-20260524-db-viciedo-missing-row-2021038904",
+      "publishedDate": "2026-08-05",
+      "gameDate": "2026-05-24",
+      "gameId": "2021038904",
+      "title": "Sportsnavi PA確認: DeNAビシエドの出場成績行欠落（5/24 DB-S）",
+      "url": "https://baseball.yahoo.co.jp/npb/game/2021038904/text",
+      "notes": "7回裏、代打ビシエドの空振り三振がテキスト/PAには存在する一方、canonicalの出場成績行とbattingLinesに存在しないため、PA由来の最小行を追加する。",
+      "batting": [
+        {
+          "yahooPlayerId": "1600021",
+          "playerName": "ビシエド",
+          "set": { "ab": 1, "r": 0, "h": 0, "rbi": 0, "so": 1, "bb": 0, "hbp": 0, "sh": 0, "sb": 0, "e": 0, "hr": 0 },
+          "addBattingLine": {
+            "teamName": "DeNA",
+            "yahooTeamId": "3",
+            "positionCell": "打",
+            "avg": ".000",
+            "appearancePaSlotsJa": [ "空三振" ]
+          }
+        }
+      ],
+      "pitching": []
     }
   ]
 }
