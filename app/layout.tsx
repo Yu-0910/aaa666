@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   title: "NPB打撃成績ランキング - プロ野球選手の詳細データ",
   description: "NPBプロ野球選手の打撃成績をランキング形式で表示。OPS、打率、本塁打、打点など各種指標で比較できます。",
   generator: "v0.app",
+  verification: {
+    google: "kKv1BMYikT9gulfJnk8IZvMreBFL9TURx42GS1nituI",
+  },
   icons: {
     icon: [
       {
