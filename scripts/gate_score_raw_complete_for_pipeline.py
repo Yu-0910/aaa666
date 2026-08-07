@@ -72,6 +72,35 @@ def parse_iso_ms(value: object) -> float:
         return 0.0
 
 
+def first_finished_seen_at_ms_for_game(root: Path, game_id: str, from_date: str, to_date: str) -> float:
+    finish_seen_path = root / "_data" / "scraped_games" / "_meta" / "schedule_finish_seen_v1.json"
+    if not finish_seen_path.is_file():
+        return 0.0
+    try:
+        payload = json.loads(finish_seen_path.read_text(encoding="utf-8"))
+    except Exception:
+        return 0.0
+    games = payload.get("games") if isinstance(payload, dict) else None
+    if not isinstance(games, dict):
+        return 0.0
+    candidate_dates = [d for d in [from_date, to_date] if d]
+    for date_jst in candidate_dates:
+        entry = games.get(f"{date_jst}:{game_id}")
+        if isinstance(entry, dict):
+            parsed = parse_iso_ms(entry.get("firstFinishedSeenAt"))
+            if parsed > 0:
+                return parsed
+    for entry in games.values():
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("gameId", "")).strip() != game_id:
+            continue
+        parsed = parse_iso_ms(entry.get("firstFinishedSeenAt"))
+        if parsed > 0:
+            return parsed
+    return 0.0
+
+
 def schedule_fetched_at_ms_for_game(root: Path, game_id: str) -> float:
     snap_dir = root / "_data" / "sportsnavi_schedule_snapshots" / "by_date"
     if not snap_dir.is_dir():
@@ -158,7 +187,8 @@ def collect_incomplete_game_ids(
         if _score_raw_game_already_complete(gdir, meta_path, len(pas)):
             meta = read_json(meta_path) if meta_path.is_file() else {}
             status_text = schedule_status_text_for_game(root, game_id)
-            schedule_fetched_at_ms = schedule_fetched_at_ms_for_game(root, game_id)
+            finished_seen_at_ms = first_finished_seen_at_ms_for_game(root, game_id, from_date, to_date)
+            schedule_fetched_at_ms = finished_seen_at_ms or schedule_fetched_at_ms_for_game(root, game_id)
             raw_fetched_at_ms = parse_iso_ms(meta.get("fetchedAt")) if isinstance(meta, dict) else 0.0
             if "試合終了" in status_text and schedule_fetched_at_ms > 0 and raw_fetched_at_ms < schedule_fetched_at_ms:
                 incomplete.append((game_id, "score_raw_before_game_finished"))
@@ -234,6 +264,11 @@ def main() -> None:
         print(
             "SCORE_RAW_GATE_INCOMPLETE_CSV="
             + ",".join(gid for gid, _ in incomplete),
+            flush=True,
+        )
+        print(
+            "SCORE_RAW_GATE_INCOMPLETE_REASONS_JSON="
+            + json.dumps({gid: reason for gid, reason in incomplete}, ensure_ascii=False, sort_keys=True),
             flush=True,
         )
     print("\n[score-raw-gate] 対処:", file=sys.stderr)

@@ -120,13 +120,22 @@ export type BuildTopLeadersSnapshotResult = {
  * ランキング JSON からトップ用スナップショットを生成（2026 想定）。
  */
 export function buildTopLeadersSnapshotsForYear(
-  year: string = TOP_LEADERS_SNAPSHOT_YEAR
+  year: string = TOP_LEADERS_SNAPSHOT_YEAR,
+  options?: {
+    leagues?: readonly string[]
+    categories?: readonly TopLeadersCategory[]
+  }
 ): BuildTopLeadersSnapshotResult {
   const written: string[] = []
   const skipped: BuildTopLeadersSnapshotResult["skipped"] = []
+  const leagues = (options?.leagues?.length ? options.leagues : SNAPSHOT_LEAGUES).map((v) =>
+    String(v).toUpperCase()
+  )
+  const categories =
+    options?.categories?.length ? options.categories : (["batting", "pitching"] as const)
 
-  for (const league of SNAPSHOT_LEAGUES) {
-    for (const category of ["batting", "pitching"] as const) {
+  for (const league of leagues) {
+    for (const category of categories) {
       const config = buildConfigFromRankings(year, league, category)
       if (!config || Object.keys(config.leaders).length === 0) {
         skipped.push({

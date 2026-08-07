@@ -18,6 +18,7 @@ import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
 import type { CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
 import { primaryCatcherYahooIdByFieldingTeam } from "@/lib/yahooGame/activeCatcherFromCanonical"
+import { catcherYahooIdsFromCanonical } from "@/lib/catcherAppearances"
 import { collectStarterYahooIdByRankingShort } from "@/lib/yahooGame/nf3PitcherMetricsFromCanonical"
 import { teamsRoughlyMatch } from "@/lib/yahooGame/startingCatcherFromCanonical"
 import { rosterTeamToRankingShort } from "@/lib/yahooGame/canonicalPitchingSeasonAgg"
@@ -31,15 +32,38 @@ import {
   type ScoreboardSide,
 } from "@/lib/standings/leagueGameFilter"
 import { loadScoreboardFromSportsnaviStatsRaw } from "@/lib/standings/sportsnaviStatsScoreboard"
+import { writeJsonFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 
-function parseArgs(argv: string[]): { year: string } {
+function parseArgs(argv: string[]): {
+  year: string
+  from: string | null
+  to: string | null
+  onlyNpbIds: string[] | null
+} {
   const yearIdx = argv.indexOf("--year")
+  const fromIdx = argv.indexOf("--from")
+  const toIdx = argv.indexOf("--to")
+  const onlyIdx = argv.indexOf("--only-npb-ids")
   const year = yearIdx >= 0 ? (argv[yearIdx + 1] ?? "").trim() : ""
-  return { year: year || "2026" }
+  const from = fromIdx >= 0 ? String(argv[fromIdx + 1] ?? "").trim() : null
+  const to = toIdx >= 0 ? String(argv[toIdx + 1] ?? "").trim() : null
+  const onlyNpbIds =
+    onlyIdx >= 0
+      ? String(argv[onlyIdx + 1] ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null
+  return { year: year || "2026", from, to, onlyNpbIds }
 }
 
 function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true })
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
 function ipToOuts(ip: string | undefined): number {
@@ -93,8 +117,12 @@ function findTeamScoreSide(teamName: string, sides: ScoreboardSide[]): Scoreboar
 
 function main() {
   const root = getProjectRoot()
-  const { year } = parseArgs(process.argv.slice(2))
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(root)
+  const { year, from, to, onlyNpbIds } = parseArgs(process.argv.slice(2))
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase25] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(root, { year })
   if (!docs.length) {
     console.error("[phase25] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -104,6 +132,24 @@ function main() {
     string,
     { starts: number; wins: number; losses: number; qs: number; hqs: number; sqs: number }
   >()
+  let targetNpbIds = onlyNpbIds ? new Set(onlyNpbIds) : null
+  if (!targetNpbIds && (from || to)) {
+    targetNpbIds = new Set<string>()
+    for (const doc of docs) {
+      const ymd = extractCanonicalGameYmd(doc)
+      if (!ymd || !ymd.startsWith(`${year}-`)) continue
+      if (from && ymd < from) continue
+      if (to && ymd > to) continue
+      for (const yahooId of catcherYahooIdsFromCanonical(doc)) {
+        const npbId = resolveNpbPlayerIdFromPublicId(String(yahooId).trim())
+        if (npbId) targetNpbIds.add(npbId)
+      }
+    }
+    if (targetNpbIds.size === 0) {
+      console.log(`[phase25] no affected catchers for range=${from ?? "(start)"}..${to ?? "(end)"}`)
+      return
+    }
+  }
 
   for (const baseDoc of docs) {
     const doc = injectTeamsFromTextPbpIfMissing(baseDoc)
@@ -124,6 +170,7 @@ function main() {
       if (!primaryYid) continue
       const catcherNpbId = resolveNpbPlayerIdFromPublicId(primaryYid)
       if (!catcherNpbId) continue
+      if (targetNpbIds && !targetNpbIds.has(catcherNpbId)) continue
 
       let agg = byCatcher.get(catcherNpbId)
       if (!agg) {
@@ -176,11 +223,13 @@ function main() {
       hqsPct,
       sqsPct,
     }
-    fs.writeFileSync(path.join(outDir, `npb_${npbCatcherId}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(path.join(outDir, `npb_${npbCatcherId}.json`), payload)
     wrote += 1
   }
 
-  console.log(`[phase25] wrote ${wrote} files → ${outDir}`)
+  console.log(
+    `[phase25] wrote ${wrote} files → ${outDir}${from || to ? ` (affected range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()

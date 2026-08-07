@@ -138,6 +138,39 @@ function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true })
 }
 
+function sleepSync(ms: number) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+function writeJsonFileSyncWithRetry(filePath: string, value: unknown, label: string) {
+  const body = JSON.stringify(value, null, 2)
+  const dir = path.dirname(filePath)
+  ensureDir(dir)
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const tmpPath = path.join(dir, `.${path.basename(filePath)}.${process.pid}.${attempt}.tmp`)
+    try {
+      fs.writeFileSync(tmpPath, body, "utf8")
+      fs.renameSync(tmpPath, filePath)
+      return
+    } catch (error) {
+      lastError = error
+      try {
+        if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+      } catch {
+        // best effort cleanup only
+      }
+      const code = (error as NodeJS.ErrnoException)?.code || "UNKNOWN"
+      if (!["UNKNOWN", "EBUSY", "EPERM", "EACCES", "ENOENT"].includes(code) || attempt === 5) break
+      const waitMs = 200 * attempt
+      console.warn(`[phase0] write retry ${attempt}/5 ${label}: ${code}; wait ${waitMs}ms`)
+      sleepSync(waitMs)
+      ensureDir(dir)
+    }
+  }
+  throw lastError
+}
+
 function isYmd(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
@@ -412,7 +445,7 @@ async function main() {
     }
 
     const prev = prevSnap
-    fs.writeFileSync(snapPath, JSON.stringify(snap, null, 2), "utf8")
+    writeJsonFileSyncWithRetry(snapPath, snap, `snapshot ${ymd}`)
 
     byDate[ymd] = gameIds
     for (const id of gameIds) all.add(id)
@@ -437,7 +470,7 @@ async function main() {
           addedGameIds: added,
           removedGameIds: removed,
         }
-        fs.writeFileSync(path.join(outDiff, `${ymd}.json`), JSON.stringify(diff, null, 2), "utf8")
+        writeJsonFileSyncWithRetry(path.join(outDiff, `${ymd}.json`), diff, `diff ${ymd}`)
       }
     }
 
@@ -490,7 +523,7 @@ async function main() {
     scheduleStatusByGameId,
     scheduleGameByGameId,
   }
-  fs.writeFileSync(idxPath, JSON.stringify(index, null, 2), "utf8")
+  writeJsonFileSyncWithRetry(idxPath, index, `season index ${year}`)
   const stadiumCount = Object.keys(stadiumByGameIdMerged).length
   console.log(
     `[phase0] wrote index: ${idxPath} (games=${index.gameIds.length}, stadium=${stadiumCount}, days=${Object.keys(index.byDate).length}, merge=${merge})`,

@@ -26,6 +26,7 @@ export type GetGameScoreSidesOptions = {
 }
 
 const TEAM_STANDINGS_EXCLUDED_GAME_IDS: Partial<Record<string, ReadonlySet<string>>> = {}
+const visitorHomeShortsCache = new WeakMap<CanonicalGameDocument, [string, string] | null>()
 
 function isExcludedStandingsGame(year: string, league: StandingsLeague, gameId: string): boolean {
   return TEAM_STANDINGS_EXCLUDED_GAME_IDS[`${year}:${league}`]?.has(gameId) ?? false
@@ -44,10 +45,12 @@ function parseRuns(raw: string | undefined): number | null {
 }
 
 function visitorHomeShorts(doc: CanonicalGameDocument): [string, string] | null {
+  if (visitorHomeShortsCache.has(doc)) return visitorHomeShortsCache.get(doc) ?? null
   const enriched = injectTeamsFromTextPbpIfMissing(doc)
   const shorts = rankingTeamShortsFromCanonicalGame(enriched)
-  if (shorts.length !== 2) return null
-  return [shorts[0]!, shorts[1]!]
+  const out: [string, string] | null = shorts.length === 2 ? [shorts[0]!, shorts[1]!] : null
+  visitorHomeShortsCache.set(doc, out)
+  return out
 }
 
 export function batterTeamShortInGame(

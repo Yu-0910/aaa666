@@ -2,8 +2,9 @@
  * 球団別取得試合数 JSON（team-games.json）のパス・読み書き。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readFileSync } from "fs"
 import { join } from "path"
+import { writeJsonFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 import type { TeamGamesByLeague } from "@/lib/yahooGame/aggregateTeamGamesFromCanonical"
 import {
   TEAM_GAMES_JSON_SCHEMA,
@@ -60,7 +61,7 @@ export function buildTeamGamesJson(
 
 export function writeTeamGamesJsonFile(path: string, payload: TeamGamesJson): void {
   mkdirSync(join(path, ".."), { recursive: true })
-  writeFileSync(path, JSON.stringify(payload, null, 2), "utf8")
+  writeJsonFileWithRetrySync(path, payload)
 }
 
 export function readTeamGamesJsonFile(path: string): TeamGamesJson | null {

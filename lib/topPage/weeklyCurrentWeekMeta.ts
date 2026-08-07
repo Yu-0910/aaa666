@@ -88,7 +88,11 @@ export function writeWeeklyCurrentWeekJson(
 
   const outPath = weeklyCurrentWeekJsonPath(projectRoot, year)
   mkdirSync(join(projectRoot, "public", "data", "rankings", "weekly", year), { recursive: true })
-  writeFileSync(outPath, JSON.stringify(payload, null, 2), "utf8")
+  try {
+    writeFileSync(outPath, JSON.stringify(payload, null, 2), "utf8")
+  } catch (error) {
+    console.warn(`[weekly-current-week] failed to write ${outPath}:`, error)
+  }
 
   if (payload.isFallbackWeek) {
     console.log(

@@ -13,7 +13,7 @@
  *   npm run phase30:build:player-matchup
  */
 
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
+import { mkdirSync, readdirSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
@@ -29,6 +29,7 @@ import { resolveNpbPlayerIdFromPublicId } from "../lib/yahooNpbBatterIdMap"
 import { battingSlashRatesFromCounts } from "../lib/battingRateFormat"
 import { teamDisplayNameFromCode } from "../lib/standings/teamCodes"
 import { PLAYER_MATCHUP_TEAM_ORDER } from "../lib/playerMatchupTeamOrder"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import {
   compareMatchupOpponentsByOpsDesc,
   sortMatchupTeamsByOpponentCountDesc,
@@ -39,6 +40,7 @@ import {
   type PlayerMatchupOpponentRow,
   type PlayerMatchupTeamBlock,
 } from "../lib/playerMatchupTypes"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -53,25 +55,76 @@ type OpponentBucket = {
 
 type MatchupStore = Map<string, Map<string, OpponentBucket>>
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
     }
   }
-  return { year }
+  return { year, from, to }
 }
 
-function cleanOutDir(dir: string) {
+function cleanOutDir(dir: string, onlySubjectIds?: Iterable<string> | null) {
   mkdirSync(dir, { recursive: true })
+  const onlySet = onlySubjectIds ? new Set([...onlySubjectIds].map((s) => String(s ?? "").trim())) : null
   for (const f of readdirSync(dir)) {
     if (f.startsWith("npb_") && f.endsWith(".json")) {
+      const npbId = f.replace(/^npb_/, "").replace(/\.json$/, "")
+      if (onlySet && !onlySet.has(npbId)) continue
       unlinkSync(join(dir, f))
     }
   }
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
+function collectAffectedSubjects(
+  docs: CanonicalGameDocument[],
+  from: string | null,
+  to: string | null,
+): { batterYahooIds: Set<string>; pitcherYahooIds: Set<string> } {
+  const batterYahooIds = new Set<string>()
+  const pitcherYahooIds = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const pa of doc.domain?.plateAppearances ?? []) {
+      const bid = String(pa.yahooBatterId ?? "").trim()
+      const pid = yahooPitcherIdForVsHandFromPa(pa)
+      if (bid) batterYahooIds.add(bid)
+      if (pid) pitcherYahooIds.add(pid)
+    }
+  }
+  return { batterYahooIds, pitcherYahooIds }
+}
+
+function gameHasTargetSubject(
+  doc: CanonicalGameDocument,
+  targetSubjects: { batterYahooIds: Set<string>; pitcherYahooIds: Set<string> } | null,
+): boolean {
+  if (!targetSubjects) return true
+  for (const pa of doc.domain?.plateAppearances ?? []) {
+    const bid = String(pa.yahooBatterId ?? "").trim()
+    const pid = yahooPitcherIdForVsHandFromPa(pa)
+    if (bid && targetSubjects.batterYahooIds.has(bid)) return true
+    if (pid && targetSubjects.pitcherYahooIds.has(pid)) return true
+  }
+  return false
 }
 
 function resolveDisplayName(yahooId: string, doc?: CanonicalGameDocument): string {
@@ -231,11 +284,7 @@ function writeStore(
       teams,
     }
 
-    writeFileSync(
-      join(outDir, `npb_${subjectNpbId}.json`),
-      JSON.stringify(payload, null, 2),
-      "utf8",
-    )
+    writeJsonFileWithRetrySync(join(outDir, `npb_${subjectNpbId}.json`), payload)
     wrote += 1
   }
 
@@ -248,6 +297,8 @@ function processPlateAppearance(
   pa: PlateAppearance,
   batterMatchups: MatchupStore,
   pitcherMatchups: MatchupStore,
+  targetBatterYahooIds?: Set<string> | null,
+  targetPitcherYahooIds?: Set<string> | null,
 ): boolean {
   const batterYahooId = String(pa.yahooBatterId ?? "").trim()
   const pitcherYahooId = yahooPitcherIdForVsHandFromPa(pa)
@@ -261,35 +312,52 @@ function processPlateAppearance(
   const pitcherTeamCode = resolveTeamCode(pitcherYahooId)
   const batterTeamCode = resolveTeamCode(batterYahooId)
 
-  const batterBucket = getOrCreateBucket(
-    batterMatchups,
-    batterNpbId,
-    pitcherYahooId,
-    pitcherNpbId,
-    pitcherName,
-    pitcherTeamCode,
-  )
-  const pitcherBucket = getOrCreateBucket(
-    pitcherMatchups,
-    pitcherNpbId,
-    batterYahooId,
-    batterNpbId,
-    batterName,
-    batterTeamCode,
-  )
-
-  updateBattingAggFromPa(batterBucket.agg, gameId, pa, doc)
-  updateBattingAggFromPa(pitcherBucket.agg, gameId, pa, doc)
-  return true
+  let processed = false
+  if (!targetBatterYahooIds || targetBatterYahooIds.has(batterYahooId)) {
+    const batterBucket = getOrCreateBucket(
+      batterMatchups,
+      batterNpbId,
+      pitcherYahooId,
+      pitcherNpbId,
+      pitcherName,
+      pitcherTeamCode,
+    )
+    updateBattingAggFromPa(batterBucket.agg, gameId, pa, doc)
+    processed = true
+  }
+  if (!targetPitcherYahooIds || targetPitcherYahooIds.has(pitcherYahooId)) {
+    const pitcherBucket = getOrCreateBucket(
+      pitcherMatchups,
+      pitcherNpbId,
+      batterYahooId,
+      batterNpbId,
+      batterName,
+      batterTeamCode,
+    )
+    updateBattingAggFromPa(pitcherBucket.agg, gameId, pa, doc)
+    processed = true
+  }
+  return processed
 }
 
 function main() {
-  const { year } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const { year, from, to } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase30-matchup] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase30-matchup] no canonical games")
     process.exit(1)
   }
+
+  if (from || to) {
+    console.log(
+      `[phase30-matchup] range=${from ?? "(start)"}..${to ?? "(end)"} requested, but player matchup is rebuilt fully to keep batter/pitcher files bidirectional`,
+    )
+  }
+  const targetSubjects = null
 
   const batterMatchups: MatchupStore = new Map()
   const pitcherMatchups: MatchupStore = new Map()
@@ -297,11 +365,22 @@ function main() {
   let skippedPa = 0
 
   for (const doc of docs) {
+    if (!gameHasTargetSubject(doc, targetSubjects)) continue
     const gameId = String(doc.gameId ?? doc.game?.gameId ?? doc.game?.yahooGameId ?? "").trim()
     if (!gameId) continue
     const pas = doc.domain?.plateAppearances ?? []
     for (const pa of pas) {
-      if (processPlateAppearance(doc, gameId, pa, batterMatchups, pitcherMatchups)) {
+      if (
+        processPlateAppearance(
+          doc,
+          gameId,
+          pa,
+          batterMatchups,
+          pitcherMatchups,
+          targetSubjects?.batterYahooIds ?? null,
+          targetSubjects?.pitcherYahooIds ?? null,
+        )
+      ) {
         plateAppearancesProcessed += 1
       } else {
         skippedPa += 1
@@ -311,8 +390,8 @@ function main() {
 
   const battingDir = join(projectRoot, "_data", "derived", "player_matchup_batting", year)
   const pitchingDir = join(projectRoot, "_data", "derived", "player_matchup_pitching", year)
-  cleanOutDir(battingDir)
-  cleanOutDir(pitchingDir)
+  cleanOutDir(battingDir, batterMatchups.keys())
+  cleanOutDir(pitchingDir, pitcherMatchups.keys())
 
   const sourceMeta = {
     canonicalGames: docs.length,
@@ -341,7 +420,7 @@ function main() {
 
   console.log(
     `[phase30-matchup] PA=${plateAppearancesProcessed} skipped=${skippedPa} games=${docs.length} ` +
-      `batting=${battingWrote} pitching=${pitchingWrote} → ${battingDir} / ${pitchingDir}`,
+      `batting=${battingWrote} pitching=${pitchingWrote} → ${battingDir} / ${pitchingDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
   )
 }
 

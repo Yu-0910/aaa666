@@ -46,6 +46,44 @@ import { isStrikeoutResultJa } from "./paOutcomeResultJa"
 import { hitBases, isAtBat } from "./resultJaHitBases"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../battingRateFormat"
 
+type BattingGameAggregationIndex = {
+  gameId: string
+  linesByBatter: Map<string, BattingLine[]>
+  dedupedPas: PlateAppearance[]
+  pasByBatter: Map<string, PlateAppearance[]>
+}
+
+const battingGameAggregationIndexCache = new WeakMap<CanonicalGameDocument, BattingGameAggregationIndex>()
+
+function battingGameAggregationIndex(doc: CanonicalGameDocument): BattingGameAggregationIndex {
+  const cached = battingGameAggregationIndexCache.get(doc)
+  if (cached) return cached
+
+  const gameId = String(doc.gameId ?? "").trim()
+  const linesByBatter = new Map<string, BattingLine[]>()
+  for (const line of doc.domain?.battingLines ?? []) {
+    const bid = String(line.yahooPlayerId ?? "").trim()
+    if (!bid) continue
+    const arr = linesByBatter.get(bid) ?? []
+    arr.push(line)
+    linesByBatter.set(bid, arr)
+  }
+
+  const dedupedPas = dedupePlateAppearancesByInningHalfOrder(doc.domain?.plateAppearances ?? [], gameId)
+  const pasByBatter = new Map<string, PlateAppearance[]>()
+  for (const pa of dedupedPas) {
+    const bid = String(pa.yahooBatterId ?? "").trim()
+    if (!bid) continue
+    const arr = pasByBatter.get(bid) ?? []
+    arr.push(pa)
+    pasByBatter.set(bid, arr)
+  }
+
+  const index = { gameId, linesByBatter, dedupedPas, pasByBatter }
+  battingGameAggregationIndexCache.set(doc, index)
+  return index
+}
+
 /**
  * 一球ログの resultJa を末尾から走査し、打席確定とみなせる最初の文言を返す。
  * 最終球だけ空・未確定で、数球前に「三振」「左飛」等が付いているケースの救済。
@@ -696,7 +734,7 @@ export function updateBattingAggFromAppearanceSlotsInGame(
   const exCs = csCountForBatterFromRunnerEvents(doc, yahooBatterId)
   const line =
     lineForSupplement ??
-    (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === yahooBatterId)
+    battingGameAggregationIndex(doc).linesByBatter.get(String(yahooBatterId ?? "").trim())?.[0]
   let hadSlot = false
   for (const raw of slots) {
     const t = String(raw ?? "").trim()
@@ -720,11 +758,16 @@ export function updateBattingAggFromAppearanceSlotsInGame(
  */
 export function aggregateBattingSeasonByYahooBatterFromAppearanceSlots(
   docs: CanonicalGameDocument[],
+  options?: { targetYahooIds?: Iterable<string> | null },
 ): Map<string, BattingSeasonAggYahoo> {
   const byBatter = new Map<string, BattingSeasonAggYahoo>()
+  const targetYahooIds = options?.targetYahooIds
+    ? new Set([...options.targetYahooIds].map((v) => String(v ?? "").trim()).filter(Boolean))
+    : null
   for (const doc of docs) {
     const gameId = String(doc.gameId ?? "").trim()
     if (!gameId) continue
+    const index = battingGameAggregationIndex(doc)
     const bids = new Set<string>()
     for (const line of doc.domain?.battingLines ?? []) {
       const bid = String(line.yahooPlayerId ?? "").trim()
@@ -741,9 +784,10 @@ export function aggregateBattingSeasonByYahooBatterFromAppearanceSlots(
       }
     }
     for (const bid of bids) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       const slots = appearanceSlotsForBatterInDoc(doc, bid)
       const exCs = csCountForBatterFromRunnerEvents(doc, bid)
-      const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
+      const line = index.linesByBatter.get(bid)?.[0]
       const hasSlots = slots.some((s) => String(s ?? "").trim() !== "")
       if (!hasSlots && exCs === 0 && !battingLineHasSupplementStats(line)) continue
       const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
@@ -751,11 +795,7 @@ export function aggregateBattingSeasonByYahooBatterFromAppearanceSlots(
       byBatter.set(bid, agg)
     }
 
-    const pasForRisp = dedupePlateAppearancesByInningHalfOrder(
-      doc.domain?.plateAppearances ?? [],
-      gameId,
-    )
-    updateRispFromPasInGame(byBatter, gameId, doc, pasForRisp)
+    updateRispFromPasInGame(byBatter, gameId, doc, index.dedupedPas)
   }
   return byBatter
 }
@@ -765,11 +805,12 @@ export function aggregateBattingSeasonByYahooBatterFromAppearanceSlots(
  */
 export function aggregateBattingSeasonForProfilesAndRankings(
   docs: CanonicalGameDocument[],
+  options?: { targetYahooIds?: Iterable<string> | null },
 ): Map<string, BattingSeasonAggYahoo> {
   if (isBattingSeasonAggFromAppearanceSlots()) {
-    return aggregateBattingSeasonByYahooBatterFromAppearanceSlots(docs)
+    return aggregateBattingSeasonByYahooBatterFromAppearanceSlots(docs, options)
   }
-  return aggregateBattingSeasonByYahooBatterHybridForProfiles(docs)
+  return aggregateBattingSeasonByYahooBatterHybridForProfiles(docs, options)
 }
 
 /**
@@ -789,13 +830,10 @@ export function shouldAggregateBattingFromPaOnlyForBatterInGame(
   if (!bid) return false
   if (!hasTrustworthyPlateAppearancesForBatterInGame(doc, bid)) return false
 
-  const lines = (doc.domain?.battingLines ?? []).filter(
-    (l) => String(l.yahooPlayerId ?? "").trim() === bid,
-  )
+  const index = battingGameAggregationIndex(doc)
+  const lines = index.linesByBatter.get(bid) ?? []
   const gameId = doc.gameId
-  const allPas = doc.domain?.plateAppearances ?? []
-  const deduped = dedupePlateAppearancesByInningHalfOrder(allPas, gameId)
-  const myPas = deduped.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
+  const myPas = index.pasByBatter.get(bid) ?? []
 
   let lineAb = 0
   let lineH = 0
@@ -823,15 +861,11 @@ export function hasTrustworthyPlateAppearancesForBatterInGame(
   const bid = String(yahooBatterId ?? "").trim()
   if (!bid) return false
 
-  const lines = (doc.domain?.battingLines ?? []).filter(
-    (l) => String(l.yahooPlayerId ?? "").trim() === bid,
-  )
+  const index = battingGameAggregationIndex(doc)
+  const lines = index.linesByBatter.get(bid) ?? []
   if (lines.length === 0) return false
 
-  const gameId = doc.gameId
-  const allPas = doc.domain?.plateAppearances ?? []
-  const deduped = dedupePlateAppearancesByInningHalfOrder(allPas, gameId)
-  const myPas = deduped.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
+  const myPas = index.pasByBatter.get(bid) ?? []
   if (myPas.length === 0) return false
 
   for (const pa of myPas) {
@@ -1038,6 +1072,7 @@ export function computeBattingTargetForGameAndBatter(
   if (!bid) return null
 
   const gameId = String(doc.gameId ?? "")
+  const index = battingGameAggregationIndex(doc)
 
   if (isBattingSeasonAggFromAppearanceSlots()) {
     const slots = appearanceSlotsForBatterInDoc(doc, bid)
@@ -1045,7 +1080,7 @@ export function computeBattingTargetForGameAndBatter(
     if (!slots.some((s) => String(s ?? "").trim() !== "") && exCs === 0) return null
 
     const tmp = emptyBattingSeasonAggYahoo()
-    const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
+    const line = index.linesByBatter.get(bid)?.[0]
     updateBattingAggFromAppearanceSlotsInGame(tmp, gameId, doc, bid, line ?? null)
     return {
       pa: tmp.pa,
@@ -1059,15 +1094,11 @@ export function computeBattingTargetForGameAndBatter(
     }
   }
 
-  const lines = (doc.domain?.battingLines ?? []).filter(
-    (l) => String(l.yahooPlayerId ?? "").trim() === bid,
-  )
+  const lines = index.linesByBatter.get(bid) ?? []
   if (lines.length === 0) return null
 
   if (shouldAggregateBattingFromPaOnlyForBatterInGame(doc, bid)) {
-    const allPas = doc.domain?.plateAppearances ?? []
-    const deduped = dedupePlateAppearancesByInningHalfOrder(allPas, doc.gameId)
-    const myPas = deduped.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
+    const myPas = index.pasByBatter.get(bid) ?? []
     const tmp = emptyBattingSeasonAggYahoo()
     for (const pa of myPas) {
       updateBattingAggFromPa(tmp, gameId, pa, doc)
@@ -1155,14 +1186,10 @@ export function aggregateBattingForBatterInGameHybrid(
   const gameId = String(doc.gameId ?? "").trim()
   if (!gameId) return null
 
-  const lines = (doc.domain?.battingLines ?? []).filter(
-    (l) => String(l.yahooPlayerId ?? "").trim() === bid,
-  )
-  const pasForHybrid = dedupePlateAppearancesByInningHalfOrder(
-    doc.domain?.plateAppearances ?? [],
-    gameId,
-  )
-  const myPas = pasForHybrid.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
+  const index = battingGameAggregationIndex(doc)
+  const lines = index.linesByBatter.get(bid) ?? []
+  const pasForHybrid = index.dedupedPas
+  const myPas = index.pasByBatter.get(bid) ?? []
 
   if (lines.length === 0 && myPas.length === 0) return null
 
@@ -1223,13 +1250,32 @@ export function aggregateBattingForBatterInGameHybrid(
 }
 
 /**
- * チーム順位表: 出場成績行（battingLines）合算。PA 上書きは行わない。
+ * チーム順位表: 本番既定の appearance_slots では Phase11 / Phase12 と同じ
+ * 出場成績末尾列をSSOTにする。hybrid運用時だけ従来の出場成績行優先に戻す。
  */
 export function aggregateBattingForBatterInGameForStandings(
   doc: CanonicalGameDocument,
   yahooBatterId: string,
   options?: { projectRoot?: string; skipRisp?: boolean },
 ): BattingSeasonAggYahoo | null {
+  const bid = String(yahooBatterId ?? "").trim()
+  if (!bid) return null
+  const gameId = String(doc.gameId ?? "").trim()
+  if (!gameId) return null
+
+  if (isBattingSeasonAggFromAppearanceSlots()) {
+    const index = battingGameAggregationIndex(doc)
+    const slots = appearanceSlotsForBatterInDoc(doc, bid)
+    const exCs = csCountForBatterFromRunnerEvents(doc, bid)
+    const line = index.linesByBatter.get(bid)?.[0]
+    const hasSlots = slots.some((s) => String(s ?? "").trim() !== "")
+    if (!hasSlots && exCs === 0 && !battingLineHasSupplementStats(line)) return null
+
+    const tmp = emptyBattingSeasonAggYahoo()
+    updateBattingAggFromAppearanceSlotsInGame(tmp, gameId, doc, bid, line ?? null)
+    return tmp.pa > 0 || tmp.ab > 0 || tmp.h > 0 || tmp.hr > 0 || tmp.bb > 0 ? tmp : null
+  }
+
   return aggregateBattingForBatterInGameHybrid(doc, yahooBatterId, {
     ...options,
     preferBattingLines: true,
@@ -1250,12 +1296,13 @@ export function aggregateBattingForBatterInGameForProfiles(
   if (!gameId) return null
 
   if (isBattingSeasonAggFromAppearanceSlots()) {
+    const index = battingGameAggregationIndex(doc)
     const slots = appearanceSlotsForBatterInDoc(doc, bid)
     const exCs = csCountForBatterFromRunnerEvents(doc, bid)
     if (!slots.some((s) => String(s ?? "").trim() !== "") && exCs === 0) return null
 
     const tmp = emptyBattingSeasonAggYahoo()
-    const line = (doc.domain?.battingLines ?? []).find((l) => String(l.yahooPlayerId ?? "").trim() === bid)
+    const line = index.linesByBatter.get(bid)?.[0]
     updateBattingAggFromAppearanceSlotsInGame(tmp, gameId, doc, bid, line ?? null)
     return tmp.pa > 0 || tmp.ab > 0 || tmp.h > 0 || tmp.hr > 0 || tmp.bb > 0 ? tmp : null
   }
@@ -1273,19 +1320,24 @@ export function aggregateBattingForBatterInGameForProfiles(
  */
 export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
   docs: CanonicalGameDocument[],
+  options?: { targetYahooIds?: Iterable<string> | null },
 ): Map<string, BattingSeasonAggYahoo> {
   const byBatter = new Map<string, BattingSeasonAggYahoo>()
+  const targetYahooIds = options?.targetYahooIds
+    ? new Set([...options.targetYahooIds].map((v) => String(v ?? "").trim()).filter(Boolean))
+    : null
 
   for (const doc of docs) {
     const gameId = doc.gameId
+    const index = battingGameAggregationIndex(doc)
     const runnerSbCs = sbCsFromTextPlayByPlay(doc)
     const sfByBatterFromText = sfFromTextPlayByPlay(doc)
     const gidpByBatterFromText = gidpFromTextPlayByPlay(doc)
     const gidpByBatterFromBatterEvents = gidpFromBatterEvents(doc)
 
     const bidsWithBattingLine = new Set<string>()
-    for (const line of doc.domain?.battingLines ?? []) {
-      const bid = String(line.yahooPlayerId ?? "").trim()
+    for (const bid of index.linesByBatter.keys()) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (bid) bidsWithBattingLine.add(bid)
     }
 
@@ -1298,30 +1350,29 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
 
     // 行優先で集計する打者（出場成績行があるが、その試合では PA を正にしない打者）
     const linePrimaryBatterIds = new Set<string>()
-    for (const line of doc.domain?.battingLines ?? []) {
-      const bid = String(line.yahooPlayerId ?? "").trim()
-      if (!bid) continue
+    for (const [bid, lines] of index.linesByBatter) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (paPrimaryDespiteLine.has(bid)) continue
       linePrimaryBatterIds.add(bid)
       const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
-      applyHybridBattingLineToAgg(agg, doc, gameId, line, {
-        runnerSbCs,
-        sfByBatterFromText,
-        gidpByBatterFromText,
-        gidpByBatterFromBatterEvents,
-      })
+      for (const line of lines) {
+        applyHybridBattingLineToAgg(agg, doc, gameId, line, {
+          runnerSbCs,
+          sfByBatterFromText,
+          gidpByBatterFromText,
+          gidpByBatterFromBatterEvents,
+        })
+      }
       byBatter.set(bid, agg)
     }
 
-    const pasForHybrid = dedupePlateAppearancesByInningHalfOrder(
-      doc.domain?.plateAppearances ?? [],
-      gameId,
-    )
+    const pasForHybrid = index.dedupedPas
 
     // 行優先の打者以外は plateAppearances（重複打席は 1 件にまとめたうえ）から集計
     for (const pa of pasForHybrid) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (linePrimaryBatterIds.has(bid)) continue
       const agg = byBatter.get(bid) ?? emptyBattingSeasonAggYahoo()
       updateBattingAggFromPa(agg, gameId, pa, doc)
@@ -1331,12 +1382,12 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
     // PA 優先の試合では `updateBattingAggFromPa` が打点・得点を積まない。
     // AB/H などは一球ログを正とするが、RBI と R は出場成績行から同一試合内で補完する。
     for (const bid of paPrimaryDespiteLine) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       const agg = byBatter.get(bid)
       if (!agg) continue
       let addR = 0
       let addRbi = 0
-      for (const line of doc.domain?.battingLines ?? []) {
-        if (String(line.yahooPlayerId ?? "").trim() !== bid) continue
+      for (const line of index.linesByBatter.get(bid) ?? []) {
         addR += line.r ?? 0
         addRbi += line.rbi ?? 0
       }
@@ -1347,6 +1398,7 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
 
     // plateAppearances 経路の GIDP が実況より少ない場合は差分だけ補完（同一試合内での不足を埋める）
     for (const [bid, gidpText] of gidpByBatterFromText.entries()) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (linePrimaryBatterIds.has(bid)) continue
       const agg = byBatter.get(bid)
       if (!agg) continue
@@ -1357,6 +1409,7 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
 
     // batterEvents（Yahoo /text DOM）があれば、それを実況の下限としても補完する（plateAppearances に依存しない）
     for (const [bid, gidpEvents] of gidpByBatterFromBatterEvents.entries()) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (linePrimaryBatterIds.has(bid)) continue
       const agg = byBatter.get(bid)
       if (!agg) continue
@@ -1370,6 +1423,7 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
 
     // plateAppearances 経路の打者に SB を補完（CS は score runnerEvents のみ・下記）
     for (const [bid, v] of runnerSbCs.entries()) {
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (linePrimaryBatterIds.has(bid)) continue
       const agg = byBatter.get(bid)
       if (!agg) continue
@@ -1379,6 +1433,7 @@ export function aggregateBattingSeasonByYahooBatterHybridForProfiles(
     for (const e of doc.domain?.runnerEvents ?? []) {
       if (e?.kind !== "CS" || e.sourceTier !== "score") continue
       const bid = String(e.yahooRunnerId ?? "").trim()
+      if (targetYahooIds && !targetYahooIds.has(bid)) continue
       if (bid && !linePrimaryBatterIds.has(bid)) csBidsNonLine.add(bid)
     }
     for (const bid of csBidsNonLine) {

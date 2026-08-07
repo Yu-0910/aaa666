@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039129",
-  "builtAt": "2026-07-12T12:32:48.863Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "6431281c0b5ff1fd8bd03f1b6576c55efa18582faeb7390e0f69d8f00e37ed9b",
-  "normalizedFetchedAt": "2026-07-12T12:18:39.349Z",
+  "sourceCompositeFingerprint": "847e8528ff29ace2c7bfc80dc5d4ebeef5e3a70741cebb7db292313b4df2d837",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月12日 阪神タイガースvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6820,31 +6820,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039129-score-1",
-        "inningHalf": "1回裏",
-        "kind": "CS",
-        "yahooRunnerId": "1800065",
-        "runnerNameJa": "近本",
-        "sourceLine": "[0120400] 求、捕手けん制（古賀）、けん制アウト（近本） 5 近本 1 1 空振り 次の打者 大山 悠輔 打者 佐藤 輝明 #8 左打 打率 .340 (285-97) 投手 吉村 貢司郎 #21 右投 投球数 打者数 防御率 5 3 4.06",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021039129-score-2",
-        "inningHalf": "4回表",
-        "kind": "CS",
-        "yahooRunnerId": "1900028",
-        "runnerNameJa": "長岡",
-        "sourceLine": "[0410200] 盗塁失敗（長岡） 7 長岡 投手 村上 頌樹 #41 右投 投球数 打者数 防御率 68 16 2.03",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021039129-score-3",
+        "eventId": "2021039129-runner-1",
         "inningHalf": "4回表",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0410400] 盗塁成功（岩田）、ランナー2塁 64 岩田 投手 村上 頌樹 #41 右投 投球数 打者数 防御率 73 18 2.02",
-        "sourceTier": "score"
+        "sourceLine": "4： 1番 内山 壮真 二死一塁 一塁けん制:ランナー 岩田 帰塁 一塁走者 岩田 :盗塁成功 二塁 二塁けん制:ランナー 岩田 帰塁 一打先制の場面で空振り三振！決定機を逃す 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

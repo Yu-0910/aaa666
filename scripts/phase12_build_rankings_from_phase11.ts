@@ -12,7 +12,7 @@
  *   npx tsx scripts/phase12_build_rankings_from_phase11.ts --year 2026
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { BattingLine, CanonicalGameDocument, LineupPlayer } from "../lib/yahooGame/types"
@@ -40,6 +40,7 @@ import {
   buildBattingRankingRowBase,
   sortValueForBattingMetricKey,
 } from "../lib/ranking/battingRankingRowFromSeasonStats"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import {
   findRosterPlayerByPublicId,
   findRosterPlayerByPublicIdOrJaName,
@@ -212,7 +213,7 @@ function main(): void {
   process.chdir(projectRoot)
   const { year } = parseArgs()
 
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase12] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -314,8 +315,8 @@ function main(): void {
       const rankedPublic = assignRanks(filtered)
 
       const fileBase = sanitizeMetricForPath(m.label)
-      writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(rankedPublic, null, 2), "utf8")
-      writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(rankedAll, null, 2), "utf8")
+      writeJsonFileWithRetrySync(join(outDir, `${fileBase}.json`), rankedPublic)
+      writeJsonFileWithRetrySync(join(outDir, `${fileBase}_all.json`), rankedAll)
     }
 
     console.log(`[phase12] wrote ${lg} rankings (${metrics.length} metrics, ${list.length} batters) → ${outDir}`)

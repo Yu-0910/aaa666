@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039023",
-  "builtAt": "2026-06-24T06:02:33.732Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "4a68593394d44f56b0fb31fe7c81b61b85d637a1870ad4d66ce867d7272935ba",
-  "normalizedFetchedAt": "2026-06-24T05:39:26.556Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月20日 読売ジャイアンツvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6219,13 +6219,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039023-score-1",
+        "eventId": "2021039023-runner-1",
         "inningHalf": "4回表",
         "kind": "SB",
         "yahooRunnerId": "1750701",
-        "runnerNameJa": "田中",
-        "sourceLine": "[0410400] 盗塁成功（田中）、ランナー2塁 2 田中 投手 ウィットリー #26 右投 投球数 打者数 防御率 57 13 2.80",
-        "sourceTier": "score"
+        "sourceLine": "4： 5番 細川 成也 二死一塁 一塁走者 田中 :盗塁成功 二塁 フルカウントから空振り三振！決定機を逃す 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

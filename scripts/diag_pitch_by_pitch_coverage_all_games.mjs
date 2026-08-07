@@ -165,9 +165,11 @@ function main() {
         )
         process.exit(1)
       }
-      console.log(
-        `[diag pitch-by-pitch] 日付範囲 ${fromDate || "…"} … ${toDate || "…"}: ${before} → ${gameIds.length} 試合`,
-      )
+      if (!jsonOnly) {
+        console.log(
+          `[diag pitch-by-pitch] 日付範囲 ${fromDate || "…"} … ${toDate || "…"}: ${before} → ${gameIds.length} 試合`,
+        )
+      }
     }
   } else {
     gameIds = fs
@@ -296,7 +298,9 @@ function main() {
     },
     gaps: {
       score_raw_but_no_canonical_events: scoreButNoEvents.length,
+      score_raw_but_no_canonical_event_game_ids: scoreButNoEvents.map((r) => r.gameId),
       sample_score_no_events: scoreButNoEvents.slice(0, 10).map((r) => r.gameId),
+      derived_not_merged_game_ids: derivedButNotMerged.map((r) => r.gameId),
       derived_not_merged_sample: derivedButNotMerged.slice(0, 10).map((r) => r.gameId),
     },
   }

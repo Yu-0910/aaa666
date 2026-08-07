@@ -809,4 +809,7 @@ export const CURRENT_ROSTER_PLAYER_SLUGS: Record<string, string> = {
   "93595155": "keita-yamamoto",
   "93795157": "calixte-orlando",
   "93995152": "reynolds-sean",
+  "21925155": "misaki-sasahara",
+  "41245152": "hiroki-tsuneya",
+  "11215152": "kaishu-takahashi",
 }

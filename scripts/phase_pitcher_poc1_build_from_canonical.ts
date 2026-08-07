@@ -35,7 +35,6 @@ import {
   readdirSync,
   readFileSync,
   unlinkSync,
-  writeFileSync,
 } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
@@ -66,6 +65,7 @@ import {
   emptyGameState,
 } from "../lib/yahooGame/paSituationSim"
 import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { loadDayNightByGameId } from "../lib/loadDayNightByGameId"
 import { getNpbRoster2026 } from "../lib/npbRoster"
 import {
@@ -149,16 +149,23 @@ function loadExistingPitcherPocPayload(
   }
 }
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyNpbIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyNpbIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+      onlyNpbIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, onlyNpbIds }
 }
 
 function ipToOuts(ip: string | undefined): number {
@@ -341,7 +348,7 @@ function opponentTeamName(canonical: CanonicalGameDocument, pitcherTeam: string)
 }
 
 function main(): void {
-  const { year } = parseArgs()
+  const { year, onlyNpbIds } = parseArgs()
   const rosterPath = join(projectRoot, "_data", "npb_roster_2026.csv")
   if (!existsSync(rosterPath)) {
     console.error("[phase_pitcher_poc1] missing roster:", rosterPath)
@@ -349,11 +356,13 @@ function main(): void {
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
   const rosterForBatHand = getNpbRoster2026()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase_pitcher_poc1] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
   }
+  const targetNpbIds = onlyNpbIds ? [...onlyNpbIds] : null
+  const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
 
   /** gameId -> scoreboard 補完済み canonical（Phase13 / Phase6 と同一） */
   const enrichedDocByGameId = new Map<string, CanonicalGameDocument>()
@@ -448,6 +457,7 @@ function main(): void {
         continue
       }
       const npb = hit.npbPlayerId
+      if (targetNpbIdSet && !targetNpbIdSet.has(npb)) continue
       let row = byNpb.get(npb)
       if (!row) {
         row = {
@@ -788,6 +798,7 @@ function main(): void {
     doc: CanonicalGameDocument,
     inferredByNpb: Map<string, PaAgg>,
     lastRoundKeyByNpb: Map<string, string>,
+    inferredErByRoundByNpb: Map<string, Map<string, number>>,
   ): void {
     const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
     for (const line of mergedLines.values()) {
@@ -795,6 +806,7 @@ function main(): void {
       if (!npb || !byNpb.has(npb)) continue
       const inferred = inferredByNpb.get(npb) ?? emptyPaAgg()
       const abOfficial = Math.max(0, line.bf - line.bb - line.hbp)
+      const officialEr = Math.max(0, line.er)
       const deltas = {
         bf: line.bf - inferred.bf,
         ab: abOfficial - inferred.ab,
@@ -804,9 +816,9 @@ function main(): void {
         bb: line.bb - inferred.bb,
         hbp: line.hbp - inferred.hbp,
         outs: line.outs - inferred.outs,
-        er: line.er - inferred.er,
       }
-      if (Object.values(deltas).every((n) => n === 0)) continue
+      const erDelta = officialEr - inferred.er
+      if (Object.values(deltas).every((n) => n === 0) && erDelta === 0) continue
 
       const roundKey = lastRoundKeyByNpb.get(npb) ?? (line.bf > 0 ? "1" : "5")
       const pm = ensurePaRound(npb)
@@ -819,7 +831,25 @@ function main(): void {
       agg.bb += deltas.bb
       agg.hbp += deltas.hbp
       agg.outs += deltas.outs
-      agg.er += deltas.er
+      if (erDelta >= 0) {
+        agg.er += erDelta
+      } else {
+        // 実況スコア差分は失策絡みの失点も含むため、公式自責点より過大になることがある。
+        // 負の残差を最後の巡目へ直接載せず、この試合で推定ERを付けた巡目から
+        // 後ろ順に差し引く。各巡目のERは必ず0以上に保つ。
+        let remaining = -erDelta
+        const gameErByRound = inferredErByRoundByNpb.get(npb) ?? new Map<string, number>()
+        for (const key of ["5", "4", "3", "2", "1"]) {
+          if (remaining <= 0) break
+          const gameEr = Math.max(0, gameErByRound.get(key) ?? 0)
+          if (gameEr <= 0) continue
+          const roundAgg = pm.get(key)
+          if (!roundAgg) continue
+          const reduction = Math.min(remaining, gameEr, Math.max(0, roundAgg.er))
+          roundAgg.er -= reduction
+          remaining -= reduction
+        }
+      }
       pm.set(roundKey, agg)
     }
   }
@@ -886,6 +916,7 @@ function main(): void {
     const bfInGameByNpb = new Map<string, number>()
     const inferredPaRoundByNpb = new Map<string, PaAgg>()
     const lastPaRoundKeyByNpb = new Map<string, string>()
+    const inferredErByRoundByNpb = new Map<string, Map<string, number>>()
 
     for (const pa of pas) {
       const pid = yahooPitcherIdForVsHandFromPa(pa)
@@ -1008,6 +1039,9 @@ function main(): void {
         inferred.er += erDelta
         inferredPaRoundByNpb.set(npb, inferred)
         lastPaRoundKeyByNpb.set(npb, key)
+        const gameErByRound = inferredErByRoundByNpb.get(npb) ?? new Map<string, number>()
+        gameErByRound.set(key, (gameErByRound.get(key) ?? 0) + erDelta)
+        inferredErByRoundByNpb.set(npb, gameErByRound)
       }
 
       const pitcherThrowRaw = (
@@ -1042,7 +1076,12 @@ function main(): void {
       }
     }
 
-    applyGamePaRoundReconcileFromPitchingLines(doc, inferredPaRoundByNpb, lastPaRoundKeyByNpb)
+    applyGamePaRoundReconcileFromPitchingLines(
+      doc,
+      inferredPaRoundByNpb,
+      lastPaRoundKeyByNpb,
+      inferredErByRoundByNpb,
+    )
 
     const halfGroups = new Map<string, PlateAppearance[]>()
     for (const pa of pas) {
@@ -1433,7 +1472,14 @@ function main(): void {
       },
     }
 
-    writeFileSync(join(outDir, `npb_${npb}.json`), JSON.stringify(payload, null, 2), "utf8")
+    const negativePaRoundEr = payload.splits.byPaRound.find((row) => row.er < 0)
+    if (negativePaRoundEr) {
+      throw new Error(
+        `[phase_pitcher_poc1] negative pa-round ER: npb=${npb} round=${negativePaRoundEr.key} er=${negativePaRoundEr.er}`,
+      )
+    }
+
+    writeJsonFileWithRetrySync(join(outDir, `npb_${npb}.json`), payload)
   }
 
   console.log(`[phase_pitcher_poc1] wrote ${byNpb.size} files → ${outDir}`)

@@ -6,29 +6,85 @@
  *
  *   npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts
  *   npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts --game-id 2021038725
+ *   npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts --game-ids 2021038725,2021038726
+ *   npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts --year 2026 --from 2026-07-18 --to 2026-07-19
  */
 
 import { createHash } from "crypto"
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, readdirSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
 import { applyCarryForwardPitcherForIntentionalWalks } from "../lib/yahooGame/carryForwardPitcherForIntentionalWalk"
 import { supplementPlateAppearancesFromTextPlayByPlay } from "../lib/yahooGame/supplementPlateAppearancesFromTextPlayByPlay"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { gameId: string | null } {
+function parseArgs(): {
+  year: string
+  gameId: string | null
+  gameIds: string[] | null
+  from: string
+  to: string
+} {
   const args = process.argv.slice(2)
+  let year = "2026"
   let gameId: string | null = null
+  let gameIds: string[] | null = null
+  let from = ""
+  let to = ""
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--game-id" && args[i + 1]) {
+    if (args[i] === "--year" && args[i + 1]) {
+      year = String(args[i + 1]).trim() || "2026"
+      i++
+    } else if (args[i] === "--game-id" && args[i + 1]) {
       gameId = args[i + 1]
+      i++
+    } else if (args[i] === "--game-ids" && args[i + 1]) {
+      gameIds = String(args[i + 1])
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
       i++
     }
   }
-  return { gameId }
+  return { year, gameId, gameIds, from, to }
+}
+
+function readJsonIfExists<T>(p: string): T | null {
+  if (!existsSync(p)) return null
+  try {
+    return JSON.parse(readFileSync(p, "utf8")) as T
+  } catch {
+    return null
+  }
+}
+
+function filterGameIdsByDateRange(
+  byDate: Record<string, string[]> | undefined,
+  from: string,
+  to: string,
+): string[] {
+  if (!byDate) return []
+  const out = new Set<string>()
+  for (const [day, ids] of Object.entries(byDate)) {
+    if (from && day < from) continue
+    if (to && day > to) continue
+    if (!Array.isArray(ids)) continue
+    for (const id of ids) {
+      const s = String(id ?? "").trim()
+      if (s) out.add(s)
+    }
+  }
+  return [...out].sort()
 }
 
 function processDoc(raw: string): { doc: CanonicalGameDocument; changed: boolean } {
@@ -63,13 +119,29 @@ function processDoc(raw: string): { doc: CanonicalGameDocument; changed: boolean
 }
 
 function main(): void {
-  const { gameId } = parseArgs()
+  const { year, gameId, gameIds, from, to } = parseArgs()
   const dir = join(projectRoot, "_data", "scraped_games", "canonical")
   if (!existsSync(dir)) {
     console.error("missing:", dir)
     process.exit(1)
   }
-  const files = gameId ? [`${gameId}.json`] : readdirSync(dir).filter((f) => f.endsWith(".json"))
+  let targetGameIds: string[] | null = null
+  if (gameId) {
+    targetGameIds = [gameId]
+  } else if (gameIds && gameIds.length > 0) {
+    targetGameIds = [...new Set(gameIds)]
+  } else if (from || to) {
+    const indexPath = join(projectRoot, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
+    const idx = readJsonIfExists<{ byDate?: Record<string, string[]> }>(indexPath)
+    targetGameIds = filterGameIdsByDateRange(idx?.byDate, from, to)
+    console.log(
+      `[backfill:canonical:plate-appearances-from-text] date-range: from=${from || "(none)"} to=${to || "(none)"} -> ${targetGameIds.length} game(s)`,
+    )
+  }
+
+  const files = targetGameIds
+    ? targetGameIds.map((id) => `${id}.json`)
+    : readdirSync(dir).filter((f) => f.endsWith(".json"))
   let n = 0
   for (const f of files) {
     const p = join(dir, f)
@@ -77,7 +149,7 @@ function main(): void {
     const raw = readFileSync(p, "utf8")
     const { doc, changed } = processDoc(raw)
     if (!changed) continue
-    writeFileSync(p, JSON.stringify(doc, null, 2), "utf8")
+    writeJsonFileWithRetrySync(p, doc)
     console.log("updated", f)
     n++
   }

@@ -833,7 +833,22 @@ export function loadVsHandRowsFromCanonicalWithDebug(
   const resultFromPaTextLine = (line: string): string =>
     inferStrictResultJaFromSportsnaviPlayLineForVsHand(line)
 
+  const docHasBatterSignal = (doc: CanonicalGameDocument): boolean => {
+    for (const pa of doc.domain?.plateAppearances ?? []) {
+      if (String(pa?.yahooBatterId ?? '').trim() === bid) return true
+    }
+    for (const line of doc.domain?.battingLines ?? []) {
+      if (String(line?.yahooPlayerId ?? '').trim() === bid) return true
+    }
+    for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+      if (String(row?.yahooPlayerId ?? '').trim() === bid) return true
+    }
+    const mentioned = doc.game?.yahooPlayersMentioned ?? {}
+    return Boolean(String((mentioned as Record<string, unknown>)[bid] ?? '').trim())
+  }
+
   for (const doc of docs) {
+    if (!docHasBatterSignal(doc)) continue
     const gid = String(doc.gameId ?? '').trim()
     // Phase 28: canonical の scoreboard / teams は現行ビルダーが空のまま生成するため、
     // 試合前情報テキスト（"先攻:X..." / "後攻:Y..."）から軽量パースして補強する。

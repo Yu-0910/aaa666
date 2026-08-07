@@ -39,6 +39,9 @@ let currentRunId = ""
 
 const childEnv = {
   ...process.env,
+  CI: process.env.CI ?? "1",
+  NO_UPDATE_NOTIFIER: process.env.NO_UPDATE_NOTIFIER ?? "1",
+  VERCEL_CLI_UPDATE_NOTIFY: process.env.VERCEL_CLI_UPDATE_NOTIFY ?? "0",
   PYTHONUNBUFFERED: "1",
   TOPPAGE_PLATE_RESULT_SOURCE: process.env.TOPPAGE_PLATE_RESULT_SOURCE ?? "appearance_only",
   TOPPAGE_BATTING_SEASON_AGG: process.env.TOPPAGE_BATTING_SEASON_AGG ?? "appearance_slots",
@@ -46,6 +49,20 @@ const childEnv = {
     process.env.TOPPAGE_STRICT_PHASE2_CANONICAL_REBUILD ?? "1",
 }
 const VERCEL_CLI = process.env.TOPPAGE_VERCEL_CLI || (process.platform === "win32" ? "vercel.cmd" : "vercel")
+
+function commandNeedsYahooScrapePermission(command) {
+  return /scripts[\\/]fetch_sportsnavi_score_raw_snapshot\.py|scripts[\\/]phase4_yahoo_pitch_by_pitch_pipeline\.mjs|scripts[\\/]fetch_yahoo_schedule_probables\.ts/.test(
+    String(command || ""),
+  )
+}
+
+function childEnvForCommand(command) {
+  if (!commandNeedsYahooScrapePermission(command)) return childEnv
+  return {
+    ...childEnv,
+    YAHOO_SCRAPE_ENABLED: childEnv.YAHOO_SCRAPE_ENABLED || "1",
+  }
+}
 
 function readVercelProjectMeta() {
   const p = path.join(root, ".vercel", "project.json")
@@ -305,6 +322,59 @@ function rawMetaFetchedAtMs(kind, gameId) {
   return parseIsoMs(meta?.fetchedAt)
 }
 
+function scheduleFinishSeenPath() {
+  return path.join(root, "_data", "scraped_games", "_meta", "schedule_finish_seen_v1.json")
+}
+
+function scheduleFinishSeenKey(dateJst, gameId) {
+  return `${dateJst}:${gameId}`
+}
+
+function readScheduleFinishSeen() {
+  const payload = readJsonOrNull(scheduleFinishSeenPath())
+  return payload && typeof payload === "object" ? payload : { schemaVersion: "schedule-finish-seen-v1", games: {} }
+}
+
+function writeScheduleFinishSeen(payload) {
+  writeJsonFileWithRetrySync(scheduleFinishSeenPath(), {
+    schemaVersion: "schedule-finish-seen-v1",
+    games: payload?.games && typeof payload.games === "object" ? payload.games : {},
+    updatedAtJst: formatJstTimestamp(),
+  })
+}
+
+function rememberFirstFinishedSeenFromSnapshot(dateJst, snap) {
+  const gamesList = Array.isArray(snap?.games) ? snap.games : []
+  if (gamesList.length === 0) return
+  const fetchedAtMs = parseIsoMs(snap?.fetchedAt)
+  const firstSeenAt = fetchedAtMs > 0 ? new Date(fetchedAtMs).toISOString() : new Date().toISOString()
+  const payload = readScheduleFinishSeen()
+  const games = payload.games && typeof payload.games === "object" ? { ...payload.games } : {}
+  let changed = false
+  for (const game of gamesList) {
+    const gameId = String(game?.gameId ?? "").trim()
+    const status = String(game?.statusText ?? "").trim()
+    if (!gameId || !/試合終了/.test(status)) continue
+    const key = scheduleFinishSeenKey(dateJst, gameId)
+    if (games[key]?.firstFinishedSeenAt) continue
+    games[key] = {
+      dateJst,
+      gameId,
+      firstFinishedSeenAt: firstSeenAt,
+      statusText: status,
+      source: "sportsnavi_schedule_snapshot",
+    }
+    changed = true
+  }
+  if (changed) writeScheduleFinishSeen({ ...payload, games })
+}
+
+function firstFinishedSeenAtMs(dateJst, gameId) {
+  const payload = readScheduleFinishSeen()
+  const entry = payload?.games?.[scheduleFinishSeenKey(dateJst, gameId)]
+  return parseIsoMs(entry?.firstFinishedSeenAt)
+}
+
 function gameIdsForDate(dateJst) {
   const snapPath = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date", `${dateJst}.json`)
   const snap = readJsonOrNull(snapPath)
@@ -520,6 +590,44 @@ function onlyYahooIdsArg(ids) {
   return ids.length > 0 ? ` -- --only-yahoo-ids ${ids.join(",")}` : ""
 }
 
+function derivedYahooArgsArg(ids, { from, to } = {}) {
+  const args = []
+  if (Array.isArray(ids) && ids.length > 0) args.push("--only-yahoo-ids", ids.join(","))
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  return args.length > 0 ? ` -- ${args.join(" ")}` : ""
+}
+
+function dateRangeNpmArgsArg({ from, to } = {}) {
+  const args = []
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  return args.length > 0 ? ` -- ${args.join(" ")}` : ""
+}
+
+function phase29Command({ from, to } = {}) {
+  return `npm run phase29:build:standings${dateRangeNpmArgsArg({ from, to })}`
+}
+
+function dateRangeNodeArgsArg({ from, to } = {}) {
+  const args = []
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  return args.length > 0 ? ` ${args.join(" ")}` : ""
+}
+
+function gameIdsOrDateRangeTsxArgsArg({ year, from, to, gameIds = [] } = {}) {
+  const args = []
+  if (year) args.push("--year", year)
+  if (Array.isArray(gameIds) && gameIds.length > 0) {
+    args.push("--game-ids", gameIds.join(","))
+  } else {
+    if (from) args.push("--from", from)
+    if (to) args.push("--to", to)
+  }
+  return args.length > 0 ? ` ${args.join(" ")}` : ""
+}
+
 function onlyNpbIdsArg(ids) {
   return ids.length > 0 ? ` -- --only-npb-ids ${ids.join(",")}` : ""
 }
@@ -697,7 +805,7 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
 
   run(
     "派生: phase17 period（鮮度NGのため再生成）",
-    `npm run phase17:build:period${onlyYahooIdsArg(affectedYahooIds)}`,
+    `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`,
     { dryRun },
   )
   if (rebuildPitchingPeriod) {
@@ -997,7 +1105,8 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
-  const phase11Command = `npm run phase11:build:batting${onlyYahooIdsArg(affectedYahooIds)}`
+  const phase11Command = `npm run phase11:build:batting${derivedYahooArgsArg(affectedYahooIds, { from, to })}`
+  const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
   const categoryPlans = [
     {
       category: "player_season_batting",
@@ -1006,7 +1115,7 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
     },
     {
       category: "player_season_batting_count",
-      command: "npm run phase16:build:batting-count",
+      command: `npm run phase16:build:batting-count${derivedAffectedArg}`,
       rebuildLabel: "派生: phase16 batting count（鮮度NGのため再生成）",
     },
   ]
@@ -1064,7 +1173,7 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
     return
   }
 
-  console.warn("\n[daily:npb-pipeline:v2] player_season_batting_splits 鮮度 NG → 最終公開前に再生成します:")
+  console.warn("\n[daily:npb-pipeline:v2] player_season_batting_splits 鮮度 NG → 1回目公開後、2回目公開前に再生成します:")
   console.warn(
     `  affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
   )
@@ -1080,14 +1189,14 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
     `player_season_batting_splits stale affected=${report.affectedCount} missing=${report.missingYahooIds.length} stale=${report.staleYahooIds.length}`,
   )
   pushRunSummaryEvent("repairs", {
-    kind: "player_season_batting_splits_rebuild_before_final_publish",
+    kind: "player_season_batting_splits_rebuild_after_first_publish",
     affectedCount: report.affectedCount,
     missingYahooIds: report.missingYahooIds.slice(0, 20),
     staleYahooIds: report.staleYahooIds.slice(0, 20),
   })
   run(
-    "派生: phase15 batting splits（最終公開前の鮮度NG再生成）",
-    `npm run phase15:build:batting-splits${onlyYahooIdsArg(affectedYahooIds)}`,
+    "派生: phase15 batting splits（1回目公開後・2回目公開前の鮮度NG再生成）",
+    `npm run phase15:build:batting-splits${derivedYahooArgsArg(affectedYahooIds, { from, to })}`,
     { dryRun },
   )
 }
@@ -1101,16 +1210,19 @@ function collectFinishedRawFreshnessFailures({ from, to, gameIds, noStatsText, n
   for (const dateJst of eachDateYmd(from, to)) {
     const snapPath = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date", `${dateJst}.json`)
     const snap = readJsonOrNull(snapPath)
-    const scheduleFetchedAtMs = parseIsoMs(snap?.fetchedAt)
+    rememberFirstFinishedSeenFromSnapshot(dateJst, snap)
+    const fallbackScheduleFetchedAtMs = parseIsoMs(snap?.fetchedAt)
     const games = Array.isArray(snap?.games) ? snap.games : []
-    if (scheduleFetchedAtMs <= 0 || games.length === 0) continue
+    if (games.length === 0) continue
     for (const game of games) {
       const gameId = String(game?.gameId ?? "").trim()
       const status = String(game?.statusText ?? "").trim()
       if (gameIdsFilter && !gameIdsFilter.has(gameId)) continue
       if (!gameId || !/試合終了/.test(status)) continue
-      const staleKinds = kinds.filter((kind) => rawMetaFetchedAtMs(kind, gameId) < scheduleFetchedAtMs)
-      if (staleKinds.length > 0) stale.push({ dateJst, gameId, staleKinds })
+      const finishedSeenAtMs = firstFinishedSeenAtMs(dateJst, gameId) || fallbackScheduleFetchedAtMs
+      if (finishedSeenAtMs <= 0) continue
+      const staleKinds = kinds.filter((kind) => rawMetaFetchedAtMs(kind, gameId) < finishedSeenAtMs)
+      if (staleKinds.length > 0) stale.push({ dateJst, gameId, staleKinds, firstFinishedSeenAtMs: finishedSeenAtMs })
     }
   }
   return stale
@@ -1312,6 +1424,7 @@ function initRunSummary(args) {
     publishProgress: {
       fastPublish: "not_started",
       fastVerify: "not_started",
+      fullDisplayPublish: "not_started",
       fullPublish: "not_started",
       fullVerify: "not_started",
       finalState: "not_complete",
@@ -1320,6 +1433,19 @@ function initRunSummary(args) {
         : "公開工程は未完了。",
     },
     completedSteps: [],
+    stepProgress: {
+      current: null,
+      totals: {
+        started: 0,
+        completed: 0,
+        failed: 0,
+        failedTry: 0,
+        skippedDryRun: 0,
+        skippedResume: 0,
+      },
+      byStepId: {},
+    },
+    stepFailures: [],
     warnings: [],
     repairs: [],
     retries: [],
@@ -1351,6 +1477,168 @@ function pushRunSummaryEvent(key, event, { limit = 120 } = {}) {
   writeRunSummary()
 }
 
+function boundedMessage(value, max = 800) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim()
+  return text.length > max ? `${text.slice(0, max)}...` : text
+}
+
+function classifyStepKind(label, command) {
+  const text = `${label}\n${command}`
+  const lower = text.toLowerCase()
+  const phase = text.match(/\bPhase\s*([0-9]+[a-z]?)/i)?.[1] || text.match(/\bphase([0-9]+[a-z]?)/i)?.[1]
+  if (/公開確認|verify.*publish|production|本番/i.test(text)) return phase ? `phase${phase}_publish_verify` : "publish_verify"
+  if (/公開|publish|upload|r2|vercel|deploy/i.test(text)) return phase ? `phase${phase}_publish` : "publish"
+  if (/検証|validate|verify|gate/i.test(text)) return phase ? `phase${phase}_validation` : "validation"
+  if (/取得|fetch|scrape|snapshot|sportsnavi|yahoo/i.test(text)) return phase ? `phase${phase}_fetch` : "fetch"
+  if (/派生|enrich|build|ranking|rankings|standings|トップ表示|top-/i.test(text)) return phase ? `phase${phase}_build` : "build"
+  if (lower.includes("repair") || /修復|補完|再生成/.test(text)) return phase ? `phase${phase}_repair` : "repair"
+  return phase ? `phase${phase}` : "step"
+}
+
+function classifyStepFailure({ label, command, error, timedOut, exitCode, tryMode = false }) {
+  const text = `${label}\n${command}\n${error?.message ?? error ?? ""}`
+  const lower = text.toLowerCase()
+  let kind = "step_failed"
+  if (timedOut) kind = "timeout"
+  else if (/yahoo_scrape_enabled=1|yahoo への http 取得をしません|yahoo_scrape_guard/i.test(text)) kind = "yahoo_scrape_guard_blocked"
+  else if (/enoent|cannot find path|no such file|not found/i.test(text)) kind = "missing_file_or_command"
+  else if (/eacces|access is denied|permission denied|アクセスが拒否/i.test(text)) kind = "permission_denied"
+  else if (/validation|validate|検証|gate/i.test(text)) kind = "validation_failure"
+  else if (/公開|publish|upload|r2|vercel|deploy|verify_display/i.test(text)) kind = "publish_or_verify_failure"
+  else if (/fetch|scrape|snapshot|sportsnavi|yahoo|取得/i.test(text)) kind = "fetch_failure"
+  else if (/build|派生|ranking|rankings|standings|生成/i.test(text)) kind = "build_failure"
+  else if (typeof exitCode === "number" && exitCode !== 0) kind = "exit_nonzero"
+  return {
+    kind,
+    severity: tryMode ? "warning" : "fatal",
+    retryable: Boolean(timedOut || /ebusy|etimedout|econnreset|temporar|一時的|open 失敗/i.test(lower)),
+  }
+}
+
+function ensureStepProgress() {
+  if (!runSummary) return null
+  const current = runSummary.stepProgress && typeof runSummary.stepProgress === "object" ? runSummary.stepProgress : {}
+  runSummary.stepProgress = {
+    current: current.current ?? null,
+    totals: {
+      started: Number(current.totals?.started || 0),
+      completed: Number(current.totals?.completed || 0),
+      failed: Number(current.totals?.failed || 0),
+      failedTry: Number(current.totals?.failedTry || 0),
+      skippedDryRun: Number(current.totals?.skippedDryRun || 0),
+      skippedResume: Number(current.totals?.skippedResume || 0),
+    },
+    byStepId: current.byStepId && typeof current.byStepId === "object" ? current.byStepId : {},
+  }
+  if (!Array.isArray(runSummary.stepFailures)) runSummary.stepFailures = []
+  return runSummary.stepProgress
+}
+
+function recordPipelineStepStart({ label, command, stepId, tryMode = false }) {
+  const progress = ensureStepProgress()
+  if (!progress) return
+  const atJst = formatJstTimestamp()
+  const step = {
+    label,
+    command,
+    stepId,
+    kind: classifyStepKind(label, command),
+    state: "running",
+    tryMode: Boolean(tryMode),
+    startedAtJst: atJst,
+  }
+  progress.current = step
+  progress.totals.started += 1
+  progress.byStepId[stepId] = {
+    ...(progress.byStepId[stepId] ?? {}),
+    ...step,
+    lastStartedAtJst: atJst,
+  }
+  writeRunSummary()
+}
+
+function recordPipelineStepSkipped({ label, command, stepId, reason, tryMode = false }) {
+  const progress = ensureStepProgress()
+  if (!progress) return
+  const atJst = formatJstTimestamp()
+  const state = reason === "dry-run" ? "skipped-dry-run" : "skipped-resume"
+  if (reason === "dry-run") progress.totals.skippedDryRun += 1
+  else progress.totals.skippedResume += 1
+  progress.current = null
+  progress.byStepId[stepId] = {
+    ...(progress.byStepId[stepId] ?? {}),
+    label,
+    command,
+    stepId,
+    kind: classifyStepKind(label, command),
+    state,
+    tryMode: Boolean(tryMode),
+    skippedAtJst: atJst,
+    skipReason: reason,
+  }
+  writeRunSummary()
+}
+
+function recordPipelineStepSuccess({ label, command, stepId, elapsed, attempts = 1, tryMode = false }) {
+  const progress = ensureStepProgress()
+  if (!progress) return
+  const atJst = formatJstTimestamp()
+  progress.current = null
+  progress.totals.completed += 1
+  progress.byStepId[stepId] = {
+    ...(progress.byStepId[stepId] ?? {}),
+    label,
+    command,
+    stepId,
+    kind: classifyStepKind(label, command),
+    state: "completed",
+    tryMode: Boolean(tryMode),
+    elapsed,
+    attempts,
+    completedAtJst: atJst,
+  }
+  writeRunSummary()
+}
+
+function recordPipelineStepFailure({ label, command, stepId, elapsed, error, exitCode, timedOut, tryMode = false }) {
+  const progress = ensureStepProgress()
+  if (!progress) return null
+  const atJst = formatJstTimestamp()
+  const classification = classifyStepFailure({ label, command, error, timedOut, exitCode, tryMode })
+  const failure = {
+    label,
+    command,
+    stepId,
+    stepKind: classifyStepKind(label, command),
+    state: tryMode ? "failed-try" : "failed",
+    tryMode: Boolean(tryMode),
+    elapsed,
+    exitCode,
+    timedOut: Boolean(timedOut),
+    failureKind: classification.kind,
+    severity: classification.severity,
+    retryable: classification.retryable,
+    message: boundedMessage(error?.message ?? error),
+  }
+  progress.current = null
+  if (tryMode) progress.totals.failedTry += 1
+  else progress.totals.failed += 1
+  progress.byStepId[stepId] = {
+    ...(progress.byStepId[stepId] ?? {}),
+    ...failure,
+    failedAtJst: atJst,
+  }
+  const failures = Array.isArray(runSummary.stepFailures) ? runSummary.stepFailures.slice() : []
+  failures.push({
+    atJst,
+    ...failure,
+  })
+  if (failures.length > 120) failures.splice(0, failures.length - 120)
+  runSummary.stepFailures = failures
+  writeRunSummary()
+  return failure
+}
+
 function setRunProgress(progressState, progressMessage, publishPatch = {}) {
   if (!runSummary) return
   runSummary.progressState = progressState
@@ -1366,6 +1654,7 @@ function progressPatchForStep(stepId, phase, ok = null) {
   const id = String(stepId || "").trim()
   const state = phase === "start" ? "running" : ok ? "completed" : "failed"
   if (id === "publish-fast-display") return { fastPublish: state }
+  if (id === "publish-full-display-delta") return { fullDisplayPublish: state }
   if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
     return { fullPublish: state }
   }
@@ -1387,10 +1676,10 @@ function updateProgressForStepStart(label, stepId) {
       "1回目公開を実行中。球場別など full derived はまだ本番反映完了と判定しない。",
       { ...patch, finalState: "not_complete", finalMessage: "1回目公開中。2回目公開は未完了。" },
     )
-  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+  } else if (id === "publish-full-display-delta" || id === "publish-full-derived" || id === "publish-daily-full-derived") {
     setRunProgress(
       "publishing_full",
-      "2回目公開を実行中。player_season_batting_context（球場別）を含む詳細派生を反映中。",
+      "2回目公開を実行中。予想投手タブと詳細派生を反映中。",
       { ...patch, finalState: "not_complete", finalMessage: "2回目公開中。公開確認は未完了。" },
     )
   } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
@@ -1419,10 +1708,10 @@ function updateProgressForStepSuccess(label, stepId) {
       "1回目公開のアップロード完了。球場別など full derived はまだ2回目公開待ち。",
       { ...patch, finalState: "not_complete", finalMessage: "1回目公開のみ完了。2回目公開は未完了。" },
     )
-  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+  } else if (id === "publish-full-display-delta" || id === "publish-full-derived" || id === "publish-daily-full-derived") {
     setRunProgress(
       "full_publish_uploaded",
-      "2回目公開のアップロード完了。球場別を含む詳細派生は R2 へ送信済み、公開確認待ち。",
+      "2回目公開のアップロード完了。予想投手タブと詳細派生は R2 へ送信済み、公開確認待ち。",
       { ...patch, finalState: "not_complete", finalMessage: "2回目公開アップロード完了、確認待ち。" },
     )
   } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
@@ -1454,10 +1743,10 @@ function updateProgressForStepFailure(label, stepId, message = "") {
       `1回目公開で失敗。2回目公開は未実行。${suffix}`.trim(),
       { ...patch, finalState: "failed_before_full_publish", finalMessage: "1回目公開で停止。2回目公開未実行。" },
     )
-  } else if (id === "publish-full-derived" || id === "publish-daily-full-derived") {
+  } else if (id === "publish-full-display-delta" || id === "publish-full-derived" || id === "publish-daily-full-derived") {
     setRunProgress(
       "failed_full_publish",
-      `2回目公開で失敗。球場別を含む詳細派生の本番反映は完了扱いにしない。${suffix}`.trim(),
+      `2回目公開で失敗。予想投手タブと詳細派生の本番反映は完了扱いにしない。${suffix}`.trim(),
       { ...patch, finalState: "failed_full_publish", finalMessage: "2回目公開で停止。" },
     )
   } else if (id === "verify-display-publish" || id === "verify-display-publish-fast" || id === "verify-display-publish-full") {
@@ -1474,6 +1763,35 @@ function updateProgressForStepFailure(label, stepId, message = "") {
       },
     )
   }
+}
+
+function assertFinalPublishCompletedBeforeFinalStatus(args) {
+  if (args.dryRun || args.noPublish) return
+  const progress = runSummary?.publishProgress ?? {}
+  const missing = []
+  if (progress.fullDisplayPublish !== "completed") missing.push("R2公開(2回目): full display delta")
+  if (progress.fullPublish !== "completed") missing.push("R2公開(2回目): daily/full derived")
+  if (progress.fullVerify !== "completed") missing.push("公開確認(2回目)")
+  if (missing.length === 0) return
+
+  runSummary.progressState = "failed_final_publish_incomplete"
+  runSummary.progressMessage = `当日最終完了判定前に2回目公開の未完了を検出: ${missing.join(", ")}`
+  runSummary.publishProgress = {
+    ...progress,
+    finalState: "failed_final_publish_incomplete",
+    finalMessage: `2回目公開未完了: ${missing.join(", ")}`,
+  }
+  recordPipelineStepFailure({
+    label: "最終完了判定: 2回目公開完了チェック",
+    command: "internal:assertFinalPublishCompletedBeforeFinalStatus",
+    stepId: "final-publish-completion-gate",
+    elapsed: "0:00",
+    error: new Error(`2回目公開未完了: ${missing.join(", ")}`),
+    exitCode: 1,
+    timedOut: false,
+  })
+  writeRunSummary()
+  throw new Error(`completed-final blocked: missing ${missing.join(", ")}`)
 }
 
 function log(msg) {
@@ -1576,6 +1894,10 @@ function inferStepId(label, command = "") {
     if (normalizeResumeText(command).includes("--no-production")) return "verify-display-publish-r2-only"
   }
   if (core === "node:display_publish_fast_2026") return "publish-fast-display"
+  if (core === "node:display_r2_upload_derived") {
+    if (labelNorm.includes("daily full derived")) return "publish-daily-full-derived"
+    if (labelNorm.includes("full derived")) return "publish-full-derived"
+  }
   if (core === "npm:display:r2:upload:full-display-delta:2026") return "publish-full-display-delta"
   if (core === "npm:display:r2:upload:derived:2026") return "publish-full-derived"
   if (core === "npm:display:r2:upload:derived:2026:daily-full") return "publish-daily-full-derived"
@@ -1602,6 +1924,14 @@ function resumeTokenVariants(value) {
   variants.add(base.replace(/\(1回目・再試行後\)/g, "(1回目)"))
   variants.add(base.replace(/\(2回目・再試行後\)/g, "(2回目)"))
   variants.add(base.replace(/\s+/g, " "))
+  if (/公開1回目.*vercel本番プロキシ再デプロイ/.test(base)) {
+    variants.add("公開確認(1回目): 主要表示 + 週次 + 選手成績")
+    variants.add("verify-display-publish-fast")
+  }
+  if (/公開2回目.*vercel本番プロキシ再デプロイ/.test(base)) {
+    variants.add("公開確認(2回目): 主要表示 + 週次 + 選手成績")
+    variants.add("verify-display-publish-full")
+  }
   return [...variants].filter(Boolean)
 }
 
@@ -1779,7 +2109,7 @@ function execPipelineStepWithRetry(label, command, opts = {}) {
         cwd: root,
         stdio: "inherit",
         shell: true,
-        env: childEnv,
+        env: childEnvForCommand(command),
         timeout: opts.timeoutMs || commandTimeoutMs(opts.timeoutKind || "default"),
       })
       return { attempts: attempt }
@@ -1810,15 +2140,20 @@ function run(label, command, opts = {}) {
   lastStep = label
   const stepId = String(opts.stepId || inferStepId(label, command)).trim()
   lastStepId = stepId
-  if (shouldSkipForResume(label, command, stepId)) return
+  if (shouldSkipForResume(label, command, stepId)) {
+    recordPipelineStepSkipped({ label, command, stepId, reason: "resume" })
+    return
+  }
   const startedAt = Date.now()
   log(`→ 開始: ${label}`)
+  recordPipelineStepStart({ label, command, stepId })
   updateProgressForStepStart(label, stepId)
   writePipelineCheckpoint("running", label, command, { stepId })
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
+    recordPipelineStepSkipped({ label, command, stepId, reason: "dry-run" })
     writePipelineCheckpoint("skipped-dry-run", label, command, { stepId })
     return
   }
@@ -1831,16 +2166,28 @@ function run(label, command, opts = {}) {
     const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
     log(`← 失敗: ${label}（所要 ${elapsed}） exit=${code}${timedOut ? " timeout" : ""}`)
     updateProgressForStepFailure(label, stepId, e?.message || String(e))
+    const failure = recordPipelineStepFailure({
+      label,
+      command,
+      stepId,
+      elapsed,
+      error: e,
+      exitCode: code,
+      timedOut,
+    })
     appendPipelineBulkLog(
       root,
       "daily:npb-pipeline:v2",
-      `失敗: ${label} 所要=${elapsed} exit=${code}${timedOut ? " timeout=1" : ""}`,
+      `失敗: ${label} 所要=${elapsed} exit=${code}${timedOut ? " timeout=1" : ""} failureKind=${failure?.failureKind || "step_failed"}`,
     )
     writePipelineCheckpoint("failed", label, command, {
       stepId,
       elapsed,
       exitCode: code,
       timedOut,
+      failureKind: failure?.failureKind,
+      stepKind: failure?.stepKind,
+      retryable: failure?.retryable,
       resumeFrom: label,
       resumeFromStepId: stepId,
       resumeAfterPrevious: true,
@@ -1855,6 +2202,7 @@ function run(label, command, opts = {}) {
     "daily:npb-pipeline:v2",
     `完了: ${label} 所要=${elapsed}${execResult.attempts > 1 ? ` attempts=${execResult.attempts}` : ""}`,
   )
+  recordPipelineStepSuccess({ label, command, stepId, elapsed, attempts: execResult.attempts })
   pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, attempts: execResult.attempts })
   writePipelineCheckpoint("completed", label, command, { stepId, elapsed, attempts: execResult.attempts })
 }
@@ -1863,15 +2211,20 @@ function runTry(label, command, opts = {}) {
   lastStep = label
   const stepId = String(opts.stepId || inferStepId(label, command)).trim()
   lastStepId = stepId
-  if (shouldSkipForResume(label, command, stepId)) return true
+  if (shouldSkipForResume(label, command, stepId)) {
+    recordPipelineStepSkipped({ label, command, stepId, reason: "resume", tryMode: true })
+    return true
+  }
   const startedAt = Date.now()
   log(`→ 開始: ${label}（失敗しても続行可）`)
+  recordPipelineStepStart({ label, command, stepId, tryMode: true })
   updateProgressForStepStart(label, stepId)
   writePipelineCheckpoint("running-try", label, command, { stepId })
   console.log(`\n========== ${label} ==========\n${command}\n`)
   if (opts.dryRun) {
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run(try): ${label} cmd=${command}`)
     log(`← 省略: ${label}（dry-run）`)
+    recordPipelineStepSkipped({ label, command, stepId, reason: "dry-run", tryMode: true })
     writePipelineCheckpoint("skipped-dry-run-try", label, command, { stepId })
     return true
   }
@@ -1885,6 +2238,7 @@ function runTry(label, command, opts = {}) {
       "daily:npb-pipeline:v2",
       `完了(try): ${label} 所要=${elapsed}${execResult.attempts > 1 ? ` attempts=${execResult.attempts}` : ""}`,
     )
+    recordPipelineStepSuccess({ label, command, stepId, elapsed, tryMode: true, attempts: execResult.attempts })
     pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, tryMode: true, attempts: execResult.attempts })
     writePipelineCheckpoint("completed-try", label, command, { stepId, elapsed, attempts: execResult.attempts })
     return true
@@ -1893,10 +2247,21 @@ function runTry(label, command, opts = {}) {
     const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
     log(`← 失敗: ${label}（所要 ${elapsed}）${timedOut ? " timeout" : ""}`)
     updateProgressForStepFailure(label, stepId, e?.message || String(e))
+    const code = e && typeof e.status === "number" ? e.status : 1
+    const failure = recordPipelineStepFailure({
+      label,
+      command,
+      stepId,
+      elapsed,
+      error: e,
+      exitCode: code,
+      timedOut,
+      tryMode: true,
+    })
     appendPipelineBulkLog(
       root,
       "daily:npb-pipeline:v2",
-      `失敗(try): ${label} 所要=${elapsed}${timedOut ? " timeout=1" : ""}`,
+      `失敗(try): ${label} 所要=${elapsed}${timedOut ? " timeout=1" : ""} failureKind=${failure?.failureKind || "step_failed"}`,
     )
     pushRunSummaryEvent("retries", {
       label,
@@ -1904,11 +2269,19 @@ function runTry(label, command, opts = {}) {
       command,
       result: "failed-try",
       timedOut,
+      exitCode: code,
+      failureKind: failure?.failureKind,
+      stepKind: failure?.stepKind,
+      retryable: failure?.retryable,
     })
     writePipelineCheckpoint("failed-try", label, command, {
       stepId,
       elapsed,
       timedOut,
+      exitCode: code,
+      failureKind: failure?.failureKind,
+      stepKind: failure?.stepKind,
+      retryable: failure?.retryable,
       resumeFrom: label,
       resumeFromStepId: stepId,
       warningOnly: true,
@@ -1998,13 +2371,107 @@ function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
 
   const inspectCommand =
     `${VERCEL_CLI}${scopePrefix} inspect ${deploymentUrl} --logs --wait --timeout=10m`
-  execSync(inspectCommand, {
-    cwd: root,
-    stdio: "inherit",
-    shell: true,
-    env: childEnv,
-    timeout: Math.max(commandTimeoutMs("publish"), 12 * 60 * 1000),
+  try {
+    const inspectOutput = execSync(inspectCommand, {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: true,
+      env: childEnv,
+      timeout: Math.max(commandTimeoutMs("publish"), 12 * 60 * 1000),
+    })
+    if (inspectOutput.trim()) console.log(inspectOutput.trimEnd())
+  } catch (e) {
+    const stdout = String(e?.stdout || "")
+    const stderr = String(e?.stderr || "")
+    const output = `${stdout}\n${stderr}`
+    if (stdout.trim()) console.log(stdout.trimEnd())
+    if (stderr.trim()) console.error(stderr.trimEnd())
+    const ready = /status\s+.*Ready|Deployment completed/i.test(output)
+    const cliUpgradeNoise = /Update available for Vercel CLI|Would you like to upgrade now|Upgrade failed|Failed to execute upgrade command|npm i -g vercel@latest/i.test(output)
+    if (ready && cliUpgradeNoise) {
+      const message =
+        `${publishStage}: Vercel deployment reached Ready, but CLI self-update prompt failed; continuing as deploy success.`
+      console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+      appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warn: ${message}`)
+      pushRunSummaryEvent("warnings", {
+        kind: "vercel_cli_update_failed_after_ready",
+        publishStage,
+        deploymentUrl,
+        message,
+      })
+      return
+    }
+    e.vercelDeploymentUrl = deploymentUrl
+    e.vercelInspectCommand = inspectCommand
+    throw e
+  }
+}
+
+function isRecoverableProductionProxyInspectFailure(error) {
+  if (!error?.vercelDeploymentUrl) return false
+  const message = String(error?.message ?? "")
+  const stdout = String(error?.stdout ?? "")
+  const stderr = String(error?.stderr ?? "")
+  const output = `${message}\n${stdout}\n${stderr}`
+  return /fetch failed|Not able to load user|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|network|temporar|一時的/i.test(output)
+}
+
+function warnProductionProxyDeployUnverified({ publishStage, error, elapsed }) {
+  const deploymentUrl = String(error?.vercelDeploymentUrl || "").trim()
+  const message =
+    `${publishStage}: R2直確認はOK。Vercel本番デプロイURL取得後のinspect確認だけ失敗したため、日次処理は停止せず継続します。deploymentUrl=${deploymentUrl || "-"}`
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message} 所要=${elapsed}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "production_proxy_deploy_unverified_after_r2_current",
+    publishStage,
+    deploymentUrl,
+    elapsed,
+    message,
+    error: boundedMessage(error?.message ?? error),
   })
+  setRunProgress(
+    "production_proxy_deploy_unverified",
+    `${publishStage}: R2は最新。本番プロキシ再デプロイ確認は失敗したが、品質確認済みのため継続。`,
+    {
+      finalState: "production_proxy_deploy_unverified",
+      finalMessage: `${publishStage}: R2公開済み。本番プロキシ確認のみ未確定。`,
+    },
+  )
+}
+
+function warnProductionProxyVerifyUnverifiedAfterDeploy({ year, publishStage, scope, samplePlayerYahooId, sampleDerivedCategories }) {
+  const r2Current = runTry(
+    `${publishStage}: Vercel再デプロイ後のR2直のみ再確認`,
+    verifyCommandArgs({
+      year,
+      scope,
+      noProduction: true,
+      samplePlayerYahooId,
+      sampleDerivedCategories,
+    }),
+  )
+  if (!r2Current) return false
+
+  const message =
+    `${publishStage}: Vercel再デプロイ後の本番公開確認だけ失敗しましたが、R2直確認はOKのため日次処理は停止せず継続します。`
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "production_proxy_verify_unverified_after_deploy_r2_current",
+    publishStage,
+    message,
+  })
+  setRunProgress(
+    "production_proxy_verify_unverified",
+    `${publishStage}: R2は最新。本番確認のみ未確定だが、品質確認済みのため継続。`,
+    {
+      finalState: "production_proxy_verify_unverified",
+      finalMessage: `${publishStage}: R2公開済み。本番確認のみ未確定。`,
+    },
+  )
+  return true
 }
 
 function isScheduleCancelledForGame(year, gameId) {
@@ -2305,7 +2772,7 @@ function runStrictCanonicalValidation({ year, from, to, noStatsText, strictQuali
     )
     run(
       "実況テキストから resultSummaryJa 再補完（自動リカバリ後）",
-      "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
+      `npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts${gameIdsOrDateRangeTsxArgsArg({ year, gameIds: badGameIds })}`,
       { dryRun },
     )
     run(
@@ -2427,7 +2894,7 @@ function runPitchCoverageValidationWithRepair({ year, from, to, phase4Sleep, dry
   })
   run(
     "Phase4: coverage修復後の resultSummaryJa 再補完",
-    "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
+    `npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts${gameIdsOrDateRangeTsxArgsArg({ year, gameIds: repairGameIds })}`,
     { dryRun },
   )
   run("検証: pitch-by-pitch coverage（修復後・再実行）", validationCommand, { dryRun })
@@ -2467,7 +2934,7 @@ function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate,
   })
   run(
     "Phase4: 実況テキストから resultSummaryJa 再補完",
-    "npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts",
+    `npx tsx scripts/backfill_plate_appearances_from_text_play_by_play.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to, gameIds: targetGameIds })}`,
     { dryRun },
   )
   if (strictQuality) {
@@ -2677,6 +3144,11 @@ function repairStaleProductionProxyIfR2IsCurrent({
         deployProductionViaVercelAndWait({ publishStage, dryRun })
       } catch (e) {
         const elapsed = formatMs(Date.now() - startedAt)
+        if (isRecoverableProductionProxyInspectFailure(e)) {
+          log(`← 警告: ${lastStep}（所要 ${elapsed}）inspect確認失敗だがR2直確認OKのため継続`)
+          warnProductionProxyDeployUnverified({ publishStage, error: e, elapsed })
+          return true
+        }
         log(`← 失敗: ${lastStep}（所要 ${elapsed}） exit=1`)
         setRunProgress(
           "failed_production_proxy_deploy",
@@ -2695,7 +3167,7 @@ function repairStaleProductionProxyIfR2IsCurrent({
       )
       appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `完了: ${lastStep} 所要=${elapsed}`)
     }
-    run(
+    const productionVerifiedAfterDeploy = runTry(
       `${publishStage}: Vercel再デプロイ後の公開確認`,
       verifyCommandArgs({
         year,
@@ -2703,8 +3175,17 @@ function repairStaleProductionProxyIfR2IsCurrent({
         samplePlayerYahooId,
         sampleDerivedCategories,
       }),
-    { dryRun },
-  )
+      { dryRun },
+    )
+    if (!productionVerifiedAfterDeploy && !warnProductionProxyVerifyUnverifiedAfterDeploy({
+      year,
+      publishStage,
+      scope,
+      samplePlayerYahooId,
+      sampleDerivedCategories,
+    })) {
+      throw new Error(`${publishStage}: Vercel再デプロイ後の公開確認に失敗しました`)
+    }
   return true
 }
 
@@ -2730,13 +3211,13 @@ function affectedDisplayPlayerIdsForArgs(args) {
   ]
 }
 
-function runFastDisplayDependencyPublish({ year, dryRun, label, playerIds = [] }) {
-  run(label, `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`, {
+function runFastDisplayDependencyPublish({ year, from, to, dryRun, label, playerIds = [] }) {
+  run(label, `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`, {
     dryRun: dryRun ? true : false,
   })
 }
 
-function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
   const fastDerivedCategories = [
     "player_season_batting",
     "player_season_batting_period",
@@ -2744,14 +3225,13 @@ function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction, sa
     "player_season_pitching_poc",
   ]
   if (dryRun) {
-    console.log("\n[daily:npb-pipeline:v2] --dry-run: fast publish / verify はスキップします。\n")
-    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: fast publish in dry-run")
-    return
+    console.log("\n[daily:npb-pipeline:v2] --dry-run: fast publish / verify は実行せず、工程判定だけ確認します。\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "dry-run: simulate fast publish / verify")
   }
   run(
     "R2公開(1回目): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`,
-    { dryRun: false },
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`,
+    { dryRun },
   )
 
   const verified = runTry(
@@ -2792,7 +3272,7 @@ function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction, sa
   })
   run(
     "R2公開(1回目・再試行): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`,
     { dryRun: false },
   )
   const retryVerified = runTry(
@@ -2820,11 +3300,13 @@ function runFastDisplayPublishAndVerify({ year, dryRun, autoDeployProduction, sa
   throw new Error("fast publish verification failed after retry")
 }
 
-function runFullDisplayPublishCommands({ year, fullOnly, dryRun, retry = false, includeFastDependencies = false, playerIds = [] }) {
+function runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry = false, includeFastDependencies = false, playerIds = [] }) {
   const suffix = retry ? "・再試行" : ""
   if (includeFastDependencies) {
     runFastDisplayDependencyPublish({
       year,
+      from,
+      to,
       dryRun: false,
       label: `R2公開(2回目${suffix}): fast display dependencies`,
       playerIds,
@@ -2844,7 +3326,7 @@ function runFullDisplayPublishCommands({ year, fullOnly, dryRun, retry = false, 
   )
 }
 
-function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
   const fullDerivedCategories = [
     "player_season_batting",
     "player_season_batting_context",
@@ -2857,7 +3339,7 @@ function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProd
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full publish in dry-run")
     return
   }
-  runFullDisplayPublishCommands({ year, fullOnly, dryRun, playerIds })
+  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, playerIds })
 
   const verified = runTry(
     "公開確認(2回目): 主要表示 + 週次 + 選手成績",
@@ -2895,7 +3377,7 @@ function runFullDisplayPublishAndVerify({ year, fullOnly, dryRun, autoDeployProd
     kind: "full_publish_retry",
     year,
   })
-  runFullDisplayPublishCommands({ year, fullOnly, dryRun, retry: true, includeFastDependencies: true, playerIds })
+  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry: true, includeFastDependencies: true, playerIds })
   const retryVerified = runTry(
     "公開確認(2回目・再試行後): 主要表示 + 週次 + 選手成績",
     verifyCommandArgs({
@@ -3063,11 +3545,12 @@ function runFastStage({
   strictVsHandValidate,
   dryRun,
   useAffectedPhase11 = true,
-  skipPhase15 = false,
+  skipPhase15 = true,
   autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
   const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
@@ -3078,34 +3561,31 @@ function runFastStage({
   }
   run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
   run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
-  run("派生: enrich:text-play-headlines", "npm run enrich:text-play-headlines", { dryRun })
+  run("派生: enrich:text-play-headlines", `npx tsx scripts/enrich_text_play_headlines_from_raw_text.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to })}`, { dryRun })
   run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
   run(
     useAffectedPhase11 && affectedYahooIds.length > 0
       ? `派生: phase11 batting（差分 ${affectedYahooIds.length}人）`
       : "派生: phase11 batting",
-    `npm run phase11:build:batting${useAffectedPhase11 ? affectedArg : ""}`,
+    `npm run phase11:build:batting${useAffectedPhase11 ? derivedAffectedArg : ""}`,
     { dryRun },
   )
   run("検証: 出場成績 打数列 vs 末尾スロット", "npm run validate:appearance-slots-vs-line-ab:fail", { dryRun })
   run("検証: appearance_slots の CS と代走のみ SB", "npm run verify:cs-runner-events-appearance-slots", { dryRun })
-  run("派生: phase17 period", `npm run phase17:build:period${affectedArg}`, { dryRun })
+  run("派生: phase17 period", `npm run phase17:build:period${derivedAffectedArg}`, { dryRun })
   ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
   run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
-  run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
-  if (useAffectedPhase11 && affectedYahooIds.length > 0) {
-    run("派生: phase11 batting（順位表用・全件）", "npm run phase11:build:batting", { dryRun })
-  }
-  run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings", { dryRun })
+  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("ランキング JSON: phase29 team standings", phase29Command({ from, to }), { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   runScheduleAheadBestEffort({ year, dryRun })
   runTopProbablesInputRefresh({ year, from, to, dryRun })
   run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
-  run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
-  run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
+  run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   if (skipPhase15) {
     console.log("\n[daily:npb-pipeline:v2] fast stage: phase15 batting splits をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: fast phase15 batting splits")
@@ -3114,7 +3594,7 @@ function runFastStage({
       affectedYahooIds.length > 0
         ? `派生: phase15 batting splits（差分 ${affectedYahooIds.length}人）`
         : "派生: phase15 batting splits",
-      `npm run phase15:build:batting-splits${affectedArg}`,
+      `npm run phase15:build:batting-splits${derivedAffectedArg}`,
       { dryRun },
     )
   }
@@ -3127,7 +3607,7 @@ function runFastStage({
     runVsHandValidationWithRetry({
       year,
       dryRun,
-      phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
+      phase15BuildCommand: `npm run phase15:build:batting-splits${derivedAffectedArg}`,
       affectedYahooIds,
       strictVsHandValidate,
     })
@@ -3136,6 +3616,8 @@ function runFastStage({
   if (!noPublish) {
     runFastDisplayPublishAndVerify({
       year,
+      from,
+      to,
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
@@ -3161,12 +3643,14 @@ function runFinalPrecomputedPublishStage({
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
   const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
-  console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップ表示だけ最終再計算します。\n")
+  console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップリーダーを1回目公開向けに最終再計算します。\n")
   run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
   run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
+  run("派生: enrich:text-play-headlines", `npx tsx scripts/enrich_text_play_headlines_from_raw_text.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to })}`, { dryRun })
   ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun })
   ensureBattingPeriodFresh({
     year,
@@ -3178,34 +3662,62 @@ function runFinalPrecomputedPublishStage({
   })
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
-  run("ランキング JSON: phase28 weekly rankings", "npm run phase28:build:weekly-rankings", { dryRun })
-  run("派生: phase11 batting（順位表用・全件）", "npm run phase11:build:batting", { dryRun })
-  run("ランキング JSON: phase29 team standings", "npm run phase29:build:standings", { dryRun })
+  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("ランキング JSON: phase29 team standings", phase29Command({ from, to }), { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
-  run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
-  run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
-  ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun })
-  if (skipVsHandValidate) {
-    console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
-  } else {
-    runVsHandValidationWithRetry({
-      year,
-      dryRun,
-      phase15BuildCommand: `npm run phase15:build:batting-splits${affectedArg}`,
-      affectedYahooIds,
-      strictVsHandValidate,
-    })
-  }
+  run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
 
   if (!noPublish) {
     runFastDisplayPublishAndVerify({
       year,
+      from,
+      to,
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
+    if (affectedYahooIds.length > 0) {
+      run(
+        `派生: phase11 batting（1回目公開後・差分整備 ${affectedYahooIds.length}人）`,
+        `npm run phase11:build:batting${derivedAffectedArg}`,
+        { dryRun },
+      )
+    } else if (!from && !to && (!Array.isArray(gameIds) || gameIds.length === 0)) {
+      run("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", { dryRun })
+    } else {
+      console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 差分対象なしのためスキップします。\n")
+      appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 no affected batters")
+    }
+    ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun })
+    if (skipVsHandValidate) {
+      console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
+    } else {
+      runVsHandValidationWithRetry({
+        year,
+        dryRun,
+        phase15BuildCommand: `npm run phase15:build:batting-splits${derivedAffectedArg}`,
+        affectedYahooIds,
+        strictVsHandValidate,
+      })
+    }
+    runScheduleAheadBestEffort({ year, dryRun })
+    runTopProbablesInputRefresh({ year, from, to, dryRun })
+    run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
+    runFullDisplayPublishAndVerify({
+      year,
+      from,
+      to,
+      fullOnly: false,
+      dryRun,
+      autoDeployProduction,
+      samplePlayerYahooId: affectedYahooIds[0] || "",
+      playerIds: affectedDisplayPlayerIds,
+    })
+    runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun })
+    runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {
     run("本番ビルド（finalize-precomputed 後）", "npm run build:clean", { dryRun })
@@ -3262,16 +3774,17 @@ function runFullStage({
   strictVsHandValidate,
   skipPhase15 = false,
   skipRepeatedTopBuilds = false,
-  validatePhase13AffectedOnly = false,
+  validatePhase13AffectedOnly = true,
   autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
+  const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
   const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   const phase13BuildCommand = `npm run phase13:build:context${affectedArg}`
-  const phase15BuildCommand = `npm run phase15:build:batting-splits${affectedArg}`
+  const phase15BuildCommand = `npm run phase15:build:batting-splits${derivedAffectedArg}`
   if (affectedYahooIds.length > 0) {
     console.log(
       `\n[daily:npb-pipeline:v2] full差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
@@ -3297,11 +3810,11 @@ function runFullStage({
   } else {
     run("派生: phase15 batting splits", phase15BuildCommand, { dryRun })
   }
-  run("派生: phase16 batting count", `npm run phase16:build:batting-count${affectedArg}`, { dryRun })
+  run("派生: phase16 batting count", `npm run phase16:build:batting-count${derivedAffectedArg}`, { dryRun })
   run("派生: pitcher season pitch types", `npm run phase25:build:pitcher-season-pitch-types${affectedNpbPitcherArg}`, { dryRun })
-  run("派生: phase22 catcher appearances", "npm run phase22:build:catcher-appearances", { dryRun })
-  run("派生: phase23 catcher-pitcher splits", "npm run phase23:build:catcher-pitcher-splits", { dryRun })
-  run("派生: phase24 catcher defense basic", "npm run phase24:build:catcher-defense-basic", { dryRun })
+  run("派生: phase22 catcher appearances", `npm run phase22:build:catcher-appearances${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("派生: phase23 catcher-pitcher splits", `npm run phase23:build:catcher-pitcher-splits${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("派生: phase24 catcher defense basic", `npm run phase24:build:catcher-defense-basic${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   runWarnOnlyValidation(
     "検証: phase24 実守備捕手帰属",
     "npm run validate:catcher-defense-active:2026",
@@ -3311,10 +3824,10 @@ function runFullStage({
       note: "捕手タブ派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  run("派生: phase25 catcher starting summary", "npm run phase25:build:catcher-starting-summary", { dryRun })
-  run("派生: phase26 catcher pa round pitch types", "npm run phase26:build:catcher-pa-round-pitch-types", { dryRun })
+  run("派生: phase25 catcher starting summary", `npm run phase25:build:catcher-starting-summary${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("派生: phase26 catcher pa round pitch types", `npm run phase26:build:catcher-pa-round-pitch-types${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   run("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, { dryRun })
-  run("派生: phase30 player matchup", "npm run phase30:build:player-matchup", { dryRun })
+  run("派生: phase30 player matchup", `npm run phase30:build:player-matchup${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   runWarnOnlyValidation(
     "検証: phase31 対戦成績 vs Phase11",
     "npm run validate:phase31-matchup-vs-phase11:fail",
@@ -3342,9 +3855,9 @@ function runFullStage({
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full repeated top leaders builds")
   } else {
     run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
-    run("トップ表示: 今週リーダー", "npm run top-weekly-leaders:build:2026", { dryRun })
+    run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   }
-  run("検証: canonical batting completeness", "npm run validate:canonical-batting-completeness", { dryRun })
+  run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   runVsHandValidationWithRetry({
     year,
     dryRun,
@@ -3356,6 +3869,8 @@ function runFullStage({
   if (!noPublish) {
     runFullDisplayPublishAndVerify({
       year,
+      from,
+      to,
       fullOnly,
       dryRun,
       autoDeployProduction,
@@ -3476,6 +3991,9 @@ function main() {
   }
 
   const completion = classifyPipelineCompletion(args)
+  if (completion.status === "completed-final") {
+    assertFinalPublishCompletedBeforeFinalStatus(args)
+  }
   appendPipelineBulkLog(
     root,
     "daily:npb-pipeline:v2",
@@ -3563,6 +4081,28 @@ try {
     runSummary.status = "failed"
     runSummary.failedAtJst = formatJstTimestamp()
     runSummary.lastStep = lastStep || "-"
+    const topLevelMessage = String(e?.message ?? e)
+    const alreadyRecordedFailure = Array.isArray(runSummary.stepFailures)
+      ? runSummary.stepFailures.some((failure) => {
+          if (topLevelMessage.includes("completed-final blocked") && failure.stepId === "final-publish-completion-gate") return true
+          if (lastStepId && failure.stepId === lastStepId && failure.severity === "fatal") return true
+          return failure.message === boundedMessage(topLevelMessage)
+        })
+      : false
+    let topLevelFailure = null
+    if (!alreadyRecordedFailure) {
+      topLevelFailure = recordPipelineStepFailure({
+        label: lastStep || "pipeline main",
+        command: "internal:top-level-catch",
+        stepId: lastStepId || "pipeline-main",
+        elapsed: "0:00",
+        error: e,
+        exitCode: typeof e?.status === "number" ? e.status : 1,
+        timedOut: Boolean(e?.signal) || /timed out/i.test(topLevelMessage),
+      })
+    } else {
+      topLevelFailure = Array.isArray(runSummary.stepFailures) ? runSummary.stepFailures[runSummary.stepFailures.length - 1] : null
+    }
     if (!runSummary.progressState || !String(runSummary.progressState).startsWith("failed")) {
       runSummary.progressState = "failed"
       runSummary.progressMessage =
@@ -3577,8 +4117,11 @@ try {
     }
     pushRunSummaryEvent("warnings", {
       kind: "pipeline_failed",
-      message: String(e?.message ?? e),
+      message: topLevelMessage,
       lastStep: lastStep || "-",
+      lastStepId: lastStepId || "-",
+      failureKind: topLevelFailure?.failureKind,
+      stepKind: topLevelFailure?.stepKind,
     })
     writeRunSummary()
   }

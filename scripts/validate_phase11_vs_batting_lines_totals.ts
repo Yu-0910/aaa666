@@ -21,16 +21,24 @@ import {
   aggregateBattingSeasonByYahooBatterFromBattingLines,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string; to: string } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from = ""
+  let to = ""
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = String(args[i + 1]).trim()
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
     }
   }
-  return { year }
+  return { year, from, to }
 }
 
 function hasAnyBattingLines(doc: CanonicalGameDocument): boolean {
@@ -41,9 +49,9 @@ function hasAnyPlateAppearances(doc: CanonicalGameDocument): boolean {
 }
 
 function main(): void {
-  const { year } = parseArgs()
+  const { year, from, to } = parseArgs()
   const projectRoot = process.cwd()
-  const docsAll = loadCanonicalGames(projectRoot)
+  const docsAll = loadCanonicalGames(projectRoot, { year, from: from || undefined, to: to || undefined })
 
   // 両方が揃っている試合のみ比較対象（同じ入力集合に揃える）
   const docs = docsAll.filter((d) => hasAnyBattingLines(d) && hasAnyPlateAppearances(d))
@@ -92,13 +100,13 @@ function main(): void {
 
   if (mismatches.length === 0) {
     console.log(
-      `[validate_phase11_vs_batting_lines_totals] OK (year=${year}): no AB/H mismatches on comparable games (n=${docs.length}).`,
+      `[validate_phase11_vs_batting_lines_totals] OK (year=${year}${from || to ? ` range=${from || "(start)"}..${to || "(end)"}` : ""}): no AB/H mismatches on comparable games (n=${docs.length}).`,
     )
     return
   }
 
   console.log(
-    `[validate_phase11_vs_batting_lines_totals] AB/H mismatch batters: ${mismatches.length} (comparable games n=${docs.length})`,
+    `[validate_phase11_vs_batting_lines_totals] AB/H mismatch batters: ${mismatches.length} (comparable games n=${docs.length}${from || to ? ` range=${from || "(start)"}..${to || "(end)"}` : ""})`,
   )
   for (const m of mismatches) {
     console.log(

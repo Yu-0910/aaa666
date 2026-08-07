@@ -9,17 +9,24 @@
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --once --dry-run
  *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --endgame-poll-minutes 2
- *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --date 2026-07-18 --auto-deploy-production
+ *   node scripts/watch_daily_pipeline_v2.mjs --year 2026 --date 2026-07-18 --no-auto-deploy-production
  */
 
 import fs from "node:fs"
 import path from "node:path"
 import { execSync, spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
+
+function withYahooScrapePermission(env = process.env) {
+  return {
+    ...env,
+    YAHOO_SCRAPE_ENABLED: env.YAHOO_SCRAPE_ENABLED || "1",
+  }
+}
 
 function parseArgs(argv) {
   const yearIdx = argv.indexOf("--year")
@@ -41,7 +48,7 @@ function parseArgs(argv) {
     force: argv.includes("--force"),
     skipWaitForStart: argv.includes("--skip-wait-for-start"),
     partialPhase4: !argv.includes("--no-partial-phase4"),
-    autoDeployProduction: argv.includes("--auto-deploy-production"),
+    autoDeployProduction: !argv.includes("--no-auto-deploy-production"),
   }
 }
 
@@ -181,14 +188,94 @@ function lockPath(dateJst) {
   return path.join(root, "_data", "scraped_games", "_meta", `watch_pipeline_v2_${dateJst}.lock`)
 }
 
+function watchSummaryPath(dateJst) {
+  return path.join(root, "_data", "scraped_games", "_meta", `watch_pipeline_v2_summary_${dateJst}.json`)
+}
+
+function watchSummaryLatestPath() {
+  return path.join(root, "_data", "scraped_games", "_meta", "watch_pipeline_v2_summary_latest.json")
+}
+
+function pipelineRunSummaryPath(runId) {
+  return path.join(root, "_data", "scraped_games", "_meta", `pipeline_v2_run_summary_${runId}.json`)
+}
+
+function readLockPayload(dateJst) {
+  try {
+    return JSON.parse(fs.readFileSync(lockPath(dateJst), "utf8"))
+  } catch {
+    return null
+  }
+}
+
+function writeWatchSummary(dateJst, summary) {
+  const dir = path.join(root, "_data", "scraped_games", "_meta")
+  fs.mkdirSync(dir, { recursive: true })
+  const payload = {
+    ...summary,
+    updatedAtJst: formatJstTimestamp(),
+  }
+  fs.writeFileSync(watchSummaryPath(dateJst), JSON.stringify(payload, null, 2), "utf8")
+  fs.writeFileSync(watchSummaryLatestPath(), JSON.stringify(payload, null, 2), "utf8")
+}
+
+function pushWatchSummaryEvent(summary, key, event, { limit = 80 } = {}) {
+  const next = Array.isArray(summary[key]) ? summary[key].slice() : []
+  next.push({
+    atJst: formatJstTimestamp(),
+    ...event,
+  })
+  if (next.length > limit) next.splice(0, next.length - limit)
+  summary[key] = next
+}
+
+function writeLockPayload(dateJst, payload) {
+  const p = lockPath(dateJst)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf8")
+}
+
+function acquireStartupLock(dateJst, { force, year, dryRun }) {
+  const existedBefore = fs.existsSync(lockPath(dateJst))
+  const payload = {
+    schemaVersion: "watch-pipeline-v2-lock-1",
+    dateJst,
+    year,
+    pid: process.pid,
+    state: dryRun ? "running-dry-run" : "running",
+    startedAtJst: formatJstTimestamp(),
+    updatedAtJst: formatJstTimestamp(),
+  }
+  const p = lockPath(dateJst)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  if (force) {
+    writeLockPayload(dateJst, { ...payload, force: true })
+    return { acquired: true, payload, replaced: existedBefore }
+  }
+  try {
+    const fd = fs.openSync(p, "wx")
+    fs.writeFileSync(fd, JSON.stringify(payload, null, 2), "utf8")
+    fs.closeSync(fd)
+    return { acquired: true, payload, replaced: false }
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      return { acquired: false, existing: readLockPayload(dateJst) }
+    }
+    throw error
+  }
+}
+
 function alreadyRanToday(dateJst, force) {
   return !force && fs.existsSync(lockPath(dateJst))
 }
 
 function writeLock(dateJst, payload) {
-  const p = lockPath(dateJst)
-  fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf8")
+  const existing = readLockPayload(dateJst) || {}
+  writeLockPayload(dateJst, {
+    ...existing,
+    ...payload,
+    updatedAtJst: formatJstTimestamp(),
+  })
 }
 
 function deadlineMsForWatchDate(dateJst, deadlineHm) {
@@ -216,7 +303,7 @@ async function waitUntilWatchStart(dateJst, skipWait) {
 function runPrefetch(year, dateJst, dryRun) {
   const cmd = `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --from ${dateJst} --to ${dateJst} --prefetch-only${dryRun ? " --dry-run" : ""}`
   log(`prefetch 実行: ${cmd}`)
-  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: withYahooScrapePermission() })
 }
 
 function listGameIdsForDate(year, dateJst) {
@@ -262,6 +349,69 @@ function scheduleSnapshotFetchedAtMs(dateJst) {
   return fetchedAt && !Number.isNaN(fetchedAt.getTime()) ? fetchedAt.getTime() : 0
 }
 
+function scheduleFinishSeenPath() {
+  return path.join(root, "_data", "scraped_games", "_meta", "schedule_finish_seen_v1.json")
+}
+
+function readScheduleFinishSeen() {
+  const payload = readJsonOrNull(scheduleFinishSeenPath())
+  return payload && typeof payload === "object" ? payload : { schemaVersion: "schedule-finish-seen-v1", games: {} }
+}
+
+function writeScheduleFinishSeen(payload) {
+  const p = scheduleFinishSeenPath()
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(
+    p,
+    JSON.stringify(
+      {
+        schemaVersion: "schedule-finish-seen-v1",
+        games: payload?.games && typeof payload.games === "object" ? payload.games : {},
+        updatedAtJst: formatJstTimestamp(),
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  )
+}
+
+function scheduleFinishSeenKey(dateJst, gameId) {
+  return `${dateJst}:${gameId}`
+}
+
+function rememberFirstFinishedSeen(dateJst) {
+  const statusMap = scheduleStatusMapForDate(dateJst)
+  if (statusMap.size === 0) return
+  const fetchedAtMs = scheduleSnapshotFetchedAtMs(dateJst)
+  const firstSeenAt = fetchedAtMs > 0 ? new Date(fetchedAtMs).toISOString() : new Date().toISOString()
+  const payload = readScheduleFinishSeen()
+  const games = payload.games && typeof payload.games === "object" ? { ...payload.games } : {}
+  let changed = false
+  for (const [gameId, status] of statusMap.entries()) {
+    if (!/試合終了/.test(String(status || ""))) continue
+    const key = scheduleFinishSeenKey(dateJst, gameId)
+    if (games[key]?.firstFinishedSeenAt) continue
+    games[key] = {
+      dateJst,
+      gameId,
+      firstFinishedSeenAt: firstSeenAt,
+      statusText: String(status || ""),
+      source: "sportsnavi_schedule_snapshot",
+    }
+    changed = true
+  }
+  if (changed) writeScheduleFinishSeen({ ...payload, games })
+}
+
+function firstFinishedSeenAtMs(dateJst, gameId) {
+  const payload = readScheduleFinishSeen()
+  const entry = payload?.games?.[scheduleFinishSeenKey(dateJst, gameId)]
+  const value = entry?.firstFinishedSeenAt
+  const parsed = value ? new Date(String(value)) : null
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : 0
+}
+
 function scheduleAllFinishedForDate(dateJst) {
   const statusMap = scheduleStatusMapForDate(dateJst)
   if (statusMap.size === 0) return false
@@ -269,6 +419,22 @@ function scheduleAllFinishedForDate(dateJst) {
     if (!/試合終了|試合中止|ノーゲーム/.test(status)) return false
   }
   return true
+}
+
+function gateReadinessUntilScheduleFinal(dateJst, readiness) {
+  if (!readiness?.ready || scheduleAllFinishedForDate(dateJst)) return readiness
+  const statusMap = scheduleStatusMapForDate(dateJst)
+  const pendingStatuses = [...statusMap.entries()]
+    .filter(([, status]) => !/試合終了|試合中止|ノーゲーム/.test(String(status || "")))
+    .map(([gameId, status]) => `${gameId}:${status || "status_unknown"}`)
+  return {
+    ...readiness,
+    ready: false,
+    pending: [
+      ...(readiness.pending || []),
+      `schedule_not_all_finished${pendingStatuses.length ? `=${pendingStatuses.join("|")}` : ""}`,
+    ],
+  }
 }
 
 function scheduleHasStartedOrFinishedForDate(dateJst) {
@@ -299,12 +465,21 @@ function parseScoreRawGateIncomplete(stdout, stderr) {
   return [...new Set(ids)]
 }
 
+function parseScoreRawGateReasons(stdout, stderr) {
+  const text = `${stdout || ""}\n${stderr || ""}`
+  const reasons = {}
+  for (const m of text.matchAll(/-\s+(\d+):\s+([^\r\n]+)/g)) {
+    reasons[m[1]] = String(m[2] || "").trim() || "unknown"
+  }
+  return reasons
+}
+
 function pendingGameIdsForRepair(readiness) {
   const ids = new Set()
   for (const p of readiness.pending ?? []) {
     const text = String(p)
     if (
-      !/score_raw_gate|raw_before_game_finished|missing_canonical|battingLines=0|textPlayByPlay=0|bad_canonical_json/.test(
+      !/score_raw_gate|raw_before_game_finished|canonical_before_score_raw|missing_canonical|battingLines=0|textPlayByPlay=0|bad_canonical_json/.test(
         text,
       )
     ) {
@@ -316,8 +491,30 @@ function pendingGameIdsForRepair(readiness) {
   return [...ids]
 }
 
+function repairReasonsByGame(readiness, gameIds) {
+  const wanted = new Set(gameIds.map(String))
+  const reasons = {}
+  for (const id of wanted) reasons[id] = []
+  for (const p of readiness.pending ?? []) {
+    const text = String(p)
+    for (const m of text.matchAll(/\d{10}/g)) {
+      const id = m[0]
+      if (wanted.has(id)) reasons[id].push(text)
+    }
+  }
+  const gateReasons = readiness.scoreRawGateReasons || {}
+  for (const id of readiness.scoreRawGateGameIds ?? []) {
+    const textId = String(id)
+    if (!wanted.has(textId)) continue
+    reasons[textId].push(`score_raw_gate:${gateReasons[textId] || "unknown"}`)
+  }
+  return Object.fromEntries(
+    Object.entries(reasons).map(([id, values]) => [id, [...new Set(values.length ? values : ["unknown"])]]),
+  )
+}
+
 function repairAttemptKey(dateJst, gameId) {
-  return `${gameId}:${scheduleSnapshotFetchedAtMs(dateJst)}`
+  return `${gameId}:${firstFinishedSeenAtMs(dateJst, gameId) || scheduleSnapshotFetchedAtMs(dateJst)}`
 }
 
 function readJsonOrNull(filePath) {
@@ -340,6 +537,43 @@ function rawMetaFetchedAtMs(kind, gameId) {
   const meta = readJsonOrNull(metaPath)
   const fetchedAt = meta?.fetchedAt ? new Date(String(meta.fetchedAt)) : null
   return fetchedAt && !Number.isNaN(fetchedAt.getTime()) ? fetchedAt.getTime() : 0
+}
+
+function canonicalBuiltAtMs(doc) {
+  const value = doc?.builtAt || doc?.normalizedFetchedAt || doc?.game?.meta?.builtAt || ""
+  const parsed = value ? new Date(String(value)) : null
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : 0
+}
+
+function phase10PitchRowsCount(gameId) {
+  const phase10Path = path.join(root, "_data", "scraped_games", "derived", `${gameId}_phase10_restored.json`)
+  const phase10 = readJsonOrNull(phase10Path)
+  return Array.isArray(phase10?.pitchRows) ? phase10.pitchRows.length : 0
+}
+
+function scoreRawMetaComplete(gameId) {
+  const metaPath = path.join(root, "_data", "scraped_games", "raw_sportsnavi_score", "_meta", `${gameId}.json`)
+  const meta = readJsonOrNull(metaPath)
+  if (!meta) return false
+  const failed = Number(meta?.failedPlateAppearances ?? 0)
+  const plateAppearances = Number(meta?.plateAppearances ?? 0)
+  const scorePageCount = Number(meta?.scorePageCount ?? 0)
+  if (Number.isFinite(failed) && failed > 0) return false
+  if (Number.isFinite(plateAppearances) && plateAppearances > 0) {
+    return Number.isFinite(scorePageCount) && scorePageCount >= plateAppearances
+  }
+  return scoreRawMetaSignature(gameId) !== ""
+}
+
+function phase4ConsistencyPending(gameId, doc) {
+  const pitchRows = phase10PitchRowsCount(gameId)
+  const pitchEvents = Array.isArray(doc?.domain?.pitchEvents) ? doc.domain.pitchEvents.length : 0
+  if (pitchRows <= 0) {
+    if (pitchEvents <= 0 && scoreRawMetaComplete(gameId)) return `${gameId}:phase4_missing`
+    return ""
+  }
+  if (pitchEvents !== pitchRows) return `${gameId}:phase4_pitch_events=${pitchEvents}/${pitchRows}`
+  return ""
 }
 
 function textPlayRowsCount(textPlayByPlay) {
@@ -375,6 +609,7 @@ function checkLocalReady(year, dateJst) {
     { cwd: root, stdio: "pipe", env: process.env, encoding: "utf8" },
   )
   const scoreRawGateGameIds = gate.status !== 0 ? parseScoreRawGateIncomplete(gate.stdout, gate.stderr) : []
+  const scoreRawGateReasons = gate.status !== 0 ? parseScoreRawGateReasons(gate.stdout, gate.stderr) : {}
   const pending = []
   if (gate.status !== 0) {
     pending.push(`score_raw_gate${scoreRawGateGameIds.length ? `:${scoreRawGateGameIds.join(",")}` : ""}`)
@@ -382,7 +617,6 @@ function checkLocalReady(year, dateJst) {
   const scoreRawCompletenessGameIds = new Set(scoreRawGateGameIds)
 
   const statusMap = scheduleStatusMapForDate(dateJst)
-  const scheduleFetchedAtMs = scheduleSnapshotFetchedAtMs(dateJst)
   for (const gameId of gameIds) {
     const status = statusMap.get(gameId) || ""
     if (/試合中止|ノーゲーム/.test(status)) continue
@@ -397,12 +631,24 @@ function checkLocalReady(year, dateJst) {
       const textRows = textPlayRowsCount(doc?.game?.textPlayByPlay)
       if (battingLines <= 0) pending.push(`${gameId}:battingLines=0`)
       if (textRows <= 0) pending.push(`${gameId}:textPlayByPlay=0`)
-      if (/試合終了/.test(status) && scheduleFetchedAtMs > 0) {
-        const staleKinds = ["stats", "text", "score"].filter((kind) => rawMetaFetchedAtMs(kind, gameId) < scheduleFetchedAtMs)
+      if (/試合終了/.test(status)) {
+        const finishedSeenAtMs = firstFinishedSeenAtMs(dateJst, gameId) || scheduleSnapshotFetchedAtMs(dateJst)
+        const staleKinds =
+          finishedSeenAtMs > 0
+            ? ["stats", "text", "score"].filter((kind) => rawMetaFetchedAtMs(kind, gameId) < finishedSeenAtMs)
+            : []
         if (staleKinds.length > 0) {
           pending.push(`${gameId}:raw_before_game_finished=${staleKinds.join("+")}`)
           scoreRawCompletenessGameIds.add(gameId)
         }
+        const scoreFetchedAtMs = rawMetaFetchedAtMs("score", gameId)
+        const builtAtMs = canonicalBuiltAtMs(doc)
+        if (scoreFetchedAtMs > 0 && builtAtMs > 0 && scoreFetchedAtMs > builtAtMs + 1000) {
+          pending.push(`${gameId}:canonical_before_score_raw`)
+          scoreRawCompletenessGameIds.add(gameId)
+        }
+        const phase4Pending = phase4ConsistencyPending(gameId, doc)
+        if (phase4Pending) pending.push(phase4Pending)
       }
     } catch {
       pending.push(`${gameId}:bad_canonical_json`)
@@ -414,14 +660,42 @@ function checkLocalReady(year, dateJst) {
     noGames: false,
     pending,
     scoreRawGateGameIds: [...scoreRawCompletenessGameIds],
+    scoreRawGateReasons,
     gateStdErr: gate.stderr || "",
   }
 }
 
-function runPipelineV2(year, dateJst, dryRun, autoDeployProduction) {
-  const cmd = `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --from ${dateJst} --to ${dateJst} --skip-prefetch --finalize-precomputed${autoDeployProduction ? " --auto-deploy-production" : ""}${dryRun ? " --dry-run" : ""}`
+function classifyWatchCompletionFromPipeline(runId) {
+  const summary = readJsonOrNull(pipelineRunSummaryPath(runId))
+  const status = String(summary?.status || "").trim()
+  if (status === "completed-final") {
+    return { summaryStatus: "completed-final", lockState: "completed-final", reason: "pipeline_completed_final", pipeline: summary }
+  }
+  if (status === "completed-deadline-force") {
+    return { summaryStatus: "completed-with-deadline-force", lockState: "completed-with-deadline-force", reason: "deadline_force", pipeline: summary }
+  }
+  if (status === "completed-intermediate") {
+    return { summaryStatus: "completed-nonfinal", lockState: "completed-nonfinal", reason: "pipeline_completed_nonfinal", pipeline: summary }
+  }
+  if (status === "completed-prefetch" || status === "completed-dry-run") {
+    return { summaryStatus: status, lockState: status, reason: status, pipeline: summary }
+  }
+  return { summaryStatus: "completed", lockState: "completed", reason: "pipeline_completed", pipeline: summary }
+}
+
+function runPipelineV2(year, dateJst, dryRun, autoDeployProduction, trigger = {}) {
+  const runId = `${dateJst}_${formatJstTimestamp().replace(" JST", "").replace(/[-: ]/g, "")}_watchpid${process.pid}`
+  const triggerReasonArg = trigger.reason ? ` --trigger-reason ${trigger.reason}` : ""
+  const triggerDetailArg = trigger.detail ? ` --trigger-detail "${String(trigger.detail).replace(/"/g, '\\"')}"` : ""
+  const childEnv = autoDeployProduction
+    ? withYahooScrapePermission()
+    : withYahooScrapePermission({ ...process.env, TOPPAGE_ALLOW_PRODUCTION_STALE: "1" })
+  const cmd =
+    `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --from ${dateJst} --to ${dateJst} --skip-prefetch --finalize-precomputed --run-id ${runId}` +
+    `${autoDeployProduction ? " --auto-deploy-production" : ""}${dryRun ? " --dry-run" : ""}${triggerReasonArg}${triggerDetailArg}`
   log(`v2 pipeline 実行: ${cmd}`)
-  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: childEnv })
+  return runId
 }
 
 function collectYahooBatterIdsForGames(gameIds) {
@@ -455,12 +729,11 @@ function runPlayerDerivationPrecompute(year, gameIds, dryRun) {
   const cmds = [
     ["phase11 batting 差分", `npm run phase11:build:batting -- --only-yahoo-ids ${idCsv}`],
     ["phase13 context 差分", `npm run phase13:build:context -- --only-yahoo-ids ${idCsv}`],
-    ["phase15 batting splits 差分", `npm run phase15:build:batting-splits -- --only-yahoo-ids ${idCsv}`],
   ]
   appendPipelineBulkLog(
     root,
     "watch:daily-pipeline:v2",
-    `player_derivation_precompute gameIds=${gameIds.join(",")} yahooIds=${yahooIds.length}`,
+    `player_derivation_precompute_light gameIds=${gameIds.join(",")} yahooIds=${yahooIds.length} phases=phase11,phase13 phase15=defer_to_finalize`,
   )
   for (const [label, cmd] of cmds) {
     log(`選手派生先行: ${label}: ${yahooIds.length}人`)
@@ -487,13 +760,15 @@ function scoreRawMetaSignature(gameId) {
 }
 
 function collectPartialPhase4Targets(year, dateJst, readiness, processedSignatures) {
-  const pendingGameIds = new Set()
+  const blockingPendingGameIds = new Set()
   for (const p of readiness.pending ?? []) {
-    for (const m of String(p).matchAll(/\d{10}/g)) pendingGameIds.add(m[0])
+    const text = String(p)
+    if (/phase4_missing|phase4_pitch_events/.test(text)) continue
+    for (const m of text.matchAll(/\d{10}/g)) blockingPendingGameIds.add(m[0])
   }
   const targets = []
   for (const gameId of listGameIdsForDate(year, dateJst)) {
-    if (pendingGameIds.has(gameId)) continue
+    if (blockingPendingGameIds.has(gameId)) continue
     const sig = scoreRawMetaSignature(gameId)
     if (!sig) continue
     if (processedSignatures.get(gameId) === sig) continue
@@ -509,7 +784,7 @@ function runPartialPhase4(year, targets, processedSignatures, dryRun) {
   const cmd = `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} --game-ids ${idCsv} --sleep 1.2`
   log(`部分更新: ready 試合のみ Phase4 実行: ${idCsv}`)
   appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `partial_phase4 gameIds=${idCsv}`)
-  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  if (!dryRun) execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: withYahooScrapePermission() })
   for (const t of targets) processedSignatures.set(t.gameId, t.sig)
   return ids
 }
@@ -520,25 +795,82 @@ function runTargetedScoreRawRepair(year, dateJst, gameIds, dryRun) {
   const idCsv = ids.join(",")
   const statsTextCmd = `node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year ${year} --game-ids ${idCsv} --force`
   const scoreRawCmd = `python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year ${year} --from-date ${dateJst} --to-date ${dateJst} --game-ids ${idCsv} --force --sleep 1.2`
+  const canonicalCmd = `node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year ${year} --game-ids ${idCsv} --force`
   log(`試合終了後の score raw 未完了を検出: ${idCsv}`)
   log(`stats/text 再取得: ${statsTextCmd}`)
   if (!dryRun) execSync(statsTextCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
   log(`score raw 再取得: ${scoreRawCmd}`)
-  if (!dryRun) execSync(scoreRawCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  if (!dryRun) execSync(scoreRawCmd, { cwd: root, stdio: "inherit", shell: true, env: withYahooScrapePermission() })
+  log(`canonical 再生成: ${canonicalCmd}`)
+  if (!dryRun) execSync(canonicalCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+}
+
+function buildDecisionContext(dateJst, readiness, extra = {}) {
+  const gameIds = listGameIdsForDate(extra.year || "", dateJst)
+  const finishedIds = finishedGameIdsForDate(dateJst)
+  const statusMap = scheduleStatusMapForDate(dateJst)
+  return {
+    dateJst,
+    totalGames: gameIds.length,
+    finishedGames: finishedIds.length,
+    allGamesFinished: scheduleAllFinishedForDate(dateJst),
+    scheduleStatuses: Object.fromEntries(statusMap),
+    pending: [...(readiness?.pending ?? [])],
+    scoreRawGateGameIds: [...(readiness?.scoreRawGateGameIds ?? [])],
+    ...extra,
+  }
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const dateJst = args.dateJst || todayJstYmd()
+  const summary = {
+    schemaVersion: "watch-pipeline-v2-summary-1",
+    dateJst,
+    year: args.year,
+    status: "starting",
+    startedAtJst: formatJstTimestamp(),
+    dryRun: args.dryRun,
+    autoDeployProduction: args.autoDeployProduction,
+    partialPhase4: args.partialPhase4,
+    pollMinutes: args.pollMinutes,
+    endgamePollMinutes: args.endgamePollMinutes,
+    deadline: args.deadline,
+    warnings: [],
+    repairs: [],
+    finalizeDecisions: [],
+    pendingSnapshots: [],
+  }
+  writeWatchSummary(dateJst, summary)
 
-  if (alreadyRanToday(dateJst, args.force)) {
-    log(`本日 (${dateJst}) は既に起動済みです。--force で再実行`)
+  const lockAcquired = acquireStartupLock(dateJst, {
+    force: args.force,
+    year: args.year,
+    dryRun: args.dryRun,
+  })
+  if (!lockAcquired.acquired) {
+    const existing = lockAcquired.existing || {}
+    const message =
+      `本日 (${dateJst}) は既に起動中または完了済みです。` +
+      ` state=${existing.state || "unknown"} startedAtJst=${existing.startedAtJst || "-"} ` +
+      `reason=${existing.reason || "-"} --force で再実行`
+    log(message)
+    summary.status = "skipped-duplicate"
+    pushWatchSummaryEvent(summary, "warnings", {
+      kind: "duplicate_start_blocked",
+      message,
+      existing,
+    })
+    writeWatchSummary(dateJst, summary)
     return
   }
 
   log(
     `開始 year=${args.year} date=${dateJst} poll=${args.pollMinutes}min endgamePoll=${args.endgamePollMinutes}min deadline=翌${args.deadline} dryRun=${args.dryRun} autoDeployProduction=${args.autoDeployProduction}`,
   )
+  summary.status = "waiting-or-running"
+  writeLock(dateJst, { state: args.dryRun ? "running-dry-run" : "running", reason: "watch_started" })
+  writeWatchSummary(dateJst, summary)
   await waitUntilWatchStart(dateJst, args.skipWaitForStart)
 
   const deadlineMs = deadlineMsForWatchDate(dateJst, args.deadline)
@@ -546,11 +878,18 @@ async function main() {
   const partialPhase4Signatures = new Map()
   for (;;) {
     runPrefetch(args.year, dateJst, args.dryRun)
-    let readiness = checkLocalReady(args.year, dateJst)
+    rememberFirstFinishedSeen(dateJst)
+    let readiness = gateReadinessUntilScheduleFinal(dateJst, checkLocalReady(args.year, dateJst))
 
     if (readiness.noGames) {
       log(`当日の試合なし (${dateJst})`)
-      if (!args.dryRun) writeLock(dateJst, { ranAt: new Date().toISOString(), reason: "no_games_today" })
+      summary.status = "completed-no-games"
+      pushWatchSummaryEvent(summary, "finalizeDecisions", {
+        kind: "no_games_today",
+        detail: buildDecisionContext(dateJst, readiness, { year: args.year }),
+      })
+      writeWatchSummary(dateJst, summary)
+      if (!args.dryRun) writeLock(dateJst, { state: "completed", ranAtJst: formatJstTimestamp(), reason: "no_games_today" })
       return
     }
 
@@ -560,12 +899,52 @@ async function main() {
         const precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
         runPlayerDerivationPrecompute(args.year, precomputedGameIds, args.dryRun)
       }
-      log("必要データが全試合で揃ったため、v2 pipeline を起動します")
+      const decision = buildDecisionContext(dateJst, readiness, {
+        year: args.year,
+        triggerReason: "all_ready",
+        finalizeMode: "finalize-precomputed",
+      })
+      log(
+        `必要データが全試合で揃ったため、v2 pipeline を起動します ` +
+        `(reason=all_ready total=${decision.totalGames} finished=${decision.finishedGames} allFinished=${decision.allGamesFinished})`,
+      )
       appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `all_ready date=${dateJst}`)
+      pushWatchSummaryEvent(summary, "finalizeDecisions", {
+        kind: "all_ready",
+        detail: decision,
+      })
+      summary.status = "handoff-to-finalize"
+      writeWatchSummary(dateJst, summary)
       if (!args.dryRun) {
-        writeLock(dateJst, { ranAt: new Date().toISOString(), reason: "all_data_ready" })
+        writeLock(dateJst, {
+          state: "handoff-to-finalize",
+          ranAtJst: formatJstTimestamp(),
+          reason: "all_data_ready",
+          triggerReason: "all_ready",
+        })
       }
-      runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
+      const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+        reason: "all_ready",
+        detail: JSON.stringify({
+          totalGames: decision.totalGames,
+          finishedGames: decision.finishedGames,
+          allGamesFinished: decision.allGamesFinished,
+        }),
+      })
+      const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
+      summary.status = pipelineCompletion.summaryStatus
+      summary.completedAtJst = formatJstTimestamp()
+      summary.pipelineRunId = runId
+      summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
+      writeWatchSummary(dateJst, summary)
+      if (!args.dryRun) {
+        writeLock(dateJst, {
+          state: pipelineCompletion.lockState,
+          completedAtJst: formatJstTimestamp(),
+          reason: pipelineCompletion.reason,
+          pipelineRunId: runId,
+        })
+      }
       return
     }
 
@@ -576,32 +955,88 @@ async function main() {
       .filter((id) => !repairedGameKeys.has(repairAttemptKey(dateJst, id)))
 
     if (finishedPendingIds.length > 0) {
+      const repairReasons = repairReasonsByGame(readiness, finishedPendingIds)
       for (const id of finishedPendingIds) repairedGameKeys.add(repairAttemptKey(dateJst, id))
       appendPipelineBulkLog(
         root,
         "watch:daily-pipeline:v2",
-        `score_raw_repair_finished date=${dateJst} gameIds=${finishedPendingIds.join(",")}`,
+        `score_raw_repair_finished date=${dateJst} gameIds=${finishedPendingIds.join(",")} reasons=${JSON.stringify(repairReasons)}`,
       )
+      pushWatchSummaryEvent(summary, "repairs", {
+        kind: "score_raw_repair_finished",
+        gameIds: finishedPendingIds,
+        reasonsByGame: repairReasons,
+      })
+      writeWatchSummary(dateJst, summary)
       runTargetedScoreRawRepair(args.year, dateJst, finishedPendingIds, args.dryRun)
-      readiness = checkLocalReady(args.year, dateJst)
+      readiness = gateReadinessUntilScheduleFinal(dateJst, checkLocalReady(args.year, dateJst))
       if (readiness.ready) {
         if (args.partialPhase4) {
           const finalTargets = collectPartialPhase4Targets(args.year, dateJst, readiness, partialPhase4Signatures)
           const precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
           runPlayerDerivationPrecompute(args.year, precomputedGameIds, args.dryRun)
         }
-        log("再取得後に必要データが揃ったため、v2 pipeline を起動します")
+        const decision = buildDecisionContext(dateJst, readiness, {
+          year: args.year,
+          triggerReason: "all_ready_after_repair",
+          repairGameIds: finishedPendingIds,
+          finalizeMode: "finalize-precomputed",
+        })
+        log(
+          `再取得後に必要データが揃ったため、v2 pipeline を起動します ` +
+          `(reason=all_ready_after_repair total=${decision.totalGames} finished=${decision.finishedGames} allFinished=${decision.allGamesFinished})`,
+        )
         appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `all_ready_after_repair date=${dateJst}`)
+        pushWatchSummaryEvent(summary, "finalizeDecisions", {
+          kind: "all_ready_after_repair",
+          detail: decision,
+        })
+        summary.status = "handoff-to-finalize"
+        writeWatchSummary(dateJst, summary)
         if (!args.dryRun) {
-          writeLock(dateJst, { ranAt: new Date().toISOString(), reason: "all_data_ready_after_repair" })
+          writeLock(dateJst, {
+            state: "handoff-to-finalize",
+            ranAtJst: formatJstTimestamp(),
+            reason: "all_data_ready_after_repair",
+            triggerReason: "all_ready_after_repair",
+          })
         }
-        runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
+        const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+          reason: "all_ready_after_repair",
+          detail: JSON.stringify({
+            totalGames: decision.totalGames,
+            finishedGames: decision.finishedGames,
+            allGamesFinished: decision.allGamesFinished,
+            repairedGames: finishedPendingIds,
+          }),
+        })
+        const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
+        summary.status = pipelineCompletion.summaryStatus
+        summary.completedAtJst = formatJstTimestamp()
+        summary.pipelineRunId = runId
+        summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
+        writeWatchSummary(dateJst, summary)
+        if (!args.dryRun) {
+          writeLock(dateJst, {
+            state: pipelineCompletion.lockState,
+            completedAtJst: formatJstTimestamp(),
+            reason: pipelineCompletion.reason,
+            pipelineRunId: runId,
+          })
+        }
         return
       }
     }
 
     log(`未完了: ${readiness.pending.join(", ")}`)
     appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `pending date=${dateJst} ${readiness.pending.join(",")}`)
+    pushWatchSummaryEvent(summary, "pendingSnapshots", {
+      pending: readiness.pending,
+      totalGames: listGameIdsForDate(args.year, dateJst).length,
+      finishedGames: finishedGameIdsForDate(dateJst).length,
+      allGamesFinished: scheduleAllFinishedForDate(dateJst),
+    }, { limit: 40 })
+    writeWatchSummary(dateJst, summary)
 
     if (args.partialPhase4) {
       const partialTargets = collectPartialPhase4Targets(args.year, dateJst, readiness, partialPhase4Signatures)
@@ -621,14 +1056,54 @@ async function main() {
     if (Date.now() >= deadlineMs) {
       log(`デッドライン (翌 ${args.deadline} JST) に到達したため、未完了があっても v2 pipeline を起動します`)
       appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `deadline_force date=${dateJst} pending=${readiness.pending.join(",")}`)
+      const decision = buildDecisionContext(dateJst, readiness, {
+        year: args.year,
+        triggerReason: "deadline_force",
+        finalizeMode: "finalize-precomputed",
+      })
+      pushWatchSummaryEvent(summary, "warnings", {
+        kind: "deadline_force",
+        message: "未完了が残るまま finalize-precomputed を起動しました。",
+        detail: decision,
+      })
+      pushWatchSummaryEvent(summary, "finalizeDecisions", {
+        kind: "deadline_force",
+        detail: decision,
+      })
+      summary.status = "handoff-to-finalize"
+      writeWatchSummary(dateJst, summary)
       if (!args.dryRun) {
         writeLock(dateJst, {
-          ranAt: new Date().toISOString(),
+          state: "handoff-to-finalize",
+          ranAtJst: formatJstTimestamp(),
           reason: "deadline_force",
+          triggerReason: "deadline_force",
           pending: readiness.pending,
         })
       }
-      runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction)
+      const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+        reason: "deadline_force",
+        detail: JSON.stringify({
+          pending: readiness.pending,
+          totalGames: decision.totalGames,
+          finishedGames: decision.finishedGames,
+          allGamesFinished: decision.allGamesFinished,
+        }),
+      })
+      const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
+      summary.status = pipelineCompletion.summaryStatus
+      summary.completedAtJst = formatJstTimestamp()
+      summary.pipelineRunId = runId
+      summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
+      writeWatchSummary(dateJst, summary)
+      if (!args.dryRun) {
+        writeLock(dateJst, {
+          state: pipelineCompletion.lockState,
+          completedAtJst: formatJstTimestamp(),
+          reason: pipelineCompletion.reason,
+          pipelineRunId: runId,
+        })
+      }
       return
     }
 
@@ -642,6 +1117,31 @@ async function main() {
 }
 
 main().catch((e) => {
+  const args = parseArgs(process.argv.slice(2))
+  const dateJst = args.dateJst || todayJstYmd()
+  const summaryPath = watchSummaryPath(dateJst)
+  let summary = {}
+  try {
+    if (fs.existsSync(summaryPath)) {
+      summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"))
+    }
+  } catch {
+    summary = {}
+  }
+  writeWatchSummary(dateJst, {
+    ...summary,
+    schemaVersion: summary.schemaVersion || "watch-pipeline-v2-summary-1",
+    dateJst,
+    year: args.year,
+    status: "failed",
+    failedAtJst: formatJstTimestamp(),
+    error: String(e?.message || e),
+  })
+  writeLock(dateJst, {
+    state: "failed",
+    reason: String(e?.message || e),
+    failedAtJst: formatJstTimestamp(),
+  })
   console.error("[watch:daily-pipeline:v2] failed:", e)
   process.exit(1)
 })

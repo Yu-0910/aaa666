@@ -9,18 +9,42 @@ import {
   buildTopLeadersSnapshotsForYear,
   TOP_LEADERS_SNAPSHOT_YEAR,
 } from "@/lib/topPage/leadersSnapshot2026"
+import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
 
-function parseYear(argv: string[]): string {
-  const i = argv.indexOf("--year")
-  if (i >= 0 && argv[i + 1]) return argv[i + 1]!
-  return TOP_LEADERS_SNAPSHOT_YEAR
+function parseArgs(argv: string[]): {
+  year: string
+  leagues?: string[]
+  categories?: TopLeadersCategory[]
+} {
+  let year = TOP_LEADERS_SNAPSHOT_YEAR
+  let leagues: string[] | undefined
+  let categories: TopLeadersCategory[] | undefined
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--year" && argv[i + 1]) {
+      year = argv[i + 1]!
+      i++
+    } else if (argv[i] === "--league" && argv[i + 1]) {
+      leagues = argv[i + 1]!
+        .split(",")
+        .map((v) => v.trim().toUpperCase())
+        .filter(Boolean)
+      i++
+    } else if (argv[i] === "--category" && argv[i + 1]) {
+      categories = argv[i + 1]!
+        .split(",")
+        .map((v) => v.trim())
+        .filter((v): v is TopLeadersCategory => v === "batting" || v === "pitching")
+      i++
+    }
+  }
+  return { year, leagues, categories }
 }
 
 function main(): void {
-  const year = parseYear(process.argv.slice(2))
+  const { year, leagues, categories } = parseArgs(process.argv.slice(2))
   console.log(`[top-leaders] building snapshots for ${year}...`)
 
-  const { written, skipped } = buildTopLeadersSnapshotsForYear(year)
+  const { written, skipped } = buildTopLeadersSnapshotsForYear(year, { leagues, categories })
 
   for (const p of written) {
     console.log(`[top-leaders] wrote ${p}`)

@@ -1,99 +1,5 @@
 [
   {
-    "playerId": "1100095",
-    "player": "松本 剛",
-    "name": "松本 剛",
-    "team": "巨人",
-    "metric": "盗塁死",
-    "age": 0,
-    "ops": 0.461,
-    "avg": 0.211,
-    "hits": 4,
-    "hr": 0,
-    "rbi": 1,
-    "games": 5,
-    "pa": 20,
-    "ab": 19,
-    "singles": 4,
-    "doubles": 0,
-    "triples": 0,
-    "runs": 0,
-    "obp": 0.25,
-    "slg": 0.21052631578947367,
-    "bb": 1,
-    "ibb": 0,
-    "hbp": 0,
-    "so": 1,
-    "tb": 4,
-    "sb": 1,
-    "cs": 1,
-    "e": 0,
-    "sh": 0,
-    "sf": 0,
-    "gidp": 1,
-    "isop": 0,
-    "isod": 0.04,
-    "bbPct": 5,
-    "kPct": 5,
-    "bbk": 1,
-    "rc": 0.38,
-    "xr": 0.47,
-    "babip": 0.222,
-    "seca": 0.053,
-    "ta": 0.294,
-    "noi": 320.17543859649123,
-    "gpa": 0.165,
-    "romanName": "G.Matsumoto",
-    "rank": 1
-  },
-  {
-    "playerId": "1600124",
-    "player": "坂倉 将吾",
-    "name": "坂倉 将吾",
-    "team": "広島",
-    "metric": "盗塁死",
-    "age": 0,
-    "ops": 0.778,
-    "avg": 0.389,
-    "hits": 7,
-    "hr": 0,
-    "rbi": 2,
-    "games": 4,
-    "pa": 18,
-    "ab": 18,
-    "singles": 7,
-    "doubles": 0,
-    "triples": 0,
-    "runs": 2,
-    "obp": 0.3888888888888889,
-    "slg": 0.3888888888888889,
-    "bb": 0,
-    "ibb": 0,
-    "hbp": 0,
-    "so": 1,
-    "tb": 7,
-    "sb": 0,
-    "cs": 1,
-    "e": 0,
-    "sh": 0,
-    "sf": 0,
-    "gidp": 0,
-    "isop": 0,
-    "isod": 0,
-    "bbPct": 0,
-    "kPct": 5.556,
-    "bbk": 0,
-    "rc": 2.32,
-    "xr": 2.18,
-    "babip": 0.412,
-    "seca": -0.056,
-    "ta": 0.5,
-    "noi": 518.5185185185185,
-    "gpa": 0.272,
-    "romanName": "S.Sakakura",
-    "rank": 2
-  },
-  {
     "playerId": "1800079",
     "player": "大盛 穂",
     "name": "大盛 穂",
@@ -138,7 +44,7 @@
     "noi": 433.3333333333333,
     "gpa": 0.225,
     "romanName": "M.Ohmori",
-    "rank": 3
+    "rank": 1
   },
   {
     "playerId": "2000007",
@@ -185,7 +91,7 @@
     "noi": 561.9047619047619,
     "gpa": 0.293,
     "romanName": "R.Nakayama",
-    "rank": 4
+    "rank": 2
   },
   {
     "playerId": "1000002",
@@ -232,7 +138,7 @@
     "noi": 728.2051282051283,
     "gpa": 0.408,
     "romanName": "Y.Tsutsugoh",
-    "rank": 5
+    "rank": 3
   },
   {
     "playerId": "1000138",
@@ -279,7 +185,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "Y.Ohno",
-    "rank": 6
+    "rank": 4
   },
   {
     "playerId": "1000176",
@@ -326,7 +232,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "T.Kai",
-    "rank": 7
+    "rank": 5
   },
   {
     "playerId": "1100069",
@@ -373,7 +279,7 @@
     "noi": 500,
     "gpa": 0.225,
     "romanName": "S.Takahashi",
-    "rank": 8
+    "rank": 6
   },
   {
     "playerId": "1100082",
@@ -420,7 +326,54 @@
     "noi": 388.8888888888889,
     "gpa": 0.208,
     "romanName": "R.Kikuchi",
-    "rank": 9
+    "rank": 7
+  },
+  {
+    "playerId": "1100095",
+    "player": "松本 剛",
+    "name": "松本 剛",
+    "team": "巨人",
+    "metric": "盗塁死",
+    "age": 0,
+    "ops": 0.461,
+    "avg": 0.211,
+    "hits": 4,
+    "hr": 0,
+    "rbi": 1,
+    "games": 5,
+    "pa": 20,
+    "ab": 19,
+    "singles": 4,
+    "doubles": 0,
+    "triples": 0,
+    "runs": 0,
+    "obp": 0.25,
+    "slg": 0.21052631578947367,
+    "bb": 1,
+    "ibb": 0,
+    "hbp": 0,
+    "so": 1,
+    "tb": 4,
+    "sb": 1,
+    "cs": 0,
+    "e": 0,
+    "sh": 0,
+    "sf": 0,
+    "gidp": 1,
+    "isop": 0,
+    "isod": 0.04,
+    "bbPct": 5,
+    "kPct": 5,
+    "bbk": 1,
+    "rc": 0.74,
+    "xr": 0.79,
+    "babip": 0.222,
+    "seca": 0.105,
+    "ta": 0.375,
+    "noi": 320.17543859649123,
+    "gpa": 0.165,
+    "romanName": "G.Matsumoto",
+    "rank": 8
   },
   {
     "playerId": "1200053",
@@ -467,7 +420,7 @@
     "noi": 490.19607843137254,
     "gpa": 0.268,
     "romanName": "T.Miyazaki",
-    "rank": 10
+    "rank": 9
   },
   {
     "playerId": "1300031",
@@ -514,7 +467,7 @@
     "noi": null,
     "gpa": 0,
     "romanName": "K.Taira",
-    "rank": 11
+    "rank": 10
   },
   {
     "playerId": "1300073",
@@ -561,7 +514,7 @@
     "noi": 333.3333333333333,
     "gpa": 0.175,
     "romanName": "R.Umeno",
-    "rank": 12
+    "rank": 11
   },
   {
     "playerId": "1400160",
@@ -608,7 +561,7 @@
     "noi": 222.2222222222222,
     "gpa": 0.117,
     "romanName": "T.Katoh",
-    "rank": 13
+    "rank": 12
   },
   {
     "playerId": "1400173",
@@ -655,7 +608,7 @@
     "noi": 888.8888888888888,
     "gpa": 0.467,
     "romanName": "T.Noma",
-    "rank": 14
+    "rank": 13
   },
   {
     "playerId": "1500042",
@@ -702,7 +655,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "K.Takahashi",
-    "rank": 15
+    "rank": 14
   },
   {
     "playerId": "1500050",
@@ -749,7 +702,7 @@
     "noi": 250,
     "gpa": 0.113,
     "romanName": "Y.Yamamoto",
-    "rank": 16
+    "rank": 15
   },
   {
     "playerId": "1500054",
@@ -796,7 +749,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "D.Masuda",
-    "rank": 17
+    "rank": 16
   },
   {
     "playerId": "1500063",
@@ -843,7 +796,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "T.Shibata",
-    "rank": 18
+    "rank": 17
   },
   {
     "playerId": "1500064",
@@ -890,7 +843,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "Y.Tobashira",
-    "rank": 19
+    "rank": 18
   },
   {
     "playerId": "1500078",
@@ -937,7 +890,7 @@
     "noi": 1500,
     "gpa": 0.825,
     "romanName": "T.Abe",
-    "rank": 20
+    "rank": 19
   },
   {
     "playerId": "1500087",
@@ -984,7 +937,7 @@
     "noi": 447.61904761904765,
     "gpa": 0.216,
     "romanName": "S.Sakamoto",
-    "rank": 21
+    "rank": 20
   },
   {
     "playerId": "1500091",
@@ -1031,7 +984,7 @@
     "noi": 266.6666666666667,
     "gpa": 0.14,
     "romanName": "Y.Itayama",
-    "rank": 22
+    "rank": 21
   },
   {
     "playerId": "1561820",
@@ -1078,7 +1031,7 @@
     "noi": 70.17543859649122,
     "gpa": 0.037,
     "romanName": "B.Dalbec",
-    "rank": 23
+    "rank": 22
   },
   {
     "playerId": "1561854",
@@ -1125,7 +1078,7 @@
     "noi": 358.8235294117647,
     "gpa": 0.179,
     "romanName": "M.Sano",
-    "rank": 24
+    "rank": 23
   },
   {
     "playerId": "1600078",
@@ -1172,7 +1125,7 @@
     "noi": 222.2222222222222,
     "gpa": 0.1,
     "romanName": "Y.Koga",
-    "rank": 25
+    "rank": 24
   },
   {
     "playerId": "1600085",
@@ -1219,7 +1172,7 @@
     "noi": 410.7744107744108,
     "gpa": 0.213,
     "romanName": "S.Hosokawa",
-    "rank": 26
+    "rank": 25
   },
   {
     "playerId": "1600089",
@@ -1266,7 +1219,7 @@
     "noi": 621.5538847117795,
     "gpa": 0.338,
     "romanName": "K.Sano",
-    "rank": 27
+    "rank": 26
   },
   {
     "playerId": "1600106",
@@ -1313,7 +1266,7 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "Y.Yanagi",
-    "rank": 28
+    "rank": 27
   },
   {
     "playerId": "1600113",
@@ -1360,7 +1313,7 @@
     "noi": 401.3888888888889,
     "gpa": 0.207,
     "romanName": "Y.Ohyama",
-    "rank": 29
+    "rank": 28
   },
   {
     "playerId": "1600115",
@@ -1407,7 +1360,7 @@
     "noi": 500,
     "gpa": 0.225,
     "romanName": "H.Saiki",
-    "rank": 30
+    "rank": 29
   },
   {
     "playerId": "1600123",
@@ -1454,6 +1407,53 @@
     "noi": 0,
     "gpa": 0,
     "romanName": "H.Tokoda",
+    "rank": 30
+  },
+  {
+    "playerId": "1600124",
+    "player": "坂倉 将吾",
+    "name": "坂倉 将吾",
+    "team": "広島",
+    "metric": "盗塁死",
+    "age": 0,
+    "ops": 0.778,
+    "avg": 0.389,
+    "hits": 7,
+    "hr": 0,
+    "rbi": 2,
+    "games": 4,
+    "pa": 18,
+    "ab": 18,
+    "singles": 7,
+    "doubles": 0,
+    "triples": 0,
+    "runs": 2,
+    "obp": 0.3888888888888889,
+    "slg": 0.3888888888888889,
+    "bb": 0,
+    "ibb": 0,
+    "hbp": 0,
+    "so": 1,
+    "tb": 7,
+    "sb": 0,
+    "cs": 0,
+    "e": 0,
+    "sh": 0,
+    "sf": 0,
+    "gidp": 0,
+    "isop": 0,
+    "isod": 0,
+    "bbPct": 0,
+    "kPct": 5.556,
+    "bbk": 0,
+    "rc": 2.69,
+    "xr": 2.5,
+    "babip": 0.412,
+    "seca": 0,
+    "ta": 0.636,
+    "noi": 518.5185185185185,
+    "gpa": 0.272,
+    "romanName": "S.Sakakura",
     "rank": 31
   },
   {
@@ -4884,6 +4884,7 @@
     "ta": 1.1,
     "noi": 666.6666666666666,
     "gpa": 0.358,
+    "romanName": "J.Encarnacion",
     "rank": 104
   },
   {

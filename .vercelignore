@@ -25,20 +25,20 @@ output/reports/
 output/master/
 
 # ランキングデータ（外部ストレージから取得するもののみ除外）
-public/data/rankings/
+public/data/*
+!public/data/top-probables/
+!public/data/top-probables/**
 
 # 1950〜の巨大CSV（本番ビルド・APIでは不要。英字名は master_csv_calculated の 2025 のみ＋名簿）
-_data/master_csv__import_1950_2024/
-_data/master_csv/
+_data/*
+!_data/npb_roster_2026.csv
+!_data/scraped_games
+_data/scraped_games/*
+!_data/scraped_games/derived
+_data/scraped_games/derived/*
+!_data/scraped_games/derived/2021038624_batting_master_bridge.csv
 
 # 工場・スクレイプ・PoC（本番表示は R2。Vercel ビルドから除外）
-_data/scraped_games/**
-!_data/scraped_games/derived/
-_data/scraped_games/derived/**
-!_data/scraped_games/derived/*_batting_master_bridge.csv
-_data/cache/
-_data/sportsnavi_schedule_snapshots/
-_data/sportsnavi_schedule_diff/
-_data/yahoo_games_pilot/
+output/*
 output/html_cache_probe/
 output/temp/

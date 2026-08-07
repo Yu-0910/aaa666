@@ -2,7 +2,7 @@
   "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-22",
-  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "fetchedAt": "2026-07-22T15:06:56.268Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-22",
   "gameIds": [
     "2021039175",
@@ -18,8 +18,8 @@
       "stadiumName": "東京ドーム",
       "homeTeamShort": "巨人",
       "awayTeamShort": "広島",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "G",
       "awayTeamCode": "C"
     },
@@ -28,8 +28,8 @@
       "stadiumName": "神宮球場",
       "homeTeamShort": "ヤクルト",
       "awayTeamShort": "中日",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "S",
       "awayTeamCode": "D"
     },
@@ -38,8 +38,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "DeNA",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "H",
       "awayTeamCode": "DB"
     },
@@ -48,8 +48,8 @@
       "stadiumName": "ベルーナD",
       "homeTeamShort": "西武",
       "awayTeamShort": "日本ハム",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "L",
       "awayTeamCode": "F"
     },
@@ -58,8 +58,8 @@
       "stadiumName": "ZOZOマリン",
       "homeTeamShort": "ロッテ",
       "awayTeamShort": "楽天",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "M",
       "awayTeamCode": "E"
     },
@@ -68,8 +68,8 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "オリックス",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Hs",
       "awayTeamCode": "Bs"
     }
@@ -83,11 +83,11 @@
     "2021039180": "みずほPayPay"
   },
   "scheduleStatusByGameId": {
-    "2021039175": "試合前",
-    "2021039176": "試合前",
-    "2021039177": "試合前",
-    "2021039178": "試合前",
-    "2021039179": "試合前",
-    "2021039180": "試合前"
+    "2021039175": "試合終了",
+    "2021039176": "試合終了",
+    "2021039177": "試合終了",
+    "2021039178": "試合終了",
+    "2021039179": "試合終了",
+    "2021039180": "試合終了"
   }
 }

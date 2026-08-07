@@ -15,6 +15,7 @@
  * 用法:
  *   node scripts/display_publish_fast_2026.mjs --year 2026
  *   node scripts/display_publish_fast_2026.mjs --year 2026 --player-ids 1000035,91095136
+ *   node scripts/display_publish_fast_2026.mjs --year 2026 --from 2026-08-07 --to 2026-08-07
  *   node scripts/display_publish_fast_2026.mjs --year 2026 --dry-run
  */
 
@@ -41,6 +42,13 @@ const playerIdsArg =
 const PLAYER_IDS = playerIdsArg
   ? playerIdsArg.split(",").map((s) => s.trim()).filter(Boolean)
   : null
+const fromArg =
+  process.argv.find((a) => a.startsWith("--from="))?.split("=")[1] ??
+  (process.argv.includes("--from") ? process.argv[process.argv.indexOf("--from") + 1] : null)
+const toArg =
+  process.argv.find((a) => a.startsWith("--to="))?.split("=")[1] ??
+  (process.argv.includes("--to") ? process.argv[process.argv.indexOf("--to") + 1] : null)
+const WEEK_KEYS = weekKeysForRange(fromArg?.trim(), toArg?.trim())
 
 function loadDotEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return false
@@ -81,6 +89,67 @@ function matchesPlayerFilter(rel, ids) {
     if (base === id || base === `yahoo_${id}` || base === `npb_${id}`) return true
     return base.endsWith(`_${id}`)
   })
+}
+
+function ymdToUtcDate(ymd) {
+  const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 3, 0, 0))
+}
+
+function formatYmdUtc(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`
+}
+
+function addDaysYmd(ymd, days) {
+  const date = ymdToUtcDate(ymd)
+  if (!date) return ""
+  date.setUTCDate(date.getUTCDate() + days)
+  return formatYmdUtc(date)
+}
+
+function tuesdayWeekKeyFromYmd(ymd) {
+  const date = ymdToUtcDate(ymd)
+  if (!date) return ""
+  const day = date.getUTCDay()
+  const diff = day >= 2 ? day - 2 : day + 5
+  date.setUTCDate(date.getUTCDate() - diff)
+  return formatYmdUtc(date)
+}
+
+function weekKeysForRange(from, to) {
+  if (!from && !to) return null
+  const start = from || to
+  const end = to || from
+  if (!start || !end) return null
+  const keys = new Set()
+  let cur = start
+  for (let guard = 0; guard < 370 && cur <= end; guard += 1) {
+    const wk = tuesdayWeekKeyFromYmd(cur)
+    if (wk) keys.add(wk)
+    cur = addDaysYmd(cur, 1)
+    if (!cur) break
+  }
+  return keys.size > 0 ? keys : null
+}
+
+function matchesWeeklyScope(rel, weekKeys) {
+  if (!weekKeys) return true
+  const normalized = rel.replace(/\\/g, "/")
+  if (normalized === `weekly/${YEAR}/current-week.json`) return true
+  const batting = normalized.match(new RegExp(`^weekly/${YEAR}/([^/]+)/`))
+  if (batting) return weekKeys.has(batting[1])
+  const pitching = normalized.match(new RegExp(`^pitching/weekly/${YEAR}/([^/]+)/`))
+  if (pitching) return weekKeys.has(pitching[1])
+  return true
+}
+
+function matchesTopLeadersWeeklyScope(rel, weekKeys) {
+  if (!weekKeys) return true
+  const normalized = rel.replace(/\\/g, "/")
+  const weekly = normalized.match(new RegExp(`^weekly/${YEAR}/([^/]+)/`))
+  if (weekly) return weekKeys.has(weekly[1])
+  return true
 }
 
 function contentHashes(body) {
@@ -135,8 +204,10 @@ function collectFastFiles(year) {
     const match =
       rel.startsWith(`${year}/`) ||
       rel.startsWith(`pitching/${year}/`) ||
+      rel.startsWith(`pitching/weekly/${year}/`) ||
       rel.startsWith(`weekly/${year}/`)
     if (!match) continue
+    if (!matchesWeeklyScope(rel, WEEK_KEYS)) continue
     files.push({ local: f, key: `data/rankings/${rel}` })
   }
 
@@ -151,6 +222,7 @@ function collectFastFiles(year) {
   for (const f of walkJsonFiles(topLeadersRoot)) {
     const rel = path.relative(topLeadersRoot, f).replace(/\\/g, "/")
     if (!(rel.startsWith(`${year}/`) || rel.startsWith(`weekly/${year}/`))) continue
+    if (!matchesTopLeadersWeeklyScope(rel, WEEK_KEYS)) continue
     files.push({ local: f, key: `data/top-leaders/${rel}` })
   }
 
@@ -246,6 +318,7 @@ async function main() {
 
   const files = collectFastFiles(YEAR)
   if (PLAYER_IDS?.length) console.log(`Filter: player-ids=${PLAYER_IDS.join(",")} (derived only)`)
+  if (WEEK_KEYS?.size) console.log(`Filter: weekly weekKeys=${[...WEEK_KEYS].join(",")}`)
   console.log(`JSON files: ${files.length}`)
   if (files.length === 0) {
     throw new Error(`No fast-publish files found for year=${YEAR}`)

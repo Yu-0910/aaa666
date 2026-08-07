@@ -7,10 +7,11 @@
  * 実行: npx tsx scripts/build_yahoo_pitcher_npb_index.ts [--year 2026]
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import { findRosterPlayerByPublicId } from "../lib/npbRoster"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -162,7 +163,7 @@ function main(): void {
     map,
   }
   mkdirSync(dirname(outPath), { recursive: true })
-  writeFileSync(outPath, JSON.stringify(payload, null, 2), "utf8")
+  writeJsonFileWithRetrySync(outPath, payload)
   console.log("[build_yahoo_pitcher_npb_index] wrote", Object.keys(map).length, "yahoo→npb →", outPath)
 }
 

@@ -44,6 +44,7 @@ import {
   isPhase2RawComplete,
   isStatsHtmlParseComplete,
 } from "../lib/yahooGame/phase2RawCanonicalSync.mjs"
+import { writeJsonFileWithRetrySync, writeTextFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 const seasonIndexCache = new Map()
 
@@ -193,7 +194,16 @@ function readJsonIfExists(p) {
 }
 
 function writeJson(p, v) {
-  fs.writeFileSync(p, JSON.stringify(v, null, 2), "utf8")
+  writeJsonFileWithRetrySync(p, v)
+}
+
+function writeFetchFailureMarker(outDir, gameId, fetchedAt, message) {
+  const failuresDir = path.join(outDir, "_failed_fetches")
+  ensureDir(failuresDir)
+  const stamp = fetchedAt.replace(/[:.]/g, "-")
+  const markerPath = path.join(failuresDir, `${gameId}_${stamp}.txt`)
+  writeTextFileWithRetrySync(markerPath, `FETCH_FAILED ${fetchedAt}\n${message}\n`)
+  return markerPath
 }
 
 /**
@@ -320,7 +330,7 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
           : isCancelledGameMainRaw(root, gameId)
 
     const writeSuccess = (text, httpStatus, httpStatusText) => {
-      fs.writeFileSync(htmlPath, text, "utf8")
+      writeTextFileWithRetrySync(htmlPath, text)
       writeJson(metaPath, {
         schemaVersion: "sportsnavi-game-raw-meta-v1",
         year,
@@ -361,16 +371,19 @@ async function fetchKind({ root, kind, year, force, throttleMs, targets }) {
       )
     } catch (e) {
       failed += 1
+      const errorMessage = String(e?.message ?? e)
       upsertFailure(failures, {
         gameId,
         kind,
         sourceUrl: url,
         fetchedAt,
-        error: String(e?.message ?? e),
+        error: errorMessage,
       })
       writeJson(failuresPath, failures)
-      fs.writeFileSync(htmlPath, `FETCH_FAILED ${fetchedAt}\n${String(e?.message ?? e)}\n`, "utf8")
-      console.log(`[phase2:stats-text] ${kind} ${i + 1}/${targets.length} ${gameId} … FETCH FAILED`)
+      const markerPath = writeFetchFailureMarker(outDir, gameId, fetchedAt, errorMessage)
+      console.log(
+        `[phase2:stats-text] ${kind} ${i + 1}/${targets.length} ${gameId} … FETCH FAILED (kept existing raw; marker=${markerPath})`,
+      )
     }
 
     if (throttleMs > 0) await sleep(throttleMs)

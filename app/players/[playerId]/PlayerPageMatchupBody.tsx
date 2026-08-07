@@ -114,85 +114,89 @@ export function PlayerPageMatchupBody({
 
   return (
     <div>
-      {teams.map((team) => (
-        <section key={team.teamCode} className={mbScroll}>
-          <h2
-            className={h2Section}
-            style={{
-              borderLeft: `6px solid ${TEAM_COLORS[team.teamDisplay] || "#666"}`,
-            }}
-          >
-            <span className="block font-black">{team.teamDisplay}</span>
-            <span className="mt-0.5 block text-[15px] font-normal leading-tight text-gray-400 latin">
-              {teamRomanNameFromCode(team.teamCode)}
-            </span>
-          </h2>
-          <div className="overflow-x-auto overflow-y-hidden">
-            <table
-              className="text-xs"
+      <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+        {teams.map((team) => (
+          <section key={team.teamCode} className={`${mbScroll} min-w-0`}>
+            <h2
+              className={h2Section}
               style={{
-                fontVariantNumeric: "tabular-nums",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                border: "1px solid #555",
-                width: "100%",
-                tableLayout: "fixed",
+                borderLeft: `6px solid ${TEAM_COLORS[team.teamDisplay] || "#666"}`,
               }}
             >
-              <colgroup>
-                <col style={{ width: `${PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX}px` }} />
-                {PLAYER_MATCHUP_TABLE_COLUMNS.map((c) => (
-                  <col key={c.key} style={{ width: "48px" }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-                    {opponentLabel}
-                  </th>
-                  {PLAYER_MATCHUP_TABLE_COLUMNS.map((c) => (
-                    <th
-                      key={c.key}
-                      className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500"
-                    >
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[...team.opponents].sort(compareMatchupOpponentsByOpsDesc).map((row) => (
-                  <tr key={row.opponentNpbId} style={DATA_ROW}>
-                    <td
-                      className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                      style={{ backgroundColor: "#1a1a1a" }}
-                    >
-                      <Link
-                        href={playerPageHref({
-                          npbPlayerId: row.opponentNpbId,
-                          playerId: row.opponentPublicId,
-                          name: matchupOpponentDisplayNameJa(row.opponentName),
-                        })}
-                        className="hover:text-[#FFFF44] transition-colors"
-                      >
-                        {matchupOpponentDisplayNameJa(row.opponentName)}
-                      </Link>
-                    </td>
+              <span className="block font-black">{team.teamDisplay}</span>
+              <span className="mt-0.5 block text-[15px] font-normal leading-tight text-gray-400 latin">
+                {teamRomanNameFromCode(team.teamCode)}
+              </span>
+            </h2>
+            <div className="w-full">
+              <div className="player-matchup-table-scroll overflow-x-auto overflow-y-hidden">
+                <table
+                  className="text-xs"
+                  style={{
+                    fontVariantNumeric: "tabular-nums",
+                    borderCollapse: "separate",
+                    borderSpacing: 0,
+                    border: "1px solid #555",
+                    width: "100%",
+                    tableLayout: "fixed",
+                  }}
+                >
+                  <colgroup>
+                    <col style={{ width: `${PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX}px` }} />
                     {PLAYER_MATCHUP_TABLE_COLUMNS.map((c) => (
-                      <td
-                        key={c.key}
-                        className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                      >
-                        {cellValue(row, c.key)}
-                      </td>
+                      <col key={c.key} style={{ width: "48px" }} />
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+                  </colgroup>
+                  <thead>
+                    <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
+                      <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
+                        {opponentLabel}
+                      </th>
+                      {PLAYER_MATCHUP_TABLE_COLUMNS.map((c) => (
+                        <th
+                          key={c.key}
+                          className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500"
+                        >
+                          {c.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...team.opponents].sort(compareMatchupOpponentsByOpsDesc).map((row) => (
+                      <tr key={row.opponentNpbId} style={DATA_ROW}>
+                        <td
+                          className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                          style={{ backgroundColor: "#1a1a1a" }}
+                        >
+                          <Link
+                            href={playerPageHref({
+                              npbPlayerId: row.opponentNpbId,
+                              playerId: row.opponentPublicId,
+                              name: matchupOpponentDisplayNameJa(row.opponentName),
+                            })}
+                            className="hover:text-[#FFFF44] transition-colors"
+                          >
+                            {matchupOpponentDisplayNameJa(row.opponentName)}
+                          </Link>
+                        </td>
+                        {PLAYER_MATCHUP_TABLE_COLUMNS.map((c) => (
+                          <td
+                            key={c.key}
+                            className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
+                          >
+                            {cellValue(row, c.key)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )
 }

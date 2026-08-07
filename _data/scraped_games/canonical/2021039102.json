@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039102",
-  "builtAt": "2026-07-07T13:23:00.241Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "3e29b046f0caf1171a69df8c5c6e1155561381ecbda39c800a79d4aca2f9ef85",
-  "normalizedFetchedAt": "2026-07-07T13:10:45.738Z",
+  "sourceCompositeFingerprint": "b959b062cd4db9989dfe69d7b8c7082a64b0e7c91b5f048f32caeb3739de1cd5",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月7日 広島東洋カープvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7392,22 +7392,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039102-score-1",
+        "eventId": "2021039102-runner-1",
         "inningHalf": "2回表",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0210400] 盗塁成功（岩田）、ランナー2塁 64 岩田 投手 岡本 駿 #53 右投 投球数 打者数 防御率 25 6 2.88",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 石井 巧 無死一塁 一塁けん制:ランナー 岩田 帰塁 一塁走者 岩田 :盗塁成功 二塁 ショートゴロ 1アウト三塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039102-score-2",
+        "eventId": "2021039102-runner-2",
         "inningHalf": "2回表",
         "kind": "SB",
         "yahooRunnerId": "1600078",
-        "runnerNameJa": "古賀",
-        "sourceLine": "[0210700] 盗塁成功（古賀）、ランナー2塁 2 古賀 投手 岡本 駿 #53 右投 投球数 打者数 防御率 41 9 2.97",
-        "sourceTier": "score"
+        "sourceLine": "7： 1番 モンテル 二死一塁 一塁走者 古賀 :盗塁成功 二塁 セカンドフライ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

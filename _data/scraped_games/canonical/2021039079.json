@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039079",
-  "builtAt": "2026-07-03T20:17:37.657Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "e9b48391a3e483acad0b4e2e8d78cdc7b164364a766aed074154d494673abede",
-  "normalizedFetchedAt": "2026-07-03T20:00:25.332Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月2日 阪神タイガースvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -10259,13 +10259,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039079-score-1",
+        "eventId": "2021039079-runner-1",
         "inningHalf": "11回裏",
         "kind": "SB",
         "yahooRunnerId": "1400172",
-        "runnerNameJa": "植田",
-        "sourceLine": "[1120400] 盗塁成功（植田）、ランナー2塁 62 植田 1 2 1 見逃し 2 ボール 次の打者 髙寺 望夢 打者 嶋村 麟士朗 #85 左打 打率 .216 (37-8) 投手 松山 晋也 #90 右投 投球数 打者数 防御率 14 3 1.86",
-        "sourceTier": "score"
+        "sourceLine": "4： 代打 嶋村 麟士朗 二死一塁 及川 →代打: 嶋村 －中日:コーチマウンドへむかう－ 一塁走者 植田 :盗塁成功 二塁 一打同点の場面でワンバウンドした球に空振り、三振を喫する 3アウト 試合終了",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

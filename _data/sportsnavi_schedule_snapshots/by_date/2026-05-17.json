@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-05-17",
-  "fetchedAt": "2026-05-30T15:28:52.900Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-17",
+  "fetchedAt": "2026-07-14T16:09:34.770Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-05-17",
   "gameIds": [
     "2021038872",
     "2021038873",
@@ -15,27 +15,63 @@
   "games": [
     {
       "gameId": "2021038872",
-      "stadiumName": "東京ドーム"
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "DB"
     },
     {
       "gameId": "2021038873",
-      "stadiumName": "バンテリンD"
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "ヤクルト",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "S"
     },
     {
       "gameId": "2021038874",
-      "stadiumName": "甲子園球場"
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "広島",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "H",
+      "awayTeamCode": "C"
     },
     {
       "gameId": "2021038875",
-      "stadiumName": "エスコンＦ"
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "F",
+      "awayTeamCode": "L"
     },
     {
       "gameId": "2021038876",
-      "stadiumName": "楽天モバイル"
+      "stadiumName": "楽天モバイル",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "ソフトバンク",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "E",
+      "awayTeamCode": "Hs"
     },
     {
       "gameId": "2021038877",
-      "stadiumName": "ZOZOマリン"
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "M",
+      "awayTeamCode": "Bs"
     }
   ],
   "stadiumByGameId": {
@@ -45,5 +81,13 @@
     "2021038875": "エスコンＦ",
     "2021038876": "楽天モバイル",
     "2021038877": "ZOZOマリン"
+  },
+  "scheduleStatusByGameId": {
+    "2021038872": "試合終了",
+    "2021038873": "試合終了",
+    "2021038874": "試合終了",
+    "2021038875": "試合終了",
+    "2021038876": "試合終了",
+    "2021038877": "試合終了"
   }
 }

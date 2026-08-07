@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-05-12",
-  "fetchedAt": "2026-05-30T15:28:52.900Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-05-12",
+  "fetchedAt": "2026-07-14T16:09:34.770Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-05-12",
   "gameIds": [
     "2021038846",
     "2021038847",
@@ -15,27 +15,63 @@
   "games": [
     {
       "gameId": "2021038846",
-      "stadiumName": "地方球場"
+      "stadiumName": "地方球場",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "広島",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "C"
     },
     {
       "gameId": "2021038847",
-      "stadiumName": "神宮球場"
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "S",
+      "awayTeamCode": "H"
     },
     {
       "gameId": "2021038848",
-      "stadiumName": "横浜スタジアム"
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "中日",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "D"
     },
     {
       "gameId": "2021038849",
-      "stadiumName": "地方球場"
+      "stadiumName": "地方球場",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "E",
+      "awayTeamCode": "Bs"
     },
     {
       "gameId": "2021038850",
-      "stadiumName": "ZOZOマリン"
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "M",
+      "awayTeamCode": "F"
     },
     {
       "gameId": "2021038851",
-      "stadiumName": "みずほPayPay"
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "L"
     }
   ],
   "stadiumByGameId": {
@@ -45,5 +81,13 @@
     "2021038849": "地方球場",
     "2021038850": "ZOZOマリン",
     "2021038851": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021038846": "試合終了",
+    "2021038847": "試合終了",
+    "2021038848": "試合終了",
+    "2021038849": "試合終了",
+    "2021038850": "試合終了",
+    "2021038851": "試合終了"
   }
 }

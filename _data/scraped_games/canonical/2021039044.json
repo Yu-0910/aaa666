@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039044",
-  "builtAt": "2026-06-25T19:23:20.580Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "11b51dff101eebde03ffa1590a90c9c9540c3b4a21c247edc1c852d1fea414aa",
-  "normalizedFetchedAt": "2026-06-25T19:23:20.580Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月24日 広島東洋カープvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -16,9 +16,7 @@
     "statsPlayerLinkedRows": [],
     "yahooPlayersMentioned": {},
     "missingOrPartial": [
-      "phase2: stats HTML present but no player rows parsed",
-      "phase2: hint: スポナビ /stats は CSR のため、初回 fetch が空テーブルだけになることがある。phase2_fetch は遅延再試行する。手動では npm run phase2:sportsnavi:stats-text -- --year 2026 --game-ids 2021039044 --force",
-      "phase2: text HTML present but no bb-liveText sections parsed",
+      "phase2: game cancelled (試合中止); empty stats/text expected",
       "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039044.html",
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039044.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039044.html",

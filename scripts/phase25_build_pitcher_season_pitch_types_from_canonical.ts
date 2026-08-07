@@ -21,23 +21,27 @@
 
 
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from "fs"
 
 import { join, dirname } from "path"
 
 import { fileURLToPath } from "url"
 
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 import {
 
   accumulatePitcherSeasonPitchTypesFromDocs,
 
   aggregatePitcherSeasonPitchTypeRows,
+  collectPitcherSeasonPaBlocksFromGame,
 
 } from "../lib/yahooGame/pitcherSeasonPitchTypes"
 
 import { parseRosterCsv } from "../lib/yahooGame/rosterCsv"
+import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 
 
 
@@ -47,11 +51,14 @@ const projectRoot = join(__dirname, "..")
 
 
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyNpbIds: string[] | null } {
 
   const args = process.argv.slice(2)
 
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
+  let onlyNpbIds: string[] | null = null
 
   for (let i = 0; i < args.length; i++) {
 
@@ -61,12 +68,37 @@ function parseArgs(): { year: string } {
 
       i++
 
+    } else if (args[i] === "--from" && args[i + 1]) {
+
+      from = String(args[i + 1]).trim()
+
+      i++
+
+    } else if (args[i] === "--to" && args[i + 1]) {
+
+      to = String(args[i + 1]).trim()
+
+      i++
+
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+
+      onlyNpbIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      i++
+
     }
 
   }
 
-  return { year }
+  return { year, from, to, onlyNpbIds }
 
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
 
@@ -103,9 +135,13 @@ function loadCanonicalFiles(): CanonicalGameDocument[] {
 
 function main(): void {
 
-  const { year } = parseArgs()
+  const { year, from, to, onlyNpbIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase25-pitch-types] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
 
-  const docs = loadCanonicalFiles()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
 
   if (!docs.length) {
 
@@ -125,7 +161,19 @@ function main(): void {
 
 
 
-  const byNpb = accumulatePitcherSeasonPitchTypesFromDocs(docs, roster)
+  const targetNpbIds = onlyNpbIds ? [...onlyNpbIds] : null
+  const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
+  const inputDocs =
+    targetNpbIdSet
+      ? docs.filter((doc) => {
+          const chunk = collectPitcherSeasonPaBlocksFromGame(doc, roster)
+          for (const npb of chunk.keys()) {
+            if (targetNpbIdSet.has(npb)) return true
+          }
+          return false
+        })
+      : docs
+  const byNpb = accumulatePitcherSeasonPitchTypesFromDocs(inputDocs, roster)
 
 
 
@@ -136,7 +184,8 @@ function main(): void {
 
 
   for (const f of readdirSync(outDir).filter((x) => x.endsWith(".json"))) {
-
+    const npbId = f.replace(/^npb_/, "").replace(/\.json$/, "")
+    if (targetNpbIds && !targetNpbIds.includes(npbId)) continue
     unlinkSync(join(outDir, f))
 
   }
@@ -148,6 +197,18 @@ function main(): void {
   const generatedAt = new Date().toISOString()
 
   for (const [npb, acc] of byNpb) {
+    if (targetNpbIdSet && !targetNpbIdSet.has(npb)) continue
+    if (from || to) {
+      const inRange = [...acc.gameIds].some((gid) => {
+        const doc = docs.find((d) => d.gameId === gid)
+        const ymd = doc ? extractCanonicalGameYmd(doc) : ""
+        if (!ymd) return false
+        if (from && ymd < from) return false
+        if (to && ymd > to) return false
+        return true
+      })
+      if (!inRange) continue
+    }
 
     if (!acc.blocks.length) continue
 
@@ -173,7 +234,7 @@ function main(): void {
 
     const path = join(outDir, `npb_${npb}.json`)
 
-    writeFileSync(path, JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(path, payload)
 
     n++
 
@@ -181,7 +242,9 @@ function main(): void {
 
 
 
-  console.log(`[phase25-pitch-types] wrote ${n} files → ${outDir}`)
+  console.log(
+    `[phase25-pitch-types] wrote ${n} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 
 }
 

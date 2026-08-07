@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038658",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-07-14T17:46:36.457Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "133d3dce99489a7313551e19fe16ea5e9335dd4835146096ecf68601edd74137",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月3日 読売ジャイアンツvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1340,7 +1340,7 @@
     ],
     "pitchByPitchNote": {
       "status": "restored_phase10",
-      "note": "pitch rows=309"
+      "note": "pitch rows=303"
     },
     "pickoffCatchMissInvestigations": []
   },
@@ -2120,63 +2120,9 @@
             "pitchIndex": 7,
             "yahooPitcherId": "2118993",
             "yahooBatterId": "2000035",
-            "speedKmh": 127,
-            "pitchTypeJa": "チェンジアップ",
-            "zoneId": 11,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 8,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
-            "speedKmh": null,
-            "pitchTypeJa": "スライダー",
-            "zoneId": 11,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 9,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
-            "speedKmh": 129,
-            "pitchTypeJa": "スライダー",
-            "zoneId": 17,
-            "resultJa": "見逃し"
-          },
-          {
-            "pitchIndex": 10,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
-            "speedKmh": 125,
-            "pitchTypeJa": "チェンジアップ",
-            "zoneId": 22,
-            "resultJa": "空振り"
-          },
-          {
-            "pitchIndex": 11,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
-            "speedKmh": 148,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 3,
-            "resultJa": "ファウル"
-          },
-          {
-            "pitchIndex": 12,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
-            "speedKmh": 125,
-            "pitchTypeJa": "チェンジアップ",
-            "zoneId": 23,
-            "resultJa": "ボール[ランエンドヒット、ワンバウンド、送球がバウンド]"
-          },
-          {
-            "pitchIndex": 13,
-            "yahooPitcherId": "2118993",
-            "yahooBatterId": "2000035",
             "speedKmh": 128,
             "pitchTypeJa": "チェンジアップ",
-            "zoneId": 24,
+            "zoneId": 11,
             "resultJa": "四球"
           }
         ]
@@ -3558,6 +3504,11 @@
         "inningHalf": "6回裏",
         "yahooPitcherId": "1700058",
         "yahooBatterId": "2000007",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -4438,6 +4389,11 @@
         "inningHalf": "8回裏",
         "yahooPitcherId": "2117433",
         "yahooBatterId": "1700044",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "空三振[高めのつり球を要求]",
         "pitchEvents": [
           {
@@ -5108,6 +5064,11 @@
         "inningHalf": "9回裏",
         "yahooPitcherId": "1400109",
         "yahooBatterId": "800043",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -5685,63 +5646,9 @@
         "pitchIndex": 7,
         "yahooPitcherId": "2118993",
         "yahooBatterId": "2000035",
-        "speedKmh": 127,
-        "pitchTypeJa": "チェンジアップ",
-        "zoneId": 11,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 8,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
-        "speedKmh": null,
-        "pitchTypeJa": "スライダー",
-        "zoneId": 11,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 9,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
-        "speedKmh": 129,
-        "pitchTypeJa": "スライダー",
-        "zoneId": 17,
-        "resultJa": "見逃し"
-      },
-      {
-        "pitchIndex": 10,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
-        "speedKmh": 125,
-        "pitchTypeJa": "チェンジアップ",
-        "zoneId": 22,
-        "resultJa": "空振り"
-      },
-      {
-        "pitchIndex": 11,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
-        "speedKmh": 148,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 3,
-        "resultJa": "ファウル"
-      },
-      {
-        "pitchIndex": 12,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
-        "speedKmh": 125,
-        "pitchTypeJa": "チェンジアップ",
-        "zoneId": 23,
-        "resultJa": "ボール[ランエンドヒット、ワンバウンド、送球がバウンド]"
-      },
-      {
-        "pitchIndex": 13,
-        "yahooPitcherId": "2118993",
-        "yahooBatterId": "2000035",
         "speedKmh": 128,
         "pitchTypeJa": "チェンジアップ",
-        "zoneId": 24,
+        "zoneId": 11,
         "resultJa": "四球"
       },
       {
@@ -7916,12 +7823,13 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038658-runner-1",
+        "eventId": "2021038658-score-1",
         "inningHalf": "3回表",
         "kind": "SB",
         "yahooRunnerId": "2103703",
-        "sourceLine": "4： 1番 牧 秀悟 二死一塁 一塁けん制:ランナー 梶原 帰塁 また一塁けん制:ランナー 梶原 帰塁 一塁走者 梶原 :盗塁成功 二塁 フォアボールを選ぶ 一二塁",
-        "sourceTier": "rawTextSteal"
+        "runnerNameJa": "梶原",
+        "sourceLine": "[0310400] 盗塁成功（梶原）、ランナー2塁 58 梶原 投手 竹丸 和幸 #21 左投 投球数 打者数 防御率 37 9 1.04",
+        "sourceTier": "score"
       }
     ],
     "battingLines": [
@@ -8809,5 +8717,5 @@
       }
     ]
   },
-  "eventsFingerprint": "caa4ff7be0675dfaf76ecfc440c3c4f7a8edb351427dd95476510c7a8f92fc51"
+  "eventsFingerprint": "98c6d8c4504467543aed08d87cd30a207d0ffa8707c39598e0066596d2c629d4"
 }

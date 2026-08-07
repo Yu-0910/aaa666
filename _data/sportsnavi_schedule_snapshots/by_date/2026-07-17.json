@@ -2,7 +2,7 @@
   "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-17",
-  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "fetchedAt": "2026-07-18T05:22:39.341Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-17",
   "gameIds": [
     "2021039150",
@@ -15,8 +15,8 @@
       "stadiumName": "東京ドーム",
       "homeTeamShort": "巨人",
       "awayTeamShort": "中日",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "G",
       "awayTeamCode": "D"
     },
@@ -25,8 +25,8 @@
       "stadiumName": "横浜スタジアム",
       "homeTeamShort": "DeNA",
       "awayTeamShort": "ヤクルト",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "DB",
       "awayTeamCode": "S"
     },
@@ -35,8 +35,8 @@
       "stadiumName": "マツダ",
       "homeTeamShort": "広島",
       "awayTeamShort": "阪神",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "C",
       "awayTeamCode": "H"
     }
@@ -47,8 +47,8 @@
     "2021039152": "マツダ"
   },
   "scheduleStatusByGameId": {
-    "2021039150": "試合前",
-    "2021039151": "試合前",
-    "2021039152": "試合前"
+    "2021039150": "試合終了",
+    "2021039151": "試合終了",
+    "2021039152": "試合終了"
   }
 }

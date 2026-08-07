@@ -15,7 +15,6 @@ import {
   readdirSync,
   readFileSync,
   unlinkSync,
-  writeFileSync,
 } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
@@ -25,6 +24,8 @@ import { buildPitcherZoneStatsFromCanonicalPlateAppearances } from "../lib/pitch
 import { resolveBatHandJaForBatter } from "../lib/yahooGame/batterHandFromCanonical"
 import { getNpbRoster2026 } from "../lib/npbRoster"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -41,16 +42,31 @@ type ZoneAgg = {
 
 type SeasonAcc = Record<HandBucket, Map<number, ZoneAgg>>
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, from, to, onlyYahooIds }
 }
 
 function loadCanonicalFiles(): CanonicalGameDocument[] {
@@ -75,6 +91,51 @@ function emptyAcc(): SeasonAcc {
     vsRight: new Map(),
     vsLeft: new Map(),
   }
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
+function collectPitcherIdsInGame(doc: CanonicalGameDocument): Set<string> {
+  const ids = new Set<string>()
+  for (const pa of doc.domain.plateAppearances ?? []) {
+    const paPid = String(pa.yahooPitcherId ?? "").trim()
+    if (paPid) ids.add(paPid)
+    for (const ev of pa.pitchEvents ?? []) {
+      const id = String(ev.yahooPitcherId ?? "").trim()
+      if (id) ids.add(id)
+    }
+  }
+  for (const line of doc.domain?.pitchingLines ?? []) {
+    const id = String(line.yahooPlayerId ?? "").trim()
+    if (id) ids.add(id)
+  }
+  return ids
+}
+
+function collectAffectedPitcherIds(
+  docs: CanonicalGameDocument[],
+  from: string | null,
+  to: string | null,
+): string[] {
+  const ids = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const id of collectPitcherIdsInGame(doc)) ids.add(id)
+  }
+  return [...ids].sort()
+}
+
+function gameHasTargetPitcher(doc: CanonicalGameDocument, targetYahooIdSet: Set<string> | null): boolean {
+  if (!targetYahooIdSet) return true
+  for (const id of collectPitcherIdsInGame(doc)) {
+    if (targetYahooIdSet.has(id)) return true
+  }
+  return false
 }
 
 function mergeGameResponse(acc: SeasonAcc, res: ZoneStatsResponse): void {
@@ -148,8 +209,12 @@ function accToOutput(
 }
 
 function main(): void {
-  const { year } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const { year, from, to, onlyYahooIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase20] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error(
       "[phase20] no canonical games under _data/scraped_games/canonical/"
@@ -157,16 +222,33 @@ function main(): void {
     process.exit(1)
   }
 
+  let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
+  if (!targetYahooIds && (from || to)) {
+    targetYahooIds = collectAffectedPitcherIds(docs, from, to)
+    if (targetYahooIds.length === 0) {
+      console.log(
+        `[phase20] no affected pitchers for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
+  const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
+
   const roster = getNpbRoster2026()
   const pitcherIds = new Set<string>()
   for (const doc of docs) {
+    if (!gameHasTargetPitcher(doc, targetYahooIdSet)) continue
     for (const pa of doc.domain.plateAppearances ?? []) {
       const paPid = (pa.yahooPitcherId ?? "").trim()
-      if (paPid) pitcherIds.add(paPid)
+      if (paPid && (!targetYahooIdSet || targetYahooIdSet.has(paPid))) pitcherIds.add(paPid)
       for (const ev of pa.pitchEvents ?? []) {
         const id = String(ev.yahooPitcherId ?? "").trim()
-        if (id) pitcherIds.add(id)
+        if (id && (!targetYahooIdSet || targetYahooIdSet.has(id))) pitcherIds.add(id)
       }
+    }
+    for (const line of doc.domain?.pitchingLines ?? []) {
+      const id = String(line.yahooPlayerId ?? "").trim()
+      if (id && (!targetYahooIdSet || targetYahooIdSet.has(id))) pitcherIds.add(id)
     }
   }
 
@@ -181,6 +263,8 @@ function main(): void {
 
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      if (targetYahooIds && !targetYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -194,6 +278,7 @@ function main(): void {
     const acc = emptyAcc()
     const usedGames: string[] = []
     for (const doc of docs) {
+      if (targetYahooIdSet && !collectPitcherIdsInGame(doc).has(pid)) continue
       const resolveBatHand = (batterId: string) =>
         resolveBatHandJaForBatter(doc, batterId, roster)
       const res = buildPitcherZoneStatsFromCanonicalPlateAppearances(
@@ -211,16 +296,12 @@ function main(): void {
     if (!accHasPitchData(acc)) continue
 
     const payload = accToOutput(pid, year, [...new Set(usedGames)], acc)
-    writeFileSync(
-      join(outDir, `yahoo_${pid}.json`),
-      JSON.stringify(payload, null, 2),
-      "utf8"
-    )
+    writeJsonFileWithRetrySync(join(outDir, `yahoo_${pid}.json`), payload)
     written++
   }
 
   console.log(
-    `[phase20] canonical games=${docs.length} pitchers with zone data=${written} → ${outDir}`
+    `[phase20] canonical games=${docs.length} pitchers with zone data=${written} → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`
   )
 }
 

@@ -13,10 +13,12 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   // Vercel ビルド: 歴史 CSV 1 万ファイル超をサーバー関数のトレース対象から除外
   outputFileTracingExcludes: {
-    '*': [
+    '/*': [
       '_data/master_csv__import_1950_2024/**',
       '_data/master_csv/**',
       '_data/derived/**',
+      // 表示用ランキングは本番ではR2から取得する。関数へ同梱すると1GB超になる。
+      './public/data/rankings/**/*',
     ],
   },
   typescript: {

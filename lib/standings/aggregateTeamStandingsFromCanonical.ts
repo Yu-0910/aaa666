@@ -3,7 +3,7 @@
  * 仕様: docs/plan_team_standings_phase0_spec.md §5
  */
 
-import { findRosterPlayerByPublicId } from "@/lib/npbRoster"
+import { findRosterPlayerByPublicId, findRosterPlayerByPublicIdOrJaName } from "@/lib/npbRoster"
 import {
   aggregateBattingForBatterInGameForStandings,
   emptyBattingSeasonAggYahoo,
@@ -270,10 +270,19 @@ function applyGameErrors(
   }
 }
 
-function collectBatterIdsWithLinesInGame(doc: CanonicalGameDocument): Set<string> {
+function collectBatterIdsForStandingsInGame(doc: CanonicalGameDocument): Set<string> {
   const ids = new Set<string>()
   for (const line of doc.domain?.battingLines ?? []) {
     const bid = String(line.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+    const bid = String(row.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const e of doc.domain?.runnerEvents ?? []) {
+    if (e?.kind !== "CS" || e.sourceTier !== "score") continue
+    const bid = String(e.yahooRunnerId ?? "").trim()
     if (bid) ids.add(bid)
   }
   return ids
@@ -285,6 +294,20 @@ function teamShortHintFromBattingLines(lines: BattingLine[]): string {
     if (fromTeamName) return fromTeamName
   }
   return ""
+}
+
+function rosterTeamShortForBatterInGame(
+  doc: CanonicalGameDocument,
+  yahooBatterId: string,
+  linesForBatter: BattingLine[],
+): string {
+  const nameHint = linesForBatter.map((line) => String(line.playerName ?? "").trim()).find(Boolean) ?? ""
+  const rosterTeam = rosterTeamToRankingShort(
+    String(findRosterPlayerByPublicIdOrJaName(yahooBatterId, nameHint)?.team ?? "").trim(),
+  )
+  if (!rosterTeam) return ""
+  const sides = new Set(rankingTeamShortsFromCanonicalGame(doc))
+  return sides.has(rosterTeam) ? rosterTeam : ""
 }
 
 function isSupplementOnlyBattingLine(line: BattingLine): boolean {
@@ -333,19 +356,35 @@ function applyDirectBattingLineToTeam(
   bucket.batting.tb += h1 + 2 * h2 + 3 * h3 + 4 * hr
 }
 
-/** 出場成績行優先ハイブリッド（公式チーム打撃合算に合わせる） */
+/** 個人成績/ランキングと同じ打撃SSOTでチーム別に合算する */
 function processGameBatting(
   buckets: Map<string, TeamBucket>,
   doc: CanonicalGameDocument,
   projectRoot?: string,
 ): void {
   const gameId = String(doc.gameId ?? "").trim()
+  const battingLines = doc.domain?.battingLines ?? []
+  const linesByBatter = new Map<string, BattingLine[]>()
+  for (const line of battingLines) {
+    const bid = String(line.yahooPlayerId ?? "").trim()
+    if (!bid) continue
+    const arr = linesByBatter.get(bid) ?? []
+    arr.push(line)
+    linesByBatter.set(bid, arr)
+  }
+  const teamShortByBatter = new Map<string, string>()
 
-  for (const bid of collectBatterIdsWithLinesInGame(doc)) {
-    const linesForBatter = (doc.domain?.battingLines ?? []).filter(
-      (line) => String(line.yahooPlayerId ?? "").trim() === bid,
-    )
-    const teamShort = teamShortHintFromBattingLines(linesForBatter) || batterTeamShortInGame(doc, bid)
+  for (const bid of collectBatterIdsForStandingsInGame(doc)) {
+    const linesForBatter = linesByBatter.get(bid) ?? []
+    const teamShort =
+      teamShortHintFromBattingLines(linesForBatter) ||
+      teamShortByBatter.get(bid) ||
+      (() => {
+        const resolved = batterTeamShortInGame(doc, bid) || ""
+        if (resolved) teamShortByBatter.set(bid, resolved)
+        return resolved
+      })() ||
+      rosterTeamShortForBatterInGame(doc, bid, linesForBatter)
     if (!teamShort) continue
     const bucket = buckets.get(teamShort)
     if (!bucket) continue
@@ -364,7 +403,7 @@ function processGameBatting(
     }
   }
 
-  for (const line of doc.domain?.battingLines ?? []) {
+  for (const line of battingLines) {
     if (String(line.yahooPlayerId ?? "").trim()) continue
     const teamShort = teamShortHintFromBattingLines([line])
     if (!teamShort) continue
@@ -381,7 +420,7 @@ function processGameBatting(
   updateRispFromPasInGame(rispByBatter, gameId, doc, pas, projectRoot)
   for (const [bid, rispAgg] of rispByBatter) {
     if (rispAgg.risp_ab <= 0) continue
-    const teamShort = batterTeamShortInGame(doc, bid)
+    const teamShort = teamShortByBatter.get(bid) || batterTeamShortInGame(doc, bid)
     if (!teamShort) continue
     const bucket = buckets.get(teamShort)
     if (!bucket) continue

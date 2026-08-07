@@ -19,11 +19,13 @@ import { weekKeysToBuild } from "@/lib/ranking/weeklyRankingsWeekKeys"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string; week?: string; anchor?: string } {
+function parseArgs(): { year: string; week?: string; anchor?: string; from?: string; to?: string } {
   const args = process.argv.slice(2)
   let year = "2026"
   let week: string | undefined
   let anchor: string | undefined
+  let from: string | undefined
+  let to: string | undefined
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!
@@ -34,14 +36,20 @@ function parseArgs(): { year: string; week?: string; anchor?: string } {
     } else if (args[i] === "--anchor" && args[i + 1]) {
       anchor = args[i + 1]!
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = args[i + 1]!
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = args[i + 1]!
+      i++
     }
   }
-  return { year, week, anchor }
+  return { year, week, anchor, from, to }
 }
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year, week, anchor } = parseArgs()
+  const { year, week, anchor, from, to } = parseArgs()
 
   if (year !== "2026") {
     console.error("[phase28] v1 は --year 2026 のみ")
@@ -59,6 +67,17 @@ function main(): void {
   if (week) {
     const wk = tuesdayWeekKeyFromYmd(week) ?? week
     weekKeys = [wk]
+  } else if (from || to) {
+    const keys = new Set<string>()
+    if (from) {
+      const wk = tuesdayWeekKeyFromYmd(from) ?? from
+      keys.add(wk)
+    }
+    if (to) {
+      const wk = tuesdayWeekKeyFromYmd(to) ?? to
+      keys.add(wk)
+    }
+    weekKeys = [...keys].sort()
   } else if (anchor) {
     weekKeys = weekKeysToBuild(anchor)
   }

@@ -2,7 +2,7 @@
   "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-25",
-  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "fetchedAt": "2026-07-26T06:19:16.143Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-25",
   "gameIds": [
     "2021039189",
@@ -18,8 +18,8 @@
       "stadiumName": "神宮球場",
       "homeTeamShort": "ヤクルト",
       "awayTeamShort": "広島",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "S",
       "awayTeamCode": "C"
     },
@@ -28,8 +28,8 @@
       "stadiumName": "バンテリンD",
       "homeTeamShort": "中日",
       "awayTeamShort": "DeNA",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "D",
       "awayTeamCode": "DB"
     },
@@ -38,8 +38,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "巨人",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "H",
       "awayTeamCode": "G"
     },
@@ -48,8 +48,8 @@
       "stadiumName": "エスコンＦ",
       "homeTeamShort": "日本ハム",
       "awayTeamShort": "楽天",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "F",
       "awayTeamCode": "E"
     },
@@ -58,8 +58,8 @@
       "stadiumName": "ベルーナD",
       "homeTeamShort": "西武",
       "awayTeamShort": "ソフトバンク",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "L",
       "awayTeamCode": "Hs"
     },
@@ -68,8 +68,8 @@
       "stadiumName": "京セラD大阪",
       "homeTeamShort": "オリックス",
       "awayTeamShort": "ロッテ",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Bs",
       "awayTeamCode": "M"
     }
@@ -83,11 +83,11 @@
     "2021039194": "京セラD大阪"
   },
   "scheduleStatusByGameId": {
-    "2021039189": "試合前",
-    "2021039190": "試合前",
-    "2021039191": "試合前",
-    "2021039192": "試合前",
-    "2021039193": "試合前",
-    "2021039194": "試合前"
+    "2021039189": "試合終了",
+    "2021039190": "試合終了",
+    "2021039191": "試合終了",
+    "2021039192": "試合終了",
+    "2021039193": "試合終了",
+    "2021039194": "試合終了"
   }
 }

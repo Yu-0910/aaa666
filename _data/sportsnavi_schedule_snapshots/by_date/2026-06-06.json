@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-06-06",
-  "fetchedAt": "2026-06-06T15:17:41.922Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-06-06",
+  "fetchedAt": "2026-07-14T16:09:34.770Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-06-06",
   "gameIds": [
     "2021038969",
     "2021038970",
@@ -15,27 +15,63 @@
   "games": [
     {
       "gameId": "2021038969",
-      "stadiumName": "東京ドーム"
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "M"
     },
     {
       "gameId": "2021038970",
-      "stadiumName": "神宮球場"
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "S",
+      "awayTeamCode": "F"
     },
     {
       "gameId": "2021038971",
-      "stadiumName": "横浜スタジアム"
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "ソフトバンク",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "Hs"
     },
     {
       "gameId": "2021038972",
-      "stadiumName": "バンテリンD"
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "L"
     },
     {
       "gameId": "2021038973",
-      "stadiumName": "甲子園球場"
+      "stadiumName": "甲子園球場",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "H",
+      "awayTeamCode": "E"
     },
     {
       "gameId": "2021038974",
-      "stadiumName": "マツダ"
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "C",
+      "awayTeamCode": "Bs"
     }
   ],
   "stadiumByGameId": {
@@ -45,5 +81,13 @@
     "2021038972": "バンテリンD",
     "2021038973": "甲子園球場",
     "2021038974": "マツダ"
+  },
+  "scheduleStatusByGameId": {
+    "2021038969": "試合終了",
+    "2021038970": "試合終了",
+    "2021038971": "試合終了",
+    "2021038972": "試合終了",
+    "2021038973": "試合終了",
+    "2021038974": "試合終了"
   }
 }

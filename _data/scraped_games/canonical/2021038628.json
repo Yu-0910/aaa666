@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038628",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-07-14T16:50:43.641Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "9569ad6dea6f40c338d7d32992f95153856ab1c65117acc1934a05bdf04ee640",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年3月28日 読売ジャイアンツvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1297,7 +1297,7 @@
     ],
     "pitchByPitchNote": {
       "status": "restored_phase10",
-      "note": "pitch rows=265"
+      "note": "pitch rows=260"
     },
     "pickoffCatchMissInvestigations": []
   },
@@ -1446,54 +1446,9 @@
             "pitchIndex": 6,
             "yahooPitcherId": "1961886",
             "yahooBatterId": "1850183",
-            "speedKmh": 147,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 21,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 7,
-            "yahooPitcherId": "1961886",
-            "yahooBatterId": "1850183",
-            "speedKmh": 148,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 12,
-            "resultJa": "ファウル"
-          },
-          {
-            "pitchIndex": 8,
-            "yahooPitcherId": "1961886",
-            "yahooBatterId": "1850183",
-            "speedKmh": 148,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 24,
-            "resultJa": "ボール[高めのつり球を要求]"
-          },
-          {
-            "pitchIndex": 9,
-            "yahooPitcherId": "1961886",
-            "yahooBatterId": "1850183",
-            "speedKmh": 118,
-            "pitchTypeJa": "ナックルカーブ",
-            "zoneId": 18,
-            "resultJa": "見逃し"
-          },
-          {
-            "pitchIndex": 10,
-            "yahooPitcherId": "1961886",
-            "yahooBatterId": "1850183",
-            "speedKmh": 150,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 21,
-            "resultJa": "ボール[ランエンドヒット]"
-          },
-          {
-            "pitchIndex": 11,
-            "yahooPitcherId": "1961886",
-            "yahooBatterId": "1850183",
             "speedKmh": 127,
             "pitchTypeJa": "チェンジアップ",
-            "zoneId": 17,
+            "zoneId": 21,
             "resultJa": "左犠飛"
           }
         ]
@@ -3338,6 +3293,11 @@
         "inningHalf": "6回裏",
         "yahooPitcherId": "1700078",
         "yahooBatterId": "2106178",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中飛[バットの先]",
         "pitchEvents": [
           {
@@ -3969,6 +3929,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1500052",
         "yahooBatterId": "1800036",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "空三振[ワンバウンド]",
         "pitchEvents": [
           {
@@ -4160,6 +4125,11 @@
         "inningHalf": "8回裏",
         "yahooPitcherId": "1700078",
         "yahooBatterId": "800043",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "一ゴロ",
         "pitchEvents": [
           {
@@ -4727,54 +4697,9 @@
         "pitchIndex": 6,
         "yahooPitcherId": "1961886",
         "yahooBatterId": "1850183",
-        "speedKmh": 147,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 21,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 7,
-        "yahooPitcherId": "1961886",
-        "yahooBatterId": "1850183",
-        "speedKmh": 148,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 12,
-        "resultJa": "ファウル"
-      },
-      {
-        "pitchIndex": 8,
-        "yahooPitcherId": "1961886",
-        "yahooBatterId": "1850183",
-        "speedKmh": 148,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 24,
-        "resultJa": "ボール[高めのつり球を要求]"
-      },
-      {
-        "pitchIndex": 9,
-        "yahooPitcherId": "1961886",
-        "yahooBatterId": "1850183",
-        "speedKmh": 118,
-        "pitchTypeJa": "ナックルカーブ",
-        "zoneId": 18,
-        "resultJa": "見逃し"
-      },
-      {
-        "pitchIndex": 10,
-        "yahooPitcherId": "1961886",
-        "yahooBatterId": "1850183",
-        "speedKmh": 150,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 21,
-        "resultJa": "ボール[ランエンドヒット]"
-      },
-      {
-        "pitchIndex": 11,
-        "yahooPitcherId": "1961886",
-        "yahooBatterId": "1850183",
         "speedKmh": 127,
         "pitchTypeJa": "チェンジアップ",
-        "zoneId": 17,
+        "zoneId": 21,
         "resultJa": "左犠飛"
       },
       {
@@ -7012,12 +6937,13 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038628-runner-1",
+        "eventId": "2021038628-score-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "2000056",
-        "sourceLine": "3： 3番 森下 翔太 一死一塁 一塁けん制:ランナー 中野 帰塁 岸田 (捕):悪送球 一塁走者 中野 :盗塁成功 一塁走者 中野 はさらに三塁まで進塁 三塁 ランナー三塁の3-2からレフトへの犠牲フライを放つ 阪神先制！ 巨 0-1 神 2アウト",
-        "sourceTier": "rawTextSteal"
+        "runnerNameJa": "中野",
+        "sourceLine": "[0110300] 盗塁成功（中野）、ランナー3塁 7 中野 投手 ハワード #28 右投 投球数 打者数 防御率 11 2 0.00",
+        "sourceTier": "score"
       }
     ],
     "battingLines": [
@@ -7886,5 +7812,5 @@
       }
     ]
   },
-  "eventsFingerprint": "d11d17c73788d4edd8a747cab9c12c3431f73705cb09332c3b126e12812ee758"
+  "eventsFingerprint": "a725450e5bff6d90f7a08b329f8e812f90654b081c912343c10ab0a4afdd6254"
 }

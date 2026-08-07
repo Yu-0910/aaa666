@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038965",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-08-03T13:32:10.089Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "bdb7426d2963b6dfe57253a60e1f2fcfccb8e6d240c06a9d54f60051d930cab5",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "sourceCompositeFingerprint": "c66a8cfe44a5ce19a108000f044fe7adb4e668ce9ce608dd41223febfcfe6e85",
+  "normalizedFetchedAt": "2026-08-03T13:32:10.089Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月5日 横浜DeNAベイスターズvs.福岡ソフトバンクホークス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -312,12 +312,12 @@
         "lines": [
           "1： 9番 大関 友久 無死走者なし ショートゴロ 1アウト",
           "2： 1番 正木 智也 一死走者なし 一度もバットを振ることなく三球三振 2アウト",
-          "3： 2番 庄子 雄大 二死走者なし ショートゴロ 3アウト"
+          "3： 2番 庄子 雄大 二死走者なし ショートゴロ 3アウト 0:09 6回表、篠木選手が高めのストレートで空振り三振を奪う!!"
         ],
         "playHeadlineJa": [
           null,
           null,
-          null
+          "6回表、篠木選手が高めのストレートで空振り三振を奪う!!"
         ]
       },
       {
@@ -325,7 +325,7 @@
         "lines": [
           "1： 2番 牧 秀悟 無死走者なし レフトへの二塁打 二塁",
           "2： 3番 度会 隆輝 無死二塁 0アウト二塁の1-1からライトスタンドへの2ランホームラン デ 5-1 ソ",
-          "3： 4番 筒香 嘉智 無死走者なし ファーストゴロ 1アウト",
+          "3： 4番 筒香 嘉智 無死走者なし ファーストゴロ 1アウト 0:35 5回裏、松尾選手のダメ押しとなる今季第1号ホームラン!!",
           "4： 5番 宮﨑 敏郎 一死走者なし ストレートのフォアボールで出塁 一塁",
           "5： 6番 ヒュンメル 一死一塁 －ソフトバンク:コーチマウンドへむかう－ カウント3-1からレフトスタンドへの2ランホームラン デ 7-1 ソ",
           "6： 7番 京田 陽太 一死走者なし ショートゴロ 2アウト",
@@ -335,7 +335,7 @@
         "playHeadlineJa": [
           null,
           null,
-          null,
+          "5回裏、松尾選手のダメ押しとなる今季第1号ホームラン!!",
           null,
           null,
           null,
@@ -382,13 +382,13 @@
         "lines": [
           "1： 8番 渡邉 陸 無死走者なし 見逃し三振 1アウト",
           "2： 9番 谷川原 健太 一死走者なし フェンス直撃の二塁打を放つ 二塁",
-          "3： 1番 正木 智也 一死二塁 外角高めのストレートを打つもレフトフライ 2アウト",
+          "3： 1番 正木 智也 一死二塁 外角高めのストレートを打つもレフトフライ 2アウト 0:18 7回表、篠木選手がインコース高めのストレートで見逃し三振を奪う!",
           "4： 2番 庄子 雄大 二死二塁 ピッチャーゴロ 3アウト"
         ],
         "playHeadlineJa": [
           null,
           null,
-          null,
+          "7回表、篠木選手がインコース高めのストレートで見逃し三振を奪う!",
           null
         ]
       },
@@ -447,13 +447,13 @@
         "sectionTitle": "9回表",
         "lines": [
           "1： 9番 谷川原 健太 無死走者なし 投手交代: ルイーズ → 宮城 守備交代:サード 柴田 守備交代:ショート 石上 守備変更: 京田 ショート→ファースト 空振りの三振を喫する 1アウト",
-          "2： 1番 正木 智也 一死走者なし ショートゴロ 2アウト",
+          "2： 1番 正木 智也 一死走者なし ショートゴロ 2アウト 0:21 9回表、宮城選手が大きなカーブで空振り三振を奪う！",
           "3： 代打 髙橋 隆慶 二死走者なし 庄子 →代打: 髙橋 カウント2-1からスタンド中段に飛び込むホームランを放つ デ 8-3 ソ",
           "4： 3番 野村 勇 二死走者なし ファウルフライを 柴田 (三)が捕球してバッターアウト 3アウト 試合終了"
         ],
         "playHeadlineJa": [
           null,
-          null,
+          "9回表、宮城選手が大きなカーブで空振り三振を奪う！",
           null,
           null
         ]
@@ -463,6 +463,8 @@
       {
         "yahooPlayerId": "2103735",
         "playerName": "正木 智也",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(右左)",
           "正木 智也",
@@ -493,6 +495,8 @@
       {
         "yahooPlayerId": "1950149",
         "playerName": "庄子 雄大",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(遊)",
           "庄子 雄大",
@@ -523,6 +527,8 @@
       {
         "yahooPlayerId": "2112183",
         "playerName": "髙橋 隆慶",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "打",
           "髙橋 隆慶",
@@ -553,6 +559,8 @@
       {
         "yahooPlayerId": "1100097",
         "playerName": "近藤 健介",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(左)",
           "近藤 健介",
@@ -583,6 +591,8 @@
       {
         "yahooPlayerId": "2104035",
         "playerName": "野村 勇",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "走二",
           "野村 勇",
@@ -613,6 +623,8 @@
       {
         "yahooPlayerId": "1400127",
         "playerName": "栗原 陵矢",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(三)",
           "栗原 陵矢",
@@ -643,6 +655,8 @@
       {
         "yahooPlayerId": "1000175",
         "playerName": "牧原 大成",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(二中)",
           "牧原 大成",
@@ -673,6 +687,8 @@
       {
         "yahooPlayerId": "1850172",
         "playerName": "廣瀨 隆太",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(一)",
           "廣瀨 隆太",
@@ -703,6 +719,8 @@
       {
         "yahooPlayerId": "1700135",
         "playerName": "周東 佑京",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(中)",
           "周東 佑京",
@@ -733,6 +751,8 @@
       {
         "yahooPlayerId": "2102969",
         "playerName": "鈴木 豪太",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "投",
           "鈴木 豪太",
@@ -763,6 +783,8 @@
       {
         "yahooPlayerId": "2000008",
         "playerName": "伊藤 優輔",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "投",
           "伊藤 優輔",
@@ -793,6 +815,8 @@
       {
         "yahooPlayerId": "1000128",
         "playerName": "柳田 悠岐",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "打",
           "柳田 悠岐",
@@ -823,6 +847,8 @@
       {
         "yahooPlayerId": "1900102",
         "playerName": "津森 宥紀",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "投",
           "津森 宥紀",
@@ -853,6 +879,8 @@
       {
         "yahooPlayerId": "1800113",
         "playerName": "渡邉 陸",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(捕)",
           "渡邉 陸",
@@ -883,6 +911,8 @@
       {
         "yahooPlayerId": "1900106",
         "playerName": "大関 友久",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "(投)",
           "大関 友久",
@@ -913,6 +943,8 @@
       {
         "yahooPlayerId": "1500140",
         "playerName": "谷川原 健太",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "cells": [
           "右",
           "谷川原 健太",
@@ -943,6 +975,8 @@
       {
         "yahooPlayerId": "1900035",
         "playerName": "蝦名 達夫",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(中右)",
           "蝦名 達夫",
@@ -973,6 +1007,8 @@
       {
         "yahooPlayerId": "2000035",
         "playerName": "牧 秀悟",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(二)",
           "牧 秀悟",
@@ -1003,6 +1039,8 @@
       {
         "yahooPlayerId": "1850873",
         "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(左)",
           "度会 隆輝",
@@ -1033,6 +1071,8 @@
       {
         "yahooPlayerId": "1000002",
         "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(一)",
           "筒香 嘉智",
@@ -1063,6 +1103,8 @@
       {
         "yahooPlayerId": "1500063",
         "playerName": "柴田 竜拓",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "三",
           "柴田 竜拓",
@@ -1093,6 +1135,8 @@
       {
         "yahooPlayerId": "1200053",
         "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(三)",
           "宮﨑 敏郎",
@@ -1123,6 +1167,8 @@
       {
         "yahooPlayerId": "2112189",
         "playerName": "石上 泰輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "遊",
           "石上 泰輝",
@@ -1153,6 +1199,8 @@
       {
         "yahooPlayerId": "2101034",
         "playerName": "ヒュンメル",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(右)",
           "ヒュンメル",
@@ -1183,6 +1231,8 @@
       {
         "yahooPlayerId": "1700059",
         "playerName": "神里 和毅",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "中",
           "神里 和毅",
@@ -1213,6 +1263,8 @@
       {
         "yahooPlayerId": "1600107",
         "playerName": "京田 陽太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(遊一)",
           "京田 陽太",
@@ -1243,6 +1295,8 @@
       {
         "yahooPlayerId": "2100277",
         "playerName": "松尾 汐恩",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(捕)",
           "松尾 汐恩",
@@ -1273,6 +1327,8 @@
       {
         "yahooPlayerId": "1850838",
         "playerName": "篠木 健太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(投)",
           "篠木 健太郎",
@@ -1303,6 +1359,8 @@
       {
         "yahooPlayerId": "1600166",
         "playerName": "九鬼 隆平",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "打",
           "九鬼 隆平",
@@ -1333,6 +1391,8 @@
       {
         "yahooPlayerId": "1860235",
         "playerName": "ルイーズ",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "投",
           "ルイーズ",
@@ -1363,6 +1423,8 @@
       {
         "yahooPlayerId": "1800049",
         "playerName": "宮城 滝太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "投",
           "宮城 滝太",
@@ -8079,6 +8141,8 @@
       {
         "yahooPlayerId": "2103735",
         "playerName": "正木 智也",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(右左)",
         "avg": ".301",
         "ab": 4,
@@ -8109,6 +8173,8 @@
       {
         "yahooPlayerId": "1950149",
         "playerName": "庄子 雄大",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(遊)",
         "avg": ".288",
         "ab": 4,
@@ -8139,6 +8205,8 @@
       {
         "yahooPlayerId": "2112183",
         "playerName": "髙橋 隆慶",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "打",
         "avg": ".250",
         "ab": 1,
@@ -8169,6 +8237,8 @@
       {
         "yahooPlayerId": "1100097",
         "playerName": "近藤 健介",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(左)",
         "avg": ".293",
         "ab": 2,
@@ -8199,6 +8269,8 @@
       {
         "yahooPlayerId": "2104035",
         "playerName": "野村 勇",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "走二",
         "avg": ".169",
         "ab": 2,
@@ -8229,6 +8301,8 @@
       {
         "yahooPlayerId": "1400127",
         "playerName": "栗原 陵矢",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(三)",
         "avg": ".278",
         "ab": 4,
@@ -8259,6 +8333,8 @@
       {
         "yahooPlayerId": "1000175",
         "playerName": "牧原 大成",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(二中)",
         "avg": ".271",
         "ab": 3,
@@ -8289,6 +8365,8 @@
       {
         "yahooPlayerId": "1850172",
         "playerName": "廣瀨 隆太",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(一)",
         "avg": ".500",
         "ab": 3,
@@ -8321,6 +8399,8 @@
       {
         "yahooPlayerId": "1700135",
         "playerName": "周東 佑京",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(中)",
         "avg": ".274",
         "ab": 3,
@@ -8351,6 +8431,8 @@
       {
         "yahooPlayerId": "1000128",
         "playerName": "柳田 悠岐",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "打",
         "avg": ".249",
         "ab": 1,
@@ -8381,6 +8463,8 @@
       {
         "yahooPlayerId": "1800113",
         "playerName": "渡邉 陸",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(捕)",
         "avg": ".133",
         "ab": 4,
@@ -8413,6 +8497,8 @@
       {
         "yahooPlayerId": "1900106",
         "playerName": "大関 友久",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "(投)",
         "avg": ".000",
         "ab": 2,
@@ -8443,6 +8529,8 @@
       {
         "yahooPlayerId": "1500140",
         "playerName": "谷川原 健太",
+        "teamName": "ソフトバンク",
+        "yahooTeamId": "12",
         "positionCell": "右",
         "avg": ".241",
         "ab": 2,
@@ -8475,6 +8563,8 @@
       {
         "yahooPlayerId": "1900035",
         "playerName": "蝦名 達夫",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(中右)",
         "avg": ".273",
         "ab": 5,
@@ -8505,6 +8595,8 @@
       {
         "yahooPlayerId": "2000035",
         "playerName": "牧 秀悟",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(二)",
         "avg": ".352",
         "ab": 5,
@@ -8537,6 +8629,8 @@
       {
         "yahooPlayerId": "1850873",
         "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(左)",
         "avg": ".298",
         "ab": 4,
@@ -8567,6 +8661,8 @@
       {
         "yahooPlayerId": "1000002",
         "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(一)",
         "avg": ".242",
         "ab": 5,
@@ -8597,6 +8693,8 @@
       {
         "yahooPlayerId": "1500063",
         "playerName": "柴田 竜拓",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "三",
         "avg": ".167",
         "ab": 0,
@@ -8627,6 +8725,8 @@
       {
         "yahooPlayerId": "1200053",
         "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(三)",
         "avg": ".270",
         "ab": 4,
@@ -8657,6 +8757,8 @@
       {
         "yahooPlayerId": "2112189",
         "playerName": "石上 泰輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "遊",
         "avg": ".152",
         "ab": 0,
@@ -8687,6 +8789,8 @@
       {
         "yahooPlayerId": "2101034",
         "playerName": "ヒュンメル",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(右)",
         "avg": ".211",
         "ab": 3,
@@ -8719,6 +8823,8 @@
       {
         "yahooPlayerId": "1700059",
         "playerName": "神里 和毅",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "中",
         "avg": ".083",
         "ab": 1,
@@ -8749,6 +8855,8 @@
       {
         "yahooPlayerId": "1600107",
         "playerName": "京田 陽太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(遊一)",
         "avg": ".253",
         "ab": 3,
@@ -8779,6 +8887,8 @@
       {
         "yahooPlayerId": "2100277",
         "playerName": "松尾 汐恩",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(捕)",
         "avg": ".256",
         "ab": 2,
@@ -8809,6 +8919,8 @@
       {
         "yahooPlayerId": "1850838",
         "playerName": "篠木 健太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(投)",
         "avg": ".222",
         "ab": 2,
@@ -8839,6 +8951,8 @@
       {
         "yahooPlayerId": "1600166",
         "playerName": "九鬼 隆平",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "打",
         "avg": ".333",
         "ab": 1,

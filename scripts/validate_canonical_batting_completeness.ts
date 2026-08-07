@@ -8,6 +8,7 @@
  * 実行:
  *   tsx scripts/validate_canonical_batting_completeness.ts --year 2026
  *   tsx scripts/validate_canonical_batting_completeness.ts --year 2026 --fail-on-warn
+ *   tsx scripts/validate_canonical_batting_completeness.ts --year 2026 --from 2026-07-18 --to 2026-07-19
  */
 
 import fs from "node:fs"
@@ -37,11 +38,29 @@ type CanonicalDoc = {
   }
 }
 
-function parseArgs(argv: string[]): { year: string; failOnWarn: boolean } {
+function parseArgs(argv: string[]): {
+  year: string
+  failOnWarn: boolean
+  from: string
+  to: string
+  gameIds: string[] | null
+} {
   const yearIdx = argv.indexOf("--year")
+  const fromIdx = argv.indexOf("--from")
+  const toIdx = argv.indexOf("--to")
+  const gameIdsIdx = argv.indexOf("--game-ids")
   const failOnWarn = argv.includes("--fail-on-warn")
   const year = yearIdx >= 0 ? String(argv[yearIdx + 1] ?? "").trim() : "2026"
-  return { year: year || "2026", failOnWarn }
+  const from = fromIdx >= 0 ? String(argv[fromIdx + 1] ?? "").trim() : ""
+  const to = toIdx >= 0 ? String(argv[toIdx + 1] ?? "").trim() : ""
+  const gameIdsRaw = gameIdsIdx >= 0 ? String(argv[gameIdsIdx + 1] ?? "").trim() : ""
+  const gameIds = gameIdsRaw
+    ? gameIdsRaw
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : null
+  return { year: year || "2026", failOnWarn, from, to, gameIds }
 }
 
 function readJson<T>(p: string): T | null {
@@ -68,6 +87,20 @@ function gameIdsForDayFromIndex(root: string, year: string, day: string): string
   return list.map((x) => String(x ?? "").trim()).filter(Boolean)
 }
 
+function collectGameIdsForRange(root: string, year: string, from: string, to: string): string[] {
+  if (!from && !to) return listCanonicalGameIds(root)
+  const idxPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
+  const idx = readJson<{ byDate?: Record<string, string[]> }>(idxPath)
+  const byDate = idx?.byDate ?? {}
+  const ids = new Set<string>()
+  for (const day of Object.keys(byDate).sort()) {
+    if (from && day < from) continue
+    if (to && day > to) continue
+    for (const id of gameIdsForDayFromIndex(root, year, day)) ids.add(id)
+  }
+  return [...ids].sort()
+}
+
 function extractSfCountFromText(doc: CanonicalDoc): number {
   const sections = doc.game?.textPlayByPlay ?? []
   let n = 0
@@ -82,7 +115,7 @@ function extractSfCountFromText(doc: CanonicalDoc): number {
 
 function main(): void {
   const root = process.cwd()
-  const { year, failOnWarn } = parseArgs(process.argv.slice(2))
+  const { year, failOnWarn, from, to, gameIds } = parseArgs(process.argv.slice(2))
 
   const idsAll = listCanonicalGameIds(root)
   if (idsAll.length === 0) {
@@ -90,8 +123,20 @@ function main(): void {
     process.exit(1)
   }
 
-  // 日付単位の検査もできるようにする（必要なら caller 側で game-ids へ拡張）
-  const ids = idsAll
+  let ids = idsAll
+  if (gameIds && gameIds.length > 0) {
+    const allowed = new Set(gameIds)
+    ids = idsAll.filter((id) => allowed.has(id))
+  } else if (from || to) {
+    const allowed = new Set(collectGameIdsForRange(root, year, from, to))
+    ids = idsAll.filter((id) => allowed.has(id))
+  }
+  if (ids.length === 0) {
+    console.log(
+      `[validate_canonical_batting_completeness] no canonical games for range year=${year} from=${from || "(none)"} to=${to || "(none)"}`,
+    )
+    return
+  }
 
   const findings: Array<{
     gameId: string
@@ -159,7 +204,7 @@ function main(): void {
 
   if (warnCount > 0) {
     console.warn(
-      `[validate_canonical_batting_completeness] warnings=${warnCount} (see ${outPath})`
+      `[validate_canonical_batting_completeness] warnings=${warnCount} games=${ids.length} (see ${outPath})`
     )
     if (failOnWarn) process.exit(2)
   } else {

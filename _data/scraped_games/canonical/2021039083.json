@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039083",
-  "builtAt": "2026-07-04T15:27:26.542Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "f5eed8bdd0497189fc68ec3ed776032f1dee00be2fa0b237291757191decf857",
-  "normalizedFetchedAt": "2026-07-04T15:02:05.279Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月3日 中日ドラゴンズvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6407,13 +6407,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039083-score-1",
+        "eventId": "2021039083-runner-1",
         "inningHalf": "6回裏",
         "kind": "SB",
         "yahooRunnerId": "1750223",
-        "runnerNameJa": "村松",
-        "sourceLine": "[0620300] 盗塁成功（村松）、ランナー2塁 5 村松 1 2 3 4 5 6 1 見逃し 2 空振り 3 ボール 4 ボール 5 ボール 6 空三振 次の打者 サノー 打者 細川 成也 #55 右打 打率 .221 (253-56) 一邪飛 、 中飛 投手 ウィットリー #26 右投 投球数 打者数 防御率 94 21 2.39 ナックルカーブ - 130km/h （ 詳細 ） 中日攻撃中 前へ 打者3 次へ 球場名： バンテリンドーム 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 巨人 0 0 0 0 0 0 0 0 0 0 3 0 中日 0 0 0 0 0 1 0 0 X 1 4 0 2026/7/3 20:32 中日 選手名 打率 1 中 岡林 勇希 左 .293 2 二 田中 幹也 右 .231 3 遊 村松 開人 左 .255 4 左 細川",
-        "sourceTier": "score"
+        "sourceLine": "3： 4番 細川 成也 一死一塁 空振り三振に倒れるもスタートを切っていた一塁走者 村松 が盗塁成功 2アウト二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

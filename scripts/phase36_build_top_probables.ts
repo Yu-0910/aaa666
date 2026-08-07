@@ -15,8 +15,15 @@ import {
 function parseArgs(argv: string[]) {
   const yearIdx = argv.indexOf("--year")
   const asOfIdx = argv.indexOf("--as-of")
+  const fromIdx = argv.indexOf("--from")
+  const toIdx = argv.indexOf("--to")
   const year = yearIdx >= 0 ? (argv[yearIdx + 1] ?? "").trim() : "2026"
-  const asOfDateJst = asOfIdx >= 0 ? (argv[asOfIdx + 1] ?? "").trim() : undefined
+  const from = fromIdx >= 0 ? (argv[fromIdx + 1] ?? "").trim() : ""
+  const to = toIdx >= 0 ? (argv[toIdx + 1] ?? "").trim() : ""
+  const asOfDateJst =
+    asOfIdx >= 0
+      ? (argv[asOfIdx + 1] ?? "").trim()
+      : to || from || undefined
   return { year, asOfDateJst }
 }
 

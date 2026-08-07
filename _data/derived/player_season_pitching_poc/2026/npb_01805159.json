@@ -7,13 +7,14 @@
   ],
   "playerName": "藤原 大翔",
   "team": "福岡ソフトバンクホークス",
-  "generatedAt": "2026-07-25T07:28:40.797Z",
+  "generatedAt": "2026-08-04T07:31:40.743Z",
   "source": {
     "canonicalGames": [
       "2021038856",
       "2021038888"
     ],
-    "note": "1 試合または少数試合の合算。公式記録の代替ではない。"
+    "note": "1 試合または少数試合の合算。公式記録の代替ではない。",
+    "catcherNote": "捕手は各打席時点の実守備捕手（textPlayByPlay の守備交代・(捕) 表記を追跡）。1試合内で複数捕手に打席が分かれる場合は BF 最大の捕手に pitchingLines（回数・自責点・勝敗・QS）を帰属。打者・安打等は打席単位で集計。"
   },
   "basic": {
     "ip": "6.2",
@@ -1645,6 +1646,33 @@
         "qsCount": 0
       }
     ],
-    "byCatcher": []
+    "byCatcher": [
+      {
+        "yahooCatcherId": "1700066",
+        "label": "山本 祐大",
+        "bf": 34,
+        "ab": 27,
+        "h": 8,
+        "hr": 0,
+        "so": 5,
+        "bb": 6,
+        "hbp": 0,
+        "avg": ".296",
+        "era": 9.45,
+        "ip": "6.2",
+        "ipOuts": 20,
+        "wl": "0-2",
+        "kPct": 14.7,
+        "kBbPct": -2.9,
+        "whip": 2.1,
+        "games": 2,
+        "wins": 0,
+        "losses": 2,
+        "qsCount": 0,
+        "qsPct": 0,
+        "er": 7,
+        "ibb": 0
+      }
+    ]
   }
 }

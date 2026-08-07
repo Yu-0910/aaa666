@@ -3,7 +3,7 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs"
-import { join } from "path"
+import { dirname, join } from "path"
 import type { SeasonStatsRow } from "@/lib/seasonStatsPilot"
 import type { PitcherSeasonPitchingPeriodRow } from "@/lib/pitcherSeasonPocTypes"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
@@ -70,6 +70,53 @@ type PeriodBattingFile = {
 type PeriodPitchingFile = {
   npbPlayerId?: string
   rows?: PitcherSeasonPitchingPeriodRow[]
+}
+
+function sleepMsSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+function isRetryableWriteError(error: unknown): boolean {
+  const code = String((error as { code?: string } | null)?.code ?? "").trim().toUpperCase()
+  return code === "UNKNOWN" || code === "EPERM" || code === "EBUSY" || code === "EMFILE" || code === "ENFILE"
+}
+
+function canReadJsonFile(filePath: string): boolean {
+  try {
+    JSON.parse(readFileSync(filePath, "utf8"))
+    return true
+  } catch {
+    return false
+  }
+}
+
+function writeJsonFileWithRetry(
+  filePath: string,
+  value: unknown,
+  options: { allowExistingFallback?: boolean } = {}
+): boolean {
+  const body = JSON.stringify(value, null, 2)
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 8; attempt++) {
+    try {
+      mkdirSync(dirname(filePath), { recursive: true })
+      writeFileSync(filePath, body, "utf8")
+      return true
+    } catch (error) {
+      lastError = error
+      if (!isRetryableWriteError(error) || attempt === 8) break
+      const delayMs = attempt <= 3 ? 150 : attempt <= 6 ? 400 : 800
+      console.warn(
+        `[phase28] write retry ${attempt}/8: ${filePath} code=${String((error as { code?: string } | null)?.code ?? "UNKNOWN")} wait=${delayMs}ms`
+      )
+      sleepMsSync(delayMs)
+    }
+  }
+  if (options.allowExistingFallback && existsSync(filePath) && canReadJsonFile(filePath)) {
+    console.warn(`[phase28] WARN existing file kept due to locked write target: ${filePath}`)
+    return false
+  }
+  throw lastError
 }
 
 function loadBattingWeekRows(
@@ -140,7 +187,7 @@ export function buildWeeklyRankingsFromPeriod(
       ? options.weekKeys
       : weekKeysToBuild(anchor, WEEKLY_RANKINGS_WEEKS_TO_KEEP)
 
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   const metaMap = docs.length > 0 ? yahooMetaFromCanonical(docs) : new Map()
 
   const battingPeriodDir = join(projectRoot, "_data", "derived", "player_season_batting_period", year)
@@ -200,8 +247,10 @@ export function buildWeeklyRankingsFromPeriod(
         const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
         const fileBase = sanitizeMetricForPath(m.label)
-        writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), "utf8")
-        writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(allRanked, null, 2), "utf8")
+        writeJsonFileWithRetry(join(outDir, `${fileBase}.json`), ranked)
+        writeJsonFileWithRetry(join(outDir, `${fileBase}_all.json`), allRanked, {
+          allowExistingFallback: true,
+        })
         battingFiles += 2
       }
     }
@@ -261,8 +310,10 @@ export function buildWeeklyRankingsFromPeriod(
         const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
         const fileBase = sanitizeMetricForPath(m.label)
-        writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(ranked, null, 2), "utf8")
-        writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(allRanked, null, 2), "utf8")
+        writeJsonFileWithRetry(join(outDir, `${fileBase}.json`), ranked)
+        writeJsonFileWithRetry(join(outDir, `${fileBase}_all.json`), allRanked, {
+          allowExistingFallback: true,
+        })
         pitchingFiles += 2
       }
     }

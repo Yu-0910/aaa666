@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039082",
-  "builtAt": "2026-07-04T15:25:07.317Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "e29037c86d3caa50aefdc7e87f6e8acf940236e2d296dd465a85a75db9ea63fe",
-  "normalizedFetchedAt": "2026-07-04T15:02:05.279Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月3日 東京ヤクルトスワローズvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8979,22 +8979,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039082-score-1",
+        "eventId": "2021039082-runner-1",
         "inningHalf": "3回表",
         "kind": "SB",
         "yahooRunnerId": "1800046",
-        "runnerNameJa": "勝又",
-        "sourceLine": "[0310400] 盗塁成功（勝又）、ランナー2塁 28 勝又 投手 高橋 奎二 #47 左投 投球数 打者数 防御率 45 11 2.97",
-        "sourceTier": "score"
+        "sourceLine": "4： 3番 佐野 恵太 二死一塁 一塁走者 勝又 :盗塁成功 二塁 一打先制の場面で低めのチェンジアップを打つもセンターフライ 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039082-score-2",
+        "eventId": "2021039082-runner-2",
         "inningHalf": "8回裏",
         "kind": "SB",
         "yahooRunnerId": "2107178",
-        "runnerNameJa": "モンテル",
-        "sourceLine": "[0820300] 盗塁成功（モンテル）、ランナー2,3塁 90 モンテル 00 赤羽 1 1 ボール 次の打者 増田 珠 打者 長岡 秀樹 #7 左打 打率 .242 (215-52) 右安 、 四球 、 二ゴロ 投手 中川 虎大 #64 右投 投球数 打者数 防御率 12 2 1.40",
-        "sourceTier": "score"
+        "sourceLine": "3： 3番 長岡 秀樹 無死一三塁 一塁走者 サンタナ →代走: モンテル 一塁走者 モンテル :すかさず初球から走って盗塁成功 二三塁 空振りの三振を喫する 1アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

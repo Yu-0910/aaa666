@@ -79,6 +79,10 @@ export type PlayerPageCareerSectionProps = {
   showSalaryColumn?: boolean
   /** 通算成績表の表・文字・数値スケール */
   careerTableScaleMultiplier?: number
+  /** 打撃キャリアハイカードの追加クラス */
+  careerHighBattingGridClassName?: string
+  careerBattingTableClassName?: string
+  careerBattingTableShellClassName?: string
 }
 
 export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
@@ -113,6 +117,9 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
     sectionStripeColor,
     showSalaryColumn = true,
     careerTableScaleMultiplier = CAREER_TABLE_SCALE_MULTIPLIER,
+    careerHighBattingGridClassName,
+    careerBattingTableClassName,
+    careerBattingTableShellClassName,
   } = props
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
@@ -129,7 +136,11 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           キャリアハイの打撃成績
         </h2>
 
-        <CareerHighStatGrid cards={careerHighBattingCards} isMobile={isMobile} />
+        <CareerHighStatGrid
+          cards={careerHighBattingCards}
+          isMobile={isMobile}
+          className={careerHighBattingGridClassName}
+        />
           </>
         )}
 
@@ -232,6 +243,8 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
             birthRaw={mergedBirthRaw}
             showSalaryColumn={showSalaryColumn}
             scaleMultiplier={careerTableScaleMultiplier}
+            tableClassName={careerBattingTableClassName}
+            shellClassName={careerBattingTableShellClassName}
           />
         ) : (
         <CareerTableScaleWrap
@@ -332,7 +345,11 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                 >
                   {formatCareerHighBattingHeading(careerHighBattingYear)}
                 </h2>
-                <CareerHighStatGrid cards={careerHighBattingCards} isMobile={isMobile} />
+                <CareerHighStatGrid
+                  cards={careerHighBattingCards}
+                  isMobile={isMobile}
+                  className={careerHighBattingGridClassName}
+                />
               </>
             )}
           </div>

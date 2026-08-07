@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039101",
-  "builtAt": "2026-07-07T13:22:24.693Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "bb0efa09089bc8664f178369dfb4589cb25aaf703b3d44a27b35a68688abb662",
-  "normalizedFetchedAt": "2026-07-07T13:10:45.738Z",
+  "sourceCompositeFingerprint": "e116349ea7a29d1af7116cb9aeb3795e2a53751bb37136978249b4e1ed0dbdb3",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月7日 横浜DeNAベイスターズvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7091,13 +7091,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039101-score-1",
+        "eventId": "2021039101-runner-1",
         "inningHalf": "6回裏",
         "kind": "SB",
         "yahooRunnerId": "2100014",
-        "runnerNameJa": "宮下",
-        "sourceLine": "[0620500] 盗塁成功（宮下）、ランナー2,3塁 34 宮下 25 筒香 1 2 1 ボール 2 ボール 次の打者 勝又 温史 打者 石田 裕太郎 #54 右打 打率 .095 (21-2) 空三振 、 二ゴロ 投手 マラー #93 左投 投球数 打者数 防御率 97 26 2.87",
-        "sourceTier": "score"
+        "sourceLine": "5： 9番 石田 裕太郎 二死一三塁 一塁走者 宮下 :盗塁成功 二三塁 セカンドゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

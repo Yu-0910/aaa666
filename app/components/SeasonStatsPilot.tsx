@@ -339,8 +339,8 @@ export default function SeasonStatsPilot({
     )
   )
   const pitchTypeHandCards = [
-    { key: "R", title: "対右投手", rows: pitchTypeHandSplit.vsRight },
     { key: "L", title: "対左投手", rows: pitchTypeHandSplit.vsLeft },
+    { key: "R", title: "対右投手", rows: pitchTypeHandSplit.vsRight },
   ] as const
 
   const centerStatsForPitcherHand = (key: "R" | "L") => {
@@ -367,9 +367,16 @@ export default function SeasonStatsPilot({
       )}
       {/* total 行が無いと従来は以下全体が非表示になり Phase17 のみのとき真っ白になる。通算・打撃指標だけ total に依存する。 */}
       <div className={blockWrap}>
-          {showPilotTab("basic") && renderBasicTopContent?.(totalRow)}
-          {totalRow && showPilotTab("basic") && (
-            <>
+        {showPilotTab("basic") && (
+          <div className="season-basic-overview-flow">
+            {renderBasicTopContent ? (
+              <div className="season-basic-overview-item">
+                {renderBasicTopContent(totalRow)}
+              </div>
+            ) : null}
+            {totalRow ? (
+              <>
+                <div className="season-basic-overview-item">
           <PilotTotalRecordBlock
             totalRow={totalRow}
             titleBase={titleBase}
@@ -377,7 +384,9 @@ export default function SeasonStatsPilot({
             looseSpacing={loose}
             headingStripeColor={headingStripeColor}
           />
+                </div>
 
+                <div className="season-basic-overview-item">
           {/* 打撃指標（セイバーメトリクス） */}
           <h2
             className={h2BattingMetrics}
@@ -426,9 +435,12 @@ export default function SeasonStatsPilot({
               </tbody>
             </table>
           </div>
+                </div>
 
-            </>
-          )}
+              </>
+            ) : null}
+          </div>
+        )}
 
           {/* 対左右別の対戦成績（チーム別と同デザイン） */}
           {showPilotTab("basic") && (() => {
@@ -819,35 +831,32 @@ export default function SeasonStatsPilot({
               </h2>
               {pitchTypeColorOrder.length > 0 ? (
                 <>
-                  <div className={`${loose ? "my-5" : "mb-4"} w-full`}>
-                    <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
-                      {pitchTypeHandCards.map((item) =>
-                        item.rows.length > 0 ? (
-                          <PitchTypePieChart
-                            key={item.key}
-                            title={item.title}
-                            rows={item.rows.map((r) => ({
-                              pitch_type: r.pitch_type,
-                              pitches: r.pitches,
-                              pct: r.pct,
-                            }))}
-                            centerStats={centerStatsForPitcherHand(item.key)}
-                            pitchTypeColorOrder={pitchTypeColorOrder}
-                            compact
-                            isAnimationActive={animatePitchCharts}
-                          />
-                        ) : null
-                      )}
-                    </div>
-                    <PitchTypeChartLegend
-                      pitchTypes={pitchTypeColorOrder}
-                      pitchTypeColorOrder={pitchTypeColorOrder}
-                      className={loose ? "mb-0" : "mb-4"}
-                    />
-                  </div>
-                  <div className={`flex flex-row flex-wrap items-start gap-4 ${mbAfterChart}`}>
+                  <div className={`season-pitch-type-table-list flex flex-row flex-wrap items-start gap-4 ${mbAfterChart}`}>
                     {pitchTypeHandCards.map((item) => (
-                      <div key={item.key} className="min-w-0 flex-1 basis-[360px]">
+                      <div key={item.key} className="min-w-0 flex-1 basis-[430px]">
+                        {item.rows.length > 0 ? (
+                          <div className={`season-pitch-chart-panel ${loose ? "mb-5" : "mb-3"} w-full`}>
+                            <div className="flex w-full justify-center">
+                              <PitchTypePieChart
+                                title={item.title}
+                                rows={item.rows.map((r) => ({
+                                  pitch_type: r.pitch_type,
+                                  pitches: r.pitches,
+                                  pct: r.pct,
+                                }))}
+                                centerStats={centerStatsForPitcherHand(item.key)}
+                                pitchTypeColorOrder={pitchTypeColorOrder}
+                                compact
+                                isAnimationActive={animatePitchCharts}
+                              />
+                            </div>
+                            <PitchTypeChartLegend
+                              pitchTypes={pitchTypeColorOrder}
+                              pitchTypeColorOrder={pitchTypeColorOrder}
+                              className="mb-0"
+                            />
+                          </div>
+                        ) : null}
                         <div
                           className="mb-2 inline-block rounded-sm bg-[#FFFF44] px-3 py-1 text-[13px] font-black text-black"
                         >
@@ -890,7 +899,7 @@ export default function SeasonStatsPilot({
                                     <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500 whitespace-nowrap">
                                       {row.avg_speed != null ? (
                                         <>
-                                          <span className="latin">{row.avg_speed.toFixed(1)}</span>
+                                          {row.avg_speed.toFixed(1)}
                                           <span className="latin text-[11px] opacity-90"> km/h</span>
                                         </>
                                       ) : (

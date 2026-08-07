@@ -21,7 +21,7 @@ import {
   resolveGameContextForBatter,
   type BatterGameContextSplit,
 } from "@/lib/yahooGame/batterGameContextFromCanonical"
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
+import { mkdirSync, readdirSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
@@ -33,24 +33,34 @@ import {
   mergeBattingSeasonAggYahoo,
   type BattingSeasonAggYahoo,
 } from "../lib/yahooGame/canonicalBattingSeasonAgg"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import { battingSeasonAggSource } from "../lib/yahooGame/battingSeasonAggSourceFeatureFlag"
 import { dedupePlateAppearancesByInningHalfOrder } from "../lib/yahooGame/dedupePlateAppearances"
 import { invalidateYahooNpbBatterMapsCache } from "../lib/yahooNpbBatterIdMap"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
 import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
   let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
+      i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
       i++
     } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
       onlyYahooIds = String(args[i + 1])
@@ -60,7 +70,11 @@ function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
       i++
     }
   }
-  return { year, onlyYahooIds }
+  return { year, from, to, onlyYahooIds }
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
 function splitLabelForRow(splitType: string, splitValue: string): string {
@@ -145,6 +159,30 @@ function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {
   return ids
 }
 
+function collectAffectedBatterIds(
+  docs: CanonicalGameDocument[],
+  from: string | null,
+  to: string | null,
+): string[] {
+  const ids = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const bid of collectBatterIdsInGame(doc)) ids.add(bid)
+  }
+  return [...ids].sort()
+}
+
+function gameHasTargetBatter(doc: CanonicalGameDocument, targetYahooIdSet: Set<string> | null): boolean {
+  if (!targetYahooIdSet) return true
+  for (const bid of collectBatterIdsInGame(doc)) {
+    if (targetYahooIdSet.has(bid)) return true
+  }
+  return false
+}
+
 function addGameAggToSplits(
   byBatter: Map<string, Map<string, BattingSeasonAggYahoo>>,
   bid: string,
@@ -167,13 +205,29 @@ function addGameAggToSplits(
 }
 
 function main(): void {
-  const { year, onlyYahooIds } = parseArgs()
+  const { year, from, to, onlyYahooIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase13] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
   invalidateYahooNpbBatterMapsCache()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase13] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
+
+  let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
+  if (!targetYahooIds && (from || to)) {
+    targetYahooIds = collectAffectedBatterIds(docs, from, to)
+    if (targetYahooIds.length === 0) {
+      console.log(
+        `[phase13] no affected batters for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
+  const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
 
   const aggSource = battingSeasonAggSource()
   console.log(`[phase13] battingSeasonAggSource=${aggSource} (Phase11 と同一)`)
@@ -197,10 +251,12 @@ function main(): void {
   const byBatter = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
   for (const baseDoc of docs) {
+    if (!gameHasTargetBatter(baseDoc, targetYahooIdSet)) continue
     const doc = injectTeamsFromTextPbpIfMissing(baseDoc)
     const batterIds = collectBatterIdsInGame(doc)
 
     for (const bid of batterIds) {
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
       const gameAgg = aggregateBattingForBatterInGameForProfiles(doc, bid)
       if (!gameAgg) continue
 
@@ -217,7 +273,7 @@ function main(): void {
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
       const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
-      if (onlyYahooIds && !onlyYahooIds.includes(yid)) continue
+      if (targetYahooIds && !targetYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -226,7 +282,7 @@ function main(): void {
     }
   }
 
-  const batterIds = (onlyYahooIds ?? [...byBatter.keys()]).slice().sort()
+  const batterIds = (targetYahooIds ?? [...byBatter.keys()]).slice().sort()
   for (const bid of batterIds) {
     const m = byBatter.get(bid)
     if (!m) continue
@@ -261,10 +317,12 @@ function main(): void {
       },
       rows,
     }
-    writeFileSync(join(outDir, `yahoo_${bid}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(join(outDir, `yahoo_${bid}.json`), payload)
   }
 
-  console.log(`[phase13] wrote ${batterIds.length} files → ${outDir}`)
+  console.log(
+    `[phase13] wrote ${batterIds.length} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()

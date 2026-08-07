@@ -4,11 +4,6 @@ import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { TOP_PAGE_BEBAS_NUMERIC_CLASS } from "@/app/components/top/topPageConstants"
 import type { PitcherSeasonPitchTypeRow } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
 
-function fmtPct(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return "—"
-  return `${v.toFixed(1)}%`
-}
-
 function fmtSpeed(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—"
   return v.toFixed(1)
@@ -29,8 +24,8 @@ type Props = {
 
 /** 球速列幅 */
 const SPEED_COL_WIDTH_PX = 54
-/** 投球割合列幅（flex 時の想定 114px × 0.8 × 0.95 × 0.95 × 0.5） */
-const PCT_COL_WIDTH_PX = Math.round(114 * 0.8 * 0.95 * 0.95 * 0.5)
+/** Whiff% 列幅（横幅を通常指標列の 9.2 割に調整） */
+const WHIFF_COL_WIDTH_PX = Math.round(62 * 0.92)
 const OVERLAY_TABLE_SCALE = 1.2 * 0.9
 const OVERLAY_TABLE_VERTICAL_SCALE = 1.1
 const OVERLAY_NUMERIC_FONT_SCALE = 1.2
@@ -42,12 +37,12 @@ const overlayColWidth = (px: number) => Math.round(px * OVERLAY_TABLE_SCALE)
 function overlayCompactColumnWidths() {
   const pitchTypeColWidth = overlayColWidth(88)
   const speedColWidth = overlayColWidth(SPEED_COL_WIDTH_PX)
-  const pctColWidth = overlayColWidth(PCT_COL_WIDTH_PX)
+  const whiffColWidth = overlayColWidth(WHIFF_COL_WIDTH_PX)
   const splitMetricColWidth = overlayColWidth(62)
   return {
     pitchTypeColWidth,
     speedColWidth,
-    pctColWidth,
+    whiffColWidth,
     splitMetricColWidth,
   }
 }
@@ -88,7 +83,7 @@ export default function PitcherSeasonPitchTypesTable({
   const overlayCols = compactOverlay ? overlayCompactColumnWidths() : null
   const pitchTypeColWidth = overlayCols?.pitchTypeColWidth ?? 88
   const speedColWidth = overlayCols?.speedColWidth ?? SPEED_COL_WIDTH_PX
-  const pctColWidth = overlayCols?.pctColWidth ?? PCT_COL_WIDTH_PX
+  const whiffColWidth = overlayCols?.whiffColWidth ?? WHIFF_COL_WIDTH_PX
   const splitMetricColWidth = overlayCols?.splitMetricColWidth ?? 62
   const pitchTypeStickyClass = compactOverlay
     ? ""
@@ -116,8 +111,8 @@ export default function PitcherSeasonPitchTypesTable({
       <colgroup>
         <col style={{ width: `${pitchTypeColWidth}px` }} />
         <col style={{ width: `${speedColWidth}px` }} />
-        <col style={{ width: `${pctColWidth}px` }} />
-        <col style={{ width: `${pctColWidth}px` }} />
+        <col style={{ width: `${whiffColWidth}px` }} />
+        <col style={{ width: `${whiffColWidth}px` }} />
         <col style={{ width: `${splitMetricColWidth}px` }} />
         <col style={{ width: `${splitMetricColWidth}px` }} />
         <col style={{ width: `${splitMetricColWidth}px` }} />
@@ -140,12 +135,6 @@ export default function PitcherSeasonPitchTypesTable({
             平均
             <br />
             球速
-          </th>
-          <th
-            colSpan={2}
-            className={`px-0.5 py-1 text-center font-bold ${headerMainClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}
-          >
-            投球割合
           </th>
           <th
             colSpan={2}
@@ -187,31 +176,20 @@ export default function PitcherSeasonPitchTypesTable({
           <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
             対右
           </th>
-          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
-            対左
-          </th>
-          <th className={`px-0.5 py-0.5 text-center font-bold ${headerSubClass} latin tabular-nums whitespace-nowrap border-l border-b border-gray-500`}>
-            対右
-          </th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.pitch_type} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
             <td
-              className={`px-1 py-1 text-left latin font-black tabular-nums ${cellTextClass} border-l border-b border-gray-500 first:border-l-0 whitespace-nowrap ${pitchTypeStickyClass}`}
+              className={`min-w-0 overflow-hidden px-1 py-1 text-left latin font-black tabular-nums ${cellTextClass} border-l border-b border-gray-500 first:border-l-0 whitespace-nowrap ${pitchTypeStickyClass}`}
               style={{ backgroundColor: "#1a1a1a" }}
+              title={row.pitch_type}
             >
-              {row.pitch_type}
+              <span className="block min-w-0 truncate">{row.pitch_type}</span>
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
               {fmtSpeed(row.avg_speed_kmh)}
-            </td>
-            <td className={numericCellClass} style={numericCellStyle}>
-              {fmtPct(row.pct_vs_left)}
-            </td>
-            <td className={numericCellClass} style={numericCellStyle}>
-              {fmtPct(row.pct_vs_right)}
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
               {row.whiff_pct_vs_left ?? "—"}

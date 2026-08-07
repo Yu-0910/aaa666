@@ -119,5 +119,3 @@ export default async function RankingPage({ params, searchParams }: RankingPageP
 
 
 
-
-

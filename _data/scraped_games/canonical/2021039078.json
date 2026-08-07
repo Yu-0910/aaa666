@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039078",
-  "builtAt": "2026-07-03T20:15:08.477Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "a7bca14831560e888b3f7c5dd8fd47233ad90673e794530f02c1476a0212eb5d",
-  "normalizedFetchedAt": "2026-07-03T20:00:25.332Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月2日 横浜DeNAベイスターズvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -11880,13 +11880,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039078-score-1",
+        "eventId": "2021039078-runner-1",
         "inningHalf": "10回表",
         "kind": "SB",
         "yahooRunnerId": "2000065",
-        "runnerNameJa": "矢野",
-        "sourceLine": "[1010500] 盗塁成功（矢野）、ランナー2,3塁 4 矢野 5 小園 投手 マルセリーノ #98 右投 投球数 打者数 防御率 25 4 4.71",
-        "sourceTier": "score"
+        "sourceLine": "5： 9番 野間 峻祥 二死一三塁 －DeNA:コーチマウンドへむかう－ 一塁走者 矢野 :盗塁成功 二三塁 一打勝ち越しの場面でセカンドゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

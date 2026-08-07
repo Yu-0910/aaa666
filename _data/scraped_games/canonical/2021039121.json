@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039121",
-  "builtAt": "2026-07-11T13:00:09.725Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "ca19fad24f6262917620ad7b27b6df8400508f079cb89c17f604b192d9d8ae4e",
-  "normalizedFetchedAt": "2026-07-11T12:50:27.070Z",
+  "sourceCompositeFingerprint": "6e53dd9f554413ba1bb0a604171b571d5e55e1e8543ec43d0e5ff69d15eab901",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月11日 横浜DeNAベイスターズvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8988,13 +8988,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039121-score-1",
+        "eventId": "2021039121-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "1951153",
-        "runnerNameJa": "浦田",
-        "sourceLine": "[0110200] 盗塁成功（浦田）、ランナー2塁 32 浦田 投手 藤浪 晋太郎 #27 右投 投球数 打者数 防御率 8 1 -",
-        "sourceTier": "score"
+        "sourceLine": "2： 2番 松本 剛 無死一塁 一塁走者 浦田 :盗塁成功 二塁 フォアボールを選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

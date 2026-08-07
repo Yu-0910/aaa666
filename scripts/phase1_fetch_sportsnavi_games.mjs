@@ -22,6 +22,7 @@ import path from "node:path"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
 import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
 import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
+import { writeJsonFileWithRetrySync, writeTextFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 function parseArgs(argv) {
   const yearIdx = argv.indexOf("--year")
@@ -58,7 +59,7 @@ function readJsonIfExists(p) {
 }
 
 function writeJson(p, v) {
-  fs.writeFileSync(p, JSON.stringify(v, null, 2), "utf8")
+  writeJsonFileWithRetrySync(p, v)
 }
 
 function sleep(ms) {
@@ -191,7 +192,7 @@ async function main() {
     const url = `https://baseball.yahoo.co.jp/npb/game/${encodeURIComponent(gameId)}/index`
     try {
       const r = await fetchWithRetry(url, 3, 800)
-      fs.writeFileSync(htmlPath, r.text, "utf8")
+      writeTextFileWithRetrySync(htmlPath, r.text)
       writeJson(metaPath, {
         schemaVersion: "sportsnavi-game-raw-meta-v1",
         year,

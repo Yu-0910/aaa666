@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039127",
-  "builtAt": "2026-07-12T12:30:36.692Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "1ab78021fe3645077b30b482cc9508265ed932db06402b10e28c3f9cc3652eea",
-  "normalizedFetchedAt": "2026-07-12T12:18:39.349Z",
+  "sourceCompositeFingerprint": "1a2a452ba5e6a48f25f3ffa3c9e38bc5c8df572f5e47bd7cc0726ad18d8a4dbd",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月12日 横浜DeNAベイスターズvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7456,22 +7456,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039127-score-1",
+        "eventId": "2021039127-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "1951153",
-        "runnerNameJa": "浦田",
-        "sourceLine": "[0110300] 盗塁成功（浦田）、巨人・残り2回、ランナー2塁 32 浦田 投手 篠木 健太郎 #30 右投 投球数 打者数 防御率 12 2 3.74",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021039127-score-2",
-        "inningHalf": "3回表",
-        "kind": "CS",
-        "yahooRunnerId": "2118420",
-        "runnerNameJa": "キャベッジ",
-        "sourceLine": "[0310300] 盗塁失敗（キャベッジ） 13 キャベッジ 投手 篠木 健太郎 #30 右投 投球数 打者数 防御率 60 12 4.37",
-        "sourceTier": "score"
+        "sourceLine": "3： 3番 岸田 行倫 一死一塁 一塁けん制:ランナー 浦田 帰塁 一塁けん制:ランナー 浦田 帰塁 巨人・浦田の二塁盗塁アウトの判定を巡り、巨人がリクエスト リプレー検証後判定覆る 一塁走者 浦田 :盗塁成功 二塁 粘りを見せて8球目にフォアボールを選ぶ 一二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

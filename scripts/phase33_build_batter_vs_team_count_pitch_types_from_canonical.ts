@@ -9,7 +9,7 @@
  *   npm run phase33:build:batter-vs-team-count-pitch-types
  */
 
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
+import { mkdirSync, readdirSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import {
@@ -22,20 +22,37 @@ import {
   buildBatterVsTeamCountPitchTypesTeamBlocks,
 } from "../lib/yahooGame/batterVsTeamCountPitchTypesAgg"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!.trim()
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, from, to, onlyYahooIds }
 }
 
 function resolvePlayerNameJa(yahooBatterId: string): string | undefined {
@@ -44,16 +61,75 @@ function resolvePlayerNameJa(yahooBatterId: string): string | undefined {
   return name || undefined
 }
 
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
+function collectBatterIdsInGame(doc: { domain?: { plateAppearances?: Array<{ yahooBatterId?: string }> } }): Set<string> {
+  const ids = new Set<string>()
+  for (const pa of doc.domain?.plateAppearances ?? []) {
+    const bid = String(pa.yahooBatterId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  return ids
+}
+
+function collectAffectedBatterIds(
+  docs: Parameters<typeof accumulateAllBattersVsTeamCountPitchTypesFromDocs>[0],
+  from: string | null,
+  to: string | null,
+): string[] {
+  const ids = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const bid of collectBatterIdsInGame(doc)) ids.add(bid)
+  }
+  return [...ids].sort()
+}
+
+function gameHasTargetBatter(
+  doc: Parameters<typeof accumulateAllBattersVsTeamCountPitchTypesFromDocs>[0][number],
+  targetYahooIdSet: Set<string> | null,
+): boolean {
+  if (!targetYahooIdSet) return true
+  for (const bid of collectBatterIdsInGame(doc)) {
+    if (targetYahooIdSet.has(bid)) return true
+  }
+  return false
+}
+
 function main(): void {
-  const { year } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const { year, from, to, onlyYahooIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase33] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase33] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
+  let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
+  if (!targetYahooIds && (from || to)) {
+    targetYahooIds = collectAffectedBatterIds(docs, from, to)
+    if (targetYahooIds.length === 0) {
+      console.log(
+        `[phase33] no affected batters for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
+  const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
+
   const stadiumByGameId = loadScheduleStadiumByGameId(year, projectRoot)
-  const byBatter = accumulateAllBattersVsTeamCountPitchTypesFromDocs(docs, stadiumByGameId)
+  const inputDocs = targetYahooIdSet
+    ? docs.filter((doc) => gameHasTargetBatter(doc, targetYahooIdSet))
+    : docs
+  const byBatter = accumulateAllBattersVsTeamCountPitchTypesFromDocs(inputDocs, stadiumByGameId)
 
   const outDir = join(
     projectRoot,
@@ -66,6 +142,8 @@ function main(): void {
 
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      if (targetYahooIds && !targetYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -75,11 +153,12 @@ function main(): void {
   }
 
   const gameIds = docs.map((d) => String(d.gameId ?? "").trim()).filter(Boolean).sort()
-  const batterIds = [...byBatter.keys()].sort()
+  const batterIds = (targetYahooIds ?? [...byBatter.keys()]).slice().sort()
   let written = 0
 
   for (const bid of batterIds) {
-    const acc = byBatter.get(bid)!
+    const acc = byBatter.get(bid)
+    if (!acc) continue
     const teams = buildBatterVsTeamCountPitchTypesTeamBlocks(acc, 0)
     if (teams.length === 0) continue
 
@@ -96,12 +175,12 @@ function main(): void {
       },
       teams,
     }
-    writeFileSync(join(outDir, `yahoo_${bid}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(join(outDir, `yahoo_${bid}.json`), payload)
     written++
   }
 
   console.log(
-    `[phase33] wrote ${written} files (${batterIds.length} batters with pitchEvents) → ${outDir}`,
+    `[phase33] wrote ${written} files (${batterIds.length} batters with pitchEvents) → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
   )
 }
 

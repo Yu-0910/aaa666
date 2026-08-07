@@ -1,49 +1,67 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-04-30",
-  "fetchedAt": "2026-05-30T15:28:52.900Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/inter?date=2026-04-30",
+  "fetchedAt": "2026-07-14T16:09:34.770Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-04-30",
   "gameIds": [
-    "2021038909",
-    "2021038910",
-    "2021038911",
-    "2021038912",
-    "2021038913",
-    "2021038914"
+    "2021038788",
+    "2021038789",
+    "2021038790",
+    "2021038791"
   ],
   "games": [
     {
-      "gameId": "2021038909",
-      "stadiumName": "東京ドーム"
+      "gameId": "2021038788",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "広島",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "C"
     },
     {
-      "gameId": "2021038910",
-      "stadiumName": "神宮球場"
+      "gameId": "2021038789",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "S",
+      "awayTeamCode": "H"
     },
     {
-      "gameId": "2021038911",
-      "stadiumName": "横浜スタジアム"
+      "gameId": "2021038790",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "DB"
     },
     {
-      "gameId": "2021038912",
-      "stadiumName": "バンテリンD"
-    },
-    {
-      "gameId": "2021038913",
-      "stadiumName": "甲子園球場"
-    },
-    {
-      "gameId": "2021038914",
-      "stadiumName": "マツダ"
+      "gameId": "2021038791",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "L",
+      "awayTeamCode": "F"
     }
   ],
   "stadiumByGameId": {
-    "2021038909": "東京ドーム",
-    "2021038910": "神宮球場",
-    "2021038911": "横浜スタジアム",
-    "2021038912": "バンテリンD",
-    "2021038913": "甲子園球場",
-    "2021038914": "マツダ"
+    "2021038788": "東京ドーム",
+    "2021038789": "神宮球場",
+    "2021038790": "バンテリンD",
+    "2021038791": "ベルーナD"
+  },
+  "scheduleStatusByGameId": {
+    "2021038788": "試合終了",
+    "2021038789": "試合終了",
+    "2021038790": "試合終了",
+    "2021038791": "試合終了"
   }
 }

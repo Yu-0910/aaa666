@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039070",
-  "builtAt": "2026-06-30T22:43:43.069Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "07f914b18422ac64467da4d3c5353ca0da031388d2f2ac249610842b7af67550",
-  "normalizedFetchedAt": "2026-06-30T22:25:42.518Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月30日 阪神タイガースvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8264,22 +8264,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039070-score-1",
+        "eventId": "2021039070-runner-1",
         "inningHalf": "2回表",
         "kind": "SB",
         "yahooRunnerId": "1500091",
-        "runnerNameJa": "板山",
-        "sourceLine": "[0210400] 盗塁成功（板山）、ランナー2塁 63 板山 投手 才木 浩人 #35 右投 投球数 打者数 防御率 26 6 3.16",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 石川 昂弥 二死一塁 一塁けん制:ランナー 板山 帰塁 一塁走者 板山 :盗塁成功 二塁 2アウト二塁の3-2からレフトへのタイムリーヒットで中日先制！ 神 0-1 中 一塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039070-score-2",
+        "eventId": "2021039070-runner-2",
         "inningHalf": "8回表",
         "kind": "SB",
         "yahooRunnerId": "1750223",
-        "runnerNameJa": "村松",
-        "sourceLine": "[0810500] 盗塁成功（村松）、ランナー2,3塁 5 村松 45 土田 投手 工藤 泰成 #49 右投 投球数 打者数 防御率 6 4 1.59",
-        "sourceTier": "score"
+        "sourceLine": "5： 4番 細川 成也 一死一三塁 一塁走者 村松 :盗塁成功 二三塁 当てるだけのバッティングでサードゴロ 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

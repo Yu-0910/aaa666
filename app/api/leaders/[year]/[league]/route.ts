@@ -1,10 +1,8 @@
 /**
  * API Route: 指定年度・リーグの打撃成績リーダーを取得（動的ルート）
- * モダン年度はランキング JSON から TOP5/TOP3 を切り出し、スナップショットは補完のみ。
+ * 公開済みの R2 top-leaders スナップショットを返す。
  */
 
-import { hasRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
-import { finalizeBattingLeadersConfigForTopPageAsync } from '@/lib/ranking/leadersFromRankingsJson'
 import { fetchTopLeadersSnapshotRemote } from '@/lib/topPage/fetchTopLeadersSnapshotRemote'
 import { usesTopPageModernLayout } from '@/lib/topPageModernLayout'
 import { NextResponse } from 'next/server'
@@ -24,23 +22,9 @@ export async function GET(
       console.log(`[API] GET /api/leaders/${year}/${upperLeague}`)
     }
 
-    const fromSnapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
-    const finalized = await finalizeBattingLeadersConfigForTopPageAsync(
-      year,
-      upperLeague,
-      fromSnapshot
-    )
-
-    if (finalized && Object.keys(finalized.leaders ?? {}).length > 0) {
-      return NextResponse.json(finalized)
-    }
-
-    if (!hasRankingsBaseUrl() && process.env.NODE_ENV !== 'production') {
-      const { getBattingLeaders } = await import('@/lib/ranking/leaders')
-      const fromCsv = getBattingLeaders(year, upperLeague)
-      if (Object.keys(fromCsv.leaders ?? {}).length > 0) {
-        return NextResponse.json(fromCsv)
-      }
+    const snapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
+    if (snapshot && Object.keys(snapshot.leaders ?? {}).length > 0) {
+      return NextResponse.json(snapshot)
     }
 
     if (usesTopPageModernLayout(Number(year))) {

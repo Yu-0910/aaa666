@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039018",
-  "builtAt": "2026-06-21T15:30:02.963Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "2437a4dc4db685da4e6a7d52316549a484001c3c5e752c6793ae80c8d3b87955",
-  "normalizedFetchedAt": "2026-06-20T20:24:19.317Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月19日 東京ヤクルトスワローズvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7499,13 +7499,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039018-score-1",
+        "eventId": "2021039018-runner-1",
         "inningHalf": "2回裏",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0220200] 盗塁成功（岩田）、ランナー2塁 64 岩田 1 2 1 見逃し 2 ボール 次の打者 古賀 優大 打者 オスナ #13 右打 打率 .227 (181-41) 投手 ターノック #42 右投 投球数 打者数 防御率 24 5 3.49 ワンシーム - - （ 詳細 ） ヤクルト攻撃中 前へ 打者2 次へ 球場名： 神宮 自動更新 手動更新 更新 更新情報があります 略語については こちら をご覧ください。 1 2 3 4 5 6 7 8 9 計 安 失 広島 0 0 0 0 0 0 2 0 0 2 6 1 ヤクルト 0 0 0 5 1 0 3 0 X 9 12 0 2026/6/19 21:03 ヤクルト 選手名 打率 1 二 内山 壮真 右 .219 2 遊 長岡 秀樹 左 .237 3 右 増田 珠 右 .280 4 左 サンタナ 右 .255 5 中 岩田 幸宏 左 .259 6 一 オスナ 右 .227 7 捕 古賀 優",
-        "sourceTier": "score"
+        "sourceLine": "2： 6番 オスナ 無死一塁 一塁けん制:ランナー 岩田 帰塁 また一塁けん制:ランナー 岩田 帰塁 一塁走者 岩田 :盗塁成功 二塁 外角高めの球を打つもセンターフライ 1アウト三塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

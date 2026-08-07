@@ -20,7 +20,7 @@ import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
 const FIELDER_COUNT_PITCH_ROW_LABEL_CLASS =
-  "text-[9.6px] text-gray-200 font-black tabular-nums leading-tight"
+  "text-[12px] text-gray-200 font-black tabular-nums leading-tight"
 
 const TEAM_COLORS: Record<string, string> = {
   日本ハム: "#0077c8",
@@ -76,6 +76,7 @@ export type PlayerPageFielderVsTeamPitchBodyProps = {
   settled: boolean
   payload: BatterVsTeamCountPitchTypesFile | null
   looseSpacing?: boolean
+  twoColumnTeamLayout?: boolean
 }
 
 function TeamCountPitchBlock({
@@ -159,6 +160,7 @@ export function PlayerPageFielderVsTeamPitchBody({
   settled,
   payload,
   looseSpacing = true,
+  twoColumnTeamLayout = false,
 }: PlayerPageFielderVsTeamPitchBodyProps) {
   const h2Team = `${tb} ${looseSpacing ? "mb-4 pl-4 mt-0" : "mb-3 pl-4 mt-0"}`
   const h2PageTop = `${tb} ${looseSpacing ? "mb-6 pl-4 mt-3" : "mb-4 pl-4 mt-2"}`
@@ -249,46 +251,56 @@ export function PlayerPageFielderVsTeamPitchBody({
         カウント別の配球
       </h2>
 
-      {visibleTeams.map((team) => {
-        const panel = vsHandByTeam[team.teamCode] ?? { leftOpen: false, rightOpen: false }
-        const hasVsL = hasPitchTypesSplitRows(team.byCountPitchTypesVsL)
-        const hasVsR = hasPitchTypesSplitRows(team.byCountPitchTypesVsR)
-        return (
-          <section key={team.teamCode} className={mbScroll}>
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2
-                className={`${h2Team} min-w-0 flex-1`}
-                style={{
-                  borderLeft: `6px solid ${TEAM_COLORS[team.label] || sectionStripeColor}`,
-                  fontWeight: 900,
-                }}
-              >
-                {team.label}
-              </h2>
-              {hasVsL || hasVsR ? (
-                <PitchTypeSidePanelToggle
-                  leftOpen={panel.leftOpen && hasVsL}
-                  rightOpen={panel.rightOpen && hasVsR}
-                  onLeftToggle={() => toggleVsHand(team.teamCode, "left")}
-                  onRightToggle={() => toggleVsHand(team.teamCode, "right")}
-                  leftDisabled={!hasVsL}
-                  rightDisabled={!hasVsR}
-                  ariaLabel={`${team.label}の対左右配球表示切替`}
-                  leftTitle="対左投手から受けた配球を表示"
-                  rightTitle="対右投手から受けた配球を表示"
+      <div
+        className={
+          twoColumnTeamLayout
+            ? "grid grid-cols-1 gap-x-12 md:grid-cols-2"
+            : undefined
+        }
+      >
+        {visibleTeams.map((team) => {
+          const panel = vsHandByTeam[team.teamCode] ?? { leftOpen: false, rightOpen: false }
+          const hasVsL = hasPitchTypesSplitRows(team.byCountPitchTypesVsL)
+          const hasVsR = hasPitchTypesSplitRows(team.byCountPitchTypesVsR)
+          return (
+            <section key={team.teamCode} className={`${mbScroll} min-w-0`}>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <h2
+                  className={`${h2Team} min-w-0 flex-1`}
+                  style={{
+                    borderLeft: `6px solid ${TEAM_COLORS[team.label] || sectionStripeColor}`,
+                    fontWeight: 900,
+                  }}
+                >
+                  {team.label}
+                </h2>
+                {hasVsL || hasVsR ? (
+                  <PitchTypeSidePanelToggle
+                    leftOpen={panel.leftOpen && hasVsL}
+                    rightOpen={panel.rightOpen && hasVsR}
+                    onLeftToggle={() => toggleVsHand(team.teamCode, "left")}
+                    onRightToggle={() => toggleVsHand(team.teamCode, "right")}
+                    leftDisabled={!hasVsL}
+                    rightDisabled={!hasVsR}
+                    ariaLabel={`${team.label}の対左右配球表示切替`}
+                    leftTitle="対左投手から受けた配球を表示"
+                    rightTitle="対右投手から受けた配球を表示"
+                  />
+                ) : null}
+              </div>
+              <div className={twoColumnTeamLayout ? "max-w-[94%]" : undefined}>
+                <TeamCountPitchBlock
+                  tb={tb}
+                  sectionStripeColor={sectionStripeColor}
+                  team={team}
+                  vsHandPanel={panel}
+                  onVsHandToggle={(side) => toggleVsHand(team.teamCode, side)}
                 />
-              ) : null}
-            </div>
-            <TeamCountPitchBlock
-              tb={tb}
-              sectionStripeColor={sectionStripeColor}
-              team={team}
-              vsHandPanel={panel}
-              onVsHandToggle={(side) => toggleVsHand(team.teamCode, side)}
-            />
-          </section>
-        )
-      })}
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }

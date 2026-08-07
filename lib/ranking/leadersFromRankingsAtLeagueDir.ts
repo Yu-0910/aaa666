@@ -20,6 +20,7 @@ import {
   rowPassesQualifyingPAWithMinMap,
 } from "@/lib/ranking/qualifyingThresholds"
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
+import { resolveRankingNpbPlayerIdServer } from "@/lib/ranking/resolveRankingNpbPlayerId.server"
 import {
   BATTING_TOP_2025_GRID_METRICS,
   BATTING_TOP_2025_RBI_TOP_N,
@@ -171,6 +172,14 @@ function toLeaderRow(
     kind === "batting"
       ? battingMetricValue(row, metricLabel)
       : pitchingMetricValue(row, metricLabel)
+  const yahooPlayerId = String(row.playerId ?? row.player_id ?? "").trim()
+  const explicitNpb = String(row.npbPlayerId ?? row.npb_player_id ?? "").trim()
+  const npbPlayerId = resolveRankingNpbPlayerIdServer({
+    name: nameRaw,
+    team: teamRaw,
+    playerId: yahooPlayerId,
+    explicitNpb,
+  })
 
   return {
     rank,
@@ -179,6 +188,8 @@ function toLeaderRow(
     teamName: getTeamName(teamCode),
     value,
     romanName: romanRaw || undefined,
+    playerId: yahooPlayerId || undefined,
+    npbPlayerId,
   }
 }
 

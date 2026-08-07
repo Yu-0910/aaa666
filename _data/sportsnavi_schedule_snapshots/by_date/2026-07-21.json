@@ -2,7 +2,7 @@
   "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-07-21",
-  "fetchedAt": "2026-07-12T17:58:25.059Z",
+  "fetchedAt": "2026-07-21T13:13:06.153Z",
   "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-07-21",
   "gameIds": [
     "2021039171",
@@ -16,8 +16,8 @@
       "stadiumName": "東京ドーム",
       "homeTeamShort": "巨人",
       "awayTeamShort": "広島",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "G",
       "awayTeamCode": "C"
     },
@@ -26,8 +26,8 @@
       "stadiumName": "神宮球場",
       "homeTeamShort": "ヤクルト",
       "awayTeamShort": "中日",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "S",
       "awayTeamCode": "D"
     },
@@ -36,8 +36,8 @@
       "stadiumName": "甲子園球場",
       "homeTeamShort": "阪神",
       "awayTeamShort": "DeNA",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "H",
       "awayTeamCode": "DB"
     },
@@ -46,8 +46,8 @@
       "stadiumName": "みずほPayPay",
       "homeTeamShort": "ソフトバンク",
       "awayTeamShort": "オリックス",
-      "statusText": "試合前",
-      "gameState": "scheduled",
+      "statusText": "試合終了",
+      "gameState": "completed",
       "homeTeamCode": "Hs",
       "awayTeamCode": "Bs"
     }
@@ -59,9 +59,9 @@
     "2021039174": "みずほPayPay"
   },
   "scheduleStatusByGameId": {
-    "2021039171": "試合前",
-    "2021039172": "試合前",
-    "2021039173": "試合前",
-    "2021039174": "試合前"
+    "2021039171": "試合終了",
+    "2021039172": "試合終了",
+    "2021039173": "試合終了",
+    "2021039174": "試合終了"
   }
 }

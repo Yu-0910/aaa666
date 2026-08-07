@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-08-07",
+  "fetchedAt": "2026-08-07T13:47:03.801Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-08-07",
+  "gameIds": [
+    "2021039236",
+    "2021039237",
+    "2021039238",
+    "2021039239",
+    "2021039240",
+    "2021039241"
+  ],
+  "games": [
+    {
+      "gameId": "2021039236",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "ヤクルト",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "S"
+    },
+    {
+      "gameId": "2021039237",
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "広島",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039238",
+      "stadiumName": "京セラD大阪",
+      "homeTeamShort": "阪神",
+      "awayTeamShort": "中日",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "H",
+      "awayTeamCode": "D"
+    },
+    {
+      "gameId": "2021039239",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "F",
+      "awayTeamCode": "E"
+    },
+    {
+      "gameId": "2021039240",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "ソフトバンク",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "L",
+      "awayTeamCode": "Hs"
+    },
+    {
+      "gameId": "2021039241",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "M",
+      "awayTeamCode": "Bs"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039236": "東京ドーム",
+    "2021039237": "横浜スタジアム",
+    "2021039238": "京セラD大阪",
+    "2021039239": "エスコンＦ",
+    "2021039240": "ベルーナD",
+    "2021039241": "ZOZOマリン"
+  },
+  "scheduleStatusByGameId": {
+    "2021039236": "試合終了",
+    "2021039237": "試合終了",
+    "2021039238": "試合終了",
+    "2021039239": "試合終了",
+    "2021039240": "試合終了",
+    "2021039241": "試合終了"
+  }
+}

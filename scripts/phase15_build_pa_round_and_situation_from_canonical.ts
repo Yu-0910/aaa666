@@ -33,7 +33,7 @@
  * 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）。
  */
 
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
+import { mkdirSync, readdirSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
@@ -65,6 +65,8 @@ import {
 import { isSituationBasesFromScoreIllustration } from "../lib/yahooGame/situationBasesSourceFeatureFlag"
 import { loadSportsnaviScoreSnapshots } from "../lib/yahooGame/sportsnaviScoreSnapshotIO"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import {
   extractAppearanceStatSlotsFromCells,
@@ -79,13 +81,21 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
   let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
+      i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
       i++
     } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
       onlyYahooIds = String(args[i + 1])
@@ -101,7 +111,11 @@ function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
       process.env.TOPPAGE_SITUATION_BASES_SOURCE = "score_illustration"
     }
   }
-  return { year, onlyYahooIds }
+  return { year, from, to, onlyYahooIds }
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
 function aggToSeasonStatsRow(
@@ -280,15 +294,77 @@ function appearanceSlotResultsByBatter(doc: CanonicalGameDocument): Map<string, 
   return byBid
 }
 
+function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {
+  const ids = new Set<string>()
+  for (const line of doc.domain?.battingLines ?? []) {
+    const bid = String(line.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+    const bid = String(row.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const pa of doc.domain?.plateAppearances ?? []) {
+    const bid = String(pa.yahooBatterId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const e of doc.domain?.runnerEvents ?? []) {
+    if (e?.kind !== "CS" || e.sourceTier !== "score") continue
+    const bid = String(e.yahooRunnerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  return ids
+}
+
+function collectAffectedBatterIds(
+  docs: CanonicalGameDocument[],
+  from: string | null,
+  to: string | null,
+): string[] {
+  const ids = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const bid of collectBatterIdsInGame(doc)) ids.add(bid)
+  }
+  return [...ids].sort()
+}
+
+function setIntersects(a: Set<string>, b: Set<string>): boolean {
+  for (const value of a) {
+    if (b.has(value)) return true
+  }
+  return false
+}
+
 function main(): void {
-  const { year, onlyYahooIds } = parseArgs()
+  const { year, from, to, onlyYahooIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase15] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
   const usePitchPbp = isPlateResultPitchPbp()
   const useScoreBases = isSituationBasesFromScoreIllustration()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+
+  let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
+  if (!targetYahooIds && (from || to)) {
+    const rangeDocs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year, from: from ?? undefined, to: to ?? undefined })
+    targetYahooIds = collectAffectedBatterIds(rangeDocs, from, to)
+    if (targetYahooIds.length === 0) {
+      console.log(
+        `[phase15] no affected batters for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase15] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
+  const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
   // mergedDocsByGameId はマージ済み doc の参照（loadVsHand が gameId で取り出す）。
 
   /** batterId -> roundKey "1"|"2"|"3"|"4"|"5" -> Agg */
@@ -428,8 +504,24 @@ function main(): void {
   }
 
   const allBattersWithPas = new Set<string>()
+  const batterIdsByGameId = new Map<string, Set<string>>()
+  const docsByBatterId = new Map<string, CanonicalGameDocument[]>()
 
   for (const doc of docs) {
+    const gameId = String(doc.gameId ?? "").trim()
+    const batterIds = collectBatterIdsInGame(doc)
+    if (gameId) batterIdsByGameId.set(gameId, batterIds)
+    for (const bid of batterIds) {
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
+      const list = docsByBatterId.get(bid) ?? []
+      list.push(doc)
+      docsByBatterId.set(bid, list)
+    }
+  }
+
+  for (const doc of docs) {
+    const docBatterIds = batterIdsByGameId.get(String(doc.gameId ?? "").trim()) ?? collectBatterIdsInGame(doc)
+    if (targetYahooIdSet && !setIntersects(docBatterIds, targetYahooIdSet)) continue
     const gameId = doc.gameId
     const pas = [...(doc.domain.plateAppearances ?? [])].sort(comparePlateAppearances)
     const appearanceCount = new Map<string, number>()
@@ -444,6 +536,7 @@ function main(): void {
     )
 
     for (const [bid, slotResults] of appearanceSlotsByBatter.entries()) {
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
       if (!starterSlot.get(bid)) continue
       const roundMap = ensureRoundMap(bid)
       for (let i = 0; i < slotResults.length; i++) {
@@ -477,6 +570,7 @@ function main(): void {
     ): void {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) return
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) return
       allBattersWithPas.add(bid)
 
       const n = (appearanceCount.get(bid) ?? 0) + 1
@@ -573,6 +667,7 @@ function main(): void {
   for (const doc of docs) {
     for (const line of doc.domain?.battingLines ?? []) {
       const bid = String(line.yahooPlayerId ?? "").trim()
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
       if (bid) allBattersWithBattingLines.add(bid)
     }
   }
@@ -584,15 +679,16 @@ function main(): void {
     ...byBatterStarterField.keys(),
     ...allBattersWithBattingLines,
   ])
-  const batterIds = (onlyYahooIds ?? [...allBatterIds]).slice().sort()
+  const batterIds = (targetYahooIds ?? [...allBatterIds]).slice().sort()
   for (const bid of batterIds) {
     const roundMap = byBatterRound.get(bid)
     const sitMap = byBatterSit.get(bid)
     const batOrderMap = byBatterBatOrder.get(bid)
     const starterFieldMap = byBatterStarterField.get(bid)
     const rows: SeasonStatsRow[] = []
+    const vsHandDocs = docsByBatterId.get(bid) ?? []
     const vsHand = loadVsHandRowsFromCanonicalWithDebug(bid, {
-      preloadedCanonicalDocs: docs,
+      preloadedCanonicalDocs: vsHandDocs,
       mergedDocsByGameId,
     })
     for (const r of vsHand.rows) {
@@ -691,10 +787,12 @@ function main(): void {
       },
       rows,
     }
-    writeFileSync(join(outDir, `yahoo_${bid}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(join(outDir, `yahoo_${bid}.json`), payload)
   }
 
-  console.log(`[phase15] wrote ${batterIds.length} files → ${outDir}`)
+  console.log(
+    `[phase15] wrote ${batterIds.length} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()

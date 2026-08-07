@@ -271,7 +271,7 @@ export function CountPitchTypeChart({
   staggerRowReveal,
   revealGeneration,
   baseColorMap,
-  rowLabelClassName,
+  rowLabelClassName = "pitch-type-split-row-label text-[13px] text-gray-200 font-black tabular-nums leading-tight",
 }: {
   splits: PitcherSeasonPocPitchTypesSplitRow[] | null
   staggerRowReveal?: boolean

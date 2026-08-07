@@ -11,7 +11,7 @@
  * scoreboard が空の canonical 向けに Phase13 と同様 `injectTeamsFromTextPbpIfMissing` で先攻/後攻を補完する。
  */
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs"
+import { existsSync, readFileSync, readdirSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { PlateAppearance } from "../lib/yahooGame/types"
@@ -27,20 +27,28 @@ import {
 } from "../lib/yahooGame/activeCatcherFromCanonical"
 import { fieldingTeamNameFromInningHalf, teamsRoughlyMatch } from "../lib/yahooGame/startingCatcherFromCanonical"
 import type { PitcherSeasonPocPayload } from "../lib/pitcherSeasonPocTypes"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyNpbIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyNpbIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+      onlyNpbIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, onlyNpbIds }
 }
 
 type PaAgg = {
@@ -111,8 +119,8 @@ function loadYahooPitcherIdToNpbMap(
 }
 
 function main(): void {
-  const { year } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const { year, onlyNpbIds } = parseArgs()
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase6] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
@@ -124,7 +132,13 @@ function main(): void {
     process.exit(1)
   }
 
-  const files = readdirSync(outDir).filter((f) => f.startsWith("npb_") && f.endsWith(".json"))
+  const targetNpbIds = onlyNpbIds ? [...onlyNpbIds] : null
+  const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
+  const files = readdirSync(outDir).filter((f) => {
+    if (!f.startsWith("npb_") || !f.endsWith(".json")) return false
+    const npb = f.replace(/^npb_/, "").replace(/\.json$/, "")
+    return !targetNpbIdSet || targetNpbIdSet.has(npb)
+  })
   if (files.length === 0) {
     console.error("[phase6] no npb_*.json in", outDir)
     process.exit(1)
@@ -133,12 +147,15 @@ function main(): void {
   const yahooPitcherToNpb = loadYahooPitcherIdToNpbMap(outDir, files)
 
   /** Phase13 と同型: scoreboard 空でも試合前情報から先攻/後攻を補完した doc */
-  const docByGameId = new Map(
-    docs.map((baseDoc) => [
-      baseDoc.gameId,
-      injectTeamsFromTextPbpIfMissing(baseDoc),
-    ] as const),
-  )
+  const docByGameId = new Map<string, ReturnType<typeof injectTeamsFromTextPbpIfMissing>>()
+  function enrichedDoc(baseDoc: (typeof docs)[number]) {
+    const gid = String(baseDoc.gameId ?? "").trim()
+    const cached = docByGameId.get(gid)
+    if (cached) return cached
+    const doc = injectTeamsFromTextPbpIfMissing(baseDoc)
+    if (gid) docByGameId.set(gid, doc)
+    return doc
+  }
 
   /** npbPlayerId -> Map<catcherYahooId, PaAgg> */
   const byNpbCatcher = new Map<string, Map<string, PaAgg>>()
@@ -160,7 +177,16 @@ function main(): void {
   }
 
   for (const baseDoc of docs) {
-    const doc = docByGameId.get(baseDoc.gameId) ?? injectTeamsFromTextPbpIfMissing(baseDoc)
+    if (
+      targetNpbIdSet &&
+      !(baseDoc.domain?.plateAppearances ?? []).some((pa) => {
+        const pid = yahooPitcherIdForVsHandFromPa(pa)
+        return Boolean(pid && yahooPitcherToNpb.has(pid))
+      })
+    ) {
+      continue
+    }
+    const doc = enrichedDoc(baseDoc)
     const catcherTimeline = buildCatcherYahooIdByPaTimeline(doc)
     const pas = [...(doc.domain?.plateAppearances ?? [])].sort(comparePlateAppearances)
     for (const pa of pas) {
@@ -225,6 +251,15 @@ function main(): void {
   }
 
   for (const baseDoc of docs) {
+    if (
+      targetNpbIdSet &&
+      !(baseDoc.domain?.pitchingLines ?? []).some((pl) => {
+        const pid = String(pl.yahooPlayerId ?? "").trim()
+        return Boolean(pid && yahooPitcherToNpb.has(pid))
+      })
+    ) {
+      continue
+    }
     const gameId = baseDoc.gameId
     const perPitcher = bfByGamePitcherCatcher.get(gameId) ?? new Map()
     for (const [pid, perCatcher] of perPitcher.entries()) {
@@ -334,7 +369,7 @@ function main(): void {
         "捕手は各打席時点の実守備捕手（textPlayByPlay の守備交代・(捕) 表記を追跡）。1試合内で複数捕手に打席が分かれる場合は BF 最大の捕手に pitchingLines（回数・自責点・勝敗・QS）を帰属。打者・安打等は打席単位で集計。",
     }
 
-    writeFileSync(path, JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(path, payload)
     updated++
   }
 

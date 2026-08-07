@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038953",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-08-03T13:32:10.089Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "cb27087b97d4272648b9e6faf8c00b2daf60e5f43672187e50e81c9312e7d073",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "sourceCompositeFingerprint": "45d2831dde8cf860bceb1c0447f39a473ed1468ac431d57e8a3df3b37739967c",
+  "normalizedFetchedAt": "2026-08-03T13:32:10.089Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月3日 横浜DeNAベイスターズvs.東北楽天ゴールデンイーグルス 試合出場成績 - プロ野球 - スポーツナビ",
@@ -182,13 +182,13 @@
       {
         "sectionTitle": "1回表",
         "lines": [
-          "1： 1番 佐藤 直樹 無死走者なし 空振りの三振を喫する 1アウト",
+          "1： 1番 佐藤 直樹 無死走者なし 空振りの三振を喫する 1アウト 0:26 1回表、石田選手が外のストレートで空振り三振を奪う！",
           "2： 2番 辰己 涼介 一死走者なし デッドボールを受ける 一塁",
           "3： 3番 平良 竜哉 一死一塁 セカンドへの内野安打 一二塁",
           "4： 4番 浅村 栄斗 一死一二塁 4-6-3のダブルプレー 3アウト"
         ],
         "playHeadlineJa": [
-          null,
+          "1回表、石田選手が外のストレートで空振り三振を奪う！",
           null,
           null,
           null
@@ -210,14 +210,14 @@
       {
         "sectionTitle": "2回表",
         "lines": [
-          "1： 5番 村林 一輝 無死走者なし ショートゴロ 1アウト",
+          "1： 5番 村林 一輝 無死走者なし ショートゴロ 1アウト 0:22 2回表、石田選手が外の変化球で空振り三振を奪う!!",
           "2： 6番 黒川 史陽 一死走者なし ライトへのヒットを放つ 一塁",
           "3： 7番 マッカスカー 一死一塁 一塁けん制:ランナー 黒川 帰塁 一塁けん制:ランナー 黒川 帰塁 四球を選ぶ 一二塁",
           "4： 8番 太田 光 一死一二塁 空振りの三振を喫する 2アウト",
           "5： 9番 古謝 樹 二死一二塁 一打先制の場面でファーストゴロ 3アウト"
         ],
         "playHeadlineJa": [
-          null,
+          "2回表、石田選手が外の変化球で空振り三振を奪う!!",
           null,
           null,
           null,
@@ -243,12 +243,12 @@
         "sectionTitle": "3回表",
         "lines": [
           "1： 1番 佐藤 直樹 無死走者なし 見逃し三振 1アウト",
-          "2： 2番 辰己 涼介 一死走者なし ショートゴロ 2アウト",
+          "2： 2番 辰己 涼介 一死走者なし ショートゴロ 2アウト 0:10 3回表、石田選手が見逃し三振で三者凡退に斬って取る!!",
           "3： 3番 平良 竜哉 二死走者なし 見逃し三振でバッターアウト！ 3アウト"
         ],
         "playHeadlineJa": [
           null,
-          null,
+          "3回表、石田選手が見逃し三振で三者凡退に斬って取る!!",
           null
         ]
       },
@@ -328,14 +328,14 @@
         "lines": [
           "1： 2番 辰己 涼介 無死走者なし 見逃し三振 1アウト",
           "2： 3番 平良 竜哉 一死走者なし センターへのヒットを放つ 一塁",
-          "3： 4番 浅村 栄斗 一死一塁 一塁けん制:ランナー 平良 帰塁 一塁けん制:ランナー 平良 帰塁 ショートへの内野安打 石上 (遊):悪送球 二三塁",
+          "3： 4番 浅村 栄斗 一死一塁 一塁けん制:ランナー 平良 帰塁 一塁けん制:ランナー 平良 帰塁 ショートへの内野安打 石上 (遊):悪送球 二三塁 0:25 6回表、石田選手が2死2、3塁のピンチを空振り三振で切り抜ける!!",
           "4： 5番 村林 一輝 一死二三塁 ピッチャーゴロ 2アウト二三塁",
           "5： 6番 黒川 史陽 二死二三塁 カウント2-2から空振り三振！決定機を逃す 3アウト"
         ],
         "playHeadlineJa": [
           null,
           null,
-          null,
+          "6回表、石田選手が2死2、3塁のピンチを空振り三振で切り抜ける!!",
           null,
           null
         ]
@@ -446,6 +446,8 @@
       {
         "yahooPlayerId": "1900100",
         "playerName": "佐藤 直樹",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(右)",
           "佐藤 直樹",
@@ -476,6 +478,8 @@
       {
         "yahooPlayerId": "1800117",
         "playerName": "辰己 涼介",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(中)",
           "辰己 涼介",
@@ -506,6 +510,8 @@
       {
         "yahooPlayerId": "2105283",
         "playerName": "平良 竜哉",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(三)",
           "平良 竜哉",
@@ -536,6 +542,8 @@
       {
         "yahooPlayerId": "900056",
         "playerName": "浅村 栄斗",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(一)",
           "浅村 栄斗",
@@ -566,6 +574,8 @@
       {
         "yahooPlayerId": "1900112",
         "playerName": "小深田 大翔",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "二",
           "小深田 大翔",
@@ -596,6 +606,8 @@
       {
         "yahooPlayerId": "1600007",
         "playerName": "村林 一輝",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(遊)",
           "村林 一輝",
@@ -626,6 +638,8 @@
       {
         "yahooPlayerId": "1900113",
         "playerName": "黒川 史陽",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(二一)",
           "黒川 史陽",
@@ -656,6 +670,8 @@
       {
         "yahooPlayerId": "2122300",
         "playerName": "マッカスカー",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(左)",
           "マッカスカー",
@@ -686,6 +702,8 @@
       {
         "yahooPlayerId": "1950278",
         "playerName": "中島 大輔",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "走左",
           "中島 大輔",
@@ -716,6 +734,8 @@
       {
         "yahooPlayerId": "1800118",
         "playerName": "太田 光",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(捕)",
           "太田 光",
@@ -746,6 +766,8 @@
       {
         "yahooPlayerId": "2110316",
         "playerName": "古謝 樹",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "(投)",
           "古謝 樹",
@@ -776,6 +798,8 @@
       {
         "yahooPlayerId": "1100103",
         "playerName": "鈴木 大地",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "打",
           "鈴木 大地",
@@ -806,6 +830,8 @@
       {
         "yahooPlayerId": "1800124",
         "playerName": "鈴木 翔天",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "投",
           "鈴木 翔天",
@@ -836,6 +862,8 @@
       {
         "yahooPlayerId": "1750493",
         "playerName": "西垣 雅矢",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "投",
           "西垣 雅矢",
@@ -866,6 +894,8 @@
       {
         "yahooPlayerId": "800075",
         "playerName": "伊藤 光",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "打",
           "伊藤 光",
@@ -896,6 +926,8 @@
       {
         "yahooPlayerId": "1600092",
         "playerName": "藤平 尚真",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "cells": [
           "投",
           "藤平 尚真",
@@ -926,6 +958,8 @@
       {
         "yahooPlayerId": "1900035",
         "playerName": "蝦名 達夫",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(中)",
           "蝦名 達夫",
@@ -956,6 +990,8 @@
       {
         "yahooPlayerId": "1600089",
         "playerName": "佐野 恵太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(左)",
           "佐野 恵太",
@@ -986,6 +1022,8 @@
       {
         "yahooPlayerId": "1200053",
         "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(三)",
           "宮﨑 敏郎",
@@ -1016,6 +1054,8 @@
       {
         "yahooPlayerId": "1000002",
         "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(一)",
           "筒香 嘉智",
@@ -1046,6 +1086,8 @@
       {
         "yahooPlayerId": "1850873",
         "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(右)",
           "度会 隆輝",
@@ -1076,6 +1118,8 @@
       {
         "yahooPlayerId": "1600167",
         "playerName": "三森 大貴",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(二)",
           "三森 大貴",
@@ -1106,6 +1150,8 @@
       {
         "yahooPlayerId": "2112189",
         "playerName": "石上 泰輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(遊)",
           "石上 泰輝",
@@ -1136,6 +1182,8 @@
       {
         "yahooPlayerId": "1500064",
         "playerName": "戸柱 恭孝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(捕)",
           "戸柱 恭孝",
@@ -1166,6 +1214,8 @@
       {
         "yahooPlayerId": "2112182",
         "playerName": "石田 裕太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "(投)",
           "石田 裕太郎",
@@ -1196,6 +1246,8 @@
       {
         "yahooPlayerId": "1900032",
         "playerName": "伊勢 大夢",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "投",
           "伊勢 大夢",
@@ -1226,6 +1278,8 @@
       {
         "yahooPlayerId": "2117433",
         "playerName": "レイノルズ",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "投",
           "レイノルズ",
@@ -1256,6 +1310,8 @@
       {
         "yahooPlayerId": "2101034",
         "playerName": "ヒュンメル",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "打",
           "ヒュンメル",
@@ -1286,6 +1342,8 @@
       {
         "yahooPlayerId": "1400109",
         "playerName": "山﨑 康晃",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "cells": [
           "投",
           "山﨑 康晃",
@@ -7685,6 +7743,8 @@
       {
         "yahooPlayerId": "1900100",
         "playerName": "佐藤 直樹",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(右)",
         "avg": ".280",
         "ab": 4,
@@ -7715,6 +7775,8 @@
       {
         "yahooPlayerId": "1800117",
         "playerName": "辰己 涼介",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(中)",
         "avg": ".294",
         "ab": 3,
@@ -7745,6 +7807,8 @@
       {
         "yahooPlayerId": "2105283",
         "playerName": "平良 竜哉",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(三)",
         "avg": ".281",
         "ab": 4,
@@ -7775,6 +7839,8 @@
       {
         "yahooPlayerId": "900056",
         "playerName": "浅村 栄斗",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(一)",
         "avg": ".253",
         "ab": 3,
@@ -7805,6 +7871,8 @@
       {
         "yahooPlayerId": "1900112",
         "playerName": "小深田 大翔",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "二",
         "avg": ".196",
         "ab": 0,
@@ -7835,6 +7903,8 @@
       {
         "yahooPlayerId": "1600007",
         "playerName": "村林 一輝",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(遊)",
         "avg": ".291",
         "ab": 4,
@@ -7865,6 +7935,8 @@
       {
         "yahooPlayerId": "1900113",
         "playerName": "黒川 史陽",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(二一)",
         "avg": ".263",
         "ab": 4,
@@ -7897,6 +7969,8 @@
       {
         "yahooPlayerId": "2122300",
         "playerName": "マッカスカー",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(左)",
         "avg": ".217",
         "ab": 2,
@@ -7927,6 +8001,8 @@
       {
         "yahooPlayerId": "1950278",
         "playerName": "中島 大輔",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "走左",
         "avg": ".220",
         "ab": 1,
@@ -7959,6 +8035,8 @@
       {
         "yahooPlayerId": "1800118",
         "playerName": "太田 光",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(捕)",
         "avg": ".238",
         "ab": 4,
@@ -7989,6 +8067,8 @@
       {
         "yahooPlayerId": "2110316",
         "playerName": "古謝 樹",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "(投)",
         "avg": ".000",
         "ab": 2,
@@ -8019,6 +8099,8 @@
       {
         "yahooPlayerId": "1100103",
         "playerName": "鈴木 大地",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "打",
         "avg": ".190",
         "ab": 1,
@@ -8049,6 +8131,8 @@
       {
         "yahooPlayerId": "800075",
         "playerName": "伊藤 光",
+        "teamName": "楽天",
+        "yahooTeamId": "376",
         "positionCell": "打",
         "avg": ".148",
         "ab": 1,
@@ -8079,6 +8163,8 @@
       {
         "yahooPlayerId": "1900035",
         "playerName": "蝦名 達夫",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(中)",
         "avg": ".250",
         "ab": 4,
@@ -8109,6 +8195,8 @@
       {
         "yahooPlayerId": "1600089",
         "playerName": "佐野 恵太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(左)",
         "avg": ".269",
         "ab": 4,
@@ -8139,6 +8227,8 @@
       {
         "yahooPlayerId": "1200053",
         "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(三)",
         "avg": ".273",
         "ab": 4,
@@ -8169,6 +8259,8 @@
       {
         "yahooPlayerId": "1000002",
         "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(一)",
         "avg": ".235",
         "ab": 3,
@@ -8199,6 +8291,8 @@
       {
         "yahooPlayerId": "1850873",
         "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(右)",
         "avg": ".293",
         "ab": 3,
@@ -8229,6 +8323,8 @@
       {
         "yahooPlayerId": "1600167",
         "playerName": "三森 大貴",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(二)",
         "avg": ".250",
         "ab": 3,
@@ -8259,6 +8355,8 @@
       {
         "yahooPlayerId": "2112189",
         "playerName": "石上 泰輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(遊)",
         "avg": ".152",
         "ab": 3,
@@ -8289,6 +8387,8 @@
       {
         "yahooPlayerId": "1500064",
         "playerName": "戸柱 恭孝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(捕)",
         "avg": ".190",
         "ab": 3,
@@ -8319,6 +8419,8 @@
       {
         "yahooPlayerId": "2112182",
         "playerName": "石田 裕太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "(投)",
         "avg": ".125",
         "ab": 2,
@@ -8349,6 +8451,8 @@
       {
         "yahooPlayerId": "2101034",
         "playerName": "ヒュンメル",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
         "positionCell": "打",
         "avg": ".200",
         "ab": 1,

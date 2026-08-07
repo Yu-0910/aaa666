@@ -340,7 +340,40 @@ function main(): void {
     return hit?.npbPlayerId ?? null
   }
 
+  function gameHasTargetPitcher(doc: CanonicalGameDocument): boolean {
+    if (!targetNpbIdSet) return true
+    const mergedLines = mergePitchingLines(doc.domain.pitchingLines ?? [])
+    for (const m of mergedLines.values()) {
+      const lineLike: PitchingLine = {
+        yahooPlayerId: m.yahooPlayerId,
+        playerName: m.playerName,
+        ip: outsToIpDisplay(m.outs),
+        bf: m.bf,
+        h: m.h,
+        hr: m.hr,
+        so: m.so,
+        bb: m.bb,
+        hbp: m.hbp,
+        bk: m.bk,
+        r: m.r,
+        er: m.er,
+        pitches: m.pitches,
+        inferredFrom: "stats_row_v0",
+      }
+      const hit = resolveNpbForPitcherLine(roster, doc, lineLike)
+      if (hit?.npbPlayerId && targetNpbIdSet.has(hit.npbPlayerId)) return true
+    }
+    for (const pa of doc.domain.plateAppearances ?? []) {
+      const pid = yahooPitcherIdForVsHandFromPa(pa)
+      if (!pid) continue
+      const npb = npbForYahooPitcher(doc, pid)
+      if (npb && targetNpbIdSet.has(npb)) return true
+    }
+    return false
+  }
+
   for (const doc of docs) {
+    if (!gameHasTargetPitcher(doc)) continue
     const ymd = parseGameDateYmdFromCanonical(doc)
     if (!ymd || ymd.slice(0, 4) !== year) continue
     if (from && ymd < from) continue

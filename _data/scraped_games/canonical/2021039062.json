@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039062",
-  "builtAt": "2026-06-30T20:18:44.162Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "445a78d8d8aca4e8deaf0e0106ba966594d6cf310dcca6500c77a8766b09b012",
-  "normalizedFetchedAt": "2026-06-30T20:06:19.153Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月28日 東京ヤクルトスワローズvs.中日ドラゴンズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8475,31 +8475,28 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039062-score-1",
+        "eventId": "2021039062-runner-1",
         "inningHalf": "6回裏",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0620300] 盗塁成功（岩田）、ランナー2塁 64 岩田 1 2 3 4 5 6 1 ボール 2 ファウル 3 ボール 4 ボール 5 見逃し 6 見三振 次の打者 古賀 優大 打者 オスナ #13 右打 打率 .228 (197-45) 遊安 、 空三振 投手 金丸 夢斗 #21 左投 投球数 打者数 防御率 97 23 2.55",
-        "sourceTier": "score"
+        "sourceLine": "3： 6番 オスナ 無死一塁 －中日:コーチマウンドへむかう－ 見逃し三振に倒れるもスタートを切っていた一塁走者 岩田 が盗塁成功 1アウト二塁",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039062-score-2",
+        "eventId": "2021039062-runner-2",
         "inningHalf": "7回裏",
         "kind": "SB",
         "yahooRunnerId": "1700087",
-        "runnerNameJa": "塩見",
-        "sourceLine": "[0720500] 盗塁成功（塩見）、ランナー2,3塁 9 塩見 7 長岡 1 2 3 4 1 見逃し 2 ファウル 3 ファウル 4 ボール 次の打者 オスナ 打者 岩田 幸宏 #64 左打 打率 .264 (212-56) 三直 、 中安 、 中安 投手 橋本 侑樹 #13 左投 投球数 打者数 防御率 24 4 1.23",
-        "sourceTier": "score"
+        "sourceLine": "5： 5番 岩田 幸宏 二死一三塁 一塁走者 塩見 :盗塁成功 二三塁 一打勝ち越しの場面でセカンドゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039062-score-3",
+        "eventId": "2021039062-runner-3",
         "inningHalf": "9回表",
         "kind": "SB",
         "yahooRunnerId": "2103780",
-        "runnerNameJa": "福永",
-        "sourceLine": "[0910300] 盗塁成功（福永）、ランナー2塁 7 福永 投手 キハダ #11 左投 投球数 打者数 防御率 18 2 2.52",
-        "sourceTier": "score"
+        "sourceLine": "3： 2番 板山 祐太郎 一死一塁 空振り三振に倒れるもスタートを切っていた一塁走者 福永 が盗塁成功 2アウト二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

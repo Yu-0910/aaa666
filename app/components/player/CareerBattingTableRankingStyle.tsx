@@ -109,6 +109,8 @@ type Props = {
   showSalaryColumn?: boolean
   /** 表・文字・数値の一括スケール（既定 1） */
   scaleMultiplier?: number
+  tableClassName?: string
+  shellClassName?: string
 }
 
 function rowBg(idx: number, isTotal: boolean): string {
@@ -123,6 +125,8 @@ export default function CareerBattingTableRankingStyle({
   rowKeyPrefix = "career-bat",
   showSalaryColumn = true,
   scaleMultiplier = 1,
+  tableClassName,
+  shellClassName,
 }: Props) {
   const m = useMemo(
     () => buildCareerRankingTableMetrics(scaleMultiplier),
@@ -135,13 +139,22 @@ export default function CareerBattingTableRankingStyle({
     (showSalaryColumn ? m.SALARY_COL_WIDTH : 0)
 
   return (
-    <div className="mb-4 bg-[#1a1a1a] border border-[#333]">
+    <div
+      className={[
+        "career-batting-ranking-table-shell mb-4 bg-[#1a1a1a] border border-[#333]",
+        shellClassName ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div
         className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <table
-          className="border-collapse border-spacing-0 max-w-none"
+          className={["border-collapse border-spacing-0 max-w-none", tableClassName ?? ""]
+            .filter(Boolean)
+            .join(" ")}
           style={{
             tableLayout: "fixed",
             width: `${tableMinWidthPx}px`,

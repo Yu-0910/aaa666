@@ -45,6 +45,7 @@ import {
   yahooPlayersMentionedFromStatsRows,
 } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
 import { parseTeamsFromSportsnaviStatsHtml } from "../lib/yahooGame/sportsnaviStatsStartingLineup.mjs"
+import { writeJsonFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 function parseArgs(argv) {
   const yearIdx = argv.indexOf("--year")
@@ -330,7 +331,7 @@ function main() {
 
     canonical = preservePhase10DomainOnSportsnaviRebuild(canonical, existingCanonical)
 
-    fs.writeFileSync(outPath, JSON.stringify(canonical, null, 2), "utf8")
+    writeJsonFileWithRetrySync(outPath, canonical)
     wrote += 1
     const tag = rebuildDecision.reason === "force" ? "wrote" : `wrote (${rebuildDecision.reason})`
     console.log(`[phase2] canonical ${fi + 1}/${targets.length} ${gameId} … ${tag}`)

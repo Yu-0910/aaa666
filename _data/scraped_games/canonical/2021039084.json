@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039084",
-  "builtAt": "2026-07-04T15:28:57.129Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "4b8691c2549ee2a970173008bb38ba22d0b58a631112c8902437146abf3bbb21",
-  "normalizedFetchedAt": "2026-07-04T15:02:05.279Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月3日 阪神タイガースvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7342,13 +7342,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039084-score-1",
+        "eventId": "2021039084-runner-1",
         "inningHalf": "2回表",
         "kind": "CS",
         "yahooRunnerId": "1600124",
-        "runnerNameJa": "坂倉",
-        "sourceLine": "[0210200] 盗塁失敗（坂倉） 31 坂倉 投手 大竹 耕太郎 #21 左投 投球数 打者数 防御率 28 4 2.14",
-        "sourceTier": "score"
+        "sourceLine": "2： 5番 小園 海斗 無死一塁 一塁けん制:ランナー 坂倉 帰塁 一塁けん制:ランナー 坂倉 帰塁 空振り三振！一塁走者 坂倉 も盗塁失敗でダブルプレー 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039096",
-  "builtAt": "2026-07-05T13:59:01.651Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "f09af515a78d878ad7304c457d939ece44766a9806865f400c63e1268503bb26",
-  "normalizedFetchedAt": "2026-07-05T13:45:24.218Z",
+  "sourceCompositeFingerprint": "c46d3cc270fd0cf710d52e839e6fdcbe587dfc8cfcf3d47d470d8d180b44da48",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月5日 阪神タイガースvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7979,22 +7979,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039096-score-1",
+        "eventId": "2021039096-runner-1",
         "inningHalf": "1回表",
         "kind": "SB",
         "yahooRunnerId": "1800079",
-        "runnerNameJa": "大盛",
-        "sourceLine": "[0110300] 盗塁成功（大盛）、ランナー2塁 59 大盛 投手 村上 頌樹 #41 右投 投球数 打者数 防御率 10 2 2.12",
-        "sourceTier": "score"
-      },
-      {
-        "eventId": "2021039096-score-2",
-        "inningHalf": "8回表",
-        "kind": "CS",
-        "yahooRunnerId": "2107887",
-        "runnerNameJa": "辰見",
-        "sourceLine": "[0810600] 盗塁失敗（辰見）、広島・残り1回 69 辰見 10 佐々木 投手 岩崎 優 #13 左投 投球数 打者数 防御率 25 5 2.91",
-        "sourceTier": "score"
+        "sourceLine": "3： 3番 菊池 涼介 一死一塁 一塁走者 大盛 :盗塁成功 二塁 外角低めのチェンジアップを打つもサードライナー 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

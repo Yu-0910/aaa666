@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039038",
-  "builtAt": "2026-06-24T17:51:13.057Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "08d2836a45f9653f8b2d91bba75a0ed02d6fc42e3d4b4aa60d448af595a4db0e",
-  "normalizedFetchedAt": "2026-06-24T17:39:36.234Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年6月23日 広島東洋カープvs.読売ジャイアンツ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8213,13 +8213,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039038-score-1",
+        "eventId": "2021039038-runner-1",
         "inningHalf": "9回表",
         "kind": "SB",
         "yahooRunnerId": "1100095",
-        "runnerNameJa": "松本",
-        "sourceLine": "[0910400] 盗塁成功（松本）、ランナー2,3塁 9 松本 32 浦田 投手 黒原 拓未 #24 左投 投球数 打者数 防御率 14 3 6.75",
-        "sourceTier": "score"
+        "sourceLine": "4： 3番 泉口 友汰 一死一三塁 一塁走者 松本 :盗塁成功 二三塁 見逃し三振 2アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

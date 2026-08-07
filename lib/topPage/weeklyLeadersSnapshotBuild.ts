@@ -108,7 +108,11 @@ export type BuildWeeklyTopLeadersSnapshotResult = {
 export function buildWeeklyTopLeadersSnapshots(
   projectRoot: string,
   year: string = TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR,
-  weekKeys?: string[]
+  weekKeys?: string[],
+  options?: {
+    leagues?: readonly string[]
+    categories?: readonly TopLeadersCategory[]
+  }
 ): BuildWeeklyTopLeadersSnapshotResult {
   const keys =
     weekKeys && weekKeys.length > 0 ? weekKeys : listWeeklyRankingWeekKeys(projectRoot, year)
@@ -129,6 +133,11 @@ export function buildWeeklyTopLeadersSnapshots(
 
   const written: string[] = []
   const skipped: BuildWeeklyTopLeadersSnapshotResult["skipped"] = []
+  const leagues = (options?.leagues?.length ? options.leagues : SNAPSHOT_LEAGUES).map((v) =>
+    String(v).toUpperCase()
+  )
+  const categories =
+    options?.categories?.length ? options.categories : (["batting", "pitching"] as const)
 
   for (const weekKey of keys) {
     const meta: WeeklyLeadersSnapshotMeta = {
@@ -137,8 +146,8 @@ export function buildWeeklyTopLeadersSnapshots(
       year,
     }
 
-    for (const league of SNAPSHOT_LEAGUES) {
-      for (const category of ["batting", "pitching"] as const) {
+    for (const league of leagues) {
+      for (const category of categories) {
         let config: LeadersConfig | null = null
         if (category === "batting") {
           const dir = weeklyBattingRankingsLeagueDir(projectRoot, year, weekKey, league)

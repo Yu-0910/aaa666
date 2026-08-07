@@ -92,7 +92,7 @@ function recomputeVsTeam(
 
 function main(): void {
   const { year, fail, yahooIds } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   const ctxDir = join(projectRoot, "_data", "derived", "player_season_batting_context", year)
   if (!existsSync(ctxDir)) {
     console.error(`[validate:phase13] missing ${ctxDir}`)

@@ -823,4 +823,7 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "01905152", nameJa: "櫻井 ユウヤ", romanFull: "Sakurai Yuya", position: "内野手", teamCode: "M", slug: "yuya-sakurai" },
   { npbPlayerId: "11015159", nameJa: "進藤 勇也", romanFull: "Shintoh Yuya", position: "捕手", teamCode: "F", slug: "yuya-shintoh" },
   { npbPlayerId: "63165134", nameJa: "柳 裕也", romanFull: "Yanagi Yuya", position: "投手", teamCode: "D", slug: "yuya-yanagi" },
+  { npbPlayerId: "21925155", nameJa: "笹原 操希", romanFull: "Sasahara Misaki", position: "外野手", teamCode: "G", slug: "misaki-sasahara" },
+  { npbPlayerId: "41245152", nameJa: "常谷 拓輝", romanFull: "Tsuneya Hiroki", position: "内野手", teamCode: "F", slug: "hiroki-tsuneya" },
+  { npbPlayerId: "11215152", nameJa: "髙橋 快秀", romanFull: "Takahashi Kaishu", position: "投手", teamCode: "M", slug: "kaishu-takahashi" },
 ]

@@ -12,7 +12,7 @@
  * 入力は `loadCanonicalGamesMergedForDerivedPipeline`（Phase11 と同一: 一球マージ済み canonical）。
  */
 
-import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "fs"
+import { mkdirSync, readdirSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
@@ -31,21 +31,42 @@ import {
 import type { SeasonStatsRow } from "../lib/seasonStatsPilot"
 import { enrichSeasonStatsRowSabermetrics } from "../lib/seasonStatsPilotShared"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | null = null
+  let to: string | null = null
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = String(args[i + 1]).trim()
+      i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, from, to, onlyYahooIds }
+}
+
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
 function aggToSeasonStatsRow(splitValue: string, agg: BattingSeasonAggYahoo): SeasonStatsRow {
@@ -119,6 +140,47 @@ function loadCanonicalFiles(): CanonicalGameDocument[] {
   return out
 }
 
+function collectBatterIdsInGame(doc: CanonicalGameDocument): Set<string> {
+  const ids = new Set<string>()
+  for (const pa of doc.domain.plateAppearances ?? []) {
+    const bid = String(pa.yahooBatterId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const line of doc.domain?.battingLines ?? []) {
+    const bid = String(line.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  for (const row of doc.game?.statsPlayerLinkedRows ?? []) {
+    const bid = String(row.yahooPlayerId ?? "").trim()
+    if (bid) ids.add(bid)
+  }
+  return ids
+}
+
+function collectAffectedBatterIds(
+  docs: CanonicalGameDocument[],
+  from: string | null,
+  to: string | null,
+): string[] {
+  const ids = new Set<string>()
+  for (const doc of docs) {
+    const ymd = extractCanonicalGameYmd(doc)
+    if (!ymd) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const bid of collectBatterIdsInGame(doc)) ids.add(bid)
+  }
+  return [...ids].sort()
+}
+
+function gameHasTargetBatter(doc: CanonicalGameDocument, targetYahooIdSet: Set<string> | null): boolean {
+  if (!targetYahooIdSet) return true
+  for (const bid of collectBatterIdsInGame(doc)) {
+    if (targetYahooIdSet.has(bid)) return true
+  }
+  return false
+}
+
 const COUNT_ORDER = [
   "0-0",
   "1-0",
@@ -135,12 +197,28 @@ const COUNT_ORDER = [
 ]
 
 function main(): void {
-  const { year } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  const { year, from, to, onlyYahooIds } = parseArgs()
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase16] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
     console.error("[phase16] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
+
+  let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
+  if (!targetYahooIds && (from || to)) {
+    targetYahooIds = collectAffectedBatterIds(docs, from, to)
+    if (targetYahooIds.length === 0) {
+      console.log(
+        `[phase16] no affected batters for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
+  const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
 
   const byBatterCount = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
@@ -154,6 +232,7 @@ function main(): void {
   }
 
   for (const doc of docs) {
+    if (!gameHasTargetBatter(doc, targetYahooIdSet)) continue
     const gameId = doc.gameId
     const pas = dedupePlateAppearancesByInningHalfOrder(
       doc.domain.plateAppearances ?? [],
@@ -162,6 +241,7 @@ function main(): void {
     for (const pa of pas) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
       const resolvedResultText = plateAppearanceResolvedResultText(doc, pa).trim()
       const fallbackResultText = plateAppearanceResultTextFromPitchOnly(pa).trim()
       const resultText = resolvedResultText || fallbackResultText
@@ -186,6 +266,8 @@ function main(): void {
 
   for (const f of readdirSync(outDir)) {
     if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+      if (targetYahooIds && !targetYahooIds.includes(yid)) continue
       try {
         unlinkSync(join(outDir, f))
       } catch {
@@ -194,9 +276,10 @@ function main(): void {
     }
   }
 
-  const batterIds = [...byBatterCount.keys()].sort()
+  const batterIds = (targetYahooIds ?? [...byBatterCount.keys()]).slice().sort()
   for (const bid of batterIds) {
-    const cm = byBatterCount.get(bid)!
+    const cm = byBatterCount.get(bid)
+    if (!cm) continue
     const rows: SeasonStatsRow[] = []
     for (const ck of COUNT_ORDER) {
       const agg = cm.get(ck)
@@ -216,10 +299,12 @@ function main(): void {
       },
       rows,
     }
-    writeFileSync(join(outDir, `yahoo_${bid}.json`), JSON.stringify(payload, null, 2), "utf8")
+    writeJsonFileWithRetrySync(join(outDir, `yahoo_${bid}.json`), payload)
   }
 
-  console.log(`[phase16] wrote ${batterIds.length} files → ${outDir}`)
+  console.log(
+    `[phase16] wrote ${batterIds.length} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()

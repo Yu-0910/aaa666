@@ -37,11 +37,17 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? Math.trunc(n) : 0
 }
 
-function parseArgs(): { year: string; failOnNegativeRecon: boolean; onlyYahooIds: string[] | null } {
+function parseArgs(): {
+  year: string
+  failOnNegativeRecon: boolean
+  onlyYahooIds: string[] | null
+  reportJson: string | null
+} {
   const args = process.argv.slice(2)
   let year = "2026"
   let failOnNegativeRecon = false
   let onlyYahooIds: string[] | null = null
+  let reportJson: string | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!
@@ -54,9 +60,12 @@ function parseArgs(): { year: string; failOnNegativeRecon: boolean; onlyYahooIds
         .map((s) => s.trim())
         .filter(Boolean)
       i++
+    } else if (args[i] === "--report-json" && args[i + 1]) {
+      reportJson = String(args[i + 1]).trim()
+      i++
     }
   }
-  return { year, failOnNegativeRecon, onlyYahooIds }
+  return { year, failOnNegativeRecon, onlyYahooIds, reportJson }
 }
 
 function sumVsHandP0(rows: Row[]): { pa: number; ab: number; bb: number; hbp: number; sh: number; sf: number } {
@@ -74,7 +83,7 @@ function sumVsHandP0(rows: Row[]): { pa: number; ab: number; bb: number; hbp: nu
 }
 
 function main(): void {
-  const { year, failOnNegativeRecon, onlyYahooIds } = parseArgs()
+  const { year, failOnNegativeRecon, onlyYahooIds, reportJson } = parseArgs()
   const root = process.cwd()
   const phase11Dir = path.join(root, "_data", "derived", "player_season_batting", year)
   const splitsDir = path.join(root, "_data", "derived", "player_season_batting_splits", year)
@@ -102,6 +111,8 @@ function main(): void {
   let mismatches = 0
   let missingSplits = 0
   let negativeReconPlayers = 0
+  const mismatchPlayerIds: string[] = []
+  const missingSplitsPlayerIds: string[] = []
 
   for (const f of phase11Files) {
     const id = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
@@ -126,6 +137,7 @@ function main(): void {
 
     if (!fs.existsSync(splitsPath)) {
       missingSplits++
+      missingSplitsPlayerIds.push(id)
       console.error(`[validate] missing phase15 splits file for phase11 player: ${f}`)
       continue
     }
@@ -162,6 +174,7 @@ function main(): void {
 
     if (!ok) {
       mismatches++
+      mismatchPlayerIds.push(id)
       console.error(
         [
           `[validate] P0 mismatch yahoo_${id}`,
@@ -200,6 +213,30 @@ function main(): void {
     mismatches > 0 ||
     missingSplits > 0 ||
     (failOnNegativeRecon && negativeReconPlayers > 0)
+
+  if (reportJson) {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      year,
+      checkedPlayers: phase11Files.length,
+      mismatches,
+      missingSplits,
+      negativeReconPlayers,
+      failOnNegativeRecon,
+      onlyYahooIds: onlyYahooIds ?? [],
+      mismatchPlayerIds,
+      missingSplitsPlayerIds,
+      extraSplits,
+      exitBad,
+    }
+    try {
+      fs.mkdirSync(path.dirname(reportJson), { recursive: true })
+      fs.writeFileSync(reportJson, JSON.stringify(report, null, 2), "utf8")
+    } catch (error) {
+      console.error(`[validate] failed to write reportJson: ${reportJson}`)
+      console.error(error)
+    }
+  }
 
   if (failOnNegativeRecon && negativeReconPlayers > 0) {
     console.error(

@@ -13,7 +13,7 @@
  * ランタイムは lib/yahooNpbBatterIdMap.ts がこのファイルを読み、MANUAL より前にマージする。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readFileSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance, PitchingLine } from "../lib/yahooGame/types"
@@ -22,6 +22,7 @@ import { findNpbIdForYahooBatting, parseRosterCsv, type RosterRow } from "../lib
 import { parsePaId, resolveNpbForPitcherLine, teamForYahooPlayerId } from "../lib/yahooGame/pitcherPocHelpers"
 import { collectPitcherYahooIdsFromPlateAppearance } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
 import { findRosterPlayerByPublicId } from "../lib/npbRoster"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -231,24 +232,17 @@ function main(): void {
   }
 
   mkdirSync(dirname(outPath), { recursive: true })
-  writeFileSync(
-    outPath,
-    JSON.stringify(
-      {
-        schemaVersion: "yahoo-to-npb-full-v1",
-        generatedAt: new Date().toISOString(),
-        source:
-          "batting_master_bridge.csv + yahoo_pitcher_to_npb.json + canonical roster match (batting/pa/mentioned/pitching/pa-pitcher)",
-        canonicalGames: docs.length,
-        pairsAddedFromCanonicalVsBridgePitcher: fromCanonical,
-        entryCount: Object.keys(record).length,
-        map: record,
-      },
-      null,
-      2,
-    ),
-    "utf8",
-  )
+  const payload = {
+    schemaVersion: "yahoo-to-npb-full-v1",
+    generatedAt: new Date().toISOString(),
+    source:
+      "batting_master_bridge.csv + yahoo_pitcher_to_npb.json + canonical roster match (batting/pa/mentioned/pitching/pa-pitcher)",
+    canonicalGames: docs.length,
+    pairsAddedFromCanonicalVsBridgePitcher: fromCanonical,
+    entryCount: Object.keys(record).length,
+    map: record,
+  }
+  writeJsonFileWithRetrySync(outPath, payload)
   console.log(
     "[build_yahoo_npb_full_index] wrote",
     Object.keys(record).length,

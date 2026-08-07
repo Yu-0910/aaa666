@@ -20,14 +20,34 @@ import type {
 import { buildCatcherPitcherSeasonTotals } from "@/lib/catcherPitcherSplits"
 import type { PitcherSeasonPocPayload, PitcherSeasonPocCatcherRow } from "@/lib/pitcherSeasonPocTypes"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
+import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
+import { writeJsonFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 
-function parseArgs(argv: string[]): { year: string; limit: number } {
+function parseArgs(argv: string[]): {
+  year: string
+  limit: number
+  from: string | null
+  to: string | null
+  onlyNpbIds: string[] | null
+} {
   const yearIdx = argv.indexOf("--year")
   const year = yearIdx >= 0 ? (argv[yearIdx + 1] ?? "").trim() : ""
   const limitIdx = argv.indexOf("--limit")
   const limitRaw = limitIdx >= 0 ? (argv[limitIdx + 1] ?? "").trim() : ""
+  const fromIdx = argv.indexOf("--from")
+  const toIdx = argv.indexOf("--to")
+  const onlyIdx = argv.indexOf("--only-npb-ids")
   const limit = limitRaw ? Math.max(1, Math.min(50, parseInt(limitRaw, 10) || 15)) : 15
-  return { year: year || "2026", limit }
+  const from = fromIdx >= 0 ? String(argv[fromIdx + 1] ?? "").trim() : null
+  const to = toIdx >= 0 ? String(argv[toIdx + 1] ?? "").trim() : null
+  const onlyNpbIds =
+    onlyIdx >= 0
+      ? String(argv[onlyIdx + 1] ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null
+  return { year: year || "2026", limit, from, to, onlyNpbIds }
 }
 
 function safeReadJson<T>(p: string): T | null {
@@ -42,9 +62,48 @@ function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true })
 }
 
+function isYmd(s: string | null): s is string {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
+}
+
+function collectAffectedCatcherIdsFromCanonical(
+  root: string,
+  year: string,
+  from: string | null,
+  to: string | null,
+): Set<string> {
+  const out = new Set<string>()
+  const dir = path.join(root, "_data", "scraped_games", "canonical")
+  if (!fs.existsSync(dir)) return out
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".json"))) {
+    const doc = safeReadJson<{ gameId?: string; game?: { meta?: { documentTitle?: string; ogTitle?: string }; teams?: Array<{ startingLineup?: Array<{ yahooPlayerId?: string; fieldingPosition?: string }> }> } }>(
+      path.join(dir, f),
+    )
+    if (!doc?.gameId) continue
+    const ymd = extractCanonicalGameYmd(doc as any)
+    if (!ymd || !ymd.startsWith(`${year}-`)) continue
+    if (from && ymd < from) continue
+    if (to && ymd > to) continue
+    for (const team of doc.game?.teams ?? []) {
+      for (const p of team.startingLineup ?? []) {
+        const isCatcher = String(p.fieldingPosition ?? "").trim() === "捕"
+        const yahooId = String(p.yahooPlayerId ?? "").trim()
+        if (!isCatcher || !yahooId) continue
+        const npbId = resolveNpbPlayerIdFromPublicId(yahooId)
+        if (npbId) out.add(npbId)
+      }
+    }
+  }
+  return out
+}
+
 function main() {
   const root = getProjectRoot()
-  const { year, limit } = parseArgs(process.argv.slice(2))
+  const { year, limit, from, to, onlyNpbIds } = parseArgs(process.argv.slice(2))
+  if ((from && !isYmd(from)) || (to && !isYmd(to))) {
+    console.error("[phase23] invalid --from/--to. expected YYYY-MM-DD")
+    process.exit(1)
+  }
   const inDir = path.join(root, "_data", "derived", "player_season_pitching_poc", year)
   if (!fs.existsSync(inDir)) {
     console.error("[phase23] missing:", inDir)
@@ -58,6 +117,16 @@ function main() {
 
   // catcherNpbId -> pitcher rows (one per pitcher)
   const byCatcher = new Map<string, CatcherPitcherSplitRow[]>()
+  let targetNpbIds = onlyNpbIds ? new Set(onlyNpbIds) : null
+  if (!targetNpbIds && (from || to)) {
+    targetNpbIds = collectAffectedCatcherIdsFromCanonical(root, year, from, to)
+    if (targetNpbIds.size === 0) {
+      console.log(
+        `[phase23] no affected catchers for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
+      )
+      return
+    }
+  }
 
   for (const f of files) {
     const p = path.join(inDir, f)
@@ -74,6 +143,7 @@ function main() {
       if (!catcherYahooId) continue
       const catcherNpbId = resolveNpbPlayerIdFromPublicId(catcherYahooId)
       if (!catcherNpbId) continue
+      if (targetNpbIds && !targetNpbIds.has(catcherNpbId)) continue
 
       const row: CatcherPitcherSplitRow = {
         pitcherNpbId,
@@ -109,6 +179,16 @@ function main() {
 
   const outDir = path.join(root, "_data", "derived", "player_catcher_pitcher_splits", year)
   ensureDir(outDir)
+  for (const f of fs.readdirSync(outDir).filter((x) => x.startsWith("npb_") && x.endsWith(".json"))) {
+    const npbId = f.replace(/^npb_/, "").replace(/\.json$/, "")
+    if (targetNpbIds && !targetNpbIds.has(npbId)) continue
+    if (byCatcher.has(npbId)) continue
+    try {
+      fs.unlinkSync(path.join(outDir, f))
+    } catch {
+      // ignore
+    }
+  }
 
   let wrote = 0
   for (const [catcherNpbId, rows] of byCatcher) {
@@ -125,15 +205,13 @@ function main() {
       rows: sorted,
       seasonTotals,
     }
-    fs.writeFileSync(
-      path.join(outDir, `npb_${catcherNpbId}.json`),
-      JSON.stringify(payload, null, 2),
-      "utf8"
-    )
+    writeJsonFileWithRetrySync(path.join(outDir, `npb_${catcherNpbId}.json`), payload)
     wrote += 1
   }
 
-  console.log(`[phase23] wrote ${wrote} files → ${outDir}`)
+  console.log(
+    `[phase23] wrote ${wrote} files → ${outDir}${from || to ? ` (range=${from ?? "(start)"}..${to ?? "(end)"})` : ""}`,
+  )
 }
 
 main()

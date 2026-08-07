@@ -28,16 +28,24 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/load
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; from?: string; to?: string } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let from: string | undefined
+  let to: string | undefined
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!
       i++
+    } else if (args[i] === "--from" && args[i + 1]) {
+      from = args[i + 1]!
+      i++
+    } else if (args[i] === "--to" && args[i + 1]) {
+      to = args[i + 1]!
+      i++
     }
   }
-  return { year }
+  return { year, from, to }
 }
 
 function writeStandingsJson(absPath: string, payload: TeamStandingsJson): void {
@@ -62,10 +70,15 @@ function buildPayload(
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year } = parseArgs()
+  const { year, from, to } = parseArgs()
 
   console.log(`[phase29] building team standings for ${year}...`)
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot)
+  if (from || to) {
+    console.log(
+      `[phase29] range hint ${from ?? "(start)"}..${to ?? "(end)"} accepted; using full aggregation until standings game-cache incremental mode is available.`,
+    )
+  }
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   const byLeague = aggregateTeamStandingsByLeagueFromCanonical(docs, year, { projectRoot })
 
   for (const league of ["CL", "PL"] as const) {

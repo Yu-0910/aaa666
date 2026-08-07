@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021038721",
-  "builtAt": "2026-06-14T18:31:38.865Z",
+  "builtAt": "2026-07-14T19:41:30.418Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "524881960d672b418b2234d14357b83a0e100eb3ae0b3b1db415f72c8ada0c46",
-  "normalizedFetchedAt": "2026-06-14T18:31:38.865Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年4月16日 東京ヤクルトスワローズvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1410,7 +1410,7 @@
     ],
     "pitchByPitchNote": {
       "status": "restored_phase10",
-      "note": "pitch rows=274"
+      "note": "pitch rows=263"
     },
     "pickoffCatchMissInvestigations": []
   },
@@ -1421,6 +1421,11 @@
         "inningHalf": "1回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "2000035",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "左安",
         "pitchEvents": [
           {
@@ -1484,6 +1489,11 @@
         "inningHalf": "1回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1600089",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -1538,6 +1548,11 @@
         "inningHalf": "1回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1900028",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "左安",
         "pitchEvents": [
           {
@@ -1646,6 +1661,11 @@
         "inningHalf": "1回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1600078",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "一ゴロ",
         "pitchEvents": [
           {
@@ -1688,10 +1708,10 @@
             "pitchIndex": 5,
             "yahooPitcherId": "1960901",
             "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
+            "speedKmh": 129,
+            "pitchTypeJa": "ナックルカーブ",
             "zoneId": 8,
-            "resultJa": "ファウル[セーフティバント、バントファウル]"
+            "resultJa": "ボール[ワンバウンド]"
           },
           {
             "pitchIndex": 6,
@@ -1699,88 +1719,7 @@
             "yahooBatterId": "1600078",
             "speedKmh": null,
             "pitchTypeJa": "ストレート",
-            "zoneId": 4,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 7,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": 135,
-            "pitchTypeJa": "スライダー",
-            "zoneId": 16,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 8,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 14,
-            "resultJa": "見逃し"
-          },
-          {
-            "pitchIndex": 9,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": 129,
-            "pitchTypeJa": "ナックルカーブ",
-            "zoneId": 21,
-            "resultJa": "ボール[ワンバウンド]"
-          },
-          {
-            "pitchIndex": 10,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 8,
-            "resultJa": "ファウル[セーフティバント、バントファウル]"
-          },
-          {
-            "pitchIndex": 11,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 4,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 12,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": 135,
-            "pitchTypeJa": "スライダー",
-            "zoneId": 16,
-            "resultJa": "ボール"
-          },
-          {
-            "pitchIndex": 13,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 14,
-            "resultJa": "見逃し"
-          },
-          {
-            "pitchIndex": 14,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": 129,
-            "pitchTypeJa": "ナックルカーブ",
-            "zoneId": 21,
-            "resultJa": "ボール[ワンバウンド]"
-          },
-          {
-            "pitchIndex": 15,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "1600078",
-            "speedKmh": null,
-            "pitchTypeJa": "ストレート",
-            "zoneId": 17,
+            "zoneId": null,
             "resultJa": "一ゴロ"
           }
         ]
@@ -1835,6 +1774,11 @@
         "inningHalf": "2回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊ゴロ",
         "pitchEvents": [
           {
@@ -1862,6 +1806,11 @@
         "inningHalf": "2回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -1925,6 +1874,11 @@
         "inningHalf": "2回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1700066",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "四球",
         "pitchEvents": [
           {
@@ -1979,6 +1933,11 @@
         "inningHalf": "2回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1900035",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右安",
         "pitchEvents": [
           {
@@ -2015,6 +1974,11 @@
         "inningHalf": "2回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "2100014",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "左飛",
         "pitchEvents": [
           {
@@ -2042,6 +2006,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2103917",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "三ゴロ",
         "pitchEvents": [
           {
@@ -2078,6 +2047,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2000031",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右飛",
         "pitchEvents": [
           {
@@ -2123,6 +2097,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1900029",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "四球[ワンバウンド]",
         "pitchEvents": [
           {
@@ -2168,6 +2147,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1750696",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "左安",
         "pitchEvents": [
           {
@@ -2195,6 +2179,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1650522",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "左安",
         "pitchEvents": [
           {
@@ -2222,6 +2211,11 @@
         "inningHalf": "2回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1900028",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -2330,6 +2324,11 @@
         "inningHalf": "3回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "2000035",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊飛",
         "pitchEvents": [
           {
@@ -2465,6 +2464,11 @@
         "inningHalf": "3回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1600078",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "三併打",
         "pitchEvents": [
           {
@@ -2537,6 +2541,11 @@
         "inningHalf": "3回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2103917",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "左失",
         "pitchEvents": [
           {
@@ -2600,6 +2609,11 @@
         "inningHalf": "3回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2000031",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -2624,36 +2638,18 @@
             "pitchIndex": 3,
             "yahooPitcherId": "1960901",
             "yahooBatterId": "2000031",
-            "speedKmh": 131,
+            "speedKmh": 127,
             "pitchTypeJa": "ナックルカーブ",
             "zoneId": 23,
-            "resultJa": "ファウル"
+            "resultJa": "ボール[ワンバウンド]"
           },
           {
             "pitchIndex": 4,
             "yahooPitcherId": "1960901",
             "yahooBatterId": "2000031",
-            "speedKmh": null,
-            "pitchTypeJa": "チェンジアップ",
-            "zoneId": 18,
-            "resultJa": "見逃し"
-          },
-          {
-            "pitchIndex": 5,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "2000031",
-            "speedKmh": 127,
-            "pitchTypeJa": "ナックルカーブ",
-            "zoneId": 22,
-            "resultJa": "ボール[ワンバウンド]"
-          },
-          {
-            "pitchIndex": 6,
-            "yahooPitcherId": "1960901",
-            "yahooBatterId": "2000031",
             "speedKmh": 137,
             "pitchTypeJa": "スライダー",
-            "zoneId": 22,
+            "zoneId": 18,
             "resultJa": "空三振"
           }
         ]
@@ -2663,6 +2659,11 @@
         "inningHalf": "4回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1600089",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -2708,6 +2709,11 @@
         "inningHalf": "4回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中飛",
         "pitchEvents": [
           {
@@ -2762,6 +2768,11 @@
         "inningHalf": "4回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "左飛",
         "pitchEvents": [
           {
@@ -2780,6 +2791,11 @@
         "inningHalf": "4回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1900029",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右飛",
         "pitchEvents": [
           {
@@ -2834,6 +2850,11 @@
         "inningHalf": "4回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1750696",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右安",
         "pitchEvents": [
           {
@@ -2879,6 +2900,11 @@
         "inningHalf": "4回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1650522",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "左飛",
         "pitchEvents": [
           {
@@ -2906,6 +2932,11 @@
         "inningHalf": "4回裏",
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1900028",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中飛",
         "pitchEvents": [
           {
@@ -2951,6 +2982,11 @@
         "inningHalf": "5回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1700066",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊ゴロ",
         "pitchEvents": [
           {
@@ -2987,6 +3023,11 @@
         "inningHalf": "5回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1900035",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右飛",
         "pitchEvents": [
           {
@@ -3032,6 +3073,11 @@
         "inningHalf": "5回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "2100014",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -3104,6 +3150,11 @@
         "inningHalf": "5回裏",
         "yahooPitcherId": "2000099",
         "yahooBatterId": "1600078",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "三安",
         "pitchEvents": [
           {
@@ -3203,6 +3254,11 @@
         "inningHalf": "5回裏",
         "yahooPitcherId": "2000099",
         "yahooBatterId": "2103917",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -3275,6 +3331,11 @@
         "inningHalf": "5回裏",
         "yahooPitcherId": "2000099",
         "yahooBatterId": "2000031",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "三ゴロ[高めのつり球を要求]",
         "pitchEvents": [
           {
@@ -3293,6 +3354,11 @@
         "inningHalf": "6回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中安[ポテンヒット]",
         "pitchEvents": [
           {
@@ -3311,6 +3377,11 @@
         "inningHalf": "6回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "2000035",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中飛",
         "pitchEvents": [
           {
@@ -3374,6 +3445,11 @@
         "inningHalf": "6回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1600089",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "四球",
         "pitchEvents": [
           {
@@ -3428,6 +3504,11 @@
         "inningHalf": "6回表",
         "yahooPitcherId": "1750696",
         "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "遊ゴロ",
         "pitchEvents": [
           {
@@ -3464,6 +3545,11 @@
         "inningHalf": "6回裏",
         "yahooPitcherId": "1600072",
         "yahooBatterId": "1900029",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -3518,6 +3604,11 @@
         "inningHalf": "6回裏",
         "yahooPitcherId": "1600072",
         "yahooBatterId": "1700131",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "見三振",
         "pitchEvents": [
           {
@@ -3572,6 +3663,11 @@
         "inningHalf": "6回裏",
         "yahooPitcherId": "1600072",
         "yahooBatterId": "1650522",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -3608,6 +3704,11 @@
         "inningHalf": "7回表",
         "yahooPitcherId": "2122334",
         "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -3689,6 +3790,11 @@
         "inningHalf": "7回表",
         "yahooPitcherId": "2122334",
         "yahooBatterId": "1700066",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -3734,6 +3840,11 @@
         "inningHalf": "7回表",
         "yahooPitcherId": "2122334",
         "yahooBatterId": "1900035",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊ゴロ",
         "pitchEvents": [
           {
@@ -3752,6 +3863,11 @@
         "inningHalf": "7回裏",
         "yahooPitcherId": "2105891",
         "yahooBatterId": "1900028",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右安",
         "pitchEvents": [
           {
@@ -3788,6 +3904,11 @@
         "inningHalf": "7回裏",
         "yahooPitcherId": "2105891",
         "yahooBatterId": "1600078",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振[ランエンドヒット、ワンバウンド]",
         "pitchEvents": [
           {
@@ -3869,6 +3990,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1600075",
         "yahooBatterId": "2100014",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "空三振",
         "pitchEvents": [
           {
@@ -3914,6 +4040,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1600075",
         "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "見三振",
         "pitchEvents": [
           {
@@ -3959,6 +4090,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1600075",
         "yahooBatterId": "2000035",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "四球",
         "pitchEvents": [
           {
@@ -4031,6 +4167,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1600075",
         "yahooBatterId": "1000002",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "二安[ダイビングキャッチ、送球できず]",
         "pitchEvents": [
           {
@@ -4076,6 +4217,11 @@
         "inningHalf": "8回表",
         "yahooPitcherId": "1600075",
         "yahooBatterId": "1600089",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "二ゴロ",
         "pitchEvents": [
           {
@@ -4184,6 +4330,11 @@
         "inningHalf": "8回裏",
         "yahooPitcherId": "1700067",
         "yahooBatterId": "2103917",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊安[逆シングル、送球できず]",
         "pitchEvents": [
           {
@@ -4229,6 +4380,11 @@
         "inningHalf": "8回裏",
         "yahooPitcherId": "1700067",
         "yahooBatterId": "2000031",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "見三振",
         "pitchEvents": [
           {
@@ -4274,6 +4430,11 @@
         "inningHalf": "8回裏",
         "yahooPitcherId": "1700067",
         "yahooBatterId": "1900029",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "一ゴロ",
         "pitchEvents": [
           {
@@ -4310,6 +4471,11 @@
         "inningHalf": "9回表",
         "yahooPitcherId": "1961046",
         "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "右飛[フェンスギリギリ]",
         "pitchEvents": [
           {
@@ -4364,6 +4530,11 @@
         "inningHalf": "9回表",
         "yahooPitcherId": "1961046",
         "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "遊飛",
         "pitchEvents": [
           {
@@ -4400,6 +4571,11 @@
         "inningHalf": "9回表",
         "yahooPitcherId": "1961046",
         "yahooBatterId": "1700066",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "中安",
         "pitchEvents": [
           {
@@ -4436,6 +4612,11 @@
         "inningHalf": "9回表",
         "yahooPitcherId": "1961046",
         "yahooBatterId": "1900035",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
         "resultSummaryJa": "四球",
         "pitchEvents": [
           {
@@ -4490,6 +4671,11 @@
         "inningHalf": "9回表",
         "yahooPitcherId": "1961046",
         "yahooBatterId": "2100014",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": null
+        },
         "resultSummaryJa": "右飛",
         "pitchEvents": [
           {
@@ -4725,10 +4911,10 @@
         "pitchIndex": 5,
         "yahooPitcherId": "1960901",
         "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
+        "speedKmh": 129,
+        "pitchTypeJa": "ナックルカーブ",
         "zoneId": 8,
-        "resultJa": "ファウル[セーフティバント、バントファウル]"
+        "resultJa": "ボール[ワンバウンド]"
       },
       {
         "pitchIndex": 6,
@@ -4736,88 +4922,7 @@
         "yahooBatterId": "1600078",
         "speedKmh": null,
         "pitchTypeJa": "ストレート",
-        "zoneId": 4,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 7,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": 135,
-        "pitchTypeJa": "スライダー",
-        "zoneId": 16,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 8,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 14,
-        "resultJa": "見逃し"
-      },
-      {
-        "pitchIndex": 9,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": 129,
-        "pitchTypeJa": "ナックルカーブ",
-        "zoneId": 21,
-        "resultJa": "ボール[ワンバウンド]"
-      },
-      {
-        "pitchIndex": 10,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 8,
-        "resultJa": "ファウル[セーフティバント、バントファウル]"
-      },
-      {
-        "pitchIndex": 11,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 4,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 12,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": 135,
-        "pitchTypeJa": "スライダー",
-        "zoneId": 16,
-        "resultJa": "ボール"
-      },
-      {
-        "pitchIndex": 13,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 14,
-        "resultJa": "見逃し"
-      },
-      {
-        "pitchIndex": 14,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": 129,
-        "pitchTypeJa": "ナックルカーブ",
-        "zoneId": 21,
-        "resultJa": "ボール[ワンバウンド]"
-      },
-      {
-        "pitchIndex": 15,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "1600078",
-        "speedKmh": null,
-        "pitchTypeJa": "ストレート",
-        "zoneId": 17,
+        "zoneId": null,
         "resultJa": "一ゴロ"
       },
       {
@@ -5481,36 +5586,18 @@
         "pitchIndex": 3,
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2000031",
-        "speedKmh": 131,
+        "speedKmh": 127,
         "pitchTypeJa": "ナックルカーブ",
         "zoneId": 23,
-        "resultJa": "ファウル"
+        "resultJa": "ボール[ワンバウンド]"
       },
       {
         "pitchIndex": 4,
         "yahooPitcherId": "1960901",
         "yahooBatterId": "2000031",
-        "speedKmh": null,
-        "pitchTypeJa": "チェンジアップ",
-        "zoneId": 18,
-        "resultJa": "見逃し"
-      },
-      {
-        "pitchIndex": 5,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "2000031",
-        "speedKmh": 127,
-        "pitchTypeJa": "ナックルカーブ",
-        "zoneId": 22,
-        "resultJa": "ボール[ワンバウンド]"
-      },
-      {
-        "pitchIndex": 6,
-        "yahooPitcherId": "1960901",
-        "yahooBatterId": "2000031",
         "speedKmh": 137,
         "pitchTypeJa": "スライダー",
-        "zoneId": 22,
+        "zoneId": 18,
         "resultJa": "空三振"
       },
       {
@@ -6974,28 +7061,31 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021038721-runner-1",
+        "eventId": "2021038721-score-1",
         "inningHalf": "1回裏",
         "kind": "SB",
         "yahooRunnerId": "1900028",
-        "sourceLine": "3： 3番 古賀 優大 一死一塁 一塁走者 長岡 :盗塁成功 二塁 デュプランティエ (投):暴投 三塁 ランナー三塁からファーストゴロ 2アウト",
-        "sourceTier": "rawTextSteal"
+        "runnerNameJa": "長岡",
+        "sourceLine": "[0120300] 盗塁成功（長岡）、ランナー2塁 7 長岡 1 2 3 4 1 ファウル 2 ボール 3 ボール 4 見逃し 次の打者 オスナ 打者 古賀 優大 #2 右打 打率 .324 (34-11) 投手 デュプランティエ #0 右投 投球数 打者数 防御率 14 2 3.38",
+        "sourceTier": "score"
       },
       {
-        "eventId": "2021038721-runner-2",
+        "eventId": "2021038721-score-2",
         "inningHalf": "3回裏",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "sourceLine": "5： 6番 赤羽 由紘 二死二塁 二塁走者 岩田 :盗塁成功 三塁 カウント1-2から空振りの三振を喫する 3アウト",
-        "sourceTier": "rawTextSteal"
+        "runnerNameJa": "岩田",
+        "sourceLine": "[0320500] 盗塁成功（岩田）、ランナー3塁 64 岩田 1 2 1 ファウル 2 見逃し 次の打者 武岡 龍世 打者 赤羽 由紘 #00 右打 打率 .409 (22-9) 右飛 投手 デュプランティエ #0 右投 投球数 打者数 防御率 58 14 3.52",
+        "sourceTier": "score"
       },
       {
-        "eventId": "2021038721-runner-3",
+        "eventId": "2021038721-score-3",
         "inningHalf": "7回裏",
         "kind": "CS",
         "yahooRunnerId": "1900028",
-        "sourceLine": "3： 3番 古賀 優大 一死一塁 空振り三振！一塁走者 長岡 も盗塁失敗でダブルプレー 3アウト",
-        "sourceTier": "rawTextSteal"
+        "runnerNameJa": "長岡",
+        "sourceLine": "[0720300] 盗塁失敗（長岡） 7 長岡 1 2 3 4 5 6 7 8 1 ボール 2 ファウル 3 見逃し 4 ファウル 5 ボール 6 ボール 7 ファウル 8 空三振 次の打者 オスナ 打者 古賀 優大 #2 右打 打率 .324 (37-12) 一ゴロ 、 三併打 、 三安 投手 マルセリーノ #98 右投 投球数 打者数 防御率 10 2 6.75",
+        "sourceTier": "score"
       }
     ],
     "battingLines": [
@@ -7969,7 +8059,27 @@
           ""
         ]
       }
+    ],
+    "batterEvents": [
+      {
+        "eventId": "2021038721-yahooText-batter-1",
+        "inningHalf": "1回表",
+        "kind": "GIDP",
+        "yahooBatterId": "2101034",
+        "batterNameJa": "ヒュンメル",
+        "sourceLine": "4-6-3のダブルプレー 2アウト",
+        "sourceTier": "yahooTextDom"
+      },
+      {
+        "eventId": "2021038721-yahooText-batter-2",
+        "inningHalf": "3回裏",
+        "kind": "GIDP",
+        "yahooBatterId": "1600078",
+        "batterNameJa": "古賀 優大",
+        "sourceLine": "5-4-3のダブルプレー 2アウト",
+        "sourceTier": "yahooTextDom"
+      }
     ]
   },
-  "eventsFingerprint": "4b838a6282d4c1dd0d59bddbb0e180ed7572e31a78f212f8b55cbd9c0a03174c"
+  "eventsFingerprint": "58cbdd2b0974a70b8819f6742fbc0a550ddd0d2603bf6e0d718211703f5f1658"
 }

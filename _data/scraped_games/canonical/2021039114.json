@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039114",
-  "builtAt": "2026-07-09T18:35:41.896Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "22a2e2bd909f36ee78070b5bffea9c23abac62616b108ac9e64289350a5ae564",
-  "normalizedFetchedAt": "2026-07-09T18:24:40.431Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月9日 広島東洋カープvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6660,22 +6660,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039114-score-1",
+        "eventId": "2021039114-runner-1",
         "inningHalf": "2回裏",
         "kind": "SB",
         "yahooRunnerId": "1800079",
-        "runnerNameJa": "大盛",
-        "sourceLine": "[0220400] 盗塁成功（大盛）、ランナー2塁 59 大盛 1 2 1 ボール 2 見逃し 次の打者 矢野 雅哉 打者 持丸 泰輝 #57 左打 打率 .211 (133-28) 投手 ウォルターズ #58 右投 投球数 打者数 防御率 32 6 9.00",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 持丸 泰輝 二死一塁 一塁けん制:ランナー 大盛 帰塁 また一塁けん制:ランナー 大盛 帰塁 一塁走者 大盛 :盗塁成功 二塁 セカンドゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039114-score-2",
+        "eventId": "2021039114-runner-2",
         "inningHalf": "9回裏",
         "kind": "SB",
         "yahooRunnerId": "2107875",
-        "runnerNameJa": "久保",
-        "sourceLine": "[0920500] 盗塁成功（久保）、ランナー2,3塁 56 久保 69 辰見 1 2 3 1 ボール 2 見逃し 3 ボール 次の打者 大盛 穂 打者 菊池 涼介 #33 右打 打率 .241 (224-54) 投手 キハダ #11 左投 投球数 打者数 防御率 21 4 2.96",
-        "sourceTier": "score"
+        "sourceLine": "5： 代打 菊池 涼介 二死一三塁 佐藤啓 →代打: 菊池 一塁走者 坂倉 →代走: 久保 守備交代:ライト モンテル 一塁走者 久保 :盗塁成功 二三塁 代打で登場するも空振り三振に倒れる 3アウト 試合終了",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

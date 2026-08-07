@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039108",
-  "builtAt": "2026-07-12T05:15:54.691Z",
+  "builtAt": "2026-07-14T16:36:12.945Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
   "sourceCompositeFingerprint": "b8e0bbcdcad546046bfd2458d392dabdc79a3236c51bed0aac6f1812265b8b3c",
-  "normalizedFetchedAt": "2026-07-11T19:23:35.683Z",
+  "normalizedFetchedAt": "2026-07-14T16:36:12.945Z",
   "game": {
     "meta": {
       "documentTitle": "2026年7月8日 広島東洋カープvs.東京ヤクルトスワローズ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -1453,7 +1453,6 @@
       "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039108.html",
       "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039108.html",
       "seasonYear=2026",
-      "phase10:score:0710400:trailing_intermediate_single_page_next_required",
       "phase10:score:0710400:trailing_intermediate_single_page_next_required"
     ],
     "pitchByPitchNote": {
@@ -7198,22 +7197,20 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039108-score-1",
+        "eventId": "2021039108-runner-1",
         "inningHalf": "8回裏",
         "kind": "SB",
         "yahooRunnerId": "2107887",
-        "runnerNameJa": "辰見",
-        "sourceLine": "[0820200] 盗塁成功（辰見）、ランナー2塁 69 辰見 1 2 3 1 ボール 2 見逃し 3 見逃し 次の打者 大盛 穂 打者 名原 典彦 #92 右打 打率 .275 (142-39) 一ゴロ 、 左２ 、 遊ゴロ 投手 奥川 恭伸 #18 右投 投球数 打者数 防御率 100 27 2.80",
-        "sourceTier": "score"
+        "sourceLine": "2： 1番 名原 典彦 無死一塁 一塁走者 秋山 →代走: 辰見 一塁けん制:ランナー 辰見 帰塁 一塁けん制:ランナー 辰見 帰塁 また一塁けん制:ランナー 辰見 帰塁 またも一塁けん制:ランナー 辰見 帰塁 一塁けん制:ランナー 辰見 帰塁 一塁走者 辰見 :盗塁成功 二塁 空振り三振 1アウト",
+        "sourceTier": "rawTextSteal"
       },
       {
-        "eventId": "2021039108-score-2",
+        "eventId": "2021039108-runner-2",
         "inningHalf": "9回表",
         "kind": "SB",
         "yahooRunnerId": "2103917",
-        "runnerNameJa": "岩田",
-        "sourceLine": "[0910200] 盗塁成功（岩田）、ランナー2塁 64 岩田 投手 森浦 大輔 #13 左投 投球数 打者数 防御率 10 1 2.83",
-        "sourceTier": "score"
+        "sourceLine": "2： 7番 松下 歩叶 無死一塁 一塁けん制:ランナー 岩田 帰塁 一塁けん制:ランナー 岩田 帰塁 空振り三振に倒れるもスタートを切っていた一塁走者 岩田 が盗塁成功 1アウト二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

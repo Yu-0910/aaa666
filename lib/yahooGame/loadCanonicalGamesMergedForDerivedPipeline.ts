@@ -1,6 +1,6 @@
 import { mergePhase10RestoredIntoDocIfPresent } from "@/lib/seasonStatsPilot"
 import type { CanonicalGameDocument } from "@/lib/yahooGame/types"
-import { loadCanonicalGames } from "@/lib/yahooGame/loadCanonicalGames"
+import { loadCanonicalGames, type LoadCanonicalGamesOptions } from "@/lib/yahooGame/loadCanonicalGames"
 import { enrichPlateAppearancesWithResolvedPitcherIds } from "@/lib/yahooGame/resolvePitcherIdByPaId"
 import { injectTeamsFromSportsnaviStatsIfMissing } from "@/lib/yahooGame/injectTeamsFromSportsnaviStats.mjs"
 
@@ -17,8 +17,9 @@ import { injectTeamsFromSportsnaviStatsIfMissing } from "@/lib/yahooGame/injectT
  */
 export function loadCanonicalGamesMergedForDerivedPipeline(
   projectRoot: string,
+  options?: LoadCanonicalGamesOptions,
 ): CanonicalGameDocument[] {
-  return loadCanonicalGames(projectRoot).map((d) => {
+  return loadCanonicalGames(projectRoot, options).map((d) => {
     const merged = enrichPlateAppearancesWithResolvedPitcherIds(
       mergePhase10RestoredIntoDocIfPresent(d),
     )

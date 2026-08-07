@@ -7,7 +7,7 @@
  * team-games.json は既存の season ranking 出力を再利用し、無い場合だけ canonical から再計算する。
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { PitcherSeasonPocPayload } from "../lib/pitcherSeasonPocTypes"
@@ -40,6 +40,7 @@ import {
   assignRanks,
   filterPitchingRowsForQualifyingAtBuild,
 } from "../lib/ranking/filterRankingsByQualifyingAtBuild"
+import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -346,8 +347,8 @@ function main(): void {
       const rankedPublic = assignRanks(filtered)
 
       const fileBase = sanitizeMetricForPath(m.label)
-      writeFileSync(join(outDir, `${fileBase}.json`), JSON.stringify(rankedPublic, null, 2), "utf8")
-      writeFileSync(join(outDir, `${fileBase}_all.json`), JSON.stringify(rankedAll, null, 2), "utf8")
+      writeJsonFileWithRetrySync(join(outDir, `${fileBase}.json`), rankedPublic)
+      writeJsonFileWithRetrySync(join(outDir, `${fileBase}_all.json`), rankedAll)
     }
 
     console.log(`[phase19] wrote ${lg} (${metrics.length} metrics, ${list.length} pitchers) → ${outDir}`)

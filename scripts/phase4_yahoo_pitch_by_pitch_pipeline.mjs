@@ -27,6 +27,7 @@ import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { isSportsnaviMainGameCancelled } from "../lib/yahooGame/sportsnaviStatsTextParse.mjs"
 import { isScheduleCancelledGame } from "../lib/yahooGame/sportsnaviScheduleStatus.mjs"
+import { writeJsonFileWithRetrySync, writeTextFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 const MERGE_STAMP_SCHEMA = "phase4-yahoo-phase10-merge-stamp-v1"
 // merge ロジックを変えたら bump（stamp を無効化して再マージさせる）
@@ -171,6 +172,46 @@ function phase10PitchRowCount(phase10Path) {
   } catch {
     return 0
   }
+}
+
+function canonicalDomainPitchEventCount(canonPath) {
+  if (!fileExists(canonPath)) return 0
+  try {
+    const doc = readJson(canonPath)
+    return Array.isArray(doc?.domain?.pitchEvents) ? doc.domain.pitchEvents.length : 0
+  } catch {
+    return 0
+  }
+}
+
+function writeMergeStamp(stampPath, gameId, phase10Path) {
+  const restoredJson = readJson(phase10Path)
+  const rows = pitchRowsFromPhase10Json(restoredJson)
+  const phase10RowsFingerprint = computePhase10RowsFingerprint(rows)
+  if (rows.length > 0 && phase10RowsFingerprint === EMPTY_PHASE10_ROWS_FINGERPRINT) {
+    throw new Error(`[phase4] stamp fingerprint sanity failed for ${gameId}: pitchRows=${rows.length} but empty hash`)
+  }
+  writeTextFileWithRetrySync(
+    stampPath,
+    JSON.stringify(
+      {
+        schemaVersion: MERGE_STAMP_SCHEMA,
+        gameId,
+        mergeVersion: MERGE_STAMP_MERGE_VERSION,
+        phase10RowsFingerprint,
+        builtAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    ) + "\n",
+  )
+  return { phase10RowsFingerprint, pitchRowCount: rows.length }
+}
+
+function isCanonicalConsistentWithPhase10(canonPath, phase10Path) {
+  const pitchRows = phase10PitchRowCount(phase10Path)
+  const pitchEvents = canonicalDomainPitchEventCount(canonPath)
+  return pitchRows > 0 && pitchEvents === pitchRows
 }
 
 function buildScoreIndex(inning, topBottom, batOrder) {
@@ -346,6 +387,8 @@ async function main() {
   let skippedMerge = 0
   let skippedCancelled = 0
   let failed = 0
+  const failedGameIds = []
+  const gameReports = []
 
   for (let i = 0; i < gameIds.length; i++) {
     const gameId = gameIds[i]
@@ -362,14 +405,20 @@ async function main() {
 
     const phase10Path = path.join(root, "_data", "scraped_games", "derived", `${gameId}_phase10_restored.json`)
     const canonPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
-    if (!fileExists(canonPath)) {
-      console.warn(`[phase4] skip ${gameId}: missing canonical`)
-      failed += 1
-      continue
+    const gameReport = {
+      gameId,
+      restoreStatus: "not_started",
+      mergeStatus: "not_started",
+      pitchRows: 0,
+      pitchEvents: 0,
+      attempts: [],
+      recommendedNextCommand: "",
     }
-
+    gameReports.push(gameReport)
     if (isCancelledGame(root, year, gameId, canonPath)) {
       skippedCancelled += 1
+      gameReport.restoreStatus = "skipped_cancelled"
+      gameReport.mergeStatus = "skipped_cancelled"
       console.log(`[phase4] skip ${gameId}: game cancelled (試合中止/ノーゲーム) — phase10 対象外`)
       if (fileExists(phase10Path) && phase10PitchRowCount(phase10Path) === 0) {
         try {
@@ -386,11 +435,22 @@ async function main() {
       continue
     }
 
+    if (!fileExists(canonPath)) {
+      console.warn(`[phase4] skip ${gameId}: missing canonical`)
+      gameReport.restoreStatus = "skipped_missing_canonical"
+      gameReport.mergeStatus = "skipped_missing_canonical"
+      gameReport.recommendedNextCommand = `node scripts/run_daily_npb_pipeline_v2.mjs --year ${year} --game-ids ${gameId} --prefetch-only`
+      failed += 1
+      failedGameIds.push(gameId)
+      continue
+    }
+
     // restore（空 pitchRows の derived は未完了扱い → 削除して再実行）
     const existingRows = phase10PitchRowCount(phase10Path)
     const missingBaseIndexes = !force && existingRows > 0 ? missingPhase10BaseIndexes(root, gameId, phase10Path) : []
     if (!force && existingRows > 0 && missingBaseIndexes.length === 0) {
       skippedRestore += 1
+      gameReport.restoreStatus = "skipped_existing"
       console.log(`[phase4] restore: skipped (pitchRows=${existingRows})`)
     } else {
       if (!force && existingRows > 0 && missingBaseIndexes.length > 0) {
@@ -406,6 +466,7 @@ async function main() {
       }
       try {
         console.log(`[phase4] restore: running (sleep=${sleepSec}${force ? ", force" : ""})`)
+        gameReport.attempts.push({ step: "restore", attempt: 1, status: "running" })
         run(
           "python",
           [
@@ -422,10 +483,19 @@ async function main() {
           `restore:${gameId}`
         )
         restored += 1
+        gameReport.restoreStatus = "completed"
+        gameReport.attempts[gameReport.attempts.length - 1].status = "completed"
         console.log(`[phase4] restore: ok`)
       } catch (e) {
-        console.warn(`[phase4] restore failed for ${gameId}: ${String(e?.message ?? e)}`)
+        const message = String(e?.message ?? e)
+        console.warn(`[phase4] restore failed for ${gameId}: ${message}`)
+        gameReport.restoreStatus = "failed"
+        gameReport.mergeStatus = "skipped_restore_failed"
+        gameReport.errorMessage = message
+        gameReport.recommendedNextCommand = `python scripts/run_yahoo_phase10_restore.py --game-id ${gameId} --year ${year} --text-from-raw --sleep ${sleepSec} --force`
+        if (gameReport.attempts.length > 0) gameReport.attempts[gameReport.attempts.length - 1].status = "failed"
         failed += 1
+        failedGameIds.push(gameId)
         continue
       }
     }
@@ -449,6 +519,9 @@ async function main() {
           )
         ) {
           skippedMerge += 1
+          gameReport.mergeStatus = "skipped_stamp_match"
+          gameReport.pitchRows = rows.length
+          gameReport.pitchEvents = canonicalDomainPitchEventCount(canonPath)
           console.log(`[phase4] merge: skipped (stamp match)`)
           continue
         }
@@ -459,41 +532,58 @@ async function main() {
     try {
       console.log(`[phase4] merge: running`)
       const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm"
+      gameReport.attempts.push({ step: "merge", attempt: 1, status: "running" })
       run(npmCmd, ["run", "-s", "phase4:merge:phase10", "--", "--game-id", gameId], `merge:${gameId}`)
-      let phase10RowsFingerprint = ""
-      try {
-        const restoredJson = readJson(phase10Path)
-        const rows = pitchRowsFromPhase10Json(restoredJson)
-        phase10RowsFingerprint = computePhase10RowsFingerprint(rows)
-        if (rows.length > 0 && phase10RowsFingerprint === EMPTY_PHASE10_ROWS_FINGERPRINT) {
-          throw new Error(
-            `[phase4] stamp fingerprint sanity failed for ${gameId}: pitchRows=${rows.length} but empty hash`,
-          )
-        }
-      } catch (e) {
-        throw new Error(String(e?.message ?? e))
-      }
-      fs.writeFileSync(
-        stampPath,
-        JSON.stringify(
-          {
-            schemaVersion: MERGE_STAMP_SCHEMA,
-            gameId,
-            mergeVersion: MERGE_STAMP_MERGE_VERSION,
-            phase10RowsFingerprint,
-            builtAt: new Date().toISOString(),
-          },
-          null,
-          2,
-        ) + "\n",
-        "utf8",
-      )
+      const stamp = writeMergeStamp(stampPath, gameId, phase10Path)
       merged += 1
+      gameReport.mergeStatus = "completed"
+      gameReport.pitchRows = stamp.pitchRowCount
+      gameReport.pitchEvents = canonicalDomainPitchEventCount(canonPath)
+      gameReport.attempts[gameReport.attempts.length - 1].status = "completed"
       console.log(`[phase4] merge: ok`)
     } catch (e) {
-      console.warn(`[phase4] merge failed for ${gameId}: ${String(e?.message ?? e)}`)
-      failed += 1
-      continue
+      const firstMessage = String(e?.message ?? e)
+      console.warn(`[phase4] merge failed for ${gameId}: ${firstMessage}`)
+      if (gameReport.attempts.length > 0) gameReport.attempts[gameReport.attempts.length - 1].status = "failed"
+      try {
+        console.warn(`[phase4] merge retry for ${gameId}: running once`)
+        const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm"
+        gameReport.attempts.push({ step: "merge", attempt: 2, status: "running" })
+        run(npmCmd, ["run", "-s", "phase4:merge:phase10", "--", "--game-id", gameId], `merge-retry:${gameId}`)
+        const stamp = writeMergeStamp(stampPath, gameId, phase10Path)
+        merged += 1
+        gameReport.mergeStatus = "completed_after_retry"
+        gameReport.pitchRows = stamp.pitchRowCount
+        gameReport.pitchEvents = canonicalDomainPitchEventCount(canonPath)
+        gameReport.attempts[gameReport.attempts.length - 1].status = "completed"
+        console.log(`[phase4] merge retry: ok`)
+      } catch (retryError) {
+        const retryMessage = String(retryError?.message ?? retryError)
+        if (gameReport.attempts.length > 0) gameReport.attempts[gameReport.attempts.length - 1].status = "failed"
+        if (isCanonicalConsistentWithPhase10(canonPath, phase10Path)) {
+          try {
+            const stamp = writeMergeStamp(stampPath, gameId, phase10Path)
+            skippedMerge += 1
+            gameReport.mergeStatus = "stamp_repaired_after_consistency_check"
+            gameReport.pitchRows = stamp.pitchRowCount
+            gameReport.pitchEvents = canonicalDomainPitchEventCount(canonPath)
+            gameReport.errorMessage = `merge failed but canonical was already consistent; first=${firstMessage}; retry=${retryMessage}`
+            console.warn(`[phase4] merge stamp repaired for ${gameId}: canonical already has matching pitchEvents`)
+            continue
+          } catch (stampError) {
+            gameReport.errorMessage = `first=${firstMessage}; retry=${retryMessage}; stamp=${String(stampError?.message ?? stampError)}`
+          }
+        } else {
+          gameReport.errorMessage = `first=${firstMessage}; retry=${retryMessage}`
+          gameReport.pitchRows = phase10PitchRowCount(phase10Path)
+          gameReport.pitchEvents = canonicalDomainPitchEventCount(canonPath)
+        }
+        gameReport.mergeStatus = "failed"
+        gameReport.recommendedNextCommand = `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} --game-ids ${gameId} --sleep ${sleepSec} --force`
+        failed += 1
+        failedGameIds.push(gameId)
+        continue
+      }
     } finally {
       const elapsedGame = Date.now() - startedGame
       console.log(
@@ -506,6 +596,25 @@ async function main() {
     `[phase4] year=${year} targets=${gameIds.length} restored=${restored} merged=${merged} ` +
       `skippedRestore=${skippedRestore} skippedMerge=${skippedMerge} skippedCancelled=${skippedCancelled} failed=${failed}`,
   )
+  const reportPath = path.join(root, "_data", "scraped_games", "_meta", `phase4_last_run_${year}.json`)
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true })
+  writeJsonFileWithRetrySync(reportPath, {
+    schemaVersion: "phase4-last-run-v1",
+    year,
+    generatedAt: new Date().toISOString(),
+    targetGameIds: gameIds,
+    failedGameIds: [...new Set(failedGameIds)],
+    restored,
+    merged,
+    skippedRestore,
+    skippedMerge,
+    skippedCancelled,
+    games: gameReports,
+    recommendedNextCommand:
+      failedGameIds.length > 0
+        ? `node scripts/phase4_yahoo_pitch_by_pitch_pipeline.mjs --year ${year} --game-ids ${[...new Set(failedGameIds)].join(",")} --sleep ${sleepSec} --force`
+        : "",
+  })
   if (failed > 0) {
     console.error(`[phase4] ${failed} game(s) failed — canonical の pitchEvents が未更新の可能性があります`)
     process.exit(1)
