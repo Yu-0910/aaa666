@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner"
 import TopPageLeadersClient from "@/app/components/TopPageLeadersClient"
 import TopPagePitchingLeadersClient from "@/app/components/TopPagePitchingLeadersClient"
 import { LeadersPanel, type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import type { TopSeasonStatView } from "@/app/components/common/RankingBottomNav"
 import { getDataForPanel } from "@/app/components/top/topPageConstants"
 import { usesTopPageModernLayout } from "@/lib/topPageModernLayout"
 import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
@@ -15,12 +16,14 @@ type TopPageSeasonTabContentProps = {
   layout: TopPageLayoutMode
   /** サーバー先読み済み（2026 スナップショット） */
   initialPayload?: SeasonTabPayload | null
+  activeView?: TopSeasonStatView
 }
 
 export function TopPageSeasonTabContent({
   year,
   layout,
   initialPayload,
+  activeView = "cl-batting",
 }: TopPageSeasonTabContentProps) {
   const [payload, setPayload] = useState<SeasonTabPayload | null>(initialPayload ?? null)
   const [loading, setLoading] = useState(!initialPayload)
@@ -87,40 +90,49 @@ export function TopPageSeasonTabContent({
     )
   }
 
-  const renderLeague = (league: "CL" | "PL") => (
-    <div className="space-y-4">
-      <TopPageLeadersClient
-        year={year}
-        league={league}
-        layout={layout}
-        initialData={payload.batting[league]}
-      />
-      {payload.pitching ? (
+  const renderPanel = (view: TopSeasonStatView) => {
+    const league = view.startsWith("cl") ? "CL" : "PL"
+    const isPitching = view.endsWith("pitching")
+
+    if (!isPitching) {
+      return (
+        <TopPageLeadersClient
+          year={year}
+          league={league}
+          layout={layout}
+          initialData={payload.batting[league]}
+        />
+      )
+    }
+
+    if (payload.pitching) {
+      return (
         <TopPagePitchingLeadersClient
           year={year}
           league={league}
           layout={layout}
           initialData={payload.pitching[league]}
         />
-      ) : (
-        <LeadersPanel
-          title={`${league === "CL" ? "セ・リーグ" : "パ・リーグ"} 投球成績`}
-          leagueName={league === "CL" ? "Central League" : "Pacific League"}
-          leagueColor={league === "CL" ? "#039850" : "#10b8ce"}
-          data={getDataForPanel(league, "pitching")}
-          year={year}
-          league={league}
-          layout={layout}
-          statsCategory="pitching"
-        />
-      )}
-    </div>
-  )
+      )
+    }
+
+    return (
+      <LeadersPanel
+        title={`${league === "CL" ? "セ・リーグ" : "パ・リーグ"} 投球成績`}
+        leagueName={league === "CL" ? "Central League" : "Pacific League"}
+        leagueColor={league === "CL" ? "#039850" : "#10b8ce"}
+        data={getDataForPanel(league, "pitching")}
+        year={year}
+        league={league}
+        layout={layout}
+        statsCategory="pitching"
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {renderLeague("CL")}
-      {renderLeague("PL")}
+      {renderPanel(activeView)}
     </div>
   )
 }

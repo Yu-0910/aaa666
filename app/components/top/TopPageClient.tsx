@@ -16,7 +16,7 @@ import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabCo
 import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
 import SiteFooter from "@/app/components/common/SiteFooter"
-import RankingBottomNav from "@/app/components/common/RankingBottomNav"
+import RankingBottomNav, { type TopSeasonStatView } from "@/app/components/common/RankingBottomNav"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
@@ -41,6 +41,7 @@ export function TopPageClient({
   const isMobile = layout === "mobile"
   const [selectedYear, setSelectedYear] = useState(initialYear)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [topSeasonView, setTopSeasonView] = useState<TopSeasonStatView>("cl-batting")
   const isWeeklyMainTab = activeMainTab === 1
   const isTopBattingModernPage = usesTopBattingModernLayout(selectedYear, isWeeklyMainTab)
 
@@ -93,6 +94,7 @@ export function TopPageClient({
             year={selectedYear}
             layout={layout}
             initialPayload={prefetchSeasonTab ? seasonInitial : undefined}
+            activeView={topSeasonView}
           />
         </div>
       )}
@@ -135,7 +137,7 @@ export function TopPageClient({
   )
 
   return (
-    <div className={`min-h-screen bg-black pb-20 text-white md:pb-0 ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen bg-black text-white ${activeMainTab === 0 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
@@ -210,7 +212,9 @@ export function TopPageClient({
       <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
       </div>
-      <RankingBottomNav year={selectedYear} />
+      {activeMainTab === 0 && (
+        <RankingBottomNav activeView={topSeasonView} onViewChange={setTopSeasonView} />
+      )}
       <SiteFooter className="mt-12" />
     </div>
   )
