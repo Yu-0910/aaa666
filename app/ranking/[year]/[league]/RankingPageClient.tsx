@@ -14,6 +14,7 @@ import { season2026BattingQualifyingNote } from "@/lib/ranking/qualifyingUiNotes
 import { buildRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 import { useBattingRankingTable } from "@/hooks/useBattingRankingTable"
 import { FullPageLoading } from "@/components/ui/spinner"
+import RankingBottomNav from "@/app/components/common/RankingBottomNav"
 
 interface RankingPageClientProps {
   initialViewModel: RankingViewModel
@@ -69,7 +70,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     !yahooPoc
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black pb-20 text-white flex flex-col md:pb-0">
       {emptyAfterFilter && (
         <div className="border-b border-[#444] bg-[#141414] px-3 py-2 text-center text-xs sm:text-sm text-gray-400">
           規定打席を満たす選手がいません。別の指標を選ぶか、team-games.json の生成（npm run phase12:build:rankings）を確認してください。
@@ -84,6 +85,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
         titleSubNote={titleSubNote}
         headerNavGroups={headerNavGroups}
       />
+      <RankingBottomNav year={initialViewModel.season} />
     </div>
   )
 }

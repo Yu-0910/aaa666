@@ -16,6 +16,7 @@ import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabCo
 import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
 import SiteFooter from "@/app/components/common/SiteFooter"
+import RankingBottomNav from "@/app/components/common/RankingBottomNav"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
@@ -134,7 +135,7 @@ export function TopPageClient({
   )
 
   return (
-    <div className={`min-h-screen bg-black text-white ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen bg-black pb-20 text-white md:pb-0 ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
@@ -209,6 +210,7 @@ export function TopPageClient({
       <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
       </div>
+      <RankingBottomNav year={selectedYear} />
       <SiteFooter className="mt-12" />
     </div>
   )

@@ -13,6 +13,7 @@ import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
 import { buildRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 import { usePitchingRankingTable } from "@/hooks/usePitchingRankingTable"
 import { FullPageLoading } from "@/components/ui/spinner"
+import RankingBottomNav from "@/app/components/common/RankingBottomNav"
 
 interface PitchingRankingPageClientProps {
   initialViewModel: RankingViewModel
@@ -71,7 +72,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
       : undefined
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black pb-20 text-white flex flex-col md:pb-0">
       {!loadError && emptyNoData && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-3 py-2 text-center text-xs sm:text-sm text-amber-100/90">
           この指標のランキングデータがまだありません。public/data/rankings/pitching/{initialViewModel.season}/
@@ -94,6 +95,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
         titleSubNote={titleSubNote}
         headerNavGroups={headerNavGroups}
       />
+      <RankingBottomNav year={initialViewModel.season} />
     </div>
   )
 }
