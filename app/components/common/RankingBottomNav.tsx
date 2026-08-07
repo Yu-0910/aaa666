@@ -22,7 +22,7 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 md:hidden"
       aria-label="TOP成績切り替え"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+      <div className="mx-auto grid max-w-md grid-cols-4 rounded-full bg-white p-1 shadow-[0_4px_14px_rgba(0,0,0,0.12)]">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.view
@@ -31,15 +31,15 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
               key={item.view}
               type="button"
               onClick={() => onViewChange(item.view)}
-              className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md border px-1 text-[10px] font-bold transition-colors ${
+              className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 text-[11px] font-bold leading-none transition-colors ${
                 isActive
-                  ? "border-white/80 bg-white/85 text-black shadow-[0_3px_10px_rgba(0,0,0,0.14)]"
-                  : "border-white/35 bg-white/60 text-gray-600 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:bg-white/75 hover:text-black"
+                  ? "bg-gray-100 text-[#ffff44]"
+                  : "bg-transparent text-gray-800 hover:text-black"
               }`}
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              <span className="leading-none">{item.label}</span>
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              <span className="whitespace-nowrap">{item.label}</span>
             </button>
           )
         })}
