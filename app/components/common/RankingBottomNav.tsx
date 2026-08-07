@@ -19,7 +19,7 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-3 z-50 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-2 md:hidden"
       aria-label="TOP成績切り替え"
     >
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
