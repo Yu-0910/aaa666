@@ -22,7 +22,7 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 md:hidden"
       aria-label="TOP成績切り替え"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 rounded-full bg-white p-1 shadow-[0_4px_14px_rgba(0,0,0,0.12)]">
+      <div className="mx-auto grid max-w-md grid-cols-4 rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.view
@@ -33,8 +33,8 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
               onClick={() => onViewChange(item.view)}
               className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 text-[11px] font-bold leading-none transition-colors ${
                 isActive
-                  ? "bg-gray-100 text-[#ffff44]"
-                  : "bg-transparent text-gray-800 hover:text-black"
+                  ? "bg-white/25 text-[#ffff44]"
+                  : "bg-transparent text-gray-800/85 hover:text-black"
               }`}
               aria-current={isActive ? "page" : undefined}
             >
