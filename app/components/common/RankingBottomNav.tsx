@@ -34,7 +34,7 @@ export default function RankingBottomNav({ activeView, onViewChange }: RankingBo
               className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 text-[11px] font-bold leading-none transition-colors ${
                 isActive
                   ? "bg-white/25 text-[#ffff44]"
-                  : "bg-transparent text-gray-800/85 hover:text-black"
+                  : "bg-transparent text-white/90 hover:text-white"
               }`}
               aria-current={isActive ? "page" : undefined}
             >
