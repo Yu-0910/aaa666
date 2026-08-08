@@ -51,6 +51,11 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
       {
+        url: "/favicon.ico?v=4",
+        sizes: "any",
+        type: "image/x-icon",
+      },
+      {
         url: "/app-icon-192-v2.png?v=3",
         sizes: "192x192",
         type: "image/png",
@@ -84,6 +89,8 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.webmanifest?v=3" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-v2.png?v=3" />
         <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-icon-v2.png?v=3" />
+        <link rel="shortcut icon" href="/favicon.ico?v=4" />
+        <link rel="icon" href="/favicon.ico?v=4" sizes="any" />
         <link rel="icon" type="image/png" sizes="192x192" href="/app-icon-192-v2.png?v=3" />
         <link rel="icon" type="image/png" sizes="512x512" href="/app-icon-512-v2.png?v=3" />
         <meta name="mobile-web-app-capable" content="yes" />

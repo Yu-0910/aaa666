@@ -50,6 +50,7 @@ const nextConfig = {
         '/apple-icon.png',
         '/apple-icon-v2.png',
         '/apple-touch-icon.png',
+        '/favicon.ico',
         '/app-icon-192-v2.png',
         '/app-icon-512-v2.png',
         '/app-icon-maskable-512-v2.png',
