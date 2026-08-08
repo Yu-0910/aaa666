@@ -99,9 +99,29 @@ const TEAM_STRIPE_HEX: Record<string, string> = {
 /** チーム不明・空欄: 列区切り #555 と差がつくスレート系 */
 export const UNKNOWN_RANKING_TEAM_STRIPE = "#94a3b8"
 
+function normalizeTeamStripeLookupKey(teamRaw: string): string {
+  return teamRaw.trim().normalize("NFKC").replace(/\s+/g, "")
+}
+
+function isDeNaStripeAlias(team: string): boolean {
+  return (
+    team === "横浜DeNA" ||
+    team === "DeNAベイスターズ" ||
+    team.includes("DeNAベイスターズ") ||
+    team.toLowerCase().includes("denabaystars")
+  )
+}
+
 export function rankingTeamStripeColor(teamRaw: string): string {
   const t = (teamRaw ?? "").trim()
   if (!t) return UNKNOWN_RANKING_TEAM_STRIPE
   if (HISTORICAL_TEAM_STRIPE_HEX[t]) return HISTORICAL_TEAM_STRIPE_HEX[t]
-  return TEAM_STRIPE_HEX[t] ?? UNKNOWN_RANKING_TEAM_STRIPE
+  if (TEAM_STRIPE_HEX[t]) return TEAM_STRIPE_HEX[t]
+
+  const normalized = normalizeTeamStripeLookupKey(t)
+  if (HISTORICAL_TEAM_STRIPE_HEX[normalized]) return HISTORICAL_TEAM_STRIPE_HEX[normalized]
+  if (TEAM_STRIPE_HEX[normalized]) return TEAM_STRIPE_HEX[normalized]
+  if (isDeNaStripeAlias(normalized)) return TEAM_STRIPE_HEX.DB
+
+  return UNKNOWN_RANKING_TEAM_STRIPE
 }

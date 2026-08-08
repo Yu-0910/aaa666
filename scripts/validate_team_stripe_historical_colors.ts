@@ -52,6 +52,11 @@ for (const [team, color] of Object.entries(EXPECTED)) {
 
 assert.equal(rankingTeamStripeColor("東京ヤクルトスワローズ"), "#2bbb3f")
 assert.equal(rankingTeamStripeColor("埼玉西武ライオンズ"), "#004098")
+assert.equal(rankingTeamStripeColor("ＤｅＮＡ"), "#0067c0")
+assert.equal(rankingTeamStripeColor("横浜DeNA"), "#0067c0")
+assert.equal(rankingTeamStripeColor("横浜ＤｅＮＡ"), "#0067c0")
+assert.equal(rankingTeamStripeColor("横浜ＤｅＮＡベイスターズ"), "#0067c0")
+assert.equal(rankingTeamStripeColor("Yokohama DeNA BayStars"), "#0067c0")
 assert.equal(rankingTeamStripeColor(""), "#94a3b8")
 
 console.log("validate_team_stripe_historical_colors: ok")

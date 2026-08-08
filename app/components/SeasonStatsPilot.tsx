@@ -26,6 +26,7 @@ import { SectionLoadingSpinner } from "@/components/ui/spinner"
 import { STADIUM_VENUE_UI_ROWS_BATTING, formatPlayerPageStadiumDisplay } from "@/lib/stadiumVenueNormalize"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { formatRankingStatDisplay } from "@/lib/formatStat"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { STARTER_FIELD_TABLE_KEYS } from "@/lib/yahooGame/starterFieldPositionFromStats"
 import { playerVsTeamNamesMatch } from "@/lib/standings/teamCodes"
 
@@ -56,22 +57,6 @@ type Props = {
   animatePitchCharts?: boolean
   /** 基本成績タブの本文先頭に差し込む追加コンテンツ */
   renderBasicTopContent?: (totalRow: SeasonStatsRow | null) => ReactNode
-}
-
-/** 球団別カラー（ランキングUIと同様） */
-const TEAM_COLORS: Record<string, string> = {
-  日本ハム: "#0077c8",
-  楽天: "#7a0019",
-  西武: "#004098",
-  ロッテ: "#6b7280",
-  オリックス: "#b79e51",
-  ソフトバンク: "#ffdb00",
-  巨人: "#ff6600",
-  ヤクルト: "#2bbb3f",
-  横浜: "#0067c0",
-  中日: "#004ea2",
-  阪神: "#ffde00",
-  広島: "#d60718",
 }
 
 /** 暗いストライプのデータ行。親の text-white / body の color 継承が崩れても数値が読めるよう明示する */
@@ -633,7 +618,7 @@ export default function SeasonStatsPilot({
                               style={{ backgroundColor: "#1a1a1a" }}
                             >
                               <div className="flex items-center gap-1 min-h-[1.25rem]">
-                                <div className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: TEAM_COLORS[team.label] || "#666" }} />
+                                <div className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: rankingTeamStripeColor(team.label) }} />
                                 <span>{team.label}</span>
                               </div>
                             </td>
@@ -1094,7 +1079,7 @@ export default function SeasonStatsPilot({
                           <tr key={item.display} style={PILOT_TABLE_DATA_ROW}>
                             <td className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]" style={{ backgroundColor: "#1a1a1a" }}>
                               <div className="flex items-center gap-1 min-h-[1.25rem]">
-                                <div className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: TEAM_COLORS[item.teamLabel] || "#666" }} />
+                                <div className="w-1 h-4 flex-shrink-0" style={{ backgroundColor: rankingTeamStripeColor(item.teamLabel) }} />
                                 <span>{formatPlayerPageStadiumDisplay(item.display)}</span>
                               </div>
                             </td>

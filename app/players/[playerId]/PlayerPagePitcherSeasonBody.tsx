@@ -30,6 +30,7 @@ import {
   EMPTY_STADIUM_VS_ROWS,
 } from "@/lib/pitcherSeasonPocUi"
 import { formatEra, formatRankingStatDisplay } from "@/lib/formatStat"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { formatSlashStatDisplay, slashRate3FromCounts } from "@/lib/battingRateFormat"
 import {
   PitchTypeSplitViewsSection,
@@ -475,32 +476,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                       style={{
                                         width: "4.32px",
                                         height: "17.28px",
-                                        backgroundColor:
-                                          row.team === "巨人"
-                                            ? "#ff6600"
-                                            : row.team === "阪神"
-                                              ? "#ffde00"
-                                              : row.team === "ＤｅＮＡ"
-                                                ? "#0067c0"
-                                                : row.team === "ヤクルト"
-                                                  ? "#2bbb3f"
-                                                  : row.team === "中日"
-                                                    ? "#004ea2"
-                                                    : row.team === "広島"
-                                                      ? "#d60718"
-                                                      : row.team === "日本ハム"
-                                                        ? "#0077c8"
-                                                        : row.team === "楽天"
-                                                          ? "#7a0019"
-                                                          : row.team === "西武"
-                                                            ? "#004098"
-                                                            : row.team === "ロッテ"
-                                                              ? "#6b7280"
-                                                              : row.team === "オリックス"
-                                                                ? "#b79e51"
-                                                                : row.team === "ソフトバンク"
-                                                                  ? "#ffdb00"
-                                                                  : "#666666",
+                                        backgroundColor: rankingTeamStripeColor(row.team),
                                       }}
                                     />
                                     <span>{row.team}</span>
@@ -1445,32 +1421,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                     <div
                                       className="w-1 h-4 flex-shrink-0"
                                       style={{
-                                        backgroundColor:
-                                          row.teamLabel === "日本ハム"
-                                            ? "#0077c8"
-                                            : row.teamLabel === "楽天"
-                                              ? "#7a0019"
-                                              : row.teamLabel === "西武"
-                                                ? "#004098"
-                                                : row.teamLabel === "ロッテ"
-                                                  ? "#222222"
-                                                  : row.teamLabel === "オリックス"
-                                                    ? "#b79e51"
-                                                    : row.teamLabel === "ソフトバンク"
-                                                      ? "#ffdb00"
-                                                      : row.teamLabel === "巨人"
-                                                        ? "#ff6600"
-                                                        : row.teamLabel === "ヤクルト"
-                                                          ? "#2bbb3f"
-                                                          : row.teamLabel === "ＤｅＮＡ" || row.teamLabel === "横浜"
-                                                            ? "#0067c0"
-                                                            : row.teamLabel === "中日"
-                                                              ? "#004ea2"
-                                                              : row.teamLabel === "阪神"
-                                                                ? "#ffde00"
-                                                                : row.teamLabel === "広島"
-                                                                  ? "#d60718"
-                                                                  : "#666666",
+                                        backgroundColor: rankingTeamStripeColor(row.teamLabel),
                                       }}
                                     />
                                     <span>{row.venue}</span>

@@ -16,26 +16,12 @@ import {
   type BatterVsTeamCountPitchTypesTeamBlock,
   type BatterVsTeamPitchTypesSplitRow,
 } from "@/lib/batterVsTeamCountPitchTypesTypes"
+import { UNKNOWN_RANKING_TEAM_STRIPE, rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
 const FIELDER_COUNT_PITCH_ROW_LABEL_CLASS =
   "text-[12px] text-gray-200 font-black tabular-nums leading-tight"
-
-const TEAM_COLORS: Record<string, string> = {
-  日本ハム: "#0077c8",
-  楽天: "#7a0019",
-  西武: "#004098",
-  ロッテ: "#6b7280",
-  オリックス: "#b79e51",
-  ソフトバンク: "#ffdb00",
-  巨人: "#ff6600",
-  ヤクルト: "#2bbb3f",
-  横浜: "#0067c0",
-  中日: "#004ea2",
-  阪神: "#ffde00",
-  広島: "#d60718",
-}
 
 type TeamVsHandPanelState = {
   leftOpen: boolean
@@ -44,6 +30,11 @@ type TeamVsHandPanelState = {
 
 function hasPitchTypesSplitRows(rows: BatterVsTeamPitchTypesSplitRow[] | null | undefined): boolean {
   return (rows?.length ?? 0) > 0 && rows.some((r) => r.pitches_total > 0)
+}
+
+function teamStripeColorOrFallback(team: string, fallback: string): string {
+  const stripe = rankingTeamStripeColor(team)
+  return stripe === UNKNOWN_RANKING_TEAM_STRIPE ? fallback : stripe
 }
 
 /** 球数・打数のうち大きい方で並べ替え（打数は season-stats vs_team から） */
@@ -268,7 +259,7 @@ export function PlayerPageFielderVsTeamPitchBody({
                 <h2
                   className={`${h2Team} min-w-0 flex-1`}
                   style={{
-                    borderLeft: `6px solid ${TEAM_COLORS[team.label] || sectionStripeColor}`,
+                    borderLeft: `6px solid ${teamStripeColorOrFallback(team.label, sectionStripeColor)}`,
                     fontWeight: 900,
                   }}
                 >

@@ -15,23 +15,12 @@ import {
   PLAYER_MATCHUP_TABLE_COLUMNS,
   sortMatchupTeamsByOpponentCountDesc,
 } from "@/lib/playerMatchupSeasonTab"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { teamRomanNameFromCode } from "@/lib/standings/teamCodes"
 
-const TEAM_COLORS: Record<string, string> = {
-  日本ハム: "#0077c8",
-  楽天: "#7a0019",
-  西武: "#004098",
-  ロッテ: "#6b7280",
-  オリックス: "#b79e51",
-  ソフトバンク: "#ffdb00",
-  巨人: "#ff6600",
-  ヤクルト: "#2bbb3f",
-  横浜: "#0067c0",
-  中日: "#004ea2",
-  阪神: "#ffde00",
-  広島: "#d60718",
-  その他: "#666666",
-}
+const matchupTeamStripeColor = (team: string): string =>
+  team === "その他" ? "#666666" : rankingTeamStripeColor(team)
+
 
 const DATA_ROW: CSSProperties = {
   backgroundColor: "rgba(255,255,255,0.03)",
@@ -120,7 +109,7 @@ export function PlayerPageMatchupBody({
             <h2
               className={h2Section}
               style={{
-                borderLeft: `6px solid ${TEAM_COLORS[team.teamDisplay] || "#666"}`,
+                borderLeft: `6px solid ${matchupTeamStripeColor(team.teamDisplay)}`,
               }}
             >
               <span className="block font-black">{team.teamDisplay}</span>
