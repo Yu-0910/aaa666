@@ -211,6 +211,7 @@ export function PlayerPageCatcherSeasonBody({
                       const starterStarts = derived.startingSummary?.starts ?? 0
                       const starterWins = derived.startingSummary?.teamWins ?? 0
                       const starterLosses = derived.startingSummary?.teamLosses ?? 0
+                      const starterDraws = derived.startingSummary?.teamDraws ?? 0
                       const starterWinPct = hasStartingSummary
                         ? formatRankingStatDisplay("勝率", derived.startingSummary?.teamWinPct)
                         : na
@@ -231,6 +232,7 @@ export function PlayerPageCatcherSeasonBody({
                         hasStartingSummary ? String(starterStarts) : na, // 先発＝スタメン捕手回数
                         hasStartingSummary ? String(starterWins) : na, // 勝利＝スタメン試合のチーム勝利
                         hasStartingSummary ? String(starterLosses) : na, // 敗戦＝スタメン試合のチーム敗戦
+                        hasStartingSummary ? String(starterDraws) : na, // 引分＝スタメン試合のチーム引分
                         avg(pitching?.h ?? sum.h, pitching?.ab ?? sum.ab),
                         hasStartingSummary ? String(qsCount) : na, // QS（回数）
                       ]
@@ -290,6 +292,9 @@ export function PlayerPageCatcherSeasonBody({
                                   </th>
                                   <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
                                     敗戦
+                                  </th>
+                                  <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
+                                    引分
                                   </th>
                                   <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">
                                     被打率

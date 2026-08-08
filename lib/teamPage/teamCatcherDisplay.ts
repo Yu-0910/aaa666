@@ -37,6 +37,8 @@ export function formatTeamCatcherCell(
       return fmtInt(row.wins)
     case "losses":
       return fmtInt(row.losses)
+    case "draws":
+      return fmtInt(row.draws)
     case "avgAgainst":
       if (row.h != null && row.ab != null && row.ab > 0) {
         return slashRate3FromCounts(row.h, row.ab)

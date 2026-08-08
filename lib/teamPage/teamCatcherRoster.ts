@@ -37,6 +37,7 @@ export function emptyTeamCatcherStatsRow(seed: TeamCatcherRosterSeed): TeamCatch
     starts: null,
     wins: null,
     losses: null,
+    draws: null,
     avgAgainst: null,
     qsCount: null,
     teamWinPct: null,

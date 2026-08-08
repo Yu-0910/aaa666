@@ -130,7 +130,7 @@ function main() {
 
   const byCatcher = new Map<
     string,
-    { starts: number; wins: number; losses: number; qs: number; hqs: number; sqs: number }
+    { starts: number; wins: number; losses: number; draws: number; qs: number; hqs: number; sqs: number }
   >()
   let targetNpbIds = onlyNpbIds ? new Set(onlyNpbIds) : null
   if (!targetNpbIds && (from || to)) {
@@ -174,7 +174,7 @@ function main() {
 
       let agg = byCatcher.get(catcherNpbId)
       if (!agg) {
-        agg = { starts: 0, wins: 0, losses: 0, qs: 0, hqs: 0, sqs: 0 }
+        agg = { starts: 0, wins: 0, losses: 0, draws: 0, qs: 0, hqs: 0, sqs: 0 }
         byCatcher.set(catcherNpbId, agg)
       }
       agg.starts += 1
@@ -185,6 +185,7 @@ function main() {
         if (other) {
           if (teamSide.runs > other.runs) agg.wins += 1
           else if (teamSide.runs < other.runs) agg.losses += 1
+          else agg.draws += 1
         }
       }
 
@@ -215,6 +216,7 @@ function main() {
       starts,
       teamWins: a.wins,
       teamLosses: a.losses,
+      teamDraws: a.draws,
       teamWinPct,
       qsCount: a.qs,
       hqsCount: a.hqs,

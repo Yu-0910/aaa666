@@ -5,6 +5,7 @@ export type CatcherStartingSummaryDerived = {
   starts: number
   teamWins: number
   teamLosses: number
+  teamDraws?: number
   teamWinPct: number | null
   qsCount: number
   hqsCount: number

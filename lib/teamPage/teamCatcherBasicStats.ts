@@ -137,6 +137,7 @@ export type CatcherBasicStatsFields = {
   starts: number | null
   wins: number | null
   losses: number | null
+  draws: number | null
   avgAgainst: number | null
   qsCount: number | null
   teamWinPct: number | null
@@ -233,6 +234,7 @@ export function buildCatcherBasicStatsFields(api: CatcherApiBundle): CatcherBasi
     starts: hasStarting ? starting.starts : null,
     wins: hasStarting ? starting.teamWins : null,
     losses: hasStarting ? starting.teamLosses : null,
+    draws: hasStarting ? starting.teamDraws ?? null : null,
     avgAgainst,
     qsCount: hasStarting ? starting.qsCount : pitching?.qsCount ?? agg?.qsCount ?? null,
     teamWinPct: hasStarting ? starting.teamWinPct : null,

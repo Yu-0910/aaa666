@@ -8,6 +8,7 @@ export type TeamCatcherSortKey =
   | "starts"
   | "wins"
   | "losses"
+  | "draws"
   | "avgAgainst"
   | "qsCount"
   | "teamWinPct"
@@ -50,6 +51,7 @@ export const TEAM_CATCHER_COLUMNS: readonly TeamCatcherColumnDef[] = [
   { key: "starts", label: "先発", sortable: true, numeric: true },
   { key: "wins", label: "勝利", sortable: true, numeric: true },
   { key: "losses", label: "敗戦", sortable: true, numeric: true },
+  { key: "draws", label: "引分", sortable: true, numeric: true },
   { key: "avgAgainst", label: "被打率", sortable: true, numeric: true },
   { key: "qsCount", label: "QS", sortable: true, numeric: true },
   { key: "ipOuts", label: "回数", sortable: true, numeric: true },

@@ -16,6 +16,7 @@ export type CatcherStartingSummaryApiResponse = {
     starts: number
     teamWins: number
     teamLosses: number
+    teamDraws?: number
     teamWinPct: number | null
     qsCount: number
     hqsCount: number
@@ -56,6 +57,7 @@ export async function GET(
               starts: d.starts,
               teamWins: d.teamWins,
               teamLosses: d.teamLosses,
+              teamDraws: d.teamDraws ?? 0,
               teamWinPct: d.teamWinPct,
               qsCount: d.qsCount,
               hqsCount: d.hqsCount,
