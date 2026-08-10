@@ -8,9 +8,12 @@ export const BATTING_TOP_2025_SEASON_TOP_METRICS = ["OPS", "打率", "本塁打"
 export const BATTING_TOP_2026_SEASON_ROW2_METRICS = ["打点", "出塁率", "長打率"] as const
 /** シーズン TOP 3段目: 各1〜3位 */
 export const BATTING_TOP_2026_SEASON_ROW3_METRICS = ["IsoP", "IsoD", "盗塁"] as const
+/** シーズン TOP 4段目: 各1〜3位 */
+export const BATTING_TOP_2026_SEASON_ROW4_METRICS = ["BB/K", "RC", "GPA"] as const
 export const BATTING_TOP_2026_SEASON_TOP3_METRICS = [
   ...BATTING_TOP_2026_SEASON_ROW2_METRICS,
   ...BATTING_TOP_2026_SEASON_ROW3_METRICS,
+  ...BATTING_TOP_2026_SEASON_ROW4_METRICS,
 ] as const
 export const BATTING_TOP_2026_SEASON_ALL_METRICS = [
   ...BATTING_TOP_2025_SEASON_TOP_METRICS,

@@ -145,6 +145,9 @@ export function BattingTopFourMetricsGrid({
       IsoP: "batting-top-2026-season-isop",
       IsoD: "batting-top-2026-season-isod",
       盗塁: "batting-top-2026-season-sb",
+      "BB/K": "batting-top-2026-season-bbk",
+      RC: "batting-top-2026-season-rc",
+      GPA: "batting-top-2026-season-gpa",
     }
     const seasonMetrics = battingSeasonGridMetrics(year)
     const hasAny = seasonMetrics.some((m) => (displayLeaders[m]?.length ?? 0) > 0)

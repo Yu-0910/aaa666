@@ -599,7 +599,8 @@
     grid-template-areas:
       "ops avg hr"
       "rbi obp slg"
-      "isop isod sb";
+      "isop isod sb"
+      "bbk rc gpa";
     gap: 0.25rem;
   }
 
@@ -639,6 +640,18 @@
     grid-area: sb;
   }
 
+  .batting-top-2026-season-grid > .batting-top-2026-season-bbk {
+    grid-area: bbk;
+  }
+
+  .batting-top-2026-season-grid > .batting-top-2026-season-rc {
+    grid-area: rc;
+  }
+
+  .batting-top-2026-season-grid > .batting-top-2026-season-gpa {
+    grid-area: gpa;
+  }
+
   .batting-top-2026-season-grid > .batting-top-2025-season-ops,
   .batting-top-2026-season-grid > .batting-top-2025-season-avg,
   .batting-top-2026-season-grid > .batting-top-2025-season-hr,
@@ -647,7 +660,10 @@
   .batting-top-2026-season-grid > .batting-top-2026-season-slg,
   .batting-top-2026-season-grid > .batting-top-2026-season-isop,
   .batting-top-2026-season-grid > .batting-top-2026-season-isod,
-  .batting-top-2026-season-grid > .batting-top-2026-season-sb {
+  .batting-top-2026-season-grid > .batting-top-2026-season-sb,
+  .batting-top-2026-season-grid > .batting-top-2026-season-bbk,
+  .batting-top-2026-season-grid > .batting-top-2026-season-rc,
+  .batting-top-2026-season-grid > .batting-top-2026-season-gpa {
     min-width: 0;
     min-height: 0;
   }
@@ -660,7 +676,10 @@
   .batting-top-2026-season-grid > .batting-top-2026-season-slg > *,
   .batting-top-2026-season-grid > .batting-top-2026-season-isop > *,
   .batting-top-2026-season-grid > .batting-top-2026-season-isod > *,
-  .batting-top-2026-season-grid > .batting-top-2026-season-sb > * {
+  .batting-top-2026-season-grid > .batting-top-2026-season-sb > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-bbk > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-rc > *,
+  .batting-top-2026-season-grid > .batting-top-2026-season-gpa > * {
     height: 100%;
   }
 
