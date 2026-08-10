@@ -308,6 +308,35 @@
     font-variant-numeric: tabular-nums !important;
   }
 
+  .player-page-fonts .career-high-tab-stat-grid [data-career-high-label-shell] {
+    padding-top: 0.14em !important;
+    height: calc(0.14em + 0.46em) !important;
+  }
+
+  .player-page-fonts .career-high-tab-stat-grid [data-career-high-label-bg],
+  .player-page-fonts .career-high-tab-stat-grid [data-career-high-label-wrap] {
+    top: 0.14em !important;
+    width: min(3.25em, 72%) !important;
+    height: 0.46em !important;
+  }
+
+  .player-page-fonts .career-high-tab-stat-grid [data-career-high-label] {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-size: 0.34em !important;
+    font-weight: 900 !important;
+    letter-spacing: normal !important;
+    transform: translateY(0.015em) !important;
+  }
+
+  .player-page-fonts .career-high-tab-stat-grid [data-career-high-value] {
+    font-family: var(--font-bebas-neue), "Bebas Neue", sans-serif !important;
+    font-size: 1.04em !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.032em !important;
+    line-height: 1 !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
   .player-page-fonts
     .pitcher-basic-career-high-grid
     [data-career-high-card-title="ストレート平均球速"]

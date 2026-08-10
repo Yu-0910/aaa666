@@ -26,6 +26,12 @@ import {
   type ProfileMergedPayload,
 } from "./playerPageShared"
 
+const CAREER_HIGH_TAB_GRID_CLASS = "career-high-tab-stat-grid"
+
+function careerHighTabGridClassName(className?: string): string {
+  return [CAREER_HIGH_TAB_GRID_CLASS, className].filter(Boolean).join(" ")
+}
+
 function CareerTableScaleWrap({
   scaleMultiplier,
   children,
@@ -139,7 +145,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
         <CareerHighStatGrid
           cards={careerHighBattingCards}
           isMobile={isMobile}
-          className={careerHighBattingGridClassName}
+          className={careerHighTabGridClassName(careerHighBattingGridClassName)}
         />
           </>
         )}
@@ -217,6 +223,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                 <CareerHighStatGrid
                   cards={careerHighPitching.cards}
                   isMobile={isMobile}
+                  className={CAREER_HIGH_TAB_GRID_CLASS}
                 />
               </>
             )}
@@ -348,7 +355,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                 <CareerHighStatGrid
                   cards={careerHighBattingCards}
                   isMobile={isMobile}
-                  className={careerHighBattingGridClassName}
+                  className={careerHighTabGridClassName(careerHighBattingGridClassName)}
                 />
               </>
             )}
