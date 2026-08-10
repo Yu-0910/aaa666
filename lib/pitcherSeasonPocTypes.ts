@@ -4,11 +4,15 @@ export type PitcherSeasonPocPaAgg = {
   bf: number
   ab: number
   h: number
+  h2?: number
+  h3?: number
   hr: number
+  tb?: number
   so: number
   bb: number
   hbp: number
   avg?: string
+  isop?: string
   /**
    * Phase 2+（推定）: 打席結果テキストから計算したアウト数（= ipOuts）。
    * 自責点は split 単位で直接は取れないため、必要な表示は派生側で推定値を付与する。

@@ -723,7 +723,10 @@ function main(): void {
     bf: number
     ab: number
     h: number
+    h2: number
+    h3: number
     hr: number
+    tb: number
     so: number
     bb: number
     hbp: number
@@ -731,7 +734,20 @@ function main(): void {
     /** 自責点（近似）: textPlayByPlay のスコア差分から推定。エラー絡みは未補正。 */
     er: number
   }
-  const emptyPaAgg = (): PaAgg => ({ bf: 0, ab: 0, h: 0, hr: 0, so: 0, bb: 0, hbp: 0, outs: 0, er: 0 })
+  const emptyPaAgg = (): PaAgg => ({
+    bf: 0,
+    ab: 0,
+    h: 0,
+    h2: 0,
+    h3: 0,
+    hr: 0,
+    tb: 0,
+    so: 0,
+    bb: 0,
+    hbp: 0,
+    outs: 0,
+    er: 0,
+  })
 
   const vsHand = new Map<string, { vsR: PaAgg; vsL: PaAgg; vsB: PaAgg; vsUnknown: PaAgg }>()
   const bySit = new Map<string, Map<string, PaAgg>>()
@@ -1277,12 +1293,23 @@ function main(): void {
     const enrichSplit = (a: {
       outs: number
       h: number
+      h2: number
+      h3: number
       bb: number
+      ab: number
+      tb: number
       er: number
-    }): { ipOuts: number; ip: string; er: number; era: number | null; whip: number | null } => {
+    }): { ipOuts: number; ip: string; er: number; era: number | null; whip: number | null; isop: string } => {
       const ipOuts = a.outs
       const ip = outsToIpDisplay(ipOuts)
       const er = a.er
+      const isop =
+        a.ab > 0
+          ? (() => {
+              const s = ((Math.max(0, a.tb) - Math.max(0, a.h)) / a.ab).toFixed(3)
+              return s.startsWith("0") ? s.slice(1) : s
+            })()
+          : ".000"
       const era = ipOuts > 0 ? (er * 27) / ipOuts : null
       const whip = (() => {
         if (ipOuts <= 0) return null
@@ -1295,6 +1322,7 @@ function main(): void {
         er,
         era: era != null ? Number(era.toFixed(2)) : null,
         whip: whip != null ? Number(whip.toFixed(3)) : null,
+        isop,
       }
     }
 

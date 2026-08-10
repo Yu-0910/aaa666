@@ -477,24 +477,29 @@ export function resolvePaRoundPitchTypeSplits(
   }))
 }
 
-/** カウント別（状況別と同列: 被安打, 打数, K-BB%, K%, BB%, 被打率, 被本） */
+/** カウント別: 被打率, 打数, 安打, 二塁打, 本塁打, IsoP */
 export function pitcherPocCountRows(pp: PitcherSeasonPocPayload): SitRowUi[] {
   const m = new Map((pp.splits.byCount ?? []).map((s) => [s.key, s]))
   return ORDERED_PITCH_COUNT_KEYS.map((key) => {
     const s = m.get(key)
     if (!s || s.bf <= 0) {
-      return { label: key, cells: Array.from({ length: 7 }, () => "ー") }
+      return { label: key, cells: Array.from({ length: 6 }, () => "ー") }
     }
+    const isop =
+      typeof s.isop === "string"
+        ? formatRankingStatDisplay("IsoP", s.isop)
+        : typeof s.tb === "number" && s.ab > 0
+          ? formatRankingStatDisplay("IsoP", (s.tb - s.h) / s.ab)
+          : "—"
     return {
       label: key,
       cells: [
-        String(s.h),
-        String(s.ab),
-        pctStr(s.so - s.bb, s.bf),
-        pctStr(s.so, s.bf),
-        pctStr(s.bb, s.bf),
         s.avg ?? "—",
+        String(s.ab),
+        String(s.h),
+        s.h2 != null ? String(s.h2) : "—",
         String(s.hr),
+        isop,
       ],
     }
   })

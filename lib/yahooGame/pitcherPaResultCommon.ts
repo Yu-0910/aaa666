@@ -33,7 +33,18 @@ function isSacFly(result: string): boolean {
 
 /** 投手視点: 1 打席のカウント */
 export function addPitcherPaCount(
-  agg: { bf: number; ab: number; h: number; hr: number; so: number; bb: number; hbp: number },
+  agg: {
+    bf: number
+    ab: number
+    h: number
+    h2?: number
+    h3?: number
+    hr: number
+    tb?: number
+    so: number
+    bb: number
+    hbp: number
+  },
   result: string
 ): void {
   agg.bf += 1
@@ -60,6 +71,9 @@ export function addPitcherPaCount(
   const hb = hitBases(result)
   if (hb > 0) {
     agg.h += 1
+    if ("tb" in agg) agg.tb = (agg.tb ?? 0) + hb
+    if (hb === 2 && "h2" in agg) agg.h2 = (agg.h2 ?? 0) + 1
+    if (hb === 3 && "h3" in agg) agg.h3 = (agg.h3 ?? 0) + 1
     if (hb === 4) agg.hr += 1
     if (isAtBat(result)) agg.ab += 1
     return

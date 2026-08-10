@@ -1045,49 +1045,29 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             border: "1px solid #555",
                             width: "100%",
                             tableLayout: "auto",
-                            minWidth: "520px",
+                            minWidth: "360px",
                           }}
                         >
                           <colgroup>
                             <col style={{ width: "54px" }} />
-                            {isItoDaiyaPage ? (
-                              <>
-                                <col style={{ width: "54px" }} />
-                                <col style={{ width: "54px" }} />
-                              </>
-                            ) : (
-                              <>
-                                <col style={{ width: "50px" }} />
-                                <col style={{ width: "60px" }} />
-                              </>
-                            )}
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
-                            <col style={{ width: "45px" }} />
-                            <col style={{ width: "45px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              {isItoDaiyaPage ? (
-                                <>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                                </>
-                              ) : (
-                                <>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                                </>
-                              )}
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">二塁打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">IsoP</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1095,7 +1075,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               ? pitcherPocCountRows(pitcherSeasonPocPayload)
                               : ORDERED_PITCH_COUNT_KEYS.map((label) => ({
                                   label,
-                                  cells: Array.from({ length: 7 }, () => "ー"),
+                                  cells: Array.from({ length: 6 }, () => "ー"),
                                 }))
                             ).map((row) => (
                               <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
@@ -1105,7 +1085,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 >
                                   {row.label}
                                 </td>
-                                {orderCountPitchAbCells(row.cells, isItoDaiyaPage).map((cell, i) => (
+                                {row.cells.map((cell, i) => (
                                   <td
                                     key={i}
                                     className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
