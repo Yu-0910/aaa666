@@ -461,6 +461,7 @@ function main(): void {
     doc: CanonicalGameDocument,
     inferredRbiByBid: Map<string, number>,
     byBatterRound: Map<string, Map<string, BattingSeasonAggYahoo>>,
+    lastRoundKeyInGameByBid: Map<string, string>,
     byBatterSit?: Map<string, Map<string, BattingSeasonAggYahoo>>,
   ): void {
     for (const line of doc.domain?.battingLines ?? []) {
@@ -473,14 +474,7 @@ function main(): void {
 
       const roundBucket = byBatterRound.get(bid)
       if (roundBucket) {
-        let bestKey = "5"
-        let bestPa = -1
-        for (const [rk, agg] of roundBucket) {
-          if (agg.pa > bestPa) {
-            bestPa = agg.pa
-            bestKey = rk
-          }
-        }
+        const bestKey = lastRoundKeyInGameByBid.get(bid) ?? "5"
         const roundAgg = roundBucket.get(bestKey) ?? emptyBattingSeasonAggYahoo()
         roundAgg.rbi += delta
         roundBucket.set(bestKey, roundAgg)
@@ -526,6 +520,7 @@ function main(): void {
     const pas = [...(doc.domain.plateAppearances ?? [])].sort(comparePlateAppearances)
     const appearanceCount = new Map<string, number>()
     const inferredRbiInGame = new Map<string, number>()
+    const lastRoundKeyInGame = new Map<string, string>()
     const starterSlot = starterSlotByYahooId(doc)
     const starterField = starterFieldKeyByYahooId(doc)
     const appearanceSlotsByBatter = appearanceSlotResultsByBatter(doc)
@@ -539,16 +534,23 @@ function main(): void {
       if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
       if (!starterSlot.get(bid)) continue
       const roundMap = ensureRoundMap(bid)
+      const batterPas = pas.filter((pa) => String(pa.yahooBatterId ?? "").trim() === bid)
       for (let i = 0; i < slotResults.length; i++) {
         const result = String(slotResults[i] ?? "").trim()
         if (!result) continue
         const roundKey = i < 4 ? String(i + 1) : "5"
         const roundAgg = roundMap.get(roundKey) ?? emptyBattingSeasonAggYahoo()
         const rbiBefore = roundAgg.rbi
+        const pa = batterPas[i]
+        const scoreCtx = pa ? scoreCtxByPaId.get(pa.paId) : undefined
         roundAgg.pa += 1
         roundAgg.gameIds.add(gameId)
         updateBattingAggFromResultJa(roundAgg, result)
+        if (scoreCtx?.resultBallClass != null && scoreCtx.resultBallRbi != null) {
+          roundAgg.rbi += scoreCtx.resultBallRbi
+        }
         roundMap.set(roundKey, roundAgg)
+        lastRoundKeyInGame.set(bid, roundKey)
         inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
       }
     }
@@ -584,6 +586,7 @@ function main(): void {
         const rbiBefore = roundAgg.rbi
         updateBattingAggFromPa(roundAgg, gameId, pa, doc, basesBefore, scoreCtx)
         roundMap.set(roundKey, roundAgg)
+        lastRoundKeyInGame.set(bid, roundKey)
         inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (roundAgg.rbi - rbiBefore))
       }
 
@@ -640,7 +643,13 @@ function main(): void {
       }
     }
 
-    applyGameRbiReconcileFromBattingLines(doc, inferredRbiInGame, byBatterRound, byBatterSit)
+    applyGameRbiReconcileFromBattingLines(
+      doc,
+      inferredRbiInGame,
+      byBatterRound,
+      lastRoundKeyInGame,
+      byBatterSit,
+    )
   }
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_batting_splits", year)
