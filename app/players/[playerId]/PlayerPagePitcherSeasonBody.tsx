@@ -440,7 +440,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           }}
                         >
                           <colgroup>
-                            <col style={{ width: "118px" }} />
+                            <col style={{ width: "108px" }} />
                             <col style={{ width: "50px" }} />
                             <col style={{ width: "45px" }} />
                             <col style={{ width: "45px" }} />
