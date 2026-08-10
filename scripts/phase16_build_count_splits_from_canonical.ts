@@ -34,6 +34,8 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
+import { buildScoreBasesContextByPaId } from "../lib/yahooGame/basesFromSportsnaviScoreSnapshot"
+import { loadSportsnaviScoreSnapshots } from "../lib/yahooGame/sportsnaviScoreSnapshotIO"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -231,6 +233,31 @@ function main(): void {
     return m
   }
 
+  function applyGameRbiReconcileFromBattingLines(
+    doc: CanonicalGameDocument,
+    inferredRbiByBid: Map<string, number>,
+    lastCountKeyInGameByBid: Map<string, string>,
+  ): void {
+    for (const line of doc.domain?.battingLines ?? []) {
+      const bid = String(line.yahooPlayerId ?? "").trim()
+      if (!bid) continue
+      if (targetYahooIdSet && !targetYahooIdSet.has(bid)) continue
+      const lineRbi = line.rbi ?? 0
+      const inferred = inferredRbiByBid.get(bid) ?? 0
+      const delta = lineRbi - inferred
+      if (delta === 0) continue
+
+      const countKey = lastCountKeyInGameByBid.get(bid)
+      if (!countKey) continue
+      const countMap = byBatterCount.get(bid)
+      if (!countMap) continue
+      const agg = countMap.get(countKey) ?? emptyBattingSeasonAggYahoo()
+      agg.rbi += delta
+      countMap.set(countKey, agg)
+      inferredRbiByBid.set(bid, lineRbi)
+    }
+  }
+
   for (const doc of docs) {
     if (!gameHasTargetBatter(doc, targetYahooIdSet)) continue
     const gameId = doc.gameId
@@ -238,6 +265,12 @@ function main(): void {
       doc.domain.plateAppearances ?? [],
       gameId,
     )
+    const scoreCtxByPaId = buildScoreBasesContextByPaId(
+      pas.map((p) => p.paId),
+      loadSportsnaviScoreSnapshots(projectRoot, doc.gameId),
+    )
+    const inferredRbiInGame = new Map<string, number>()
+    const lastCountKeyInGame = new Map<string, string>()
     for (const pa of pas) {
       const bid = (pa.yahooBatterId ?? "").trim()
       if (!bid) continue
@@ -250,6 +283,7 @@ function main(): void {
       if (!ck) continue
       const cm = ensureCountMap(bid)
       const agg = cm.get(ck) ?? emptyBattingSeasonAggYahoo()
+      const rbiBefore = agg.rbi
       if (resolvedResultText) {
         updateBattingAggFromPa(agg, gameId, pa, doc)
       } else {
@@ -257,8 +291,15 @@ function main(): void {
         agg.pa += 1
         updateBattingAggFromResultJa(agg, resultText)
       }
+      const scoreCtx = scoreCtxByPaId.get(pa.paId)
+      if (scoreCtx?.resultBallClass != null && scoreCtx.resultBallRbi != null) {
+        agg.rbi += scoreCtx.resultBallRbi
+      }
       cm.set(ck, agg)
+      lastCountKeyInGame.set(bid, ck)
+      inferredRbiInGame.set(bid, (inferredRbiInGame.get(bid) ?? 0) + (agg.rbi - rbiBefore))
     }
+    applyGameRbiReconcileFromBattingLines(doc, inferredRbiInGame, lastCountKeyInGame)
   }
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_batting_count", year)
