@@ -4,6 +4,7 @@
  */
 
 import { fetchTopLeadersSnapshotRemote } from '@/lib/topPage/fetchTopLeadersSnapshotRemote'
+import { buildBattingLeadersConfigFromRankingsAsync } from '@/lib/ranking/leadersFromRankingsJson'
 import { usesTopPageModernLayout } from '@/lib/topPageModernLayout'
 import { NextResponse } from 'next/server'
 
@@ -25,6 +26,11 @@ export async function GET(
     const snapshot = await fetchTopLeadersSnapshotRemote(year, upperLeague, 'batting')
     if (snapshot && Object.keys(snapshot.leaders ?? {}).length > 0) {
       return NextResponse.json(snapshot)
+    }
+
+    const fromRankings = await buildBattingLeadersConfigFromRankingsAsync(year, upperLeague)
+    if (fromRankings && Object.keys(fromRankings.leaders ?? {}).length > 0) {
+      return NextResponse.json(fromRankings)
     }
 
     if (usesTopPageModernLayout(Number(year))) {
