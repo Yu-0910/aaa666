@@ -3321,7 +3321,7 @@ function runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry
     fullOnly ? `R2公開(2回目${suffix}): full derived` : `R2公開(2回目${suffix}): daily full derived`,
     fullOnly
       ? "npm run display:r2:upload:derived:2026"
-      : `node scripts/display_r2_upload_derived.mjs --year ${year} --exclude player_profile,player_season_batting,player_season_batting_period,player_season_batting_count,player_season_pitching_poc${playerIdsCliArg(playerIds)}`,
+      : `node scripts/display_r2_upload_derived.mjs --year ${year} --exclude player_profile,player_season_batting,player_season_batting_period,player_season_batting_count${playerIdsCliArg(playerIds)}`,
     { dryRun },
   )
 }
@@ -3333,6 +3333,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
     "player_season_batting_splits",
     "player_season_batting_count",
     "player_season_batting_period",
+    "player_season_pitching_poc",
   ]
   if (dryRun) {
     console.log("\n[daily:npb-pipeline:v2] --dry-run: full publish / verify はスキップします。\n")
