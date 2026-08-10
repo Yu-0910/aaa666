@@ -63,7 +63,12 @@ const TEAM_STRIPE_HEX: Record<string, string> = {
   DeNA: "#0067c0",
   横浜: "#0067c0",
   "横浜DeNAベイスターズ": "#0067c0",
+  "横浜DeNA": "#0067c0",
+  "DeNAベイスターズ": "#0067c0",
+  BayStars: "#0067c0",
+  BAYSTARS: "#0067c0",
   DB: "#0067c0",
+  YDB: "#0067c0",
   広島: "#d60718",
   "広島東洋カープ": "#d60718",
   C: "#d60718",
@@ -104,11 +109,15 @@ function normalizeTeamStripeLookupKey(teamRaw: string): string {
 }
 
 function isDeNaStripeAlias(team: string): boolean {
+  const lower = team.toLowerCase()
   return (
     team === "横浜DeNA" ||
     team === "DeNAベイスターズ" ||
+    team === "YDB" ||
+    lower === "baystars" ||
+    lower === "yokohamabaystars" ||
     team.includes("DeNAベイスターズ") ||
-    team.toLowerCase().includes("denabaystars")
+    lower.includes("denabaystars")
   )
 }
 

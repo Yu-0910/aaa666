@@ -15,12 +15,15 @@ import {
   PLAYER_MATCHUP_TABLE_COLUMNS,
   sortMatchupTeamsByOpponentCountDesc,
 } from "@/lib/playerMatchupSeasonTab"
-import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
+import { UNKNOWN_RANKING_TEAM_STRIPE, rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { teamRomanNameFromCode } from "@/lib/standings/teamCodes"
 
-const matchupTeamStripeColor = (team: string): string =>
-  team === "その他" ? "#666666" : rankingTeamStripeColor(team)
-
+function matchupTeamStripeColor(teamCode: string, teamDisplay: string): string {
+  if (teamDisplay === "その他") return "#666666"
+  const codeStripe = rankingTeamStripeColor(teamCode)
+  if (codeStripe !== UNKNOWN_RANKING_TEAM_STRIPE) return codeStripe
+  return rankingTeamStripeColor(teamDisplay)
+}
 
 const DATA_ROW: CSSProperties = {
   backgroundColor: "rgba(255,255,255,0.03)",
@@ -109,7 +112,7 @@ export function PlayerPageMatchupBody({
             <h2
               className={h2Section}
               style={{
-                borderLeft: `6px solid ${matchupTeamStripeColor(team.teamDisplay)}`,
+                borderLeft: `6px solid ${matchupTeamStripeColor(team.teamCode, team.teamDisplay)}`,
               }}
             >
               <span className="block font-black">{team.teamDisplay}</span>

@@ -32,9 +32,12 @@ function hasPitchTypesSplitRows(rows: BatterVsTeamPitchTypesSplitRow[] | null | 
   return (rows?.length ?? 0) > 0 && rows.some((r) => r.pitches_total > 0)
 }
 
-function teamStripeColorOrFallback(team: string, fallback: string): string {
-  const stripe = rankingTeamStripeColor(team)
-  return stripe === UNKNOWN_RANKING_TEAM_STRIPE ? fallback : stripe
+function teamStripeColorOrFallback(teamCode: string, teamLabel: string, fallback: string): string {
+  const stripe = rankingTeamStripeColor(teamCode)
+  if (stripe !== UNKNOWN_RANKING_TEAM_STRIPE) return stripe
+  const labelStripe = rankingTeamStripeColor(teamLabel)
+  if (labelStripe !== UNKNOWN_RANKING_TEAM_STRIPE) return labelStripe
+  return fallback
 }
 
 /** 球数・打数のうち大きい方で並べ替え（打数は season-stats vs_team から） */
@@ -259,7 +262,7 @@ export function PlayerPageFielderVsTeamPitchBody({
                 <h2
                   className={`${h2Team} min-w-0 flex-1`}
                   style={{
-                    borderLeft: `6px solid ${teamStripeColorOrFallback(team.label, sectionStripeColor)}`,
+                    borderLeft: `6px solid ${teamStripeColorOrFallback(team.teamCode, team.label, sectionStripeColor)}`,
                     fontWeight: 900,
                   }}
                 >
