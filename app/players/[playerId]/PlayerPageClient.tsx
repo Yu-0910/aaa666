@@ -1322,7 +1322,7 @@ export function PlayerPageClient({
   })
 
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
-  const seasonSubTabProfileGapPx = 10
+  const seasonSubTabProfileGapPx = 4
 
   const pitcherInlineSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-0"
