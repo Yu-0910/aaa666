@@ -529,8 +529,8 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <colgroup>
                             <col style={{ width: "48px" }} />
-                            <col style={{ width: "50px" }} />
                             <col style={{ width: "45px" }} />
+                            <col style={{ width: "50px" }} />
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
@@ -542,12 +542,12 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
+                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
-                              <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被本塁打</th>
                             </tr>
                           </thead>
@@ -962,7 +962,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       ) => {
                         if (!agg || agg.bf <= 0) return undefined
                         const cells = pitcherPocHandCells(agg)
-                        return { avgAgainst: cells[5], kBbPct: cells[2] }
+                        return { avgAgainst: cells[0], kBbPct: cells[3] }
                       }
                       return (
                         <div

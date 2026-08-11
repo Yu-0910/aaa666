@@ -367,16 +367,16 @@ export function pitcherPocTeamVsRows(pp: PitcherSeasonPocPayload): TeamVsRow[] {
   })
 }
 
-/** 左右別 1 行分（打数, 被安打, K-BB%, K%, BB%, 被打率, 被本） */
+/** 左右別 1 行分（被打率, 打数, 被安打, K-BB%, K%, BB%, 被本） */
 export function pitcherPocHandCells(a: PitcherSeasonPocPaAgg): string[] {
   const empty = a.bf <= 0
   return [
+    a.avg ?? "—",
     empty ? "—" : String(a.ab),
     empty ? "—" : String(a.h),
     pctStr(a.so - a.bb, a.bf),
     pctStr(a.so, a.bf),
     pctStr(a.bb, a.bf),
-    a.avg ?? "—",
     String(a.hr),
   ]
 }
