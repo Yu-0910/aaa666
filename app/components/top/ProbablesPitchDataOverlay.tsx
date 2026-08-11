@@ -35,13 +35,15 @@ const PROBABLES_PITCH_DIALOG_CLASS =
   "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 const PROBABLES_PA_ROUND_DIALOG_CLASS =
   "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 pt-8 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
-const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%] -translate-x-3"
+const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%] -translate-x-1"
 const PROBABLES_PA_ROUND_ROW_LABEL_CLASS =
   "pitch-type-split-row-label text-[8px] text-gray-200 font-black tabular-nums leading-tight"
 const PROBABLES_PA_ROUND_ROW_LABEL_WIDTH_CLASS = "w-[32px]"
 const PROBABLES_PA_ROUND_BAR_AREA_LEFT = "calc(32px + 0.25rem)"
 const PROBABLES_PA_ROUND_BAR_TRACK_CLASS = "h-[18px]"
 const PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS = "mb-[8px]"
+const PROBABLES_PA_ROUND_HEADING_CLASS =
+  "ml-[calc(32px+0.25rem)] mr-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[16px] font-black leading-none text-black"
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -316,8 +318,11 @@ export function ProbablesPaRoundPitchDataOverlay({
         ) : charts.length > 0 ? (
           <div className="mx-auto flex w-full flex-col gap-y-3">
             {charts.map((chart) => (
-              <div key={chart.key} className={PROBABLES_PA_ROUND_CHART_CLASS}>
-                <div className="mx-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[13px] font-black leading-none text-black">
+              <div
+                key={chart.key}
+                className={`${PROBABLES_PA_ROUND_CHART_CLASS}${chart.key === "left" ? " mt-2" : ""}`}
+              >
+                <div className={PROBABLES_PA_ROUND_HEADING_CLASS}>
                   {chart.title}
                 </div>
                 <PaRoundPitchTypeChart
@@ -333,7 +338,7 @@ export function ProbablesPaRoundPitchDataOverlay({
               </div>
             ))}
             {handColorMap ? (
-              <div className="flex justify-center">
+              <div className="flex justify-center text-[80%]">
                 <PitchTypeColorLegend
                   typeOrder={handColorMap.typeOrder}
                   colorByType={handColorMap.colorByType}
