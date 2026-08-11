@@ -49,9 +49,9 @@ const TEAM_NAME_OFFSET_Y = 3
 /** 球団帯カラー（縦ストライプ）の高さ */
 const TEAM_BAR_HEIGHT = Math.round(TEAM_NAME_BLOCK_HEIGHT * 1.2)
 const METRIC_COL_MIN = 52
-/** 試〜HQS率（指標列）の横幅スケール */
+/** 指標列の横幅スケール */
 const METRIC_COL_WIDTH = Math.round(METRIC_COL_MIN * 0.8)
-/** 試より右の指標列は横 1.1 倍 */
+/** 主要指標列は横 1.1 倍 */
 const METRIC_COL_WIDTH_AFTER_G = Math.round(METRIC_COL_WIDTH * 1.1)
 
 function standingsMetricColWidth(key: StandingsMetricKey, scale = 1): number {
@@ -138,7 +138,13 @@ function TeamStandingsTable({
   const isMobile = layout === "mobile"
   const teamNameWidth = isMobile ? 88 : 112
   const leftBlockWidth = RANK_WIDTH + TEAM_BAR_WIDTH + teamNameWidth
-  const metricColumns = standingsMetricColumnsForSource((rows[0]?.source ?? "canonical") as any)
+  const metricColumns = useMemo(
+    () =>
+      standingsMetricColumnsForSource((rows[0]?.source ?? "canonical") as any).filter(
+        (col) => col.key !== "g",
+      ),
+    [rows],
+  )
 
   const metricsBlockWidth = metricColumns.reduce(
     (sum, col) => sum + standingsMetricColWidth(col.key, metricColScale),
