@@ -1233,18 +1233,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             border: "1px solid #555",
                             width: "100%",
                             tableLayout: "fixed",
-                            minWidth: "570px",
+                            minWidth: "513px",
                           }}
                         >
                           <colgroup>
                             <col style={{ width: "56px" }} />
-                            <col style={{ width: "43px" }} />
-                            <col style={{ width: "43px" }} />
-                            <col style={{ width: "43px" }} />
-                            <col style={{ width: "43px" }} />
-                            <col style={{ width: "43px" }} />
-                            <col style={{ width: "38px" }} />
-                            <col style={{ width: "38px" }} />
+                            <col style={{ width: "39px" }} />
+                            <col style={{ width: "39px" }} />
+                            <col style={{ width: "39px" }} />
+                            <col style={{ width: "39px" }} />
+                            <col style={{ width: "39px" }} />
+                            <col style={{ width: "34px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -1268,9 +1267,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               </th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
                                 自責点
-                              </th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">
-                                被本塁打
                               </th>
                             </tr>
                           </thead>
@@ -1327,9 +1323,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                     </td>
                                     <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
                                       {r && typeof er === "number" ? String(er) : na}
-                                    </td>
-                                    <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                                      {r ? String(r.hr ?? 0) : na}
                                     </td>
                                   </tr>
                                 )
