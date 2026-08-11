@@ -34,7 +34,8 @@ const PROBABLES_CHARTS_ROW_REF_PX = 11 * 16 * 2 + 32
 const PROBABLES_PITCH_DIALOG_CLASS =
   "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 const PROBABLES_PA_ROUND_DIALOG_CLASS =
-  "h-[90vh] max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-3 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
+  "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
+const PROBABLES_PA_ROUND_CONTENT_ZOOM = 0.8
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -307,7 +308,10 @@ export function ProbablesPaRoundPitchDataOverlay({
             <Spinner className="size-6 text-[#FFFF44]" />
           </div>
         ) : charts.length > 0 ? (
-          <div className="flex min-h-full w-full flex-col justify-center gap-y-5">
+          <div
+            className="mx-auto flex w-full origin-top flex-col gap-y-4"
+            style={{ zoom: PROBABLES_PA_ROUND_CONTENT_ZOOM }}
+          >
             {charts.map((chart) => (
               <div key={chart.key} className="min-w-0">
                 <div className="mb-2 text-center text-[11px] font-bold text-gray-200">
