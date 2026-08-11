@@ -1056,6 +1056,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
+                            <col style={{ width: "51px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -1065,9 +1066,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被打率</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">安打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">単打</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">二塁打</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">三塁打</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">本塁打</th>
-                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">IsoP</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1075,7 +1077,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               ? pitcherPocCountRows(pitcherSeasonPocPayload)
                               : ORDERED_PITCH_COUNT_KEYS.map((label) => ({
                                   label,
-                                  cells: Array.from({ length: 6 }, () => "ー"),
+                                  cells: Array.from({ length: 7 }, () => "ー"),
                                 }))
                             ).map((row) => (
                               <tr key={row.label} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
