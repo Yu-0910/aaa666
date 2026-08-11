@@ -12,7 +12,10 @@ import type {
   PitcherSeasonPitchingApiResponse,
 } from "@/lib/pitcherSeasonPocTypes"
 import { pitcherPocHandCells, resolvePaRoundPitchTypeSplits } from "@/lib/pitcherSeasonPocUi"
-import { buildPitchTypeColorMap } from "@/app/components/PitchTypeSplitStackedBarSection"
+import {
+  buildPitchTypeColorMap,
+  PitchTypeColorLegend,
+} from "@/app/components/PitchTypeSplitStackedBarSection"
 import { PaRoundPitchTypeChart } from "@/app/components/PitchTypeSplitViewsSection"
 
 const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
@@ -304,15 +307,7 @@ export function ProbablesPaRoundPitchDataOverlay({
             <Spinner className="size-6 text-[#FFFF44]" />
           </div>
         ) : charts.length > 0 ? (
-          <div
-            className={
-              charts.length >= 3
-                ? "grid min-h-full w-full grid-cols-3 content-center gap-x-3"
-                : charts.length === 2
-                  ? "grid min-h-full w-full grid-cols-2 content-center gap-x-4"
-                  : "flex min-h-full w-full items-center justify-center"
-            }
-          >
+          <div className="flex min-h-full w-full flex-col justify-center gap-y-5">
             {charts.map((chart) => (
               <div key={chart.key} className="min-w-0">
                 <div className="mb-2 text-center text-[11px] font-bold text-gray-200">
@@ -321,11 +316,18 @@ export function ProbablesPaRoundPitchDataOverlay({
                 <PaRoundPitchTypeChart
                   splits={chart.splits}
                   baseColorMap={chart.colorMap}
-                  barTrackClassName="h-9"
-                  rowWrapperClassName="mb-4"
+                  showLegend={false}
                 />
               </div>
             ))}
+            {handColorMap ? (
+              <div className="flex justify-center">
+                <PitchTypeColorLegend
+                  typeOrder={handColorMap.typeOrder}
+                  colorByType={handColorMap.colorByType}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </DialogContent>

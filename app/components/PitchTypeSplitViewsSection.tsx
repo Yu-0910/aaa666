@@ -242,6 +242,7 @@ export function PaRoundPitchTypeChart({
   rowLabelClassName,
   barTrackClassName,
   rowWrapperClassName,
+  showLegend,
 }: {
   splits: PitcherSeasonPocPitchTypesSplitRow[] | null
   staggerRowReveal?: boolean
@@ -252,6 +253,7 @@ export function PaRoundPitchTypeChart({
   rowLabelClassName?: string
   barTrackClassName?: string
   rowWrapperClassName?: string
+  showLegend?: boolean
 }) {
   if (splits == null) {
     return <span className="text-sm text-gray-400">—</span>
@@ -268,6 +270,7 @@ export function PaRoundPitchTypeChart({
       rowLabelClassName={rowLabelClassName}
       barTrackClassName={barTrackClassName}
       rowWrapperClassName={rowWrapperClassName}
+      showLegend={showLegend}
     />
   )
 }

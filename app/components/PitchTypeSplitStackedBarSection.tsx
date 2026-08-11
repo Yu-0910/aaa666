@@ -119,6 +119,34 @@ export type PitchTypeSplitStackedBarSectionProps = {
   barTrackClassName?: string
   /** 各行の余白クラス。省略時は mb-3 */
   rowWrapperClassName?: string
+  /** 凡例を表示するか。省略時は表示 */
+  showLegend?: boolean
+}
+
+export function PitchTypeColorLegend({
+  typeOrder,
+  colorByType,
+}: {
+  typeOrder: readonly string[]
+  colorByType: ReadonlyMap<string, string>
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+      {typeOrder.length > 0 ? (
+        typeOrder.map((label) => (
+          <div key={label} className="flex items-center gap-1 whitespace-nowrap">
+            <span
+              className="inline-block w-2 h-2"
+              style={{ backgroundColor: colorByType.get(label) ?? PALETTE[0] }}
+            />
+            <span className="text-gray-300">{label}</span>
+          </div>
+        ))
+      ) : (
+        <span>—</span>
+      )}
+    </div>
+  )
 }
 
 /** 球種別の色割当（投球数の多い順にパレットを割り当て） */
@@ -145,6 +173,7 @@ export function PitchTypeSplitStackedBarSection({
   rowLabelClassName = "pitch-type-split-row-label text-[12px] text-gray-200 font-black tabular-nums leading-tight",
   barTrackClassName,
   rowWrapperClassName = "mb-3",
+  showLegend = true,
 }: PitchTypeSplitStackedBarSectionProps) {
   if (splits.length === 0) return null
 
@@ -202,21 +231,7 @@ export function PitchTypeSplitStackedBarSection({
 
       <PercentAxisLabels />
 
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
-        {legendTypeOrder.length > 0 ? (
-          legendTypeOrder.map((label) => (
-            <div key={label} className="flex items-center gap-1 whitespace-nowrap">
-              <span
-                className="inline-block w-2 h-2"
-                style={{ backgroundColor: colorByType.get(label) ?? PALETTE[0] }}
-              />
-              <span className="text-gray-300">{label}</span>
-            </div>
-          ))
-        ) : (
-          <span>—</span>
-        )}
-      </div>
+      {showLegend ? <PitchTypeColorLegend typeOrder={legendTypeOrder} colorByType={colorByType} /> : null}
     </>
   )
 }
