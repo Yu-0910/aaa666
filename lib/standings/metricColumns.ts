@@ -50,7 +50,7 @@ export const STANDINGS_METRIC_COLUMNS: readonly StandingsMetricColumn[] = [
   { order: 30, label: "被打率", key: "avg_allowed" },
   { order: 31, label: "完投", key: "cg" },
   { order: 32, label: "BB%", key: "bb_pct_pitch" },
-  { order: 33, label: "K率", key: "k_pct_pitch" },
+  { order: 33, label: "K%", key: "k_pct_pitch" },
   { order: 34, label: "K-BB%", key: "k_bb_pct" },
   { order: 35, label: "QS率", key: "qs_rate" },
   { order: 36, label: "HQS率", key: "hqs_rate" },
