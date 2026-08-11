@@ -17,7 +17,7 @@ import {
   type BatterVsTeamPitchTypesSplitRow,
 } from "@/lib/batterVsTeamCountPitchTypesTypes"
 import { UNKNOWN_RANKING_TEAM_STRIPE, rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
-import { playerVsTeamRomanName, teamCodeFromShort } from "@/lib/standings/teamCodes"
+import { teamCodeFromShort } from "@/lib/standings/teamCodes"
 import { DERIVED_SEASON_YEAR_DEFAULT } from "@/lib/seasonStatsPilotShared"
 
 const FIELDER_COUNT_PITCH_ROW_LABEL_CLASS =
@@ -256,7 +256,6 @@ export function PlayerPageFielderVsTeamPitchBody({
           const panel = vsHandByTeam[team.teamCode] ?? { leftOpen: false, rightOpen: false }
           const hasVsL = hasPitchTypesSplitRows(team.byCountPitchTypesVsL)
           const hasVsR = hasPitchTypesSplitRows(team.byCountPitchTypesVsR)
-          const teamRomanName = playerVsTeamRomanName(team.teamCode || team.label)
           return (
             <section key={team.teamCode} className={`${mbScroll} min-w-0`}>
               <div className="mb-4 flex items-start justify-between gap-3">
@@ -267,12 +266,7 @@ export function PlayerPageFielderVsTeamPitchBody({
                     fontWeight: 900,
                   }}
                 >
-                  <span className="block font-black">{team.label}</span>
-                  {teamRomanName ? (
-                    <span className="mt-0.5 block text-[15px] font-normal leading-tight text-gray-400 latin">
-                      {teamRomanName}
-                    </span>
-                  ) : null}
+                  {team.label}
                 </h2>
                 {hasVsL || hasVsR ? (
                   <PitchTypeSidePanelToggle

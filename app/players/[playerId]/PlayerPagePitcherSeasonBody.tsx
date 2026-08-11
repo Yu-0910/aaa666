@@ -31,7 +31,6 @@ import {
 } from "@/lib/pitcherSeasonPocUi"
 import { formatEra, formatRankingStatDisplay } from "@/lib/formatStat"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
-import { playerVsTeamRomanName } from "@/lib/standings/teamCodes"
 import { formatSlashStatDisplay, slashRate3FromCounts } from "@/lib/battingRateFormat"
 import {
   PitchTypeSplitViewsSection,
@@ -465,43 +464,33 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             </tr>
                           </thead>
                           <tbody>
-                            {pitcherPocTeamTable.map((row) => {
-                              const teamRomanName = playerVsTeamRomanName(row.team)
-                              return (
-                                <tr key={row.team} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-                                  <td
-                                    className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                                    style={{ backgroundColor: "#1a1a1a" }}
-                                  >
-                                    <div className="flex items-center gap-1 min-h-[1.25rem]">
-                                      <div
-                                        className="flex-shrink-0"
-                                        style={{
-                                          width: "4.32px",
-                                          height: "17.28px",
-                                          backgroundColor: rankingTeamStripeColor(row.team),
-                                        }}
-                                      />
-                                      <span className="min-w-0">
-                                        <span className="block leading-tight">{row.team}</span>
-                                        {teamRomanName ? (
-                                          <span className="mt-0.5 block text-[10px] font-normal leading-tight text-gray-400 latin">
-                                            {teamRomanName}
-                                          </span>
-                                        ) : null}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
-                                  <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct}</td>
-                                </tr>
-                              )
-                            })}
+                            {pitcherPocTeamTable.map((row) => (
+                              <tr key={row.team} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                                <td
+                                  className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+                                  style={{ backgroundColor: "#1a1a1a" }}
+                                >
+                                  <div className="flex items-center gap-1 min-h-[1.25rem]">
+                                    <div
+                                      className="flex-shrink-0"
+                                      style={{
+                                        width: "4.32px",
+                                        height: "17.28px",
+                                        backgroundColor: rankingTeamStripeColor(row.team),
+                                      }}
+                                    />
+                                    <span>{row.team}</span>
+                                  </div>
+                                </td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.era}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.wl}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.ip}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_bb_pct}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.k_pct}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.whip}</td>
+                                <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{row.qs_pct}</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
