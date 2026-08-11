@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
 import { teamPageNavEnabledForYear, teamPageNavHref } from "@/lib/teamPage/teamPageNavLinks"
 import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
@@ -24,6 +24,13 @@ import type { StandingsLeague, TeamStandingRow, TeamStandingsJson } from "@/lib/
 type TopPageStandingsTabProps = {
   year: number
   layout: TopPageLayoutMode
+}
+
+type StandingsMetricJumpTarget = "batting" | "pitching"
+
+type StandingsMetricJumpRequest = {
+  target: StandingsMetricJumpTarget
+  nonce: number
 }
 
 const LEAGUE_META: Record<
@@ -102,6 +109,7 @@ function TeamStandingsTable({
   rows,
   layout,
   year,
+  jumpRequest,
   compactRowScale = 1,
   teamRowScale = 1,
   metricRowScale = 1,
@@ -112,6 +120,7 @@ function TeamStandingsTable({
   rows: TeamStandingRow[]
   layout: TopPageLayoutMode
   year: number
+  jumpRequest?: StandingsMetricJumpRequest | null
   /** 行の縦スケール（セ・リーグUIテスト） */
   compactRowScale?: number
   /** 球団列の縦スケール（セ・リーグUIテスト） */
@@ -124,6 +133,7 @@ function TeamStandingsTable({
   metricColScale?: number
   showMetricLeagueRanks?: boolean
 }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const teamPageLinksEnabled = teamPageNavEnabledForYear(year)
   const isMobile = layout === "mobile"
   const teamNameWidth = isMobile ? 88 : 112
@@ -139,6 +149,20 @@ function TeamStandingsTable({
     () => (showMetricLeagueRanks ? computeStandingsMetricLeagueRanks(rows) : null),
     [rows, showMetricLeagueRanks],
   )
+
+  useEffect(() => {
+    if (!jumpRequest) return
+
+    const targetKey = jumpRequest.target === "batting" ? "runs" : "era_starter"
+    const targetIndex = metricColumns.findIndex((col) => col.key === targetKey)
+    if (targetIndex < 0) return
+
+    const scrollLeft = metricColumns
+      .slice(0, targetIndex)
+      .reduce((sum, col) => sum + standingsMetricColWidth(col.key, metricColScale), 0)
+
+    scrollContainerRef.current?.scrollTo({ left: scrollLeft, behavior: "smooth" })
+  }, [jumpRequest, metricColumns, metricColScale])
 
   const rowScale = compactRowScale
   const teamScale = rowScale * teamRowScale
@@ -157,6 +181,7 @@ function TeamStandingsTable({
 
   return (
     <div
+      ref={scrollContainerRef}
       className="border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
@@ -369,20 +394,44 @@ function StandingsLeagueSection({
 }) {
   const meta = LEAGUE_META[league]
   const isPl = league === "PL"
+  const [jumpRequest, setJumpRequest] = useState<StandingsMetricJumpRequest | null>(null)
+
+  const jumpToMetric = (target: StandingsMetricJumpTarget) => {
+    setJumpRequest({ target, nonce: Date.now() })
+  }
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center gap-2">
-        <div style={{ width: "4px", height: "32px", backgroundColor: meta.color }} />
-        <div>
-          <div className="text-sm font-medium">{meta.title} 順位表</div>
-          <div className="text-[10px] text-gray-400">{meta.subtitle}</div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="shrink-0" style={{ width: "4px", height: "32px", backgroundColor: meta.color }} />
+          <div className="min-w-0">
+            <div className="text-sm font-medium">{meta.title} 順位表</div>
+            <div className="text-[10px] text-gray-400">{meta.subtitle}</div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            className="h-6 border border-[#555] bg-[#242424] px-2 text-[10px] font-bold text-gray-100 transition-colors hover:border-[#ffff44] hover:text-[#ffff44]"
+            onClick={() => jumpToMetric("batting")}
+          >
+            野手指標
+          </button>
+          <button
+            type="button"
+            className="h-6 border border-[#555] bg-[#242424] px-2 text-[10px] font-bold text-gray-100 transition-colors hover:border-[#ffff44] hover:text-[#ffff44]"
+            onClick={() => jumpToMetric("pitching")}
+          >
+            投手指標
+          </button>
         </div>
       </div>
       <TeamStandingsTable
         rows={data.rows}
         layout={layout}
         year={year}
+        jumpRequest={jumpRequest}
         compactRowScale={1.2}
         teamRowScale={0.85}
         metricRowScale={0.85}
