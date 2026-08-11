@@ -1321,8 +1321,18 @@ export function PlayerPageClient({
     marginBottom: collapse.marginBottom + extraMarginBottom,
   })
 
+  const profileScaleShellStyle = (gapPx: number): React.CSSProperties | undefined =>
+    pitcherProfileScaleStyle
+      ? {
+          zoom: PITCHER_PROFILE_UI_SCALE,
+          width: pitcherProfileScaleStyle.width,
+          marginBottom: gapPx,
+        }
+      : undefined
+
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
-  const seasonSubTabProfileGapPx = 4
+  const seasonSubTabProfileGapPx = 8
+  const careerSubTabProfileGapPx = 8
 
   const pitcherInlineSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-0"
@@ -1887,7 +1897,7 @@ export function PlayerPageClient({
             <>
               <div
                 ref={pilotProfileScaleCollapse.ref}
-                style={pilotScaledBlockStyle(pilotProfileScaleCollapse, seasonSubTabProfileGapPx)}
+                style={profileScaleShellStyle(seasonSubTabProfileGapPx)}
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
                 {renderRouteTabBar()}
@@ -1942,8 +1952,10 @@ export function PlayerPageClient({
               <div
                 style={
                   pitcherCareerPitchingTightLayout
-                    ? { ...pitcherProfileScaleStyle, marginBottom: "-2.5rem" }
-                    : undefined
+                    ? profileScaleShellStyle(careerSubTabProfileGapPx)
+                    : profileScaleShellStyle(
+                        statsTab === "career" ? careerSubTabProfileGapPx : seasonSubTabProfileGapPx,
+                      )
                 }
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
@@ -2016,7 +2028,7 @@ export function PlayerPageClient({
         </div>
 
         {pitcherCareerPitchingTightLayout && (
-          <div style={{ ...pitcherProfileScaleStyle, marginBottom: "-0.75rem" }}>
+          <div style={{ marginBottom: "0.25rem" }}>
             {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
           </div>
         )}
