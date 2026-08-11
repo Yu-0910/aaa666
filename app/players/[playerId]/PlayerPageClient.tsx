@@ -1326,9 +1326,9 @@ export function PlayerPageClient({
       ? { ...pitcherProfileScaleStyle, marginBottom }
       : undefined
 
-  const seasonProfileToSubTabGap = "-2.25rem"
-  const careerProfileToSubTabGap = "-2.25rem"
-  const seasonSubTabToContentGap = "0.75rem"
+  const seasonProfileToSubTabGap = "-2rem"
+  const careerProfileToSubTabGap = "-2rem"
+  const seasonSubTabToContentGap = "1rem"
 
   const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
     profileTableScaleStyle(seasonProfileToSubTabGap)
