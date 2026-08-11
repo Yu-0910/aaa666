@@ -1315,15 +1315,17 @@ export function PlayerPageClient({
 
   const pilotScaledBlockStyle = (
     collapse: ReturnType<typeof useScaleLayoutCollapse>,
+    extraMarginBottom = 0,
   ): React.CSSProperties => ({
     ...pitcherProfileScaleStyle,
-    marginBottom: collapse.marginBottom,
+    marginBottom: collapse.marginBottom + extraMarginBottom,
   })
 
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
+  const seasonSubTabProfileGapPx = 10
 
   const pitcherInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-0"
   const careerInlineSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-3"
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
@@ -1885,14 +1887,14 @@ export function PlayerPageClient({
             <>
               <div
                 ref={pilotProfileScaleCollapse.ref}
-                style={pilotScaledBlockStyle(pilotProfileScaleCollapse)}
+                style={pilotScaledBlockStyle(pilotProfileScaleCollapse, seasonSubTabProfileGapPx)}
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
                 {renderRouteTabBar()}
               </div>
               <div
                 ref={seasonSubTabRail.anchorRef}
-                className={`${stickyPilotInsetClass} mt-2`}
+                className={stickyPilotInsetClass}
                 style={{ overflowAnchor: "none" }}
               >
                 <div ref={seasonSubTabRail.spacerRef} aria-hidden />
