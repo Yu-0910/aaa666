@@ -33,7 +33,6 @@ import {
 } from "@/lib/topPageTopSeasonGrid2026"
 import {
   getWeeklyPitchingRankingUrl,
-  getWeeklyPitchingStatsListUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
 import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
 
@@ -117,17 +116,8 @@ export function LeadersPanel({
     return `/ranking/${encodeURIComponent(metric)}`
   }
 
-  const getStatsListUrl = (): string => {
-    if (statsCategory === "pitching" && league && weekKey) {
-      return getWeeklyPitchingStatsListUrl(year, weekKey, league)
-    }
-    if (statsCategory === "pitching" && league) {
-      return `/ranking/pitching/${year}/${league}`
-    }
-    if (year && league) {
-      return `/ranking/${year}/${league}`
-    }
-    return "/ranking/coming-soon"
+  const getStatsListUrl = (metric: string): string => {
+    return getRankingUrl(metric)
   }
 
   const topGrid = layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"
@@ -220,7 +210,7 @@ export function LeadersPanel({
                       </span>
                     </Link>
                     <Link
-                      href={getStatsListUrl()}
+                      href={getStatsListUrl(metric)}
                       className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
@@ -256,7 +246,7 @@ export function LeadersPanel({
                   </span>
                 </Link>
                 <Link
-                  href={getStatsListUrl()}
+                  href={getStatsListUrl(data.top3Metrics[2]!)}
                   className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
@@ -294,7 +284,7 @@ export function LeadersPanel({
                     </span>
                   </Link>
                   <Link
-                    href={getStatsListUrl()}
+                    href={getStatsListUrl(metric)}
                     className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
@@ -309,7 +299,7 @@ export function LeadersPanel({
                     <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
                   </Link>
                   <Link
-                    href={getStatsListUrl()}
+                    href={getStatsListUrl(metric)}
                     className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
@@ -353,7 +343,7 @@ export function LeadersPanel({
                     </span>
                   </Link>
                   <Link
-                    href={getStatsListUrl()}
+                    href={getStatsListUrl(metric)}
                     className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
@@ -372,7 +362,7 @@ export function LeadersPanel({
                     </span>
                   </Link>
                   <Link
-                    href={getStatsListUrl()}
+                    href={getStatsListUrl(metric)}
                     className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧

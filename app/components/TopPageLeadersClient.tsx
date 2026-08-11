@@ -25,7 +25,6 @@ import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
 import { fetchTopWeeklyLeadersForPage } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import {
   getWeeklyBattingRankingUrl,
-  getWeeklyBattingStatsListUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
 import {
   topLeadersSectionSubtitle,
@@ -141,11 +140,8 @@ export default function TopPageLeadersClient({
     return `/ranking/${yearStr}/${upperLeague}?sort=${encodeURIComponent(metricKey)}&order=${order}`
   }
 
-  const getStatsListUrl = (): string => {
-    const yearStr = String(year)
-    const url = weekKey
-      ? getWeeklyBattingStatsListUrl(yearStr, weekKey, upperLeague)
-      : `/ranking/${yearStr}/${upperLeague}`
+  const getStatsListUrl = (metric: string): string => {
+    const url = getRankingUrl(metric)
     if (process.env.NODE_ENV === "development") {
       console.log(`[TopPageLeadersClient] getStatsListUrl: ${url}`)
     }
@@ -278,7 +274,7 @@ export default function TopPageLeadersClient({
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
-                        const url = getStatsListUrl()
+                        const url = getStatsListUrl(metric)
                         if (process.env.NODE_ENV === "development") {
                           console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                         }
@@ -322,7 +318,7 @@ export default function TopPageLeadersClient({
                   type="button"
                   onClick={(e) => {
                     e.preventDefault()
-                    const url = getStatsListUrl()
+                    const url = getStatsListUrl(data.top3Metrics[2]!)
                     if (process.env.NODE_ENV === "development") {
                       console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                     }
@@ -368,7 +364,7 @@ export default function TopPageLeadersClient({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      const url = getStatsListUrl()
+                      const url = getStatsListUrl(metric)
                       if (process.env.NODE_ENV === "development") {
                         console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                       }
@@ -391,7 +387,7 @@ export default function TopPageLeadersClient({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      const url = getStatsListUrl()
+                      const url = getStatsListUrl(metric)
                       if (process.env.NODE_ENV === "development") {
                         console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                       }
@@ -443,7 +439,7 @@ export default function TopPageLeadersClient({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      const url = getStatsListUrl()
+                      const url = getStatsListUrl(metric)
                       if (process.env.NODE_ENV === "development") {
                         console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                       }
@@ -470,7 +466,7 @@ export default function TopPageLeadersClient({
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
-                      const url = getStatsListUrl()
+                      const url = getStatsListUrl(metric)
                       if (process.env.NODE_ENV === "development") {
                         console.log(`[TopPageLeadersClient] 成績一覧 clicked: ${url}`)
                       }
@@ -498,4 +494,3 @@ export default function TopPageLeadersClient({
     </div>
   )
 }
-

@@ -21,7 +21,7 @@ type TopSeasonMetricsGridProps = {
   gridClassName: string
   displayMetricTitle?: (metricKey: string) => string
   getRankingUrl: (metric: string) => string
-  getStatsListUrl: () => string
+  getStatsListUrl: (metric: string) => string
   onStatsListNavigate?: (url: string) => void
   renderLeaderRow: (props: LeaderRowRenderProps) => ReactNode
 }
@@ -76,7 +76,7 @@ function MetricPanel({
   leaders: Record<string, unknown[] | undefined>
   topN?: number | null
   getRankingUrl: (metric: string) => string
-  getStatsListUrl: () => string
+  getStatsListUrl: (metric: string) => string
   onStatsListNavigate?: (url: string) => void
   renderLeaderRow: (props: LeaderRowRenderProps) => ReactNode
   typography: ReturnType<typeof topLeaderRowTypography>
@@ -97,7 +97,7 @@ function MetricPanel({
         >
           <span className={metricTitleClass(metricTitle, typography.metricTitle)}>{metricTitle}</span>
         </Link>
-        <StatsListControl href={getStatsListUrl()} onNavigate={onStatsListNavigate} className={statsListClass} />
+        <StatsListControl href={getStatsListUrl(metricKey)} onNavigate={onStatsListNavigate} className={statsListClass} />
       </div>
       <div className="min-w-0 space-y-0 overflow-hidden">
         {displayRows.map((leader, leaderIndex) =>
