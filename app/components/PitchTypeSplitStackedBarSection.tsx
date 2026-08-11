@@ -1,9 +1,24 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import type { PitcherSeasonPocPitchTypesSplitRow } from "@/lib/pitcherSeasonPocTypes"
 
-const PALETTE = ["#3575ef", "#1fad53", "#ea900c", "#a149f0", "#e53b3b", "#05a8c4", "#dfa707"] as const
+const PALETTE = [
+  "#3575ef",
+  "#1fad53",
+  "#ea900c",
+  "#a149f0",
+  "#e53b3b",
+  "#05a8c4",
+  "#dfa707",
+  "#f05ab2",
+  "#8bbf17",
+  "#7b61ff",
+  "#00a878",
+  "#ff6f3c",
+  "#2f9df4",
+  "#c7502f",
+] as const
 
 /** 左ラベル列 + gap-1（行レイアウトと一致） */
 export const PITCH_TYPE_BAR_AREA_LEFT = "calc(46px + 0.25rem)"
@@ -121,6 +136,10 @@ export type PitchTypeSplitStackedBarSectionProps = {
   rowWrapperClassName?: string
   /** 凡例を表示するか。省略時は表示 */
   showLegend?: boolean
+  /** グラフ全体のラッパークラス */
+  chartClassName?: string
+  /** グラフ全体のラッパースタイル */
+  chartStyle?: CSSProperties
 }
 
 export function PitchTypeColorLegend({
@@ -131,7 +150,7 @@ export function PitchTypeColorLegend({
   colorByType: ReadonlyMap<string, string>
 }) {
   return (
-    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+    <div className="mt-2 flex w-full flex-wrap justify-center gap-x-3 gap-y-1 text-center text-[11px] text-gray-400">
       {typeOrder.length > 0 ? (
         typeOrder.map((label) => (
           <div key={label} className="flex items-center gap-1 whitespace-nowrap">
@@ -174,6 +193,8 @@ export function PitchTypeSplitStackedBarSection({
   barTrackClassName,
   rowWrapperClassName = "mb-3",
   showLegend = true,
+  chartClassName,
+  chartStyle,
 }: PitchTypeSplitStackedBarSectionProps) {
   if (splits.length === 0) return null
 
@@ -187,7 +208,7 @@ export function PitchTypeSplitStackedBarSection({
     : baseTypeOrder
 
   return (
-    <>
+    <div className={chartClassName} style={chartStyle}>
       <div className="relative">
         <UnifiedPercentGridBackground />
 
@@ -232,6 +253,6 @@ export function PitchTypeSplitStackedBarSection({
       <PercentAxisLabels />
 
       {showLegend ? <PitchTypeColorLegend typeOrder={legendTypeOrder} colorByType={colorByType} /> : null}
-    </>
+    </div>
   )
 }

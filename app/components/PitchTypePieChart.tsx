@@ -53,6 +53,12 @@ export const PITCH_TYPE_CHART_COLORS = [
   "#1EBAD1",
   "#E08C17",
   "#41C371",
+  "#F05AB2",
+  "#8BBF17",
+  "#7B61FF",
+  "#00A878",
+  "#FF6F3C",
+  "#2F9DF4",
 ] as const
 
 const COLORS = PITCH_TYPE_CHART_COLORS

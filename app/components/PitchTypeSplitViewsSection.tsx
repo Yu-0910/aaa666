@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import {
   buildPitchTypeColorMap,
   PITCH_TYPE_BAR_AREA_LEFT,
@@ -63,6 +63,7 @@ function PitchTypeSectionHeading({
   title,
   trailing,
   showStripe = true,
+  highlight = false,
 }: {
   tb: string
   sectionStripeColor: string
@@ -70,6 +71,8 @@ function PitchTypeSectionHeading({
   trailing?: ReactNode
   /** 対左右の展開見出しなど、球団帯を付けないとき false */
   showStripe?: boolean
+  /** 対右・対左の展開見出しを黄色背景で強調 */
+  highlight?: boolean
 }) {
   return (
     <div className="mb-4 mt-8 flex items-start justify-between gap-3">
@@ -78,6 +81,16 @@ function PitchTypeSectionHeading({
         style={{
           borderLeft: showStripe ? `6px solid ${sectionStripeColor}` : undefined,
           fontWeight: 900,
+          ...(highlight
+            ? {
+                display: "inline-flex",
+                flex: "0 0 auto",
+                backgroundColor: "#FFFF44",
+                color: "#000000",
+                padding: "0.15rem 0.55rem",
+                borderRadius: "2px",
+              }
+            : {}),
         }}
       >
         {title}
@@ -243,6 +256,8 @@ export function PaRoundPitchTypeChart({
   barTrackClassName,
   rowWrapperClassName,
   showLegend,
+  chartClassName,
+  chartStyle,
 }: {
   splits: PitcherSeasonPocPitchTypesSplitRow[] | null
   staggerRowReveal?: boolean
@@ -254,6 +269,8 @@ export function PaRoundPitchTypeChart({
   barTrackClassName?: string
   rowWrapperClassName?: string
   showLegend?: boolean
+  chartClassName?: string
+  chartStyle?: CSSProperties
 }) {
   if (splits == null) {
     return <span className="text-sm text-gray-400">—</span>
@@ -271,6 +288,8 @@ export function PaRoundPitchTypeChart({
       barTrackClassName={barTrackClassName}
       rowWrapperClassName={rowWrapperClassName}
       showLegend={showLegend}
+      chartClassName={chartClassName}
+      chartStyle={chartStyle}
     />
   )
 }
@@ -407,25 +426,6 @@ export function PitchTypeVsHandSplitBlock({
         </p>
       ) : null}
 
-      {hasVsLSplits ? (
-        <PitchTypeSidePanelReveal
-          open={leftOpen}
-          sectionStripeColor={sectionStripeColor}
-          revealGeneration={leftRevealGeneration}
-          animate={chartRevealAnimate}
-        >
-          <PitchTypeSectionHeading
-            tb={tb}
-            sectionStripeColor={sectionStripeColor}
-            title={titleVsL}
-            showStripe={false}
-          />
-          <div className={rightOpen ? "mb-2" : "mb-12"}>
-            {renderVsLChart(chartRevealAnimate && sidePanelPilot && leftOpen, leftRevealGeneration)}
-          </div>
-        </PitchTypeSidePanelReveal>
-      ) : null}
-
       {hasVsRSplits ? (
         <PitchTypeSidePanelReveal
           open={rightOpen}
@@ -438,9 +438,30 @@ export function PitchTypeVsHandSplitBlock({
             sectionStripeColor={sectionStripeColor}
             title={titleVsR}
             showStripe={false}
+            highlight
+          />
+          <div className={leftOpen ? "mb-2" : "mb-12"}>
+            {renderVsRChart(chartRevealAnimate && sidePanelPilot && rightOpen, rightRevealGeneration)}
+          </div>
+        </PitchTypeSidePanelReveal>
+      ) : null}
+
+      {hasVsLSplits ? (
+        <PitchTypeSidePanelReveal
+          open={leftOpen}
+          sectionStripeColor={sectionStripeColor}
+          revealGeneration={leftRevealGeneration}
+          animate={chartRevealAnimate}
+        >
+          <PitchTypeSectionHeading
+            tb={tb}
+            sectionStripeColor={sectionStripeColor}
+            title={titleVsL}
+            showStripe={false}
+            highlight
           />
           <div className="mb-12">
-            {renderVsRChart(chartRevealAnimate && sidePanelPilot && rightOpen, rightRevealGeneration)}
+            {renderVsLChart(chartRevealAnimate && sidePanelPilot && leftOpen, leftRevealGeneration)}
           </div>
         </PitchTypeSidePanelReveal>
       ) : null}
@@ -520,6 +541,11 @@ export function PitchTypeSplitViewsSection({
             staggerRowReveal={stagger}
             revealGeneration={generation}
             baseColorMap={paRoundColorMap}
+            rowLabelClassName="pitch-type-split-row-label text-[10px] text-gray-200 font-black tabular-nums leading-tight"
+            barTrackClassName="h-6"
+            rowWrapperClassName="mb-[10px]"
+            chartClassName="pitch-type-pa-round-vs-hand-chart"
+            chartStyle={{ width: "125%", maxWidth: "none" }}
           />
         )}
         renderVsRChart={(stagger, generation) => (
@@ -528,6 +554,11 @@ export function PitchTypeSplitViewsSection({
             staggerRowReveal={stagger}
             revealGeneration={generation}
             baseColorMap={paRoundColorMap}
+            rowLabelClassName="pitch-type-split-row-label text-[10px] text-gray-200 font-black tabular-nums leading-tight"
+            barTrackClassName="h-6"
+            rowWrapperClassName="mb-[10px]"
+            chartClassName="pitch-type-pa-round-vs-hand-chart"
+            chartStyle={{ width: "125%", maxWidth: "none" }}
           />
         )}
         chartRevealAnimate={chartRevealAnimate}

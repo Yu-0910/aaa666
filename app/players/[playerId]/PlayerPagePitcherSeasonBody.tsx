@@ -973,16 +973,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           }
                         >
                           <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
-                            {leftRows.length > 0 ? (
-                              <PitchTypePieChart
-                                title="対左"
-                                rows={leftRows}
-                                centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
-                                pitchTypeColorOrder={colorOrder}
-                                compact
-                                isAnimationActive={animatePitchCharts}
-                              />
-                            ) : null}
                             {rightRows.length > 0 ? (
                               <PitchTypePieChart
                                 title="対右"
@@ -990,6 +980,18 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
                                 pitchTypeColorOrder={colorOrder}
                                 compact
+                                sizeScale={0.85}
+                                isAnimationActive={animatePitchCharts}
+                              />
+                            ) : null}
+                            {leftRows.length > 0 ? (
+                              <PitchTypePieChart
+                                title="対左"
+                                rows={leftRows}
+                                centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
+                                pitchTypeColorOrder={colorOrder}
+                                compact
+                                sizeScale={0.85}
                                 isAnimationActive={animatePitchCharts}
                               />
                             ) : null}
