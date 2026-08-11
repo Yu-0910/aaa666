@@ -35,11 +35,11 @@ const PROBABLES_PITCH_DIALOG_CLASS =
   "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 const PROBABLES_PA_ROUND_DIALOG_CLASS =
   "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
-const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-3/4"
+const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%]"
 const PROBABLES_PA_ROUND_ROW_LABEL_CLASS =
-  "pitch-type-split-row-label text-[9px] text-gray-200 font-black tabular-nums leading-tight"
-const PROBABLES_PA_ROUND_BAR_TRACK_CLASS = "h-[21px]"
-const PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS = "mb-[9px]"
+  "pitch-type-split-row-label text-[8px] text-gray-200 font-black tabular-nums leading-tight"
+const PROBABLES_PA_ROUND_BAR_TRACK_CLASS = "h-[18px]"
+const PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS = "mb-[8px]"
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -92,7 +92,7 @@ function useOverlayLegendScale(
 function donutCenterStats(agg: PitcherSeasonPocPaAgg | undefined) {
   if (!agg || agg.bf <= 0) return undefined
   const cells = pitcherPocHandCells(agg)
-  return { avgAgainst: cells[5], kBbPct: cells[2] }
+  return { avgAgainst: cells[0], kBbPct: cells[3] }
 }
 
 export function ProbablesPitchDataOverlay({
@@ -294,8 +294,8 @@ export function ProbablesPaRoundPitchDataOverlay({
   const handSplits = [...(leftSplits ?? []), ...(rightSplits ?? [])]
   const handColorMap = handSplits.length ? buildPitchTypeColorMap(handSplits) : null
   const charts = [
-    { key: "left", title: "対左", splits: leftSplits, colorMap: handColorMap },
     { key: "right", title: "対右", splits: rightSplits, colorMap: handColorMap },
+    { key: "left", title: "対左", splits: leftSplits, colorMap: handColorMap },
   ].filter((chart) => chart.splits != null)
 
   return (
@@ -315,7 +315,7 @@ export function ProbablesPaRoundPitchDataOverlay({
           <div className="mx-auto flex w-full flex-col gap-y-3">
             {charts.map((chart) => (
               <div key={chart.key} className={PROBABLES_PA_ROUND_CHART_CLASS}>
-                <div className="mb-2 text-center text-[11px] font-bold text-gray-200">
+                <div className="mx-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[10px] font-black leading-none text-black">
                   {chart.title}
                 </div>
                 <PaRoundPitchTypeChart
