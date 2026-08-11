@@ -271,32 +271,23 @@ export function ProbablesPaRoundPitchDataOverlay({
   }
 
   const seasonRows = pitchTypes?.rows ?? []
-  const gameFallback = seasonRows.length
-    ? seasonRows.map((r) => ({ pitch_type: r.pitch_type, pct: r.pct }))
-    : null
-  const baseSplits = resolvePaRoundPitchTypeSplits(
-    pocPayload,
-    seasonRows,
-    gameFallback,
-    "byPaRoundPitchTypes",
-  )
   const leftSplits = resolvePaRoundPitchTypeSplits(
     pocPayload,
     seasonRows,
-    gameFallback,
+    null,
     "byPaRoundPitchTypesVsL",
   )
   const rightSplits = resolvePaRoundPitchTypeSplits(
     pocPayload,
     seasonRows,
-    gameFallback,
+    null,
     "byPaRoundPitchTypesVsR",
   )
-  const baseColorMap = baseSplits?.length ? buildPitchTypeColorMap(baseSplits) : null
+  const handSplits = [...(leftSplits ?? []), ...(rightSplits ?? [])]
+  const handColorMap = handSplits.length ? buildPitchTypeColorMap(handSplits) : null
   const charts = [
-    { key: "base", title: "全体", splits: baseSplits, colorMap: null },
-    { key: "left", title: "対左", splits: leftSplits, colorMap: baseColorMap },
-    { key: "right", title: "対右", splits: rightSplits, colorMap: baseColorMap },
+    { key: "left", title: "対左", splits: leftSplits, colorMap: handColorMap },
+    { key: "right", title: "対右", splits: rightSplits, colorMap: handColorMap },
   ].filter((chart) => chart.splits != null)
 
   return (
