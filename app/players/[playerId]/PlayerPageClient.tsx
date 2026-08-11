@@ -1326,18 +1326,22 @@ export function PlayerPageClient({
       ? { ...pitcherProfileScaleStyle, marginBottom }
       : undefined
 
+  const seasonProfileToSubTabGap = "-2.25rem"
+  const careerProfileToSubTabGap = "-2.25rem"
+  const seasonSubTabToContentGap = "0.5rem"
+
   const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
-    profileTableScaleStyle("-2.5rem")
+    profileTableScaleStyle(seasonProfileToSubTabGap)
 
   const careerProfileScaleShellStyle = (): React.CSSProperties | undefined =>
-    profileTableScaleStyle("-2.5rem")
+    profileTableScaleStyle(careerProfileToSubTabGap)
 
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
 
   const pitcherInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
   const careerInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-3"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-3"
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
   const pitcherStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
@@ -1345,7 +1349,7 @@ export function PlayerPageClient({
   const fielderStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
   const pitcherCareerSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-1"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-8 mb-1"
   const pitcherSubTabButtonClass =
     "relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
   const fielderCareerH2Class = careerUsesRankingCareerHeading ? "mb-3 mt-0" : `${tb} mb-4 pl-4`
@@ -1466,7 +1470,7 @@ export function PlayerPageClient({
       ref={shellRef}
       className={
         shellClassOverride ??
-        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-0"
+        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
       }
       style={{
         border: "1px solid #555",
@@ -1931,7 +1935,7 @@ export function PlayerPageClient({
                 ref={pilotContentScaleCollapse.ref}
                 style={{
                   ...pilotScaledBlockStyle(pilotContentScaleCollapse),
-                  marginTop: "-1px",
+                  marginTop: seasonSubTabToContentGap,
                 }}
               >
                 {pageSection === "game-log" ? (
