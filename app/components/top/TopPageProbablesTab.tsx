@@ -27,7 +27,10 @@ import type {
   TopProbablesPitcherSlot,
   TopProbablesSnapshot,
 } from "@/lib/probables/types"
-import { ProbablesPitchDataOverlay } from "@/app/components/top/ProbablesPitchDataOverlay"
+import {
+  ProbablesPaRoundPitchDataOverlay,
+  ProbablesPitchDataOverlay,
+} from "@/app/components/top/ProbablesPitchDataOverlay"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import { PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX } from "@/lib/playerMatchupSeasonTab"
 import { matchupOpponentDisplayNameJa, rosterNameMatchKey } from "@/lib/playerNameNormalize"
@@ -276,6 +279,13 @@ function RakutenLotteSideTooltipButtons({
     <>
       <div className={`absolute top-0 z-10 ${sideClass}`}>
         <ProbablesPitchDataOverlay
+          pitcherPublicId={pitcherPublicId}
+          season={season}
+          opponentStripeSide={opponentStripeSide}
+        />
+      </div>
+      <div className={`absolute top-[16px] z-10 ${sideClass}`}>
+        <ProbablesPaRoundPitchDataOverlay
           pitcherPublicId={pitcherPublicId}
           season={season}
           opponentStripeSide={opponentStripeSide}

@@ -220,7 +220,7 @@ function useRevealGeneration(open: boolean) {
 }
 
 function hasPitchTypeSplits(rows: PitcherSeasonPocPitchTypesSplitRow[] | null | undefined): boolean {
-  return (rows?.length ?? 0) > 0 && rows.some((r) => r.pitches_total > 0)
+  return rows != null && rows.length > 0 && rows.some((r) => r.pitches_total > 0)
 }
 
 function resolveCountPitchTypeSplits(
@@ -240,6 +240,8 @@ export function PaRoundPitchTypeChart({
   baseColorMap,
   renderRowLabel,
   rowLabelClassName,
+  barTrackClassName,
+  rowWrapperClassName,
 }: {
   splits: PitcherSeasonPocPitchTypesSplitRow[] | null
   staggerRowReveal?: boolean
@@ -248,6 +250,8 @@ export function PaRoundPitchTypeChart({
   baseColorMap?: PitchTypeColorMap | null
   renderRowLabel?: (row: PitcherSeasonPocPitchTypesSplitRow | null, key: string) => ReactNode
   rowLabelClassName?: string
+  barTrackClassName?: string
+  rowWrapperClassName?: string
 }) {
   if (splits == null) {
     return <span className="text-sm text-gray-400">—</span>
@@ -262,6 +266,8 @@ export function PaRoundPitchTypeChart({
       colorByType={baseColorMap?.colorByType}
       typeOrder={baseColorMap?.typeOrder}
       rowLabelClassName={rowLabelClassName}
+      barTrackClassName={barTrackClassName}
+      rowWrapperClassName={rowWrapperClassName}
     />
   )
 }

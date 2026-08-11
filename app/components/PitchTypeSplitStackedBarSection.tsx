@@ -74,9 +74,15 @@ function PercentAxisLabels() {
   )
 }
 
-function PitchTypeStackedBarTrack({ parts }: { parts: BarPart[] }) {
+function PitchTypeStackedBarTrack({
+  parts,
+  className = "h-7",
+}: {
+  parts: BarPart[]
+  className?: string
+}) {
   return (
-    <div className="relative z-[1] h-7 overflow-hidden border-y border-[#555] bg-transparent">
+    <div className={`relative z-[1] overflow-hidden border-y border-[#555] bg-transparent ${className}`}>
       <div className="flex h-full w-full">
         {parts.map((p) => (
           <div
@@ -109,6 +115,10 @@ export type PitchTypeSplitStackedBarSectionProps = {
   typeOrder?: readonly string[]
   /** 左ラベル列（0-0 等）のクラス。省略時は text-[12px] */
   rowLabelClassName?: string
+  /** 棒グラフ本体の高さクラス。省略時は h-7 */
+  barTrackClassName?: string
+  /** 各行の余白クラス。省略時は mb-3 */
+  rowWrapperClassName?: string
 }
 
 /** 球種別の色割当（投球数の多い順にパレットを割り当て） */
@@ -133,6 +143,8 @@ export function PitchTypeSplitStackedBarSection({
   colorByType: colorByTypeProp,
   typeOrder: typeOrderProp,
   rowLabelClassName = "pitch-type-split-row-label text-[12px] text-gray-200 font-black tabular-nums leading-tight",
+  barTrackClassName,
+  rowWrapperClassName = "mb-3",
 }: PitchTypeSplitStackedBarSectionProps) {
   if (splits.length === 0) return null
 
@@ -168,7 +180,7 @@ export function PitchTypeSplitStackedBarSection({
           return (
             <div
               key={`${revealGeneration}-${key}`}
-              className={`mb-3${staggerRowReveal ? " pitch-type-side-row-emerge" : ""}`}
+              className={`${rowWrapperClassName}${staggerRowReveal ? " pitch-type-side-row-emerge" : ""}`}
               style={
                 staggerRowReveal
                   ? { animationDelay: `${Math.min(rowIdx, 11) * 34 + 60}ms` }
@@ -180,7 +192,7 @@ export function PitchTypeSplitStackedBarSection({
                   {renderRowLabel ? renderRowLabel(row, key) : (row?.label ?? key)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <PitchTypeStackedBarTrack parts={parts} />
+                  <PitchTypeStackedBarTrack parts={parts} className={barTrackClassName} />
                 </div>
               </div>
             </div>
