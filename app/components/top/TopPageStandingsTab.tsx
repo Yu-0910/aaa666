@@ -34,7 +34,7 @@ const LEAGUE_META: Record<
   PL: { title: "パ・リーグ", subtitle: "Pacific League", color: "#10b8ce" },
 }
 
-const RANK_WIDTH = 28
+const RANK_WIDTH = Math.round(28 * 0.9)
 const TEAM_BAR_WIDTH = 4
 const TEAM_NAME_BLOCK_HEIGHT = 32
 /** 球団名・ローマ字ブロックの下方向オフセット（px・行スケール前） */
@@ -55,6 +55,8 @@ const ROW_BG_EVEN = "#292929"
 const ROW_BG_ODD = "#1f1f1f"
 /** 順位・指標セルの数値フォント倍率 */
 const STANDINGS_NUM_SIZE_SCALE = 1.1 * 0.85
+/** 順位列の 1〜6 の数字だけを小さくする */
+const STANDINGS_RANK_NUM_SIZE_SCALE = 0.8
 /** 指標ヘッダー行の高さ（2行ラベル・順・球団で共通） */
 const STANDINGS_HEADER_ROW_HEIGHT = 38
 /** thead 固定時: 左ブロック（順・球団） */
@@ -144,7 +146,7 @@ function TeamStandingsTable({
   const teamNameBlockHeight = Math.round(TEAM_NAME_BLOCK_HEIGHT * teamScale)
   const teamBarHeight = Math.round(TEAM_BAR_HEIGHT * teamScale)
   const metricRowMinHeight = Math.round(36 * metricScale)
-  const rankFontSize = `${16 * STANDINGS_NUM_SIZE_SCALE * rowScale}px`
+  const rankFontSize = `${16 * STANDINGS_NUM_SIZE_SCALE * rowScale * STANDINGS_RANK_NUM_SIZE_SCALE}px`
   const metricFontSize = `${14 * STANDINGS_NUM_SIZE_SCALE * rowScale * metricFontScale}px`
   const teamNameFontSize = `${Math.round(13 * teamScale)}px`
   const teamRomanFontSize = `${Math.round(10 * teamScale)}px`
