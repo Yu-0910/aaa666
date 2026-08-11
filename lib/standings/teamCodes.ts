@@ -390,6 +390,14 @@ export function teamRomanNameFromCode(code: string): string {
   return TEAM_CODE_TO_ROMAN[c] ?? c
 }
 
+/** 個人ページの球団別表で使う表示名（横浜など）から英字球団名を返す。 */
+export function playerVsTeamRomanName(teamName: string): string {
+  const normalized = normalizeTeamNameForMatch(teamName)
+  if (!normalized) return ""
+  const code = resolvedTeamCodeForMatch(normalized)
+  return TEAM_CODE_TO_ROMAN[code] ?? ""
+}
+
 /** 集計用内部略称から表示名 */
 export function teamDisplayNameFromShort(short: string): string {
   const s = String(short ?? "").trim()
