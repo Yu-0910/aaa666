@@ -1321,14 +1321,16 @@ export function PlayerPageClient({
     marginBottom: collapse.marginBottom + extraMarginBottom,
   })
 
-  const seasonProfileScaleShellStyle = (
-    collapse: ReturnType<typeof useScaleLayoutCollapse>,
-  ): React.CSSProperties => pilotScaledBlockStyle(collapse, 4)
+  const profileTableScaleStyle = (marginBottom: React.CSSProperties["marginBottom"]) =>
+    pitcherProfileScaleStyle
+      ? { ...pitcherProfileScaleStyle, marginBottom }
+      : undefined
+
+  const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
+    profileTableScaleStyle("-2.5rem")
 
   const careerProfileScaleShellStyle = (): React.CSSProperties | undefined =>
-    pitcherProfileScaleStyle
-      ? { ...pitcherProfileScaleStyle, marginBottom: "-2.5rem" }
-      : undefined
+    profileTableScaleStyle("-2.5rem")
 
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
 
@@ -1895,7 +1897,7 @@ export function PlayerPageClient({
             <>
               <div
                 ref={pilotProfileScaleCollapse.ref}
-                style={seasonProfileScaleShellStyle(pilotProfileScaleCollapse)}
+                style={seasonProfileScaleShellStyle()}
               >
                 <PlayerPageProfileTableBlock {...profileTableProps} />
                 {renderRouteTabBar()}
