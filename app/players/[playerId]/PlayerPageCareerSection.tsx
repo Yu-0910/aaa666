@@ -198,7 +198,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                   }
                   style={careerBattingSectionH2Style}
                 >
-                  通算の投手成績
+                  通算の投手成績／年俸
                 </h2>
                 <CareerBattingTableRankingStyle
                   rows={mergedPitchingRowsForDisplay}
@@ -241,7 +241,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           }
           style={careerBattingSectionH2Style}
         >
-          通算の打撃成績
+          通算の打撃成績／年俸
         </h2>
 
         {useRankingStyleCareerBattingTable ? (
@@ -371,7 +371,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
             fontWeight: 900,
           }}
         >
-          通算の投手成績
+          通算の投手成績／年俸
         </h2>
 
         <CareerTableScaleWrap
