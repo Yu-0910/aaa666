@@ -139,10 +139,21 @@ function TeamStandingsTable({
   const teamNameWidth = isMobile ? 88 : 112
   const leftBlockWidth = RANK_WIDTH + TEAM_BAR_WIDTH + teamNameWidth
   const metricColumns = useMemo(
-    () =>
-      standingsMetricColumnsForSource((rows[0]?.source ?? "canonical") as any).filter(
+    () => {
+      const columns = standingsMetricColumnsForSource((rows[0]?.source ?? "canonical") as any).filter(
         (col) => col.key !== "g",
-      ),
+      )
+      const pctIndex = columns.findIndex((col) => col.key === "pct")
+      const gbIndex = columns.findIndex((col) => col.key === "gb")
+      if (pctIndex >= 0 && gbIndex >= 0 && pctIndex < gbIndex) {
+        const reordered = [...columns]
+        const pctColumn = reordered[pctIndex]!
+        reordered[pctIndex] = reordered[gbIndex]!
+        reordered[gbIndex] = pctColumn
+        return reordered
+      }
+      return columns
+    },
     [rows],
   )
 
