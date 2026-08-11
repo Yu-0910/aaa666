@@ -153,18 +153,31 @@ export type PitchTypeSplitStackedBarSectionProps = {
 export function PitchTypeColorLegend({
   typeOrder,
   colorByType,
+  scale = 1,
 }: {
   typeOrder: readonly string[]
   colorByType: ReadonlyMap<string, string>
+  scale?: number
 }) {
+  const fontPx = Math.max(8, Math.round(11 * scale))
+  const swatchPx = Math.max(6, Math.round(8 * scale))
+  const gapX = Math.round(12 * scale)
+  const gapY = Math.max(2, Math.round(4 * scale))
   return (
-    <div className="mt-2 flex w-full flex-wrap justify-center gap-x-3 gap-y-1 text-center text-[11px] text-gray-400">
+    <div
+      className="mt-2 flex w-full flex-wrap justify-center text-center text-gray-400"
+      style={{ columnGap: `${gapX}px`, rowGap: `${gapY}px`, fontSize: `${fontPx}px` }}
+    >
       {typeOrder.length > 0 ? (
         typeOrder.map((label) => (
           <div key={label} className="flex items-center gap-1 whitespace-nowrap">
             <span
-              className="inline-block w-2 h-2"
-              style={{ backgroundColor: colorByType.get(label) ?? PALETTE[0] }}
+              className="inline-block"
+              style={{
+                width: swatchPx,
+                height: swatchPx,
+                backgroundColor: colorByType.get(label) ?? PALETTE[0],
+              }}
             />
             <span className="text-gray-300">{label}</span>
           </div>

@@ -43,7 +43,7 @@ const PROBABLES_PA_ROUND_BAR_AREA_LEFT = "calc(32px + 0.25rem)"
 const PROBABLES_PA_ROUND_BAR_TRACK_CLASS = "h-[18px]"
 const PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS = "mb-[8px]"
 const PROBABLES_PA_ROUND_HEADING_CLASS =
-  "ml-[calc(32px+0.25rem)] mr-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[16px] font-black leading-none text-black"
+  "mx-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[16px] font-black leading-none text-black"
 
 function probablesSideTooltipTriggerClass(): string {
   return "flex h-[14px] min-w-[14px] items-center justify-center border border-gray-500 px-0.5 text-[9px] font-semibold text-gray-400 hover:border-gray-300 hover:text-gray-200 transition-colors leading-none shrink-0"
@@ -338,10 +338,11 @@ export function ProbablesPaRoundPitchDataOverlay({
               </div>
             ))}
             {handColorMap ? (
-              <div className="flex justify-center text-[80%]">
+              <div className="flex justify-center">
                 <PitchTypeColorLegend
                   typeOrder={handColorMap.typeOrder}
                   colorByType={handColorMap.colorByType}
+                  scale={0.8}
                 />
               </div>
             ) : null}
