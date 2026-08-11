@@ -20,6 +20,7 @@ import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
+import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { shouldRequireQualifyingPA, calculateMinPA } from "@/lib/ranking/qualifyingPA"
 
@@ -629,6 +630,10 @@ export default function WeeklyRankingPageClient({
   const emptyAfterFilter =
 
     rowsFromJson.length > 0 && sortedRows.length === 0 && shouldRequireQualifyingPA(sortKey)
+  const headerNavGroups =
+    leagueUpper === "CL" || leagueUpper === "PL"
+      ? buildWeeklyRankingTopNavGroups(year, weekKey, leagueUpper, "batting")
+      : undefined
 
   return (
 
@@ -661,6 +666,7 @@ export default function WeeklyRankingPageClient({
           onWeekChange: handleWeekChange,
 
         }}
+        headerNavGroups={headerNavGroups}
 
       />
 

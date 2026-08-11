@@ -36,6 +36,7 @@ import { mergeRomanNamesFromCsv, normalizeRankingRow } from "@/lib/ranking/norma
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
+import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { FullPageLoading } from "@/components/ui/spinner"
 
@@ -472,6 +473,10 @@ export default function WeeklyPitchingRankingPageClient({
     sortedRows.length === 0 &&
 
     shouldRequireQualifyingPitching(sortKey)
+  const headerNavGroups =
+    leagueUpper === "CL" || leagueUpper === "PL"
+      ? buildWeeklyRankingTopNavGroups(year, weekKey, leagueUpper, "pitching")
+      : undefined
 
   return (
 
@@ -514,6 +519,7 @@ export default function WeeklyPitchingRankingPageClient({
           onWeekChange: handleWeekChange,
 
         }}
+        headerNavGroups={headerNavGroups}
 
       />
 
