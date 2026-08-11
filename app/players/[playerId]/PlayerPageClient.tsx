@@ -1323,15 +1323,15 @@ export function PlayerPageClient({
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
 
   const pitcherInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden -mt-px mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-0"
   const careerInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden -mt-px mb-3"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-3"
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
   const pitcherStickySubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden -mt-px mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
   /** 固定時: プロフィール表に近づけるためタブ自体の下余白だけ抑える */
   const fielderStickySubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden -mt-px mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
   const pitcherCareerSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-7 mb-1"
   const pitcherSubTabButtonClass =
@@ -1454,7 +1454,7 @@ export function PlayerPageClient({
       ref={shellRef}
       className={
         shellClassOverride ??
-        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
+        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-0"
       }
       style={{
         border: "1px solid #555",
@@ -1892,7 +1892,7 @@ export function PlayerPageClient({
               </div>
               <div
                 ref={seasonSubTabRail.anchorRef}
-                className={`${stickyPilotInsetClass} -mt-px`}
+                className={`${stickyPilotInsetClass} mt-2`}
                 style={{ overflowAnchor: "none" }}
               >
                 <div ref={seasonSubTabRail.spacerRef} aria-hidden />
