@@ -580,8 +580,7 @@ export function aggregateSpeedBandsStraightOnly(
     for (const p of pa.pitches) {
       if (!isStraightPitchKind(p.pitch_type)) continue
       const kmh = parseInt(p.speed_kmh, 10)
-      const band = kmhToStraightBandKey(kmh)
-      if (!band) continue
+      const band = kmhToStraightBandKey(kmh) ?? 'unknown'
       if (!byBand.has(band)) byBand.set(band, [])
       byBand.get(band)!.push(p)
     }
@@ -611,8 +610,7 @@ export function aggregateSpeedBandsStraightOnly(
     if (!isStraightPitchKind(last.pitch_type)) continue
     const settlement = settlementResultForPa(pa)
     const kmh = parseInt(last.speed_kmh, 10)
-    const band = kmhToStraightBandKey(kmh)
-    if (!band) continue
+    const band = kmhToStraightBandKey(kmh) ?? 'unknown'
     if (!settlementByBand.has(band)) {
       settlementByBand.set(band, {
         ab: 0,

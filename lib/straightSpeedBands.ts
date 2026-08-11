@@ -1,7 +1,7 @@
 /**
  * ストレート球速帯（Phase14 集計・UI 共通）
  *
- * 整数 km/h 区分: 161〜 / 156〜160 / 151〜155 / 146〜150 / 141〜145 / 〜140
+ * 整数 km/h 区分: 161〜 / 156〜160 / 151〜155 / 146〜150 / 141〜145 / 〜140 / 球速不明
  */
 export const STRAIGHT_SPEED_BANDS = [
   { key: '161+', labelJa: '161km/h～' },
@@ -10,6 +10,7 @@ export const STRAIGHT_SPEED_BANDS = [
   { key: '146-150', labelJa: '～150km/h' },
   { key: '141-145', labelJa: '～145km/h' },
   { key: '-140', labelJa: '～140km/h' },
+  { key: 'unknown', labelJa: '球速不明' },
 ] as const
 
 export type StraightSpeedBandKey = (typeof STRAIGHT_SPEED_BANDS)[number]['key']
