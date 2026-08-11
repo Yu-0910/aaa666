@@ -26,8 +26,6 @@ output/master/
 
 # ランキングデータ（外部ストレージから取得するもののみ除外）
 public/data/*
-!public/data/top-probables/
-!public/data/top-probables/**
 
 # 1950〜の巨大CSV（本番ビルド・APIでは不要。英字名は master_csv_calculated の 2025 のみ＋名簿）
 _data/*
