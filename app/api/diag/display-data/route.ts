@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
+import { getPublicRankingsBaseUrl, getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,11 +50,12 @@ async function probe(url: string): Promise<{
   }
 }
 
-export async function GET() {
-  const base = process.env.RANKINGS_BASE_URL?.trim() || null
-  const nextPublic = process.env.NEXT_PUBLIC_RANKINGS_BASE_URL?.trim() || null
-  const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+export async function GET(request: Request) {
+  const base = getRankingsBaseUrl() || null
+  const nextPublic = getPublicRankingsBaseUrl()
+  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  const requestOrigin = new URL(request.url).origin
+  const origin = configuredOrigin || requestOrigin
 
   const r2Ops2026 = base
     ? getExternalDisplayDataUrl('data/rankings/2026/CL/OPS.json')
