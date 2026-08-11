@@ -1,6 +1,7 @@
 import { loadCatcherAppearancesFromRepoAsync } from "@/lib/catcherAppearancesLoad"
 import { loadCatcherDefenseBasicFromRepoAsync } from "@/lib/catcherDefenseBasicLoad"
 import { loadCatcherPitcherSplitsFromRepoAsync } from "@/lib/catcherPitcherSplitsLoad"
+import { selectCatcherStartingSummaryForTeam } from "@/lib/catcherStartingSummary"
 import { loadCatcherStartingSummaryFromRepoAsync } from "@/lib/catcherStartingSummaryLoad"
 import type { CatcherApiBundle } from "@/lib/teamPage/teamCatcherBasicStats"
 import {
@@ -24,7 +25,7 @@ async function loadTeamCatcherStatsRow(
   const api: CatcherApiBundle = {
     gamesAsCatcher: appearances?.gamesAsCatcher ?? null,
     defense,
-    starting,
+    starting: selectCatcherStartingSummaryForTeam(starting, seed.teamCode),
     pitcherRows: pitchers?.rows ?? [],
     seasonTotals: pitchers?.seasonTotals ?? null,
   }

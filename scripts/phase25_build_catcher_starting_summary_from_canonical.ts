@@ -25,8 +25,11 @@ import { rosterTeamToRankingShort } from "@/lib/yahooGame/canonicalPitchingSeaso
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
-import { teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
-import type { CatcherStartingSummaryDerived } from "@/lib/catcherStartingSummary"
+import { teamCodeFromShort, teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
+import type {
+  CatcherStartingSummaryDerived,
+  CatcherStartingSummaryTeamTotals,
+} from "@/lib/catcherStartingSummary"
 import {
   getGameScoreSides,
   type ScoreboardSide,
@@ -115,6 +118,42 @@ function findTeamScoreSide(teamName: string, sides: ScoreboardSide[]): Scoreboar
   return null
 }
 
+type StartingSummaryAccumulator = {
+  starts: number
+  wins: number
+  losses: number
+  draws: number
+  qs: number
+  hqs: number
+  sqs: number
+}
+
+type CatcherStartingSummaryAccumulator = StartingSummaryAccumulator & {
+  teams: Map<string, StartingSummaryAccumulator>
+}
+
+function createAccumulator(): StartingSummaryAccumulator {
+  return { starts: 0, wins: 0, losses: 0, draws: 0, qs: 0, hqs: 0, sqs: 0 }
+}
+
+function totalsFromAccumulator(a: StartingSummaryAccumulator): CatcherStartingSummaryTeamTotals {
+  const starts = a.starts
+  const games = a.wins + a.losses
+  return {
+    starts,
+    teamWins: a.wins,
+    teamLosses: a.losses,
+    teamDraws: a.draws,
+    teamWinPct: games > 0 ? a.wins / games : null,
+    qsCount: a.qs,
+    hqsCount: a.hqs,
+    sqsCount: a.sqs,
+    qsPct: starts > 0 ? (a.qs / starts) * 100 : null,
+    hqsPct: starts > 0 ? (a.hqs / starts) * 100 : null,
+    sqsPct: starts > 0 ? (a.sqs / starts) * 100 : null,
+  }
+}
+
 function main() {
   const root = getProjectRoot()
   const { year, from, to, onlyNpbIds } = parseArgs(process.argv.slice(2))
@@ -130,7 +169,7 @@ function main() {
 
   const byCatcher = new Map<
     string,
-    { starts: number; wins: number; losses: number; draws: number; qs: number; hqs: number; sqs: number }
+    CatcherStartingSummaryAccumulator
   >()
   let targetNpbIds = onlyNpbIds ? new Set(onlyNpbIds) : null
   if (!targetNpbIds && (from || to)) {
@@ -172,28 +211,52 @@ function main() {
       if (!catcherNpbId) continue
       if (targetNpbIds && !targetNpbIds.has(catcherNpbId)) continue
 
+      const teamShort = teamRankingShortFromGameTeamName(teamName) || rosterTeamToRankingShort(teamName)
+      const teamCode = teamCodeFromShort(teamShort)
       let agg = byCatcher.get(catcherNpbId)
       if (!agg) {
-        agg = { starts: 0, wins: 0, losses: 0, draws: 0, qs: 0, hqs: 0, sqs: 0 }
+        agg = { ...createAccumulator(), teams: new Map() }
         byCatcher.set(catcherNpbId, agg)
       }
+      let teamAgg = teamCode ? agg.teams.get(teamCode) : null
+      if (teamCode && !teamAgg) {
+        teamAgg = createAccumulator()
+        agg.teams.set(teamCode, teamAgg)
+      }
       agg.starts += 1
+      if (teamAgg) teamAgg.starts += 1
 
       const teamSide = findTeamScoreSide(teamName, sides)
       if (teamSide) {
         const other = sides.find((s) => s !== teamSide)
         if (other) {
-          if (teamSide.runs > other.runs) agg.wins += 1
-          else if (teamSide.runs < other.runs) agg.losses += 1
-          else agg.draws += 1
+          if (teamSide.runs > other.runs) {
+            agg.wins += 1
+            if (teamAgg) teamAgg.wins += 1
+          } else if (teamSide.runs < other.runs) {
+            agg.losses += 1
+            if (teamAgg) teamAgg.losses += 1
+          } else {
+            agg.draws += 1
+            if (teamAgg) teamAgg.draws += 1
+          }
         }
       }
 
       const starter = starterPitcherLineForTeam(doc, teamName, starterYahooIdByTeamShort)
       const flags = qsFlagsFromStarter(starter)
-      if (flags.qs) agg.qs += 1
-      if (flags.hqs) agg.hqs += 1
-      if (flags.sqs) agg.sqs += 1
+      if (flags.qs) {
+        agg.qs += 1
+        if (teamAgg) teamAgg.qs += 1
+      }
+      if (flags.hqs) {
+        agg.hqs += 1
+        if (teamAgg) teamAgg.hqs += 1
+      }
+      if (flags.sqs) {
+        agg.sqs += 1
+        if (teamAgg) teamAgg.sqs += 1
+      }
     }
   }
 
@@ -202,28 +265,19 @@ function main() {
 
   let wrote = 0
   for (const [npbCatcherId, a] of byCatcher) {
-    const starts = a.starts
-    const games = a.wins + a.losses
-    const teamWinPct = games > 0 ? a.wins / games : null
-    const qsPct = starts > 0 ? (a.qs / starts) * 100 : null
-    const hqsPct = starts > 0 ? (a.hqs / starts) * 100 : null
-    const sqsPct = starts > 0 ? (a.sqs / starts) * 100 : null
+    const totals = totalsFromAccumulator(a)
+    const teams = Object.fromEntries(
+      [...a.teams.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([teamCode, teamTotals]) => [teamCode, totalsFromAccumulator(teamTotals)]),
+    )
 
     const payload: CatcherStartingSummaryDerived = {
       schemaVersion: "player-catcher-starting-summary-v1",
       seasonYear: year,
       npbCatcherId,
-      starts,
-      teamWins: a.wins,
-      teamLosses: a.losses,
-      teamDraws: a.draws,
-      teamWinPct,
-      qsCount: a.qs,
-      hqsCount: a.hqs,
-      sqsCount: a.sqs,
-      qsPct,
-      hqsPct,
-      sqsPct,
+      ...totals,
+      teams,
     }
     writeJsonFileWithRetrySync(path.join(outDir, `npb_${npbCatcherId}.json`), payload)
     wrote += 1
