@@ -304,10 +304,10 @@ export default function SeasonStatsPilot({
   const showPilotTab = (t: PilotSeasonDetailTab) => seasonDetailTab == null || seasonDetailTab === t
   const loose = Boolean(looseSpacing)
   const h2Section = pinLayoutShell
-    ? `${titleBase} mb-5 pl-4 mt-3`
+    ? `${titleBase} mb-4 pl-4 mt-0`
     : `${titleBase} ${loose ? "mb-5 pl-4 mt-10" : "mb-3 pl-4 mt-3"}`
   const h2BattingMetrics = pinLayoutShell
-    ? `${titleBase} mb-5 pl-4 mt-3`
+    ? `${titleBase} mb-4 pl-4 mt-0`
     : `${titleBase} ${loose ? "mb-5 pl-4 mt-8" : "mb-3 pl-4 mt-3"}`
   const mbBox = loose ? "mb-6" : "mb-3"
   const mbScroll = loose ? "mb-6" : "mb-3"
