@@ -284,14 +284,14 @@ function RakutenLotteSideTooltipButtons({
           opponentStripeSide={opponentStripeSide}
         />
       </div>
-      <div className={`absolute top-[16px] z-10 ${sideClass}`}>
+      <div className={`absolute top-1/2 z-10 -translate-y-1/2 ${sideClass}`}>
         <ProbablesPaRoundPitchDataOverlay
           pitcherPublicId={pitcherPublicId}
           season={season}
           opponentStripeSide={opponentStripeSide}
         />
       </div>
-      <div className={`absolute top-1/2 z-10 -translate-y-1/2 ${sideClass}`}>
+      <div className={`absolute bottom-0 z-10 ${sideClass}`}>
         <RakutenLotteKuOverlay
           batters={batters}
           isMobile={isMobile}
