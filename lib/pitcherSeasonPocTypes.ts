@@ -265,6 +265,9 @@ export type PitcherSeasonPitchingPeriodRow = {
   g: number
   wins?: number
   losses?: number
+  holds?: number
+  saveCount?: number
+  hp?: number
   ip: string
   ipOuts: number
   era: number | null

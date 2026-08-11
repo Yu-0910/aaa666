@@ -17,6 +17,9 @@ export function buildPitchingRankingRowFromPeriodRow(
   const ipDec = row.ipOuts / 3
   const wins = row.wins ?? 0
   const losses = row.losses ?? 0
+  const holds = row.holds ?? 0
+  const saves = row.saveCount ?? 0
+  const hp = row.hp ?? holds
   const kPct = bf > 0 ? (row.so / bf) * 100 : 0
   const bbPct = bf > 0 ? (row.bb / bf) * 100 : 0
   const kBbPct = bf > 0 ? ((row.so - row.bb) / bf) * 100 : 0
@@ -39,9 +42,9 @@ export function buildPitchingRankingRowFromPeriodRow(
     k_bb_pct: kBbPct,
     w: wins,
     l: losses,
-    hld: 0,
-    sv: 0,
-    hp: 0,
+    hld: holds,
+    sv: saves,
+    hp,
     g: row.g,
     gs: 0,
     cg: 0,

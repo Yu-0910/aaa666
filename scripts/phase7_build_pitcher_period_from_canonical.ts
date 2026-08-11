@@ -94,6 +94,8 @@ type MergedPitching = {
   playerName: string
   wins: number
   losses: number
+  holds: number
+  saves: number
   outs: number
   bf: number
   h: number
@@ -123,6 +125,8 @@ function mergePitchingLines(lines: PitchingLine[]): Map<string, MergedPitching> 
         playerName: pl.playerName,
         wins: 0,
         losses: 0,
+        holds: 0,
+        saves: 0,
         outs: 0,
         bf: 0,
         h: 0,
@@ -139,6 +143,8 @@ function mergePitchingLines(lines: PitchingLine[]): Map<string, MergedPitching> 
     }
     if (pl.decision === "win") m.wins += 1
     else if (pl.decision === "loss") m.losses += 1
+    else if (pl.decision === "hold") m.holds += 1
+    else if (pl.decision === "save") m.saves += 1
     m.outs += ipToOuts(pl.ip)
     m.bf += pl.bf ?? 0
     m.h += pl.h ?? 0
@@ -158,6 +164,8 @@ type LineAgg = {
   gameIds: Set<string>
   wins: number
   losses: number
+  holds: number
+  saves: number
   outs: number
   bf: number
   h: number
@@ -176,6 +184,8 @@ function emptyLineAgg(): LineAgg {
     gameIds: new Set(),
     wins: 0,
     losses: 0,
+    holds: 0,
+    saves: 0,
     outs: 0,
     bf: 0,
     h: 0,
@@ -194,6 +204,8 @@ function addLineAgg(a: LineAgg, m: MergedPitching, gameId: string): void {
   a.gameIds.add(gameId)
   a.wins += m.wins
   a.losses += m.losses
+  a.holds += m.holds
+  a.saves += m.saves
   a.outs += m.outs
   a.bf += m.bf
   a.h += m.h
@@ -261,6 +273,9 @@ function lineAggToRow(
     g: line.gameIds.size,
     wins: line.wins,
     losses: line.losses,
+    holds: line.holds,
+    saveCount: line.saves,
+    hp: line.holds,
     ip: outsToIpDisplay(line.outs),
     ipOuts: line.outs,
     era,
@@ -351,6 +366,7 @@ function main(): void {
         bf: m.bf,
         h: m.h,
         hr: m.hr,
+        decision: m.wins > 0 ? "win" : m.losses > 0 ? "loss" : m.holds > 0 ? "hold" : m.saves > 0 ? "save" : null,
         so: m.so,
         bb: m.bb,
         hbp: m.hbp,
@@ -391,6 +407,7 @@ function main(): void {
         bf: m.bf,
         h: m.h,
         hr: m.hr,
+        decision: m.wins > 0 ? "win" : m.losses > 0 ? "loss" : m.holds > 0 ? "hold" : m.saves > 0 ? "save" : null,
         so: m.so,
         bb: m.bb,
         hbp: m.hbp,
