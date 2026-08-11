@@ -1328,7 +1328,7 @@ export function PlayerPageClient({
 
   const seasonProfileToSubTabGap = "-2.25rem"
   const careerProfileToSubTabGap = "-2.25rem"
-  const seasonSubTabToContentGap = "0.5rem"
+  const seasonSubTabToContentGap = "0.75rem"
 
   const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
     profileTableScaleStyle(seasonProfileToSubTabGap)
@@ -1931,24 +1931,23 @@ export function PlayerPageClient({
                   </div>
                 </div>
               </div>
-              <div
-                ref={pilotContentScaleCollapse.ref}
-                style={{
-                  ...pilotScaledBlockStyle(pilotContentScaleCollapse),
-                  marginTop: seasonSubTabToContentGap,
-                }}
-              >
-                {pageSection === "game-log" ? (
-                  <PlayerPageGameLogBody
-                    payload={playerGameLogDerived.payload}
-                    loading={playerGameLogDerived.loading}
-                    settled={playerGameLogDerived.settled}
-                  />
-                ) : showPitcherSeasonSuganoUi
-                  ? pitcherSeasonSubTab === "matchup"
-                    ? renderPitcherSeasonMatchupBody()
-                    : renderPitcherSeasonBody()
-                  : renderFielderSeasonBody()}
+              <div style={{ marginTop: seasonSubTabToContentGap }}>
+                <div
+                  ref={pilotContentScaleCollapse.ref}
+                  style={pilotScaledBlockStyle(pilotContentScaleCollapse)}
+                >
+                  {pageSection === "game-log" ? (
+                    <PlayerPageGameLogBody
+                      payload={playerGameLogDerived.payload}
+                      loading={playerGameLogDerived.loading}
+                      settled={playerGameLogDerived.settled}
+                    />
+                  ) : showPitcherSeasonSuganoUi
+                    ? pitcherSeasonSubTab === "matchup"
+                      ? renderPitcherSeasonMatchupBody()
+                      : renderPitcherSeasonBody()
+                    : renderFielderSeasonBody()}
+                </div>
               </div>
             </>
           ) : (
