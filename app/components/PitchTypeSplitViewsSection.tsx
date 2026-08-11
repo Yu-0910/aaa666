@@ -253,6 +253,8 @@ export function PaRoundPitchTypeChart({
   baseColorMap,
   renderRowLabel,
   rowLabelClassName,
+  rowLabelWidthClassName,
+  barAreaLeft,
   barTrackClassName,
   rowWrapperClassName,
   showLegend,
@@ -266,6 +268,8 @@ export function PaRoundPitchTypeChart({
   baseColorMap?: PitchTypeColorMap | null
   renderRowLabel?: (row: PitcherSeasonPocPitchTypesSplitRow | null, key: string) => ReactNode
   rowLabelClassName?: string
+  rowLabelWidthClassName?: string
+  barAreaLeft?: string
   barTrackClassName?: string
   rowWrapperClassName?: string
   showLegend?: boolean
@@ -285,6 +289,8 @@ export function PaRoundPitchTypeChart({
       colorByType={baseColorMap?.colorByType}
       typeOrder={baseColorMap?.typeOrder}
       rowLabelClassName={rowLabelClassName}
+      rowLabelWidthClassName={rowLabelWidthClassName}
+      barAreaLeft={barAreaLeft}
       barTrackClassName={barTrackClassName}
       rowWrapperClassName={rowWrapperClassName}
       showLegend={showLegend}

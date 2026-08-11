@@ -34,10 +34,12 @@ const PROBABLES_CHARTS_ROW_REF_PX = 11 * 16 * 2 + 32
 const PROBABLES_PITCH_DIALOG_CLASS =
   "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 const PROBABLES_PA_ROUND_DIALOG_CLASS =
-  "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
-const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%]"
+  "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 pt-8 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
+const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%] -translate-x-3"
 const PROBABLES_PA_ROUND_ROW_LABEL_CLASS =
   "pitch-type-split-row-label text-[8px] text-gray-200 font-black tabular-nums leading-tight"
+const PROBABLES_PA_ROUND_ROW_LABEL_WIDTH_CLASS = "w-[32px]"
+const PROBABLES_PA_ROUND_BAR_AREA_LEFT = "calc(32px + 0.25rem)"
 const PROBABLES_PA_ROUND_BAR_TRACK_CLASS = "h-[18px]"
 const PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS = "mb-[8px]"
 
@@ -315,13 +317,15 @@ export function ProbablesPaRoundPitchDataOverlay({
           <div className="mx-auto flex w-full flex-col gap-y-3">
             {charts.map((chart) => (
               <div key={chart.key} className={PROBABLES_PA_ROUND_CHART_CLASS}>
-                <div className="mx-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[10px] font-black leading-none text-black">
+                <div className="mx-auto mb-2 w-fit rounded-[2px] bg-[#FFFF44] px-2 py-0.5 text-center text-[13px] font-black leading-none text-black">
                   {chart.title}
                 </div>
                 <PaRoundPitchTypeChart
                   splits={chart.splits}
                   baseColorMap={chart.colorMap}
                   rowLabelClassName={PROBABLES_PA_ROUND_ROW_LABEL_CLASS}
+                  rowLabelWidthClassName={PROBABLES_PA_ROUND_ROW_LABEL_WIDTH_CLASS}
+                  barAreaLeft={PROBABLES_PA_ROUND_BAR_AREA_LEFT}
                   barTrackClassName={PROBABLES_PA_ROUND_BAR_TRACK_CLASS}
                   rowWrapperClassName={PROBABLES_PA_ROUND_ROW_WRAPPER_CLASS}
                   showLegend={false}

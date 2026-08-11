@@ -40,11 +40,11 @@ type BarPart = {
 }
 
 /** 12 行ぶんの棒エリアに一本で通る縦グリッド */
-function UnifiedPercentGridBackground() {
+function UnifiedPercentGridBackground({ barAreaLeft = BAR_AREA_LEFT }: { barAreaLeft?: string }) {
   return (
     <div
       className="pointer-events-none absolute top-0 right-0 bottom-0 z-0"
-      style={{ left: BAR_AREA_LEFT, backgroundColor: TRACK_BG }}
+      style={{ left: barAreaLeft, backgroundColor: TRACK_BG }}
       aria-hidden
     >
       {PCT_GRID_LINES.map((pct) => (
@@ -63,10 +63,14 @@ function UnifiedPercentGridBackground() {
   )
 }
 
-function PercentAxisLabels() {
+function PercentAxisLabels({
+  rowLabelWidthClass = "w-[46px]",
+}: {
+  rowLabelWidthClass?: string
+}) {
   return (
     <div className="mt-1 flex items-start gap-1">
-      <div className="w-[46px] shrink-0" aria-hidden />
+      <div className={`${rowLabelWidthClass} shrink-0`} aria-hidden />
       <div className="relative min-w-0 flex-1 h-3.5">
         {PCT_GRID_LINES.map((pct) => (
           <span
@@ -130,6 +134,10 @@ export type PitchTypeSplitStackedBarSectionProps = {
   typeOrder?: readonly string[]
   /** 左ラベル列（0-0 等）のクラス。省略時は text-[12px] */
   rowLabelClassName?: string
+  /** 左ラベル列の幅クラス。省略時は w-[46px] */
+  rowLabelWidthClassName?: string
+  /** 棒エリアの左開始位置。左ラベル幅 + gap と一致させる */
+  barAreaLeft?: string
   /** 棒グラフ本体の高さクラス。省略時は h-7 */
   barTrackClassName?: string
   /** 各行の余白クラス。省略時は mb-3 */
@@ -190,6 +198,8 @@ export function PitchTypeSplitStackedBarSection({
   colorByType: colorByTypeProp,
   typeOrder: typeOrderProp,
   rowLabelClassName = "pitch-type-split-row-label text-[12px] text-gray-200 font-black tabular-nums leading-tight",
+  rowLabelWidthClassName = "w-[46px]",
+  barAreaLeft = BAR_AREA_LEFT,
   barTrackClassName,
   rowWrapperClassName = "mb-3",
   showLegend = true,
@@ -210,7 +220,7 @@ export function PitchTypeSplitStackedBarSection({
   return (
     <div className={chartClassName} style={chartStyle}>
       <div className="relative">
-        <UnifiedPercentGridBackground />
+        <UnifiedPercentGridBackground barAreaLeft={barAreaLeft} />
 
         {orderedKeys.map((key, rowIdx) => {
           const row = byKey.get(key) ?? null
@@ -238,7 +248,7 @@ export function PitchTypeSplitStackedBarSection({
               }
             >
               <div className="flex items-center gap-1">
-                <div className={`w-[46px] shrink-0 text-center ${rowLabelClassName}`}>
+                <div className={`${rowLabelWidthClassName} shrink-0 text-center ${rowLabelClassName}`}>
                   {renderRowLabel ? renderRowLabel(row, key) : (row?.label ?? key)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -250,7 +260,7 @@ export function PitchTypeSplitStackedBarSection({
         })}
       </div>
 
-      <PercentAxisLabels />
+      <PercentAxisLabels rowLabelWidthClass={rowLabelWidthClassName} />
 
       {showLegend ? <PitchTypeColorLegend typeOrder={legendTypeOrder} colorByType={colorByType} /> : null}
     </div>
