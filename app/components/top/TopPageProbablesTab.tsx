@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { Trophy } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { teamColors, TOP_PAGE_BEBAS_NUMERIC_CLASS } from "@/app/components/top/topPageConstants"
@@ -968,29 +969,53 @@ function ProbablesLeagueSwitch({
     { league: "CL", label: "セ", fullLabel: "セ・リーグ" },
     { league: "PL", label: "パ", fullLabel: "パ・リーグ" },
   ]
-  const buttonClass = (league: ProbablesLeague) =>
-    [
-      "flex h-10 flex-1 items-center justify-center border text-sm font-bold transition-colors",
+  const mobileButtonClass = (league: ProbablesLeague) =>
+    `flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 text-[11px] font-bold leading-none transition-colors ${
+      activeLeague === league ? "bg-white/25 text-[#ffff44]" : "bg-transparent text-white/90 hover:text-white"
+    }`
+  const desktopButtonClass = (league: ProbablesLeague) =>
+    `flex h-10 flex-1 items-center justify-center border text-sm font-bold transition-colors ${
       activeLeague === league
         ? "border-[#ffff44] bg-[#ffff44] text-black"
-        : "border-[#555] bg-[#151515] text-white hover:border-[#ffff44] hover:text-[#ffff44]",
-    ].join(" ")
+        : "border-[#555] bg-[#151515] text-white hover:border-[#ffff44] hover:text-[#ffff44]"
+    }`
+
+  if (isMobile) {
+    return (
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 md:hidden"
+        aria-label="予想投手リーグ切替"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-2 rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md">
+          {leagues.map(({ league, label, fullLabel }) => {
+            const isActive = activeLeague === league
+            return (
+              <button
+                key={league}
+                type="button"
+                className={mobileButtonClass(league)}
+                onClick={() => onChange(league)}
+                aria-current={isActive ? "page" : undefined}
+                aria-label={`${fullLabel}を表示`}
+              >
+                <Trophy className="h-5 w-5" aria-hidden="true" />
+                <span className="whitespace-nowrap">{label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+    )
+  }
 
   return (
-    <nav
-      className={
-        isMobile
-          ? "fixed inset-x-0 bottom-0 z-50 border-t border-[#333] bg-black/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-sm md:hidden"
-          : "mb-4 flex justify-end"
-      }
-      aria-label="予想投手リーグ切替"
-    >
-      <div className={isMobile ? "mx-auto flex max-w-xs gap-2" : "flex w-48 gap-2"}>
+    <nav className="mb-4 flex justify-end" aria-label="予想投手リーグ切替">
+      <div className="flex w-48 gap-2">
         {leagues.map(({ league, label, fullLabel }) => (
           <button
             key={league}
             type="button"
-            className={buttonClass(league)}
+            className={desktopButtonClass(league)}
             onClick={() => onChange(league)}
             aria-pressed={activeLeague === league}
             aria-label={`${fullLabel}を表示`}
