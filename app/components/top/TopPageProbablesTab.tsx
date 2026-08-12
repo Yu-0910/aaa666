@@ -38,12 +38,14 @@ import { playerPageHref } from "@/lib/playerPageHref"
 import { formatRomanNameForRanking } from "@/lib/ranking/formatRomanNameForRanking"
 import { resolveRomanNameFromMap } from "@/lib/ranking/romanNameLookup"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
-import { teamShortFromCode } from "@/lib/standings/teamCodes"
+import { leagueFromTeamShort, teamShortFromCode } from "@/lib/standings/teamCodes"
 
 type TopPageProbablesTabProps = {
   year: number
   layout: TopPageLayoutMode
 }
+
+type ProbablesLeague = "CL" | "PL"
 
 const ROW_BG_EVEN = "#292929"
 const ROW_BG_ODD = "#1f1f1f"
@@ -200,6 +202,17 @@ function formatDateLabel(dateJst: string): string {
 
 function firstDisplayedGameDate(card: TopProbablesCard): string {
   return card.games.map((g) => g.dateJst).sort()[0] ?? card.seriesStart
+}
+
+function leagueFromTeamCode(code: string): ProbablesLeague {
+  return leagueFromTeamShort(teamShortFromCode(code))
+}
+
+function leagueForProbablesCard(card: TopProbablesCard): ProbablesLeague {
+  const teamLeagues = [...new Set(card.teamCodes.map(leagueFromTeamCode))]
+  if (teamLeagues.length === 1) return teamLeagues[0]!
+  const firstGame = [...card.games].sort((a, b) => a.dateJst.localeCompare(b.dateJst))[0]
+  return firstGame ? leagueFromTeamCode(firstGame.homeTeamCode) : teamLeagues[0] ?? "CL"
 }
 
 const WEEKDAY_TEXT_CLASS = "text-[13px] font-semibold text-white"
@@ -423,7 +436,7 @@ function OpponentBatterTable({
                 {opponentLinkId ? (
                   <Link
                     href={playerPageHref({
-                      playerId: batter.opponentPublicId,
+                      playerId: batter.opponentPublicId ?? undefined,
                       npbPlayerId: opponentLinkId,
                       name: batter.opponentName,
                     })}
@@ -599,7 +612,7 @@ function OpponentBatterRows({
         const nameContent = opponentLinkId ? (
           <Link
             href={playerPageHref({
-              playerId: b.opponentPublicId,
+              playerId: b.opponentPublicId ?? undefined,
               npbPlayerId: opponentLinkId,
               name: b.opponentName,
             })}
@@ -942,12 +955,61 @@ function ProbablesCard({
   )
 }
 
+function ProbablesLeagueSwitch({
+  activeLeague,
+  onChange,
+  isMobile,
+}: {
+  activeLeague: ProbablesLeague
+  onChange: (league: ProbablesLeague) => void
+  isMobile: boolean
+}) {
+  const leagues: Array<{ league: ProbablesLeague; label: string; fullLabel: string }> = [
+    { league: "CL", label: "セ", fullLabel: "セ・リーグ" },
+    { league: "PL", label: "パ", fullLabel: "パ・リーグ" },
+  ]
+  const buttonClass = (league: ProbablesLeague) =>
+    [
+      "flex h-10 flex-1 items-center justify-center border text-sm font-bold transition-colors",
+      activeLeague === league
+        ? "border-[#ffff44] bg-[#ffff44] text-black"
+        : "border-[#555] bg-[#151515] text-white hover:border-[#ffff44] hover:text-[#ffff44]",
+    ].join(" ")
+
+  return (
+    <nav
+      className={
+        isMobile
+          ? "fixed inset-x-0 bottom-0 z-50 border-t border-[#333] bg-black/95 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-sm md:hidden"
+          : "mb-4 flex justify-end"
+      }
+      aria-label="予想投手リーグ切替"
+    >
+      <div className={isMobile ? "mx-auto flex max-w-xs gap-2" : "flex w-48 gap-2"}>
+        {leagues.map(({ league, label, fullLabel }) => (
+          <button
+            key={league}
+            type="button"
+            className={buttonClass(league)}
+            onClick={() => onChange(league)}
+            aria-pressed={activeLeague === league}
+            aria-label={`${fullLabel}を表示`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
 export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) {
   const isMobile = layout === "mobile"
   const [data, setData] = useState<TopProbablesSnapshot | null>(null)
   const [romanMap, setRomanMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeLeague, setActiveLeague] = useState<ProbablesLeague>("CL")
 
   useEffect(() => {
     if (year !== 2026) {
@@ -1027,18 +1089,30 @@ export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) 
     if (dateCompare !== 0) return dateCompare
     return a.cardKey.localeCompare(b.cardKey)
   })
+  const visibleCards = sortedCards.filter((card) => leagueForProbablesCard(card) === activeLeague)
 
   return (
-    <div className="space-y-6">
-      {sortedCards.map((card) => (
-        <ProbablesCard
-          key={`${card.cardKey}-${card.seriesStart}`}
-          card={card}
-          isMobile={isMobile}
-          romanMap={romanMap}
-          season={year}
-        />
-      ))}
+    <div className={isMobile ? "space-y-6 pb-20" : "space-y-6"}>
+      <ProbablesLeagueSwitch
+        activeLeague={activeLeague}
+        onChange={setActiveLeague}
+        isMobile={isMobile}
+      />
+      {visibleCards.length > 0 ? (
+        visibleCards.map((card) => (
+          <ProbablesCard
+            key={`${card.cardKey}-${card.seriesStart}`}
+            card={card}
+            isMobile={isMobile}
+            romanMap={romanMap}
+            season={year}
+          />
+        ))
+      ) : (
+        <div className="py-8 text-center text-sm text-gray-400">
+          {activeLeague === "CL" ? "セ・リーグ" : "パ・リーグ"}の予想投手カードはありません。
+        </div>
+      )}
     </div>
   )
 }
