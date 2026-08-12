@@ -1,26 +1,47 @@
 "use client"
 
-import { BarChart3, Gauge } from "lucide-react"
+import { BarChart3, Gauge, Table2 } from "lucide-react"
 
 export type TopSeasonStatView = "cl-batting" | "cl-pitching" | "pl-batting" | "pl-pitching"
+export type TopWeeklyView = "cl" | "pl" | "cl-standings" | "pl-standings"
 
-type RankingBottomNavProps = {
+type TopSeasonBottomNavProps = {
+  mode?: "season"
   activeView: TopSeasonStatView
   onViewChange: (view: TopSeasonStatView) => void
 }
 
-export default function RankingBottomNav({ activeView, onViewChange }: RankingBottomNavProps) {
-  const navItems = [
-    { view: "cl-batting", label: "セ野手", icon: BarChart3 },
-    { view: "cl-pitching", label: "セ投手", icon: Gauge },
-    { view: "pl-batting", label: "パ野手", icon: BarChart3 },
-    { view: "pl-pitching", label: "パ投手", icon: Gauge },
-  ] as const
+type TopWeeklyBottomNavProps = {
+  mode: "weekly"
+  activeView: TopWeeklyView
+  onViewChange: (view: TopWeeklyView) => void
+}
+
+type RankingBottomNavProps = TopSeasonBottomNavProps | TopWeeklyBottomNavProps
+
+export default function RankingBottomNav(props: RankingBottomNavProps) {
+  const { activeView, onViewChange } = props
+  const isWeeklyMode = props.mode === "weekly"
+
+  const navItems =
+    isWeeklyMode
+      ? ([
+          { view: "cl", label: "セ", icon: BarChart3 },
+          { view: "pl", label: "パ", icon: BarChart3 },
+          { view: "cl-standings", label: "セ順位", icon: Table2 },
+          { view: "pl-standings", label: "パ順位", icon: Table2 },
+        ] as const)
+      : ([
+          { view: "cl-batting", label: "セ野手", icon: BarChart3 },
+          { view: "cl-pitching", label: "セ投手", icon: Gauge },
+          { view: "pl-batting", label: "パ野手", icon: BarChart3 },
+          { view: "pl-pitching", label: "パ投手", icon: Gauge },
+        ] as const)
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 md:hidden"
-      aria-label="TOP成績切り替え"
+      aria-label={isWeeklyMode ? "今週表示切り替え" : "TOP成績切り替え"}
     >
       <div className="mx-auto grid max-w-md grid-cols-4 rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md">
         {navItems.map((item) => {

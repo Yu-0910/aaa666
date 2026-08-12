@@ -11,18 +11,21 @@ import {
 } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import { TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/weeklyLeadersSnapshotShared"
 import type { WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import type { TopWeeklyView } from "@/app/components/common/RankingBottomNav"
 
 type TopPageWeeklyTabContentProps = {
   year: number
   layout: TopPageLayoutMode
   /** サーバー先読み済み（週メタ + 4 リーグ分 JSON） */
   initialPayload?: WeeklyTabPayload | null
+  activeView: TopWeeklyView
 }
 
 export function TopPageWeeklyTabContent({
   year,
   layout,
   initialPayload,
+  activeView,
 }: TopPageWeeklyTabContentProps) {
   const [payload, setPayload] = useState<WeeklyTabPayload | null>(initialPayload ?? null)
   const [loading, setLoading] = useState(!initialPayload)
@@ -123,10 +126,14 @@ export function TopPageWeeklyTabContent({
     </div>
   )
 
-  return (
-    <div className="space-y-6">
-      {renderLeague("CL")}
-      {renderLeague("PL")}
-    </div>
-  )
+  if (activeView === "cl-standings" || activeView === "pl-standings") {
+    const leagueLabel = activeView === "cl-standings" ? "セ順位" : "パ順位"
+    return (
+      <div className="rounded border border-[#333] bg-[#111] px-4 py-10 text-center text-sm text-gray-300">
+        {leagueLabel}は準備中です。
+      </div>
+    )
+  }
+
+  return <div className="space-y-6">{renderLeague(activeView === "cl" ? "CL" : "PL")}</div>
 }
