@@ -456,6 +456,9 @@ function StandingsLeagueSection({
         metricColScale={1.15}
         showMetricLeagueRanks
       />
+      <p className="text-[10px] text-gray-400">
+        チーム名をタッチするとチームページへ移動できます。
+      </p>
     </section>
   )
 }
