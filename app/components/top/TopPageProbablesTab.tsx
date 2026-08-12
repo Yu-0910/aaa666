@@ -453,7 +453,7 @@ function OpponentBatterTable({
                 <td
                   key={col.key}
                   className={`px-0 py-1 text-center border-l border-b border-gray-500 ${statNumericClass}`}
-                  style={{ fontSize: "1.4em" }}
+                  style={{ fontSize: "1.6em" }}
                 >
                   {opponentBatterTableCellValue(batter, col.key)}
                 </td>
