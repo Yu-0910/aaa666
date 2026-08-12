@@ -170,7 +170,7 @@ function TeamStandingsTable({
   useEffect(() => {
     if (!jumpRequest) return
 
-    const targetKey = jumpRequest.target === "batting" ? "runs" : "era_starter"
+    const targetKey = jumpRequest.target === "batting" ? "runs" : "runs_allowed"
     const targetIndex = metricColumns.findIndex((col) => col.key === targetKey)
     if (targetIndex < 0) return
 
