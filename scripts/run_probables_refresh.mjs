@@ -557,7 +557,14 @@ function main() {
     addDaysYmd(probablesAsOfDate, 1),
   ])
 
-  run("予想投手 JSON 生成", "npx", ["tsx", "scripts/phase36_build_top_probables.ts", "--year", year])
+  run("予想投手 JSON 生成", "npx", [
+    "tsx",
+    "scripts/phase36_build_top_probables.ts",
+    "--year",
+    year,
+    "--as-of",
+    probablesAsOfDate,
+  ])
 
   if (!dryRun) verifySnapshot()
 

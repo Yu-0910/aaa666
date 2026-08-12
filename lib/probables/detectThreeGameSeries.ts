@@ -86,7 +86,12 @@ function dedupeSeriesCards(cards: ThreeGameSeriesCard[]): ThreeGameSeriesCard[] 
   return out.sort((a, b) => a.seriesStart.localeCompare(b.seriesStart))
 }
 
-/** 今日以降の試合が 1 つ以上残る系列のみ。開始日昇順・最大 6 件 */
+/**
+ * 今日以降の試合が 1 つ以上残る系列のみ。
+ *
+ * 通常は直近 6 カードまでに絞る。ただし直近表示カードがすべて残り 1 試合の
+ * 状態では、翌カードへの切り替わりが見えるように次の日程グループをまとめて足す。
+ */
 export function pickRecentThreeGameSeriesCards(
   cards: readonly ThreeGameSeriesCard[],
   asOfDateJst: string,
@@ -103,13 +108,31 @@ export function pickRecentThreeGameSeriesCards(
   const selected = filtered.slice(0, maxCards)
   if (selected.length === 0) return selected
 
-  const last = selected[selected.length - 1]!
-  if (seriesFutureGameCount(last, asOfDateJst) === 1) {
-    const next = filtered[selected.length]
-    if (next) selected.push(next)
+  const allSelectedCardsAreOnLastGame = selected.every(
+    (card) => seriesFutureGameCount(card, asOfDateJst) === 1,
+  )
+  if (allSelectedCardsAreOnLastGame) {
+    const selectedIds = new Set(selected.map(seriesIdentity))
+    const nextFirstGameDate = filtered
+      .filter((card) => !selectedIds.has(seriesIdentity(card)))
+      .map((card) => firstFutureGameDate(card, asOfDateJst))
+      .sort()[0]
+
+    if (nextFirstGameDate) {
+      for (const card of filtered) {
+        if (selectedIds.has(seriesIdentity(card))) continue
+        if (firstFutureGameDate(card, asOfDateJst) !== nextFirstGameDate) continue
+        selected.push(card)
+        selectedIds.add(seriesIdentity(card))
+      }
+    }
   }
 
   return selected
+}
+
+function seriesIdentity(card: ThreeGameSeriesCard): string {
+  return `${card.cardKey}:${card.seriesStart}:${card.seriesEnd}`
 }
 
 function seriesFutureGameCount(card: ThreeGameSeriesCard, asOfDateJst: string): number {
