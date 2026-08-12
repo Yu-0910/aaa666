@@ -1340,8 +1340,10 @@ export function PlayerPageClient({
 
   const pitcherInlineSubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
-  const careerInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-3"
+  const pitcherCareerInlineSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
+  const fielderCareerInlineSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
   const pitcherStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
@@ -1349,7 +1351,7 @@ export function PlayerPageClient({
   const fielderStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
   const pitcherCareerSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-8 mb-1"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
   const pitcherSubTabButtonClass =
     "relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
   const fielderCareerH2Class = careerUsesRankingCareerHeading ? "mb-3 mt-0" : `${tb} mb-4 pl-4`
@@ -1408,12 +1410,24 @@ export function PlayerPageClient({
   const renderPitcherCareerSubTabBar = (
     inlineInProfileShell: boolean,
     shellClass?: string,
-  ) => renderCareerSubTabBar(pitcherCareerSubTab, setPitcherCareerSubTab, inlineInProfileShell, shellClass)
+  ) =>
+    renderCareerSubTabBar(
+      pitcherCareerSubTab,
+      setPitcherCareerSubTab,
+      inlineInProfileShell,
+      shellClass ?? (inlineInProfileShell ? pitcherCareerInlineSubTabBarShellClass : undefined),
+    )
 
   const renderFielderCareerSubTabBar = (
     inlineInProfileShell: boolean,
     shellClass?: string,
-  ) => renderCareerSubTabBar(fielderCareerSubTab, setFielderCareerSubTab, inlineInProfileShell, shellClass)
+  ) =>
+    renderCareerSubTabBar(
+      fielderCareerSubTab,
+      setFielderCareerSubTab,
+      inlineInProfileShell,
+      shellClass ?? (inlineInProfileShell ? fielderCareerInlineSubTabBarShellClass : undefined),
+    )
 
   const renderPitcherSeasonSubTabBar = (
     inlineInProfileShell: boolean,
