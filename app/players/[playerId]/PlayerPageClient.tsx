@@ -1329,6 +1329,8 @@ export function PlayerPageClient({
   const seasonProfileToSubTabGap = "-2rem"
   const careerProfileToSubTabGap = "-2rem"
   const seasonSubTabToContentGap = "1rem"
+  const sharedInlineSubTabBarShellClass =
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
 
   const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
     profileTableScaleStyle(seasonProfileToSubTabGap)
@@ -1338,12 +1340,9 @@ export function PlayerPageClient({
 
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
 
-  const pitcherInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
-  const pitcherCareerInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
-  const fielderCareerInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
+  const pitcherInlineSubTabBarShellClass = sharedInlineSubTabBarShellClass
+  const pitcherCareerInlineSubTabBarShellClass = sharedInlineSubTabBarShellClass
+  const fielderCareerInlineSubTabBarShellClass = sharedInlineSubTabBarShellClass
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
   const pitcherStickySubTabBarShellClass =
     "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
@@ -1367,7 +1366,7 @@ export function PlayerPageClient({
       className={
         shellClass ??
         (inlineInProfileShell
-          ? careerInlineSubTabBarShellClass
+          ? sharedInlineSubTabBarShellClass
           : isMobile
             ? "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
             : "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
@@ -2080,6 +2079,7 @@ export function PlayerPageClient({
             sectionStripeColor={sectionStripeColor}
             showSalaryColumn={isRosterPlayer}
             careerTableScaleMultiplier={CAREER_TABLE_SCALE_MULTIPLIER}
+            careerSubTabToContentGap={seasonSubTabToContentGap}
             careerHighBattingGridClassName={
               useRosterFielderPcTableCss ? "fielder-basic-career-high-grid mb-12" : undefined
             }

@@ -85,6 +85,7 @@ export type PlayerPageCareerSectionProps = {
   showSalaryColumn?: boolean
   /** 通算成績表の表・文字・数値スケール */
   careerTableScaleMultiplier?: number
+  careerSubTabToContentGap?: React.CSSProperties["marginTop"]
   /** 打撃キャリアハイカードの追加クラス */
   careerHighBattingGridClassName?: string
   careerBattingTableClassName?: string
@@ -123,6 +124,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
     sectionStripeColor,
     showSalaryColumn = true,
     careerTableScaleMultiplier = CAREER_TABLE_SCALE_MULTIPLIER,
+    careerSubTabToContentGap,
     careerHighBattingGridClassName,
     careerBattingTableClassName,
     careerBattingTableShellClassName,
@@ -130,7 +132,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
 
-  return (
+  const content = (
     <>
         {!pitcherCareerPitchingTablePilot && !showCareerBattingSection && (
           <>
@@ -446,5 +448,11 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           </>
         )}
     </>
+  )
+
+  return showSeasonCareerTabs && careerSubTabToContentGap ? (
+    <div style={{ marginTop: careerSubTabToContentGap }}>{content}</div>
+  ) : (
+    content
   )
 }
