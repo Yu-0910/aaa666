@@ -190,7 +190,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
         )}
 
         {showCareerPitchingRankingTable && (
-          <div className={pitcherCareerPitchingTightLayout ? "-mt-2" : undefined}>
+          <div>
             {!showSeasonCareerTabs && renderPitcherCareerSubTabBar(false)}
             {(!showSeasonCareerTabs || pitcherCareerSubTab === "total") && (
               <>

@@ -1338,6 +1338,9 @@ export function PlayerPageClient({
   const careerProfileScaleShellStyle = (): React.CSSProperties | undefined =>
     profileTableScaleStyle(careerProfileToSubTabGap)
 
+  const careerSubTabScaleShellStyle = (): React.CSSProperties | undefined =>
+    profileTableScaleStyle(0)
+
   const stickyPilotInsetClass = isMobile ? "-mx-5 px-5" : "-mx-8 px-8"
 
   const pitcherInlineSubTabBarShellClass = sharedInlineSubTabBarShellClass
@@ -2042,7 +2045,7 @@ export function PlayerPageClient({
         </div>
 
         {pitcherCareerPitchingTightLayout && (
-          <div style={{ ...pitcherProfileScaleStyle, marginBottom: "-0.75rem" }}>
+          <div style={careerSubTabScaleShellStyle()}>
             {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
           </div>
         )}
