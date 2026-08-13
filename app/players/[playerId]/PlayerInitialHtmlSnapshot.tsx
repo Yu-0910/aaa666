@@ -1,5 +1,6 @@
 import type { PlayerSlugEntry } from "@/lib/playerSlug.server"
 import type { PlayerProfileMergedPayload } from "@/lib/playerProfileMergedServer"
+import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 
 type Props = {
   entry: PlayerSlugEntry
@@ -111,7 +112,8 @@ export default function PlayerInitialHtmlSnapshot({ entry, profileMerged }: Prop
     asRows(profileMerged?.career_pitching?.rows),
     (profileMerged?.career_pitching?.total ?? null) as CareerDisplayRow | null,
   )
-  const displayName = String(profileMerged?.name_ja ?? entry.nameJa ?? "").trim() || "選手"
+  const rawDisplayName = String(profileMerged?.name_ja ?? entry.nameJa ?? "").trim()
+  const displayName = matchupOpponentDisplayNameJa(rawDisplayName) || rawDisplayName || "選手"
   const romanName = String(profileMerged?.name_en_full ?? entry.romanFull ?? "").trim()
   const teamName = String(entry.teamCode ?? "").trim()
 

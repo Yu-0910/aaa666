@@ -19,7 +19,11 @@ import {
   pathMatchesKikuchiPilot,
   resolveSeasonStatsPilotQueryId,
 } from "@/lib/resolveSeasonPilotQueryId"
-import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
+import {
+  compactPlayerName,
+  matchupOpponentDisplayNameJa,
+  rosterNameMatchKey,
+} from "@/lib/playerNameNormalize"
 import {
   isCatcherRegistrationPosition,
   isFielderRegistrationPosition,
@@ -271,6 +275,7 @@ export function PlayerPageClient({
   /** 計画書 Phase 6: 投手派生 API の取得完了（未データ時の案内表示に使用） */
   const [pitcherSeasonPocApiSettled, setPitcherSeasonPocApiSettled] = useState(false)
   const [displayName, setDisplayName] = useState(() => String(initialDisplayName ?? "").trim())
+  const displayNameForHeader = matchupOpponentDisplayNameJa(displayName) || displayName
   const [displayRomanName, setDisplayRomanName] = useState<string | null>(
     () => initialDisplayRomanName?.trim() || null,
   )
@@ -1820,7 +1825,7 @@ export function PlayerPageClient({
                   fontWeight: 900,
                 }}
               >
-                {displayName}
+                {displayNameForHeader}
               </h1>
               {(() => {
                 const mergedRoman = { ...playerRomanNames, ...rosterRomanExtra }

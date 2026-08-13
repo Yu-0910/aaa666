@@ -21,6 +21,7 @@ import {
   isCatcherRegistrationPosition,
   isPitcherRegistrationPosition,
 } from "@/lib/rosterPitcher"
+import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 
 export type PlayerRouteResolved = {
   entry: PlayerSlugEntry
@@ -138,9 +139,10 @@ export function resolvePlayerRouteOrRedirect(options: {
 export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): Metadata {
   const indexesAsDedicatedPage = resolved.pageSection === "basic"
   const canonicalSection = indexesAsDedicatedPage ? resolved.pageSection : "basic"
+  const displayName = matchupOpponentDisplayNameJa(resolved.entry.nameJa) || resolved.entry.nameJa
   return {
-    title: playerPageSectionTitle(resolved.entry.nameJa, resolved.pageSection),
-    description: playerPageSectionDescription(resolved.entry.nameJa, resolved.pageSection),
+    title: playerPageSectionTitle(displayName, resolved.pageSection),
+    description: playerPageSectionDescription(displayName, resolved.pageSection),
     alternates: {
       canonical: `https://short-stop.jp${playerPageTabUrlPath(
         resolved.entry.slug,
@@ -157,5 +159,6 @@ export function metadataForResolvedPlayerRoute(resolved: PlayerRouteResolved): M
 }
 
 export function headingForResolvedPlayerRoute(resolved: PlayerRouteResolved): string {
-  return playerPageSectionHeading(resolved.entry.nameJa, resolved.pageSection)
+  const displayName = matchupOpponentDisplayNameJa(resolved.entry.nameJa) || resolved.entry.nameJa
+  return playerPageSectionHeading(displayName, resolved.pageSection)
 }
