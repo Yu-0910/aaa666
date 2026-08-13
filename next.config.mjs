@@ -44,6 +44,14 @@ const nextConfig = {
   },
   // 出力先を明示的に設定（OneDriveの同期問題を回避）
   distDir: '.next',
+  async rewrites() {
+    return [
+      {
+        source: '/x-share-card-20260813.png',
+        destination: '/x-share-card.png',
+      },
+    ]
+  },
   async headers() {
     return [
       ...[

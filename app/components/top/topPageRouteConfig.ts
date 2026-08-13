@@ -4,7 +4,7 @@ export type TopPageTabId = 0 | 1 | 2 | 3 | 4
 export type TopPageRouteKey = "top" | "weekly" | "probables" | "news" | "standings"
 
 const SITE_NAME = "Short-Stop"
-const TOP_SHARE_IMAGE_URL = "https://short-stop.jp/x-share-card.png"
+const TOP_SHARE_IMAGE_URL = "https://short-stop.jp/x-share-card-20260813.png"
 const TOP_SHARE_IMAGE_ALT = "Short-Stop"
 
 export type TopPageRouteConfig = {
