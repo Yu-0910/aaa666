@@ -7,7 +7,7 @@ import { useClientPathname, useClientSearchString } from "@/hooks/useIsDesktop"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { TEAM_PAGE_SUB_TABS, TEAM_PAGE_V1_YEARS } from "@/lib/teamPage/teamPageConstants"
+import { TEAM_PAGE_V1_YEARS } from "@/lib/teamPage/teamPageConstants"
 import { teamPageHref, teamPageWeeklyHubHref } from "@/lib/teamPage/teamPageHref"
 import { teamPagePeerNavByLeague } from "@/lib/teamPage/teamPageNavLinks"
 import {
@@ -25,10 +25,13 @@ import {
 import type { TeamPageV1Year } from "@/lib/teamPage/teamPageConstants"
 import SiteFooter from "@/app/components/common/SiteFooter"
 
-const TEAM_PAGE_CATCHER_SUB_TAB = { id: "catchers", label: "捕手成績", pathSuffix: "catchers" } as const
-const TEAM_PAGE_SHELL_SUB_TABS = TEAM_PAGE_SUB_TABS.some((tab) => tab.id === "catchers")
-  ? TEAM_PAGE_SUB_TABS
-  : ([...TEAM_PAGE_SUB_TABS, TEAM_PAGE_CATCHER_SUB_TAB] as const)
+const TEAM_PAGE_BOTTOM_NAV_ITEMS = [
+  { id: "season-batting", first: "通算", second: "打撃", subTab: "batting", period: "season" },
+  { id: "weekly-batting", first: "今週", second: "打撃", subTab: "batting", period: "weekly" },
+  { id: "season-pitching", first: "通算", second: "投球", subTab: "pitching", period: "season" },
+  { id: "weekly-pitching", first: "今週", second: "投球", subTab: "pitching", period: "weekly" },
+  { id: "catchers", first: "捕手", second: "成績", subTab: "catchers", period: "season" },
+] as const
 
 export type TeamPageShellProps = {
   teamCode: string
@@ -50,7 +53,6 @@ export default function TeamPageShell({
   const isWeekly = isTeamPageWeeklyPath(pathname)
   const weekKey = teamPageWeeklyWeekKeyFromPathname(pathname)
   const weekLabel = weekKey ? weekLabelForKey(weekKey) : null
-  const showPeriodToggle = isTeamPageRankingSubTab(activeSubTab)
   const stripeColor = rankingTeamStripeColor(teamCode)
   const activeTabLabel = teamPageSubTabLabel(activeSubTab)
   const sortKey = parseTeamPageSortFromSearch(clientSearch, activeSubTab)
@@ -89,7 +91,7 @@ export default function TeamPageShell({
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black pb-20 text-white">
       <div
         className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]"
         style={{ zIndex: 300 }}
@@ -165,83 +167,95 @@ export default function TeamPageShell({
           </div>
         </div>
 
-        <div
-          className="relative isolate box-border mb-4 flex min-h-10 w-full shrink-0 items-stretch overflow-hidden"
-          style={{ border: "1px solid #555", backgroundColor: "#1a1a1a" }}
-        >
-          {TEAM_PAGE_SHELL_SUB_TABS.map((tab) => {
-            const active = tab.id === activeSubTab
-            const tabWeekly =
-              isWeekly && weekKey && (tab.id === "batting" || tab.id === "pitching") ? weekKey : undefined
-            return (
-              <Link
-                key={tab.id}
-                href={teamPageHref({ teamCode, year, subTab: tab.id, weekKey: tabWeekly })}
-                className="relative z-[1] flex flex-1 items-center justify-center px-2 py-2 text-center text-[12px] font-bold leading-tight transition-colors"
-                style={{
-                  backgroundColor: active ? "#FFFF44" : "transparent",
-                  color: active ? "#000000" : "#9ca3af",
-                }}
-              >
-                {tab.label}
-              </Link>
-            )
-          })}
-        </div>
-
-        {showPeriodToggle ? (
-          <TeamPagePeriodToggle
-            teamCode={teamCode}
-            year={year}
-            subTab={activeSubTab}
-            isWeekly={isWeekly}
-            sort={sortParam}
-            order={orderParam}
-          />
-        ) : null}
-
         {children}
       </main>
       <SiteFooter className="mt-12" />
+      <TeamPageBottomNav
+        teamCode={teamCode}
+        year={year}
+        activeSubTab={activeSubTab}
+        isWeekly={isWeekly}
+        weekKey={weekKey}
+        sort={sortParam}
+        order={orderParam}
+      />
     </div>
   )
 }
 
-function TeamPagePeriodToggle({
+function TeamPageBottomNav({
   teamCode,
   year,
-  subTab,
+  activeSubTab,
   isWeekly,
+  weekKey,
   sort,
   order,
 }: {
   teamCode: string
   year: TeamPageV1Year
-  subTab: "batting" | "pitching"
+  activeSubTab: "batting" | "pitching" | "catchers"
   isWeekly: boolean
+  weekKey: string | null
   sort?: string
   order?: "asc" | "desc"
 }) {
-  const seasonHref = teamPageHref({ teamCode, year, subTab, sort, order })
-  const weeklyHref = teamPageWeeklyHubHref(teamCode, subTab, year, sort, order)
+  const hrefForItem = (item: (typeof TEAM_PAGE_BOTTOM_NAV_ITEMS)[number]) => {
+    const preserveSort = item.subTab === activeSubTab ? sort : undefined
+    const preserveOrder = item.subTab === activeSubTab ? order : undefined
+    if (item.period === "weekly" && isTeamPageRankingSubTab(item.subTab)) {
+      if (isWeekly && weekKey && item.subTab === activeSubTab) {
+        return teamPageHref({
+          teamCode,
+          year,
+          subTab: item.subTab,
+          weekKey,
+          sort: preserveSort,
+          order: preserveOrder,
+        })
+      }
+      return teamPageWeeklyHubHref(teamCode, item.subTab, year, preserveSort, preserveOrder)
+    }
+    return teamPageHref({
+      teamCode,
+      year,
+      subTab: item.subTab,
+      sort: preserveSort,
+      order: preserveOrder,
+    })
+  }
 
-  const tabClass = (active: boolean) =>
-    `flex flex-1 items-center justify-center px-2 py-1.5 text-center text-[11px] font-bold leading-tight transition-colors ${
-      active ? "bg-[#FFFF44] text-black" : "bg-transparent text-gray-400 hover:text-[#ffff44]"
-    }`
+  const isActive = (item: (typeof TEAM_PAGE_BOTTOM_NAV_ITEMS)[number]) => {
+    if (item.subTab !== activeSubTab) return false
+    if (item.subTab === "catchers") return true
+    return item.period === "weekly" ? isWeekly : !isWeekly
+  }
 
   return (
-    <div
-      className="relative isolate box-border mb-3 flex min-h-8 w-full max-w-xs shrink-0 items-stretch overflow-hidden"
-      style={{ border: "1px solid #555", backgroundColor: "#1a1a1a" }}
-      aria-label="通算と今週の切替"
+    <nav
+      className="fixed inset-x-0 bottom-0 z-[320] border-t border-[#333] bg-black/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-sm"
+      aria-label="チームページ表示切替"
     >
-      <Link href={seasonHref} className={tabClass(!isWeekly)}>
-        通算
-      </Link>
-      <Link href={weeklyHref} className={tabClass(isWeekly)}>
-        今週
-      </Link>
-    </div>
+      <div className="mx-auto grid max-w-[720px] grid-cols-5 gap-1.5">
+        {TEAM_PAGE_BOTTOM_NAV_ITEMS.map((item) => {
+          const active = isActive(item)
+          return (
+            <Link
+              key={item.id}
+              href={hrefForItem(item)}
+              className="flex min-h-12 flex-col items-center justify-center rounded border px-1 py-1 text-center text-[11px] font-black leading-tight transition-colors"
+              style={{
+                borderColor: active ? "#FFFF44" : "#444",
+                backgroundColor: active ? "#FFFF44" : "#141414",
+                color: active ? "#000000" : "#d1d5db",
+              }}
+            >
+              <span>{item.first}</span>
+              <span>{item.second}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
