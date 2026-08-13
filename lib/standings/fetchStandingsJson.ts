@@ -1,11 +1,8 @@
 import type { StandingsLeague, TeamStandingsJson } from "./types"
 import { displaySitePathToPublicUrl } from "@/lib/displayData/sitePath"
+import { siteTeamStandingsPath, siteWeeklyTeamStandingsPath } from "@/lib/standings/paths"
 
-export async function fetchStandingsJson(
-  year: number,
-  league: StandingsLeague
-): Promise<TeamStandingsJson> {
-  const sitePath = `/data/standings/${year}/${league}.json`
+async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamStandingsJson> {
   const r2Url = displaySitePathToPublicUrl(sitePath)
 
   if (r2Url) {
@@ -30,4 +27,19 @@ export async function fetchStandingsJson(
   }
 
   return res.json()
+}
+
+export async function fetchStandingsJson(
+  year: number,
+  league: StandingsLeague
+): Promise<TeamStandingsJson> {
+  return fetchStandingsJsonFromSitePath(siteTeamStandingsPath(String(year), league))
+}
+
+export async function fetchWeeklyStandingsJson(
+  year: number,
+  weekKey: string,
+  league: StandingsLeague
+): Promise<TeamStandingsJson> {
+  return fetchStandingsJsonFromSitePath(siteWeeklyTeamStandingsPath(String(year), weekKey, league))
 }

@@ -5,13 +5,16 @@ import { Spinner } from "@/components/ui/spinner"
 import TopPageLeadersClient from "@/app/components/TopPageLeadersClient"
 import TopPagePitchingLeadersClient from "@/app/components/TopPagePitchingLeadersClient"
 import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import { StandingsLeagueSection } from "@/app/components/top/TopPageStandingsTab"
 import {
   fetchCurrentWeekMeta,
   fetchTopWeeklyLeadersForPage,
 } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
+import { fetchWeeklyStandingsJson } from "@/lib/standings/fetchStandingsJson"
 import { TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/weeklyLeadersSnapshotShared"
 import type { WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 import type { TopWeeklyView } from "@/app/components/common/RankingBottomNav"
+import type { StandingsLeague, TeamStandingsJson } from "@/lib/standings/types"
 
 type TopPageWeeklyTabContentProps = {
   year: number
@@ -28,6 +31,11 @@ export function TopPageWeeklyTabContent({
   activeView,
 }: TopPageWeeklyTabContentProps) {
   const [payload, setPayload] = useState<WeeklyTabPayload | null>(initialPayload ?? null)
+  const [standings, setStandings] = useState<WeeklyTabPayload["standings"] | null>(
+    initialPayload?.standings ?? null,
+  )
+  const [standingsLoading, setStandingsLoading] = useState(false)
+  const [standingsError, setStandingsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(!initialPayload)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +46,7 @@ export function TopPageWeeklyTabContent({
     }
     if (initialPayload) {
       setPayload(initialPayload)
+      setStandings(initialPayload.standings ?? null)
       setLoading(false)
       setError(null)
       return
@@ -63,6 +72,7 @@ export function TopPageWeeklyTabContent({
           batting: { CL: clBat.config, PL: plBat.config },
           pitching: { CL: clPitch.config, PL: plPitch.config },
         })
+        setStandings(null)
         setLoading(false)
       })
       .catch((err: Error) => {
@@ -75,6 +85,35 @@ export function TopPageWeeklyTabContent({
       cancelled = true
     }
   }, [year, initialPayload])
+
+  useEffect(() => {
+    if (!payload?.weekMeta.weekKey) return
+    if (activeView !== "cl-standings" && activeView !== "pl-standings") return
+    if (standings?.CL && standings?.PL) return
+
+    let cancelled = false
+    setStandingsLoading(true)
+    setStandingsError(null)
+
+    Promise.all([
+      fetchWeeklyStandingsJson(year, payload.weekMeta.weekKey, "CL"),
+      fetchWeeklyStandingsJson(year, payload.weekMeta.weekKey, "PL"),
+    ])
+      .then(([clData, plData]) => {
+        if (cancelled) return
+        setStandings({ CL: clData, PL: plData })
+        setStandingsLoading(false)
+      })
+      .catch((err: Error) => {
+        if (cancelled) return
+        setStandingsError(err.message || "今週の順位表データを取得できませんでした")
+        setStandingsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeView, payload?.weekMeta.weekKey, standings?.CL, standings?.PL, year])
 
   if (year !== Number(TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR)) {
     return (
@@ -127,11 +166,35 @@ export function TopPageWeeklyTabContent({
   )
 
   if (activeView === "cl-standings" || activeView === "pl-standings") {
-    const leagueLabel = activeView === "cl-standings" ? "セ順位" : "パ順位"
+    const league: StandingsLeague = activeView === "cl-standings" ? "CL" : "PL"
+    const data: TeamStandingsJson | undefined = standings?.[league]
+    if (standingsLoading) {
+      return (
+        <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="読み込み中">
+          <Spinner className="size-8 text-[#FFFF44]" />
+        </div>
+      )
+    }
+    if (standingsError || !data) {
+      return (
+        <div className="text-white text-center py-8 space-y-2 text-sm">
+          <p>{standingsError || "今週の順位表データがありません"}</p>
+          <p className="text-gray-400 text-xs">
+            管理者: npm run phase29:build:standings -- --year {year} --weekly
+          </p>
+        </div>
+      )
+    }
     return (
-      <div className="rounded border border-[#333] bg-[#111] px-4 py-10 text-center text-sm text-gray-300">
-        {leagueLabel}は準備中です。
-      </div>
+      <StandingsLeagueSection
+        league={league}
+        data={data}
+        layout={layout}
+        year={year}
+        titleSuffix="今週の順位表"
+        subtitle={`Weekly Standings (${weekLabel})`}
+        showTeamPageNote={false}
+      />
     )
   }
 

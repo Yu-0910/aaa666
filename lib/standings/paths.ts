@@ -15,6 +15,22 @@ export function publicTeamStandingsRelPath(year: string, league: StandingsLeague
   return `public/data/standings/${year}/${league}.json`
 }
 
+export function derivedWeeklyTeamStandingsRelPath(
+  year: string,
+  weekKey: string,
+  league: StandingsLeague
+): string {
+  return `_data/derived/team_standings/weekly/${year}/${weekKey}/${league}.json`
+}
+
+export function publicWeeklyTeamStandingsRelPath(
+  year: string,
+  weekKey: string,
+  league: StandingsLeague
+): string {
+  return `public/data/standings/weekly/${year}/${weekKey}/${league}.json`
+}
+
 /** R2 オブジェクトキー（public/ なし） */
 export function r2TeamStandingsObjectKey(year: string, league: StandingsLeague): string {
   return `data/standings/${year}/${league}.json`
@@ -23,4 +39,12 @@ export function r2TeamStandingsObjectKey(year: string, league: StandingsLeague):
 /** ブラウザ / Vercel プロキシ */
 export function siteTeamStandingsPath(year: string, league: StandingsLeague): string {
   return `/data/standings/${year}/${league}.json`
+}
+
+export function siteWeeklyTeamStandingsPath(
+  year: string,
+  weekKey: string,
+  league: StandingsLeague
+): string {
+  return `/data/standings/weekly/${year}/${weekKey}/${league}.json`
 }

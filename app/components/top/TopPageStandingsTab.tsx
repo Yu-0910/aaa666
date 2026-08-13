@@ -105,7 +105,7 @@ function standingsMetricHeaderNowrap(key: StandingsMetricKey): boolean {
   return key !== "era_starter" && key !== "era_relief"
 }
 
-function TeamStandingsTable({
+export function TeamStandingsTable({
   rows,
   layout,
   year,
@@ -398,16 +398,22 @@ function TeamStandingsTable({
   )
 }
 
-function StandingsLeagueSection({
+export function StandingsLeagueSection({
   league,
   data,
   layout,
   year,
+  titleSuffix = "順位表",
+  subtitle,
+  showTeamPageNote = true,
 }: {
   league: StandingsLeague
   data: TeamStandingsJson
   layout: TopPageLayoutMode
   year: number
+  titleSuffix?: string
+  subtitle?: string
+  showTeamPageNote?: boolean
 }) {
   const meta = LEAGUE_META[league]
   const isPl = league === "PL"
@@ -423,8 +429,8 @@ function StandingsLeagueSection({
         <div className="flex min-w-0 items-center gap-2">
           <div className="shrink-0" style={{ width: "4px", height: "32px", backgroundColor: meta.color }} />
           <div className="min-w-0">
-            <div className="text-sm font-medium">{meta.title} 順位表</div>
-            <div className="text-[10px] text-gray-400">{meta.subtitle}</div>
+            <div className="text-sm font-medium">{meta.title} {titleSuffix}</div>
+            <div className="text-[10px] text-gray-400">{subtitle ?? meta.subtitle}</div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -456,9 +462,11 @@ function StandingsLeagueSection({
         metricColScale={1.15}
         showMetricLeagueRanks
       />
-      <p className="text-[10px] text-gray-400">
-        チーム名をタッチするとチームページへ移動できます。
-      </p>
+      {showTeamPageNote ? (
+        <p className="text-[10px] text-gray-400">
+          チーム名をタッチするとチームページへ移動できます。
+        </p>
+      ) : null}
     </section>
   )
 }

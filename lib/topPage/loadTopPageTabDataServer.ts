@@ -11,6 +11,11 @@ import { getProjectRoot } from "@/lib/projectRoot"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
 import { getPitchingLeadersAsync } from "@/lib/ranking/leadersFromPitchingRankingsJson"
+import {
+  publicWeeklyTeamStandingsRelPath,
+  siteWeeklyTeamStandingsPath,
+} from "@/lib/standings/paths"
+import { isTeamStandingsJson, type StandingsLeague, type TeamStandingsJson } from "@/lib/standings/types"
 import { TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshotShared"
 import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
@@ -82,6 +87,36 @@ async function readWeeklyCurrentWeekMetaAsync(
   return fetchDisplayJsonServer<WeeklyCurrentWeekJson>(
     topWeeklyCurrentWeekPublicUrl(year)
   )
+}
+
+function readWeeklyTeamStandingsLocal(
+  projectRoot: string,
+  year: string,
+  weekKey: string,
+  league: StandingsLeague
+): TeamStandingsJson | null {
+  const p = `${projectRoot}/${publicWeeklyTeamStandingsRelPath(year, weekKey, league)}`
+  if (!fs.existsSync(p)) return null
+  try {
+    const raw = JSON.parse(fs.readFileSync(p, "utf-8"))
+    return isTeamStandingsJson(raw) ? raw : null
+  } catch {
+    return null
+  }
+}
+
+async function readWeeklyTeamStandingsAsync(
+  projectRoot: string,
+  year: string,
+  weekKey: string,
+  league: StandingsLeague
+): Promise<TeamStandingsJson | null> {
+  const local = readWeeklyTeamStandingsLocal(projectRoot, year, weekKey, league)
+  if (local) return local
+  const raw = await fetchDisplayJsonServer<unknown>(
+    siteWeeklyTeamStandingsPath(year, weekKey, league)
+  )
+  return isTeamStandingsJson(raw) ? raw : null
 }
 
 /** Vercel 本番: R2 フォールバック（rankingsBaseUrl）が使えるときはサーバー先読み可 */
@@ -160,11 +195,13 @@ export async function loadWeeklyTabPayloadServer(
     }
 
     const weekKey = weekMeta.weekKey
-    const [clBat, plBat, clPitch, plPitch] = await Promise.all([
+    const [clBat, plBat, clPitch, plPitch, clStandings, plStandings] = await Promise.all([
       readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "batting"),
       readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "batting"),
       readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "CL", "pitching"),
       readWeeklyTopLeadersSnapshotAsync(root, yearStr, weekKey, "PL", "pitching"),
+      readWeeklyTeamStandingsAsync(root, yearStr, weekKey, "CL"),
+      readWeeklyTeamStandingsAsync(root, yearStr, weekKey, "PL"),
     ])
 
     if (!clBat || !plBat || !clPitch || !plPitch) return null
@@ -173,6 +210,7 @@ export async function loadWeeklyTabPayloadServer(
       weekMeta,
       batting: { CL: clBat, PL: plBat },
       pitching: { CL: clPitch, PL: plPitch },
+      standings: clStandings && plStandings ? { CL: clStandings, PL: plStandings } : undefined,
     }
   } catch (err) {
     console.error("[loadWeeklyTabPayloadServer]", err)
