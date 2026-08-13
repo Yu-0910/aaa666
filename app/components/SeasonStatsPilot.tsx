@@ -813,32 +813,35 @@ export default function SeasonStatsPilot({
               </h2>
               {pitchTypeColorOrder.length > 0 ? (
                 <>
+                  <div className="season-pitch-type-chart-list grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {pitchTypeHandCards.map((item) =>
+                      item.rows.length > 0 ? (
+                        <div key={`chart-${item.key}`} className="season-pitch-chart-panel min-w-0">
+                          <div className="flex w-full justify-center">
+                            <PitchTypePieChart
+                              title={item.title}
+                              rows={item.rows.map((r) => ({
+                                pitch_type: r.pitch_type,
+                                pitches: r.pitches,
+                                pct: r.pct,
+                              }))}
+                              centerStats={centerStatsForPitcherHand(item.key)}
+                              pitchTypeColorOrder={pitchTypeColorOrder}
+                              compact
+                              isAnimationActive={animatePitchCharts}
+                            />
+                          </div>
+                        </div>
+                      ) : null)}
+                  </div>
+                  <PitchTypeChartLegend
+                    pitchTypes={pitchTypeColorOrder}
+                    pitchTypeColorOrder={pitchTypeColorOrder}
+                    className={loose ? "mb-5" : "mb-3"}
+                  />
                   <div className={`season-pitch-type-table-list flex flex-row flex-wrap items-start gap-4 ${mbAfterChart}`}>
                     {pitchTypeHandCards.map((item) => (
                       <div key={item.key} className="min-w-0 flex-1 basis-[430px]">
-                        {item.rows.length > 0 ? (
-                          <div className={`season-pitch-chart-panel ${loose ? "mb-5" : "mb-3"} w-full`}>
-                            <div className="flex w-full justify-center">
-                              <PitchTypePieChart
-                                title={item.title}
-                                rows={item.rows.map((r) => ({
-                                  pitch_type: r.pitch_type,
-                                  pitches: r.pitches,
-                                  pct: r.pct,
-                                }))}
-                                centerStats={centerStatsForPitcherHand(item.key)}
-                                pitchTypeColorOrder={pitchTypeColorOrder}
-                                compact
-                                isAnimationActive={animatePitchCharts}
-                              />
-                            </div>
-                            <PitchTypeChartLegend
-                              pitchTypes={pitchTypeColorOrder}
-                              pitchTypeColorOrder={pitchTypeColorOrder}
-                              className="mb-0"
-                            />
-                          </div>
-                        ) : null}
                         <div
                           className="mb-2 inline-block rounded-sm bg-[#FFFF44] px-3 py-1 text-[13px] font-black text-black"
                         >
