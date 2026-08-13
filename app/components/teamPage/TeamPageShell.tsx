@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
+import { BarChart3, Gauge, Table2 } from "lucide-react"
 import { useClientPathname, useClientSearchString } from "@/hooks/useIsDesktop"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
@@ -26,11 +27,11 @@ import type { TeamPageV1Year } from "@/lib/teamPage/teamPageConstants"
 import SiteFooter from "@/app/components/common/SiteFooter"
 
 const TEAM_PAGE_BOTTOM_NAV_ITEMS = [
-  { id: "season-batting", first: "通算", second: "打撃", subTab: "batting", period: "season" },
-  { id: "weekly-batting", first: "今週", second: "打撃", subTab: "batting", period: "weekly" },
-  { id: "season-pitching", first: "通算", second: "投球", subTab: "pitching", period: "season" },
-  { id: "weekly-pitching", first: "今週", second: "投球", subTab: "pitching", period: "weekly" },
-  { id: "catchers", first: "捕手", second: "成績", subTab: "catchers", period: "season" },
+  { id: "season-batting", first: "通算", second: "打撃", subTab: "batting", period: "season", icon: BarChart3 },
+  { id: "weekly-batting", first: "今週", second: "打撃", subTab: "batting", period: "weekly", icon: BarChart3 },
+  { id: "season-pitching", first: "通算", second: "投球", subTab: "pitching", period: "season", icon: Gauge },
+  { id: "weekly-pitching", first: "今週", second: "投球", subTab: "pitching", period: "weekly", icon: Gauge },
+  { id: "catchers", first: "捕手", second: "成績", subTab: "catchers", period: "season", icon: Table2 },
 ] as const
 
 export type TeamPageShellProps = {
@@ -91,7 +92,7 @@ export default function TeamPageShell({
   }
 
   return (
-    <div className="min-h-screen bg-black pb-20 text-white">
+    <div className="min-h-screen bg-black pb-28 text-white">
       <div
         className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]"
         style={{ zIndex: 300 }}
@@ -233,25 +234,29 @@ function TeamPageBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-[320] border-t border-[#333] bg-black/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-sm"
+      className="fixed inset-x-0 bottom-0 z-[320] px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2"
       aria-label="チームページ表示切替"
     >
-      <div className="mx-auto grid max-w-[720px] grid-cols-5 gap-1.5">
+      <div className="mx-auto grid max-w-md grid-cols-5 rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md">
         {TEAM_PAGE_BOTTOM_NAV_ITEMS.map((item) => {
           const active = isActive(item)
+          const Icon = item.icon
           return (
             <Link
               key={item.id}
               href={hrefForItem(item)}
-              className="flex min-h-12 flex-col items-center justify-center rounded border px-1 py-1 text-center text-[11px] font-black leading-tight transition-colors"
-              style={{
-                borderColor: active ? "#FFFF44" : "#444",
-                backgroundColor: active ? "#FFFF44" : "#141414",
-                color: active ? "#000000" : "#d1d5db",
-              }}
+              className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 text-center text-[11px] font-bold leading-none transition-colors ${
+                active
+                  ? "bg-white/25 text-[#ffff44]"
+                  : "bg-transparent text-white/90 hover:text-white"
+              }`}
+              aria-current={active ? "page" : undefined}
             >
-              <span>{item.first}</span>
-              <span>{item.second}</span>
+              <Icon className="h-5 w-5" aria-hidden="true" />
+              <span className="flex flex-col items-center whitespace-nowrap">
+                <span>{item.first}</span>
+                <span>{item.second}</span>
+              </span>
             </Link>
           )
         })}
