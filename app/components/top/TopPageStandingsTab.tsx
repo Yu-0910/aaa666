@@ -323,7 +323,10 @@ export function TeamStandingsTable({
                         style={{
                           width: TEAM_BAR_WIDTH,
                           height: teamBarHeight,
-                          backgroundColor: rankingTeamStripeColor(teamDisplayNameFromStandingRow(row)),
+                          backgroundColor: rankingTeamStripeColor(teamDisplayNameFromStandingRow(row), {
+                            year,
+                            league,
+                          }),
                         }}
                       />
                       <div

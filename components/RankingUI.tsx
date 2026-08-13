@@ -453,7 +453,10 @@ export default function RankingUI({
                                 className="w-1 flex-shrink-0"
                                 style={{
                                   height: playerNameBlockHeight,
-                                  backgroundColor: rankingTeamStripeColor(row.team),
+                                  backgroundColor: rankingTeamStripeColor(row.team, {
+                                    year: season,
+                                    league,
+                                  }),
                                 }}
                               />
                               <div
