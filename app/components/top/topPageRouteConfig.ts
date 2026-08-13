@@ -4,7 +4,7 @@ export type TopPageTabId = 0 | 1 | 2 | 3 | 4
 export type TopPageRouteKey = "top" | "weekly" | "probables" | "news" | "standings"
 
 const SITE_NAME = "Short-Stop"
-const TOP_SHARE_IMAGE_URL = "https://short-stop.jp/baseball-mvp.jpg"
+const TOP_SHARE_IMAGE_URL = "https://short-stop.jp/x-share-card.png?v=20260813"
 const TOP_SHARE_IMAGE_ALT = "Short-Stop"
 
 export type TopPageRouteConfig = {
@@ -95,8 +95,8 @@ export function topPageMetadataFor(routeKey: TopPageRouteKey): Metadata {
       images: [
         {
           url: TOP_SHARE_IMAGE_URL,
-          width: 1024,
-          height: 1024,
+          width: 1200,
+          height: 630,
           alt: TOP_SHARE_IMAGE_ALT,
         },
       ],
