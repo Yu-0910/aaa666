@@ -3,6 +3,10 @@ import type { Metadata } from "next"
 export type TopPageTabId = 0 | 1 | 2 | 3 | 4
 export type TopPageRouteKey = "top" | "weekly" | "probables" | "news" | "standings"
 
+const SITE_NAME = "Short-Stop"
+const TOP_SHARE_IMAGE_URL = "https://short-stop.jp/baseball-mvp.jpg"
+const TOP_SHARE_IMAGE_ALT = "Short-Stop"
+
 export type TopPageRouteConfig = {
   key: TopPageRouteKey
   tabId: TopPageTabId
@@ -81,6 +85,27 @@ export function topPageMetadataFor(routeKey: TopPageRouteKey): Metadata {
     description: route.description,
     alternates: {
       canonical: route.canonical,
+    },
+    openGraph: {
+      title: route.title,
+      description: route.description,
+      url: route.canonical,
+      siteName: SITE_NAME,
+      type: "website",
+      images: [
+        {
+          url: TOP_SHARE_IMAGE_URL,
+          width: 1024,
+          height: 1024,
+          alt: TOP_SHARE_IMAGE_ALT,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: route.title,
+      description: route.description,
+      images: [TOP_SHARE_IMAGE_URL],
     },
   }
 }
