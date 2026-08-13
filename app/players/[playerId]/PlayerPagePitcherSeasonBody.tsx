@@ -19,9 +19,6 @@ import {
   pitcherPocHandCells,
   pitcherPocCatcherRows,
   pitcherPocInningRow,
-  pitcherPocMetricRow1,
-  pitcherPocMetricRow2,
-  pitcherPocMetricRow3,
   pitcherPocCountRows,
   pitcherPocSituationRows,
   pitcherPocTeamVsRows,
@@ -587,127 +584,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                     </div>
 
                     <div style={{ paddingTop: "2.75rem" }}>
-                    <h2
-                      className={`${tb} mb-4 pl-4 mt-0`}
-                      style={{
-                        borderLeft: `6px solid ${sectionStripeColor}`,
-                        fontWeight: 900,
-                      }}
-                    >
-                      投球指標
-                    </h2>
-                    <div className="overflow-hidden overflow-x-auto mb-4">
-                      <table
-                        className="text-xs"
-                        style={{
-                          fontVariantNumeric: "tabular-nums",
-                          borderCollapse: "collapse",
-                          border: "1px solid #555",
-                          width: "100%",
-                          tableLayout: "fixed",
-                        }}
-                      >
-                        <tbody>
-                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">QS率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HQS率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">SQS率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被打率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被BABIP</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被出塁率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">被長打率</th>
-                          </tr>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {(pitcherSeasonPocPayload
-                              ? pitcherPocMetricRow1(pitcherSeasonPocPayload)
-                              : Array.from({ length: 7 }, () => "—")
-                            ).map((cell, i) => (
-                              <td
-                                key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
-                              >
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="overflow-hidden overflow-x-auto mb-4">
-                      <table
-                        className="text-xs"
-                        style={{
-                          fontVariantNumeric: "tabular-nums",
-                          borderCollapse: "collapse",
-                          border: "1px solid #555",
-                          width: "100%",
-                          tableLayout: "fixed",
-                        }}
-                      >
-                        <tbody>
-                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">GO/AO</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">援護率</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">IPR</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB%</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">FIP</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">HR/9</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">K-BB％</th>
-                          </tr>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {(pitcherSeasonPocPayload
-                              ? pitcherPocMetricRow2(pitcherSeasonPocPayload)
-                              : Array.from({ length: 7 }, () => "—")
-                            ).map((cell, i) => (
-                              <td
-                                key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
-                              >
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="overflow-hidden overflow-x-auto mb-4">
-                      <table
-                        className="text-xs"
-                        style={{
-                          fontVariantNumeric: "tabular-nums",
-                          borderCollapse: "collapse",
-                          border: "1px solid #555",
-                          width: "100%",
-                          tableLayout: "fixed",
-                        }}
-                      >
-                        <tbody>
-                          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500 first:border-l-0">K％</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">BB％</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">LOB%</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">PR</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">NHB</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSAA</th>
-                            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500">RSWIN</th>
-                          </tr>
-                          <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                            {(pitcherSeasonPocPayload
-                              ? pitcherPocMetricRow3(pitcherSeasonPocPayload)
-                              : Array.from({ length: 7 }, () => "—")
-                            ).map((cell, i) => (
-                              <td
-                                key={i}
-                                className="px-1 py-2 text-center latin font-black tabular-nums text-[16px] border-l border-gray-500 first:border-l-0"
-                              >
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
                     <div
                       style={{
                         transform: "scale(1.1)",
