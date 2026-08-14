@@ -394,6 +394,7 @@ export function teamRomanNameFromCode(code: string): string {
 export function playerVsTeamRomanName(teamName: string): string {
   const normalized = normalizeTeamNameForMatch(teamName)
   if (!normalized) return ""
+  if (TEAM_CODE_TO_ROMAN[normalized]) return TEAM_CODE_TO_ROMAN[normalized]
   const code = resolvedTeamCodeForMatch(normalized)
   return TEAM_CODE_TO_ROMAN[code] ?? ""
 }

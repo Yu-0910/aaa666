@@ -16,6 +16,8 @@ import {
   enrichCareerPitchingRows,
   computeCareerPitchingTotalFromRows,
 } from "../lib/careerPitchingEnrich"
+import { calculateRCNf3 } from "../lib/rc"
+import { calculateXRNf3 } from "../lib/xr"
 
 type AnyDict = Record<string, any>
 
@@ -263,21 +265,49 @@ function computeBattingTotal(rows: AnyDict[]): AnyDict {
   total.seca = round3(
     safeDiv(total.tb - total.hits + total.bb + total.hbp + total.sb - total.cs, total.ab),
   )
-  total.ta = round3(safeDiv(total.tb + total.bb + total.hbp, total.ab + total.bb + total.hbp))
-  // NOI / GPA: commonly used approximations
-  total.noi = round3(obp !== null && slg !== null ? (obp + slg) / 2 : null)
+  total.ta = round3(
+    safeDiv(
+      total.tb + total.bb + total.hbp + total.sb - total.cs,
+      total.ab - total.hits + total.cs + total.gidp,
+    ),
+  )
+  total.noi = round3(obp !== null && slg !== null ? (obp + slg / 3) * 1000 : null)
   total.gpa = round3(obp !== null && slg !== null ? (1.8 * obp + slg) / 4 : null)
 
-  // RC / XR: if per-year exists, sum; otherwise basic RC approximation
-  const rcSum = sumNums(rows, "rc")
-  total.rc =
-    rcSum > 0
-      ? round3(rcSum)
-      : round3(
-          safeDiv((total.hits + total.bb) * total.tb, total.ab + total.bb) ?? null,
-        )
-  const xrSum = sumNums(rows, "xr")
-  total.xr = xrSum > 0 ? round3(xrSum) : null
+  total.rc = round3(
+    calculateRCNf3({
+      h: total.hits,
+      bb: total.bb,
+      hbp: total.hbp,
+      cs: total.cs,
+      gidp: total.gidp,
+      tb: total.tb,
+      sf: total.sf,
+      sh: total.sh,
+      sb: total.sb,
+      so: total.so,
+      ab: total.ab,
+    }),
+  )
+  total.xr = round3(
+    calculateXRNf3({
+      singles,
+      doubles: total.doubles,
+      triples: total.triples,
+      hr: total.hr,
+      bb: total.bb,
+      ibb: total.ibb,
+      hbp: total.hbp,
+      sb: total.sb,
+      cs: total.cs,
+      ab: total.ab,
+      h: total.hits,
+      so: total.so,
+      gidp: total.gidp,
+      sf: total.sf,
+      sh: total.sh,
+    }),
+  )
 
   return total
 }
@@ -542,4 +572,3 @@ function main(): void {
 }
 
 main()
-

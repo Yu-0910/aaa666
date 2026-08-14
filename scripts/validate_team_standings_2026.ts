@@ -88,6 +88,22 @@ function validateRow(row: TeamStandingRow, lg: StandingsLeague, errors: string[]
     errors.push(`${tag}: singles+doubles+triples+hr(${hitParts}) !== h(${row.h})`)
   }
 
+  if (row.avg != null && row.avg > 0) {
+    const ab = Math.round(row.h / row.avg)
+    const expectedAvg = ab > 0 ? row.h / ab : null
+    if (expectedAvg != null && !approxEq(row.avg, expectedAvg, 1e-6)) {
+      errors.push(`${tag}: avg(${row.avg}) != h/ab(${expectedAvg}) with inferred ab=${ab}`)
+    }
+
+    const tb = row.singles + row.doubles * 2 + row.triples * 3 + row.hr * 4
+    const expectedSlg = ab > 0 ? tb / ab : null
+    if (row.slg != null && expectedSlg != null && !approxEq(row.slg, expectedSlg, 1e-6)) {
+      errors.push(
+        `${tag}: slg(${row.slg}) != TB/AB(${expectedSlg}) with TB=${tb} AB=${ab}`,
+      )
+    }
+  }
+
   const expectedName = teamDisplayNameFromCode(row.team)
   if (row.teamName && row.teamName !== expectedName) {
     warnings.push(`${tag}: teamName "${row.teamName}" vs display map "${expectedName}"`)

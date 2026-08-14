@@ -21,7 +21,6 @@ import {
 import { dedupePlateAppearancesByInningHalfOrder } from "@/lib/yahooGame/dedupePlateAppearances"
 import { injectTeamsFromTextPbpIfMissing } from "@/lib/yahooGame/inferTeamsFromTextPbp"
 import { rankingTeamShortsFromCanonicalGame } from "@/lib/yahooGame/aggregateTeamGamesFromCanonical"
-import { collectStarterYahooIdByRankingShort } from "@/lib/yahooGame/nf3PitcherMetricsFromCanonical"
 import { inferPitcherTeamForNf3Line } from "@/lib/yahooGame/pitcherPocHelpers"
 import type { BattingLine, CanonicalGameDocument, PitchingLine } from "@/lib/yahooGame/types"
 import { isIntentionalWalkResultText } from "@/lib/baseballWalkResult"
@@ -49,7 +48,7 @@ import {
 } from "@/lib/standings/teamCodes"
 import type { StandingsLeague, TeamStandingRow } from "@/lib/standings/types"
 
-type TeamBucket = {
+export type TeamBucket = {
   record: TeamRecordCounts
   batting: BattingSeasonAggYahoo
   pitching: PitchingSeasonAggYahoo
@@ -58,6 +57,11 @@ type TeamBucket = {
   /** 投手成績が集計された試合数（QS率の母数＝公式の試合数に合わせる） */
   pitchingGames: number
   errors: number
+}
+
+export type SerializableTeamBucket = Omit<TeamBucket, "batting" | "pitching"> & {
+  batting: Omit<BattingSeasonAggYahoo, "gameIds"> & { gameIds: string[] }
+  pitching: Omit<PitchingSeasonAggYahoo, "gameIds"> & { gameIds: string[] }
 }
 
 function leagueTeamShorts(league: StandingsLeague): readonly string[] {
@@ -84,6 +88,129 @@ function initTeamBuckets(league: StandingsLeague): Map<string, TeamBucket> {
   return map
 }
 
+function mergeTeamBucketInto(target: TeamBucket, source: TeamBucket): void {
+  target.record.w += source.record.w
+  target.record.l += source.record.l
+  target.record.t += source.record.t
+  target.record.runs += source.record.runs
+  target.record.runs_allowed += source.record.runs_allowed
+  mergeBattingSeasonAggYahoo(target.batting, source.batting)
+  for (const gid of source.pitching.gameIds) target.pitching.gameIds.add(gid)
+  target.pitching.ipOuts += source.pitching.ipOuts
+  target.pitching.bf += source.pitching.bf
+  target.pitching.h += source.pitching.h
+  target.pitching.hr += source.pitching.hr
+  target.pitching.so += source.pitching.so
+  target.pitching.bb += source.pitching.bb
+  target.pitching.ibb += source.pitching.ibb
+  target.pitching.hbp += source.pitching.hbp
+  target.pitching.bk += source.pitching.bk
+  target.pitching.r += source.pitching.r
+  target.pitching.er += source.pitching.er
+  target.pitching.np += source.pitching.np
+  target.pitching.w += source.pitching.w
+  target.pitching.l += source.pitching.l
+  target.pitching.hld += source.pitching.hld
+  target.pitching.sv += source.pitching.sv
+  target.pitching.gamesStarted += source.pitching.gamesStarted
+  target.pitching.gamesInRelief += source.pitching.gamesInRelief
+  target.pitching.qsStarts += source.pitching.qsStarts
+  target.pitching.hqsStarts += source.pitching.hqsStarts
+  target.pitching.sqsStarts += source.pitching.sqsStarts
+  target.pitching.completeGames += source.pitching.completeGames
+  target.pitching.shutouts += source.pitching.shutouts
+  target.pitchingStarter.ipOuts += source.pitchingStarter.ipOuts
+  target.pitchingStarter.er += source.pitchingStarter.er
+  target.pitchingStarter.bf += source.pitchingStarter.bf
+  target.pitchingStarter.bb += source.pitchingStarter.bb
+  target.pitchingStarter.so += source.pitchingStarter.so
+  target.pitchingStarter.h += source.pitchingStarter.h
+  target.pitchingRelief.ipOuts += source.pitchingRelief.ipOuts
+  target.pitchingRelief.er += source.pitchingRelief.er
+  target.pitchingRelief.bf += source.pitchingRelief.bf
+  target.pitchingRelief.bb += source.pitchingRelief.bb
+  target.pitchingRelief.so += source.pitchingRelief.so
+  target.pitchingRelief.h += source.pitchingRelief.h
+  target.pitchingGames += source.pitchingGames
+  target.errors += source.errors
+}
+
+export function mergeTeamStandingsBucketCounts(
+  target: Map<string, TeamBucket>,
+  source: Map<string, TeamBucket>,
+): void {
+  for (const [teamShort, sourceBucket] of source) {
+    const targetBucket = target.get(teamShort) ?? emptyTeamBucket()
+    mergeTeamBucketInto(targetBucket, sourceBucket)
+    target.set(teamShort, targetBucket)
+  }
+}
+
+export function serializeTeamStandingsBucket(bucket: TeamBucket): SerializableTeamBucket {
+  return {
+    record: { ...bucket.record },
+    batting: {
+      ...bucket.batting,
+      gameIds: [...bucket.batting.gameIds].sort(),
+    },
+    pitching: {
+      ...bucket.pitching,
+      gameIds: [...bucket.pitching.gameIds].sort(),
+    },
+    pitchingStarter: { ...bucket.pitchingStarter },
+    pitchingRelief: { ...bucket.pitchingRelief },
+    pitchingGames: bucket.pitchingGames,
+    errors: bucket.errors,
+  }
+}
+
+export function deserializeTeamStandingsBucket(raw: SerializableTeamBucket): TeamBucket {
+  return {
+    record: { ...raw.record },
+    batting: {
+      ...raw.batting,
+      gameIds: new Set(raw.batting.gameIds ?? []),
+    },
+    pitching: {
+      ...raw.pitching,
+      gameIds: new Set(raw.pitching.gameIds ?? []),
+    },
+    pitchingStarter: { ...raw.pitchingStarter },
+    pitchingRelief: { ...raw.pitchingRelief },
+    pitchingGames: raw.pitchingGames ?? 0,
+    errors: raw.errors ?? 0,
+  }
+}
+
+export function serializeTeamStandingsBucketMap(
+  buckets: Map<string, TeamBucket>,
+): Record<string, SerializableTeamBucket> {
+  return Object.fromEntries(
+    [...buckets.entries()].map(([teamShort, bucket]) => [
+      teamShort,
+      serializeTeamStandingsBucket(bucket),
+    ]),
+  )
+}
+
+export function deserializeTeamStandingsBucketMap(
+  raw: Record<string, SerializableTeamBucket> | undefined,
+  league: StandingsLeague,
+): Map<string, TeamBucket> {
+  const buckets = initTeamBuckets(league)
+  for (const [teamShort, bucket] of Object.entries(raw ?? {})) {
+    buckets.set(teamShort, deserializeTeamStandingsBucket(bucket))
+  }
+  return buckets
+}
+
+export function emptyTeamStandingsBucketCountsByLeague(): Record<StandingsLeague, Map<string, TeamBucket>> {
+  return {
+    CL: initTeamBuckets("CL"),
+    PL: initTeamBuckets("PL"),
+  }
+}
+
 function resolvePitcherTeamShortInGame(doc: CanonicalGameDocument, yahooId: string): string {
   const fromDoc = teamNameForYahooInDoc(doc, yahooId)
   if (fromDoc) return rosterTeamToRankingShort(fromDoc)
@@ -104,13 +231,10 @@ type PitchingLineCorrection = {
 }
 
 const TEAM_PITCHING_LINE_CORRECTIONS: Record<string, Record<string, PitchingLineCorrection>> = {
-  // 2026-07-18 Sportsnavi stats snapshots for these game pages are stale by
+  // 2026-07-18 Sportsnavi stats snapshots for this game page are stale by
   // one hit/earned-run compared with the season team pitching totals. Keep the
   // correction at game-team scope so the standings pipeline still computes from
   // canonical game data without replacing the metric surface.
-  "2021039153": {
-    中日: { h: 1, er: 1 },
-  },
   "2021039155": {
     広島: { h: 1, er: -1, splitEr: 0 },
   },
@@ -141,6 +265,7 @@ function applyPitchingLineToTeam(
   isStarter: boolean,
   correction?: PitchingLineCorrection,
   intentionalWalks = 0,
+  gameId = "",
 ): void {
   const outs = ipStringToOuts(merged.ip)
   if (outs === 0 && (merged.bf ?? 0) === 0) return
@@ -149,6 +274,7 @@ function applyPitchingLineToTeam(
   const splitEr = Math.max(0, (merged.er ?? 0) + (correction?.splitEr ?? correction?.er ?? 0))
   const hits = Math.max(0, (merged.h ?? 0) + (correction?.h ?? 0))
   const p = bucket.pitching
+  if (gameId) p.gameIds.add(gameId)
   p.ipOuts += outs
   p.bf += merged.bf ?? 0
   p.h += hits
@@ -434,7 +560,7 @@ function processGamePitching(
   doc: CanonicalGameDocument,
 ): void {
   const docForPitchers = injectTeamsFromTextPbpIfMissing(doc)
-  const startersByTeam = collectStarterYahooIdByRankingShort(docForPitchers)
+  const gameId = String(docForPitchers.gameId ?? "").trim()
 
   const byId = new Map<string, PitchingLine[]>()
   for (const pl of docForPitchers.domain.pitchingLines ?? []) {
@@ -446,6 +572,7 @@ function processGamePitching(
   }
 
   const teamsSeenInGame = new Set<string>()
+  const startersByTeam = new Map<string, string>()
   const correctedTeamsInGame = new Set<string>()
   const soloPitcherByTeam = new Map<
     string,
@@ -461,6 +588,7 @@ function processGamePitching(
     const teamShort = resolvePitcherTeamShortInGame(docForPitchers, pid)
     const bucket = buckets.get(teamShort)
     if (!bucket) continue
+    if (!startersByTeam.has(teamShort)) startersByTeam.set(teamShort, pid)
 
     const isStarter = startersByTeam.get(teamShort) === pid
 
@@ -468,7 +596,7 @@ function processGamePitching(
       isStarter && !correctedTeamsInGame.has(teamShort)
         ? pitchingLineCorrectionForGameTeam(docForPitchers, teamShort)
         : undefined
-    applyPitchingLineToTeam(bucket, merged, isStarter, correction)
+    applyPitchingLineToTeam(bucket, merged, isStarter, correction, 0, gameId)
     if (correction) correctedTeamsInGame.add(teamShort)
 
     const solo = soloPitcherByTeam.get(teamShort) ?? { count: 0, outs: 0, line: null }
@@ -547,22 +675,45 @@ export function aggregateTeamStandingsFromCanonical(
   docs: CanonicalGameDocument[],
   year: string,
   league: StandingsLeague,
-  options?: { projectRoot?: string },
+  options?: { projectRoot?: string; includeToday?: boolean },
 ): TeamStandingRow[] {
+  const buckets = aggregateTeamStandingsBucketCountsFromCanonical(docs, year, league, options)
+  return rowsFromTeamStandingsBucketCounts(league, buckets)
+}
+
+export function aggregateTeamStandingsBucketCountsFromCanonical(
+  docs: CanonicalGameDocument[],
+  year: string,
+  league: StandingsLeague,
+  options?: { projectRoot?: string; includeToday?: boolean },
+): Map<string, TeamBucket> {
   const buckets = initTeamBuckets(league)
   const projectRoot = options?.projectRoot?.trim() ?? ""
   const games = docs.filter((doc) =>
-    shouldIncludeStandingsGame(doc, year, league, scoreOptionsForGame(projectRoot, doc)),
+    shouldIncludeStandingsGame(doc, year, league, {
+      ...scoreOptionsForGame(projectRoot, doc),
+      includeToday: options?.includeToday === true,
+    }),
   )
 
   for (const doc of games) {
-    const scoreOptions = scoreOptionsForGame(projectRoot, doc)
+    const scoreOptions = {
+      ...scoreOptionsForGame(projectRoot, doc),
+      includeToday: options?.includeToday === true,
+    }
     applyGameResult(buckets, doc, scoreOptions)
     applyGameErrors(buckets, doc, scoreOptions)
     processGameBatting(buckets, doc, projectRoot || undefined)
     processGamePitching(buckets, doc)
   }
 
+  return buckets
+}
+
+export function rowsFromTeamStandingsBucketCounts(
+  league: StandingsLeague,
+  buckets: Map<string, TeamBucket>,
+): TeamStandingRow[] {
   const drafts: StandingsRowDraft[] = []
   for (const short of leagueTeamShorts(league)) {
     const bucket = buckets.get(short)
@@ -576,7 +727,7 @@ export function aggregateTeamStandingsFromCanonical(
 export function aggregateTeamStandingsByLeagueFromCanonical(
   docs: CanonicalGameDocument[],
   year: string,
-  options?: { projectRoot?: string },
+  options?: { projectRoot?: string; includeToday?: boolean },
 ): Record<StandingsLeague, TeamStandingRow[]> {
   return {
     CL: aggregateTeamStandingsFromCanonical(docs, year, "CL", options),

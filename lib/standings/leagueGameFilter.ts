@@ -23,6 +23,8 @@ import type { StandingsLeague } from "@/lib/standings/types"
 export type GetGameScoreSidesOptions = {
   /** 出場成績 HTML のスコア表「計」列（2 行） */
   sportsnaviStatsScoreboard?: ScoreboardTeamLine[] | null
+  /** 当日最終更新など、スコアが確定している今日の試合を順位表へ含める。 */
+  includeToday?: boolean
 }
 
 const TEAM_STANDINGS_EXCLUDED_GAME_IDS: Partial<Record<string, ReadonlySet<string>>> = {}
@@ -170,7 +172,7 @@ export function shouldIncludeStandingsGame(
   const ymd = parseGameDateYmdFromCanonical(doc)
   if (!ymd || !ymd.startsWith(`${year}-`)) return false
   if (isExcludedStandingsGame(year, league, String(doc.gameId ?? "").trim())) return false
-  if (isFutureOrTodayGameYmd(ymd)) return false
+  if (!options?.includeToday && isFutureOrTodayGameYmd(ymd)) return false
   if (!isLeagueStandingsGame(doc, league)) return false
   if (!getGameScoreSides(doc, options)) return false
   return true

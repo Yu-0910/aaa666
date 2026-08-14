@@ -1,6 +1,11 @@
-import type { StandingsLeague, TeamStandingsJson } from "./types"
+import { isTeamStandingsJson, type StandingsLeague, type TeamStandingsJson } from "./types"
 import { displaySitePathToPublicUrl } from "@/lib/displayData/sitePath"
 import { siteTeamStandingsPath, siteWeeklyTeamStandingsPath } from "@/lib/standings/paths"
+
+function parseUsableStandingsJson(raw: unknown): TeamStandingsJson | null {
+  if (!isTeamStandingsJson(raw)) return null
+  return raw.rows.length > 0 ? raw : null
+}
 
 async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamStandingsJson> {
   const r2Url = displaySitePathToPublicUrl(sitePath)
@@ -11,7 +16,10 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
         cache: "no-store",
         headers: { Accept: "application/json" },
       })
-      if (r2Res.ok) return r2Res.json()
+      if (r2Res.ok) {
+        const r2Json = parseUsableStandingsJson(await r2Res.json())
+        if (r2Json) return r2Json
+      }
     } catch {
       // Fall back to the same-origin /data proxy below.
     }
@@ -26,7 +34,12 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
     throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
   }
 
-  return res.json()
+  const json = parseUsableStandingsJson(await res.json())
+  if (!json) {
+    throw new Error(`順位表データの形式が不正です: ${sitePath}`)
+  }
+
+  return json
 }
 
 export async function fetchStandingsJson(

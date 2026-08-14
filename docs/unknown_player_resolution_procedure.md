@@ -41,6 +41,7 @@
    - 捕手: phase22, phase23, phase24, phase25, phase26
 6. 表示データを再生成・公開する。
    - ranking / team / top leaders
+   - 投手の場合は top-probables（予想投手タブ）も再生成し、予想投手名が個人ページへリンクすることを確認する
    - derived JSON
    - R2 upload
    - production verify
@@ -62,6 +63,9 @@
 4. 既存個人ページに今季タブを追加する。
    - 通算成績タブのみで止めず、通常の2026名簿選手と同じタブ構成にする。
 5. チームページ・ランキングページ・トップページのリンク先を既存slugへ統一する。
+   - 投手の場合は、予想投手タブの投手名も既存slug/NPB IDへ統一してリンクさせる。
+   - `phase36_build_top_probables.ts` は予想投手名を `resolvePitcherFromRoster()` で2026名簿に当て、`pitcherNpbId` / `pitcherPublicId` を JSON に持たせる。
+   - `TopPageProbablesTab.tsx` はその ID または名前/ローマ字から `playerPageHref()` を作るため、名簿・slug・Yahoo/NPB対応を更新した後に top-probables を再生成すれば名前リンクが付く。
 
 ## 自動実行の境界
 

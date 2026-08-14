@@ -126,12 +126,31 @@ function defaultSeasonStart(year) {
   return `${year}-03-27`
 }
 
-function topProbablesAsOfDateForWindow() {
+function addDaysYmdJst(ymd, days) {
+  const s = String(ymd || "").trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ""
+  const d = new Date(`${s}T00:00:00+09:00`)
+  if (Number.isNaN(d.getTime())) return ""
+  d.setUTCDate(d.getUTCDate() + days)
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d)
+}
+
+function topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow = false } = {}) {
+  if (advanceAfterCompletedWindow) {
+    const base = String(to || from || "").trim()
+    const next = addDaysYmdJst(base, 1)
+    if (next) return next
+  }
   return todayJstYmd()
 }
 
-function topProbablesBuildCommand({ year, from, to }) {
-  const asOfDate = topProbablesAsOfDateForWindow({ from, to })
+function topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow = false }) {
+  const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
   return `npx tsx scripts/phase36_build_top_probables.ts --year ${year} --as-of ${asOfDate}`
 }
 
@@ -605,8 +624,15 @@ function dateRangeNpmArgsArg({ from, to } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
-function phase29Command({ from, to } = {}) {
-  return `npm run phase29:build:standings${dateRangeNpmArgsArg({ from, to })}`
+function phase29Command({ from, to, includeToday = false, requireTargetGameCacheNonEmpty = false } = {}) {
+  const rangeArg = dateRangeNpmArgsArg({ from, to })
+  if (!includeToday) return `npm run phase29:build:standings${rangeArg}`
+  const args = []
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  args.push("--include-today")
+  if (requireTargetGameCacheNonEmpty) args.push("--require-target-game-cache-nonempty")
+  return `npm run phase29:build:standings -- ${args.join(" ")}`
 }
 
 function dateRangeNodeArgsArg({ from, to } = {}) {
@@ -1104,9 +1130,11 @@ function restoreCheckpointRunOptions(args, checkpointArgs) {
 function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
   const phase11Command = `npm run phase11:build:batting${derivedYahooArgsArg(affectedYahooIds, { from, to })}`
   const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
+  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const categoryPlans = [
     {
       category: "player_season_batting",
@@ -1151,6 +1179,47 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
       staleYahooIds: report.staleYahooIds.slice(0, 20),
     })
     run(plan.rebuildLabel, plan.command, { dryRun })
+  }
+
+  const pitchingReport = derivedNpbCategoryFreshnessReport({
+    year,
+    category: "player_season_pitching_poc",
+    npbIds: affectedNpbPitcherIds,
+    canonicalThresholdMs,
+  })
+  if (!pitchingReport.ok) {
+    console.warn("\n[daily:npb-pipeline:v2] player_season_pitching_poc 鮮度 NG → 再生成します:")
+    console.warn(
+      `  affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
+    )
+    if (pitchingReport.missingNpbIds.length > 0) {
+      console.warn(`  missingNpbIds=${pitchingReport.missingNpbIds.slice(0, 20).join(",")}`)
+    }
+    if (pitchingReport.staleNpbIds.length > 0) {
+      console.warn(`  staleNpbIds=${pitchingReport.staleNpbIds.slice(0, 20).join(",")}`)
+    }
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `player_season_pitching_poc stale affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
+    )
+    pushRunSummaryEvent("repairs", {
+      kind: "player_season_pitching_poc_rebuild",
+      affectedCount: pitchingReport.affectedCount,
+      missingNpbIds: pitchingReport.missingNpbIds.slice(0, 20),
+      staleNpbIds: pitchingReport.staleNpbIds.slice(0, 20),
+    })
+    run("派生: phase:pitcher-poc1（鮮度NGのため再生成）", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
+    run(
+      "派生: phase6 pitcher-catcher splits（投手PoC再生成に合わせて再生成）",
+      `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`,
+      { dryRun },
+    )
+    run(
+      "派生: phase7 pitcher period（投手PoC再生成に合わせて再生成）",
+      `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`,
+      { dryRun },
+    )
   }
 }
 
@@ -2441,7 +2510,7 @@ function warnProductionProxyDeployUnverified({ publishStage, error, elapsed }) {
   )
 }
 
-function warnProductionProxyVerifyUnverifiedAfterDeploy({ year, publishStage, scope, samplePlayerYahooId, sampleDerivedCategories }) {
+function warnProductionProxyVerifyUnverifiedAfterDeploy({ year, publishStage, scope, samplePlayerYahooId, samplePlayerNpbId, sampleDerivedCategories }) {
   const r2Current = runTry(
     `${publishStage}: Vercel再デプロイ後のR2直のみ再確認`,
     verifyCommandArgs({
@@ -2449,6 +2518,7 @@ function warnProductionProxyVerifyUnverifiedAfterDeploy({ year, publishStage, sc
       scope,
       noProduction: true,
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories,
     }),
   )
@@ -2798,7 +2868,6 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
   )
   runPhase2FetchBlock({ year, from, to, noStatsText, noScoreRaw, dryRun })
   runPhase2bCanonical({ year, from, to, forceCanonical, dryRun })
-  runScheduleAheadBestEffort({ year, dryRun })
 }
 
 function readPhase4FailedGameIds(year, notBeforeMs, expectedTargetGameIds = []) {
@@ -3072,6 +3141,7 @@ function repairStaleProductionProxyIfR2IsCurrent({
   autoDeployProduction,
   scope = "full",
   samplePlayerYahooId = "",
+  samplePlayerNpbId = "",
   sampleDerivedCategories = [],
 }) {
   const r2Current = runTry(
@@ -3081,6 +3151,7 @@ function repairStaleProductionProxyIfR2IsCurrent({
       scope,
       noProduction: true,
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories,
     }),
     { dryRun },
@@ -3173,6 +3244,7 @@ function repairStaleProductionProxyIfR2IsCurrent({
         year,
         scope,
         samplePlayerYahooId,
+        samplePlayerNpbId,
         sampleDerivedCategories,
       }),
       { dryRun },
@@ -3182,6 +3254,7 @@ function repairStaleProductionProxyIfR2IsCurrent({
       publishStage,
       scope,
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories,
     })) {
       throw new Error(`${publishStage}: Vercel再デプロイ後の公開確認に失敗しました`)
@@ -3189,10 +3262,11 @@ function repairStaleProductionProxyIfR2IsCurrent({
   return true
 }
 
-function verifyCommandArgs({ year, scope = "full", noProduction = false, samplePlayerYahooId = "", sampleDerivedCategories = [] }) {
+function verifyCommandArgs({ year, scope = "full", noProduction = false, samplePlayerYahooId = "", samplePlayerNpbId = "", sampleDerivedCategories = [] }) {
   const parts = [`node scripts/verify_display_publish_after_upload.mjs --year ${year} --scope ${scope}`]
   if (noProduction) parts.push("--no-production")
   if (samplePlayerYahooId) parts.push(`--sample-player-yahoo-id ${samplePlayerYahooId}`)
+  if (samplePlayerNpbId) parts.push(`--sample-player-npb-id ${samplePlayerNpbId}`)
   if (Array.isArray(sampleDerivedCategories) && sampleDerivedCategories.length > 0) {
     parts.push(`--sample-derived-categories ${sampleDerivedCategories.join(",")}`)
   }
@@ -3217,7 +3291,7 @@ function runFastDisplayDependencyPublish({ year, from, to, dryRun, label, player
   })
 }
 
-function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProduction, samplePlayerYahooId = "", samplePlayerNpbId = "", playerIds = [] }) {
   const fastDerivedCategories = [
     "player_season_batting",
     "player_season_batting_period",
@@ -3240,6 +3314,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       year,
       scope: "fast",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
     }),
     { dryRun },
@@ -3254,6 +3329,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       autoDeployProduction,
       scope: "fast",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
     })
   ) return
@@ -3281,6 +3357,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       year,
       scope: "fast",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
     }),
     { dryRun },
@@ -3294,6 +3371,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       autoDeployProduction,
       scope: "fast",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
     })
   ) return
@@ -3326,7 +3404,7 @@ function runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry
   )
 }
 
-function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, autoDeployProduction, samplePlayerYahooId = "", playerIds = [] }) {
+function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, autoDeployProduction, samplePlayerYahooId = "", samplePlayerNpbId = "", playerIds = [] }) {
   const fullDerivedCategories = [
     "player_season_batting",
     "player_season_batting_context",
@@ -3348,6 +3426,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       year,
       scope: "full",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
     }),
     { dryRun },
@@ -3362,6 +3441,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       autoDeployProduction,
       scope: "full",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
     })
   ) return
@@ -3385,6 +3465,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       year,
       scope: "full",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
     }),
     { dryRun },
@@ -3398,6 +3479,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       autoDeployProduction,
       scope: "full",
       samplePlayerYahooId,
+      samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
     })
   ) return
@@ -3579,11 +3661,8 @@ function runFastStage({
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
   run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("ランキング JSON: phase29 team standings", phase29Command({ from, to }), { dryRun })
+  run("ランキング JSON: phase29 team standings", phase29Command({ from, to, includeToday: true }), { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
-  runScheduleAheadBestEffort({ year, dryRun })
-  runTopProbablesInputRefresh({ year, from, to, dryRun })
-  run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
   run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
@@ -3622,6 +3701,7 @@ function runFastStage({
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
+      samplePlayerNpbId: affectedNpbPitcherIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
   }
@@ -3664,7 +3744,11 @@ function runFinalPrecomputedPublishStage({
   run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
   runPhase19WithRetry({ dryRun })
   run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("ランキング JSON: phase29 team standings", phase29Command({ from, to }), { dryRun })
+  run(
+    "ランキング JSON: phase29 team standings",
+    phase29Command({ from, to, includeToday: true, requireTargetGameCacheNonEmpty: true }),
+    { dryRun },
+  )
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
   run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
@@ -3678,6 +3762,7 @@ function runFinalPrecomputedPublishStage({
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
+      samplePlayerNpbId: affectedNpbPitcherIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
     if (affectedYahooIds.length > 0) {
@@ -3705,8 +3790,12 @@ function runFinalPrecomputedPublishStage({
       })
     }
     runScheduleAheadBestEffort({ year, dryRun })
-    runTopProbablesInputRefresh({ year, from, to, dryRun })
-    run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
+    runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow: true })
+    run(
+      "トップ表示: 予想投手",
+      topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow: true }),
+      { dryRun },
+    )
     runFullDisplayPublishAndVerify({
       year,
       from,
@@ -3715,6 +3804,7 @@ function runFinalPrecomputedPublishStage({
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
+      samplePlayerNpbId: affectedNpbPitcherIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
     runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun })
@@ -3741,9 +3831,9 @@ function runScheduleAheadBestEffort({ year, dryRun }) {
   })
 }
 
-function runTopProbablesInputRefresh({ year, from, to, dryRun }) {
-  const asOfDate = topProbablesAsOfDateForWindow({ from, to })
-  const tomorrowDate = addDaysYmd(asOfDate, 1)
+function runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow = false }) {
+  const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
+  const tomorrowDate = addDaysYmdJst(asOfDate, 1)
   run(
     "Sporting News ローテーション取得（予想投手用）",
     `npx tsx scripts/phase35_fetch_sportingnews_rotation.ts --year ${year}`,
@@ -3776,6 +3866,7 @@ function runFullStage({
   skipPhase15 = false,
   skipRepeatedTopBuilds = false,
   validatePhase13AffectedOnly = true,
+  allowFutureScheduleRefresh = true,
   autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
@@ -3793,7 +3884,12 @@ function runFullStage({
   }
   run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
   run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
-  runScheduleAheadBestEffort({ year, dryRun })
+  if (allowFutureScheduleRefresh) {
+    runScheduleAheadBestEffort({ year, dryRun })
+  } else {
+    console.log("\n[daily:npb-pipeline:v2] 1回目公開前扱いのため、未来日程・予想投手入力の更新をスキップします。\n")
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: future schedule refresh before first publish")
+  }
   run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
   run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
   run("派生: phase6 pitcher-catcher splits", `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`, { dryRun })
@@ -3838,8 +3934,10 @@ function runFullStage({
       note: "対戦成績派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  runTopProbablesInputRefresh({ year, from, to, dryRun })
-  run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
+  if (allowFutureScheduleRefresh) {
+    runTopProbablesInputRefresh({ year, from, to, dryRun })
+    run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
+  }
   run("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, { dryRun })
   runWarnOnlyValidation(
     "検証: phase34 球団別配球 vs Phase14",
@@ -3876,6 +3974,7 @@ function runFullStage({
       dryRun,
       autoDeployProduction,
       samplePlayerYahooId: affectedYahooIds[0] || "",
+      samplePlayerNpbId: affectedNpbPitcherIds[0] || "",
       playerIds: affectedDisplayPlayerIds,
     })
     runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun })
@@ -3960,7 +4059,10 @@ function main() {
     runFastStage(args)
   } else if (args.fullOnly) {
     ensurePhase4ConsistencyGate(args)
-    runFullStage(args)
+    runFullStage({
+      ...args,
+      allowFutureScheduleRefresh: !args.noPublish,
+    })
   } else if (args.finalizePrecomputed) {
     if (!args.skipPrefetch) runPrefetchStage(args)
     runFinishedRawFreshnessGate(args)
@@ -3984,6 +4086,7 @@ function main() {
       skipPhase15: false,
       skipRepeatedTopBuilds: true,
       validatePhase13AffectedOnly: true,
+      allowFutureScheduleRefresh: !(args.noPublish || args.skipFastPublish),
     })
   }
 
@@ -4009,11 +4112,11 @@ function main() {
   }
   if (completion.status === "completed-final") {
     runSummary.progressState = "completed_final"
-    runSummary.progressMessage = "当日最終完了。2回目公開と公開確認まで完了した状態として扱う。"
+    runSummary.progressMessage = "当日最終完了。2回目公開と本番 /data を含む公開確認まで完了した状態として扱う。"
     runSummary.publishProgress = {
       ...(runSummary.publishProgress ?? {}),
       finalState: "complete",
-      finalMessage: "当日最終公開完了。球場別を含む詳細派生も確認済み。",
+      finalMessage: "当日最終公開完了。球場別・予想投手を含む詳細派生と本番 /data 反映も確認済み。",
     }
   } else if (completion.status === "completed-intermediate") {
     runSummary.progressState = "completed_intermediate"

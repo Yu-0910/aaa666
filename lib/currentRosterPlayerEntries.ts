@@ -43,7 +43,7 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "43945152", nameJa: "Ｒ．カストロ", romanFull: "Rodolfo Castro", position: "内野手", teamCode: "F", slug: "castro-rodolfo" },
   { npbPlayerId: "83985152", nameJa: "Ｌ．リン", romanFull: "Lyle Chia-Cheng Lin", position: "捕手", teamCode: "F", slug: "chia-cheng-lin-lyle" },
   { npbPlayerId: "73575132", nameJa: "宋 家豪", romanFull: "Sung Chia-Hao", position: "投手", teamCode: "E", slug: "chia-hao-sung" },
-  { npbPlayerId: "91095157", nameJa: "田中 千晴", romanFull: "Tanaka Chiharu", position: "投手", teamCode: "G", slug: "chiharu-tanaka" },
+  { npbPlayerId: "91095157", nameJa: "田中 千晴", romanFull: "Tanaka Chiharu", position: "投手", teamCode: "E", slug: "chiharu-tanaka" },
   { npbPlayerId: "71975134", nameJa: "佐々木 千隼", romanFull: "Sasaki Chihaya", position: "投手", teamCode: "DB", slug: "chihaya-sasaki" },
   { npbPlayerId: "21025155", nameJa: "隅田 知一郎", romanFull: "Sumida Chihiro", position: "投手", teamCode: "L", slug: "chihiro-sumida" },
   { npbPlayerId: "11815138", nameJa: "万波 中正", romanFull: "Mannami Chusei", position: "外野手", teamCode: "F", slug: "chusei-mannami" },

@@ -1,23 +1,80 @@
 {
   "schemaVersion": "unknown-player-resolution-report-v1",
-  "generatedAt": "2026-08-07T16:35:09.555Z",
+  "generatedAt": "2026-08-14T18:04:44.705Z",
   "year": "2026",
-  "from": "2026-08-07",
-  "to": "2026-08-07",
+  "from": "2026-08-14",
+  "to": "2026-08-14",
   "scannedGameIds": [
-    "2021039236",
-    "2021039237",
-    "2021039238",
-    "2021039239",
-    "2021039240",
-    "2021039241"
+    "2021039272",
+    "2021039273",
+    "2021039274",
+    "2021039275",
+    "2021039276",
+    "2021039277"
   ],
   "procedureDoc": "docs/unknown_player_resolution_procedure.md",
   "firstPublishPolicy": "unresolved players are rendered without personal-page links",
   "counts": {
-    "total": 0,
-    "newPlayerCandidates": 0,
-    "existingPageNotCurrentRoster": 0
+    "total": 4,
+    "newPlayerCandidates": 2,
+    "existingPageNotCurrentRoster": 2
   },
-  "rows": []
+  "rows": [
+    {
+      "name": "馬場 皐輔",
+      "team": "",
+      "yahooPlayerId": "1700077",
+      "npbPlayerId": "",
+      "role": "pitcher",
+      "gameId": "2021039272",
+      "source": "domain.pitchingLines",
+      "resolvedNpbPlayerId": "",
+      "category": "existing_page_not_current_roster",
+      "existingSlug": "kousuke-baba",
+      "recommendedProcedure": "B",
+      "reason": "既存個人ページまたはhistorical slugで解決できるが、2026現在名簿にはいない"
+    },
+    {
+      "name": "馬場 皐輔",
+      "team": "DeNA",
+      "yahooPlayerId": "1700077",
+      "npbPlayerId": "",
+      "role": "stats-row",
+      "gameId": "2021039272",
+      "source": "game.statsPlayerLinkedRows",
+      "resolvedNpbPlayerId": "",
+      "category": "existing_page_not_current_roster",
+      "existingSlug": "kousuke-baba",
+      "recommendedProcedure": "B",
+      "reason": "既存個人ページまたはhistorical slugで解決できるが、2026現在名簿にはいない"
+    },
+    {
+      "name": "神宮 僚介",
+      "team": "",
+      "yahooPlayerId": "2108545",
+      "npbPlayerId": "",
+      "role": "pitcher",
+      "gameId": "2021039274",
+      "source": "domain.pitchingLines",
+      "resolvedNpbPlayerId": "",
+      "category": "new_player_candidate",
+      "existingSlug": "",
+      "recommendedProcedure": "A",
+      "reason": "2026現在名簿・既存個人ページ・Yahoo/NPB対応のいずれにも確定一致しない"
+    },
+    {
+      "name": "神宮 僚介",
+      "team": "阪神",
+      "yahooPlayerId": "2108545",
+      "npbPlayerId": "",
+      "role": "stats-row",
+      "gameId": "2021039274",
+      "source": "game.statsPlayerLinkedRows",
+      "resolvedNpbPlayerId": "",
+      "category": "new_player_candidate",
+      "existingSlug": "",
+      "recommendedProcedure": "A",
+      "reason": "2026現在名簿・既存個人ページ・Yahoo/NPB対応のいずれにも確定一致しない"
+    }
+  ]
 }

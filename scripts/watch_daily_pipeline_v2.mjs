@@ -821,6 +821,60 @@ function buildDecisionContext(dateJst, readiness, extra = {}) {
   }
 }
 
+function handoffToFinalize(args, dateJst, summary, readiness, options = {}) {
+  const reason = String(options.reason || "all_ready")
+  const lockReason = String(options.lockReason || "all_data_ready")
+  const finalizeKind = String(options.kind || reason)
+  const detail = buildDecisionContext(dateJst, readiness, {
+    year: args.year,
+    triggerReason: reason,
+    finalizeMode: "finalize-precomputed",
+    ...(options.detail || {}),
+  })
+  log(
+    `必要データが揃ったため、v2 pipeline を起動します ` +
+    `(reason=${reason} total=${detail.totalGames} finished=${detail.finishedGames} allFinished=${detail.allGamesFinished})`,
+  )
+  appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `${finalizeKind} date=${dateJst}`)
+  pushWatchSummaryEvent(summary, "finalizeDecisions", {
+    kind: finalizeKind,
+    detail,
+  })
+  summary.status = "handoff-to-finalize"
+  writeWatchSummary(dateJst, summary)
+  if (!args.dryRun) {
+    writeLock(dateJst, {
+      state: "handoff-to-finalize",
+      ranAtJst: formatJstTimestamp(),
+      reason: lockReason,
+      triggerReason: reason,
+    })
+  }
+  const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+    reason,
+    detail: JSON.stringify({
+      totalGames: detail.totalGames,
+      finishedGames: detail.finishedGames,
+      allGamesFinished: detail.allGamesFinished,
+      ...(options.triggerDetail || {}),
+    }),
+  })
+  const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
+  summary.status = pipelineCompletion.summaryStatus
+  summary.completedAtJst = formatJstTimestamp()
+  summary.pipelineRunId = runId
+  summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
+  writeWatchSummary(dateJst, summary)
+  if (!args.dryRun) {
+    writeLock(dateJst, {
+      state: pipelineCompletion.lockState,
+      completedAtJst: formatJstTimestamp(),
+      reason: pipelineCompletion.reason,
+      pipelineRunId: runId,
+    })
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const dateJst = args.dateJst || todayJstYmd()
@@ -894,57 +948,18 @@ async function main() {
     }
 
     if (readiness.ready) {
+      let precomputedGameIds = []
       if (args.partialPhase4) {
         const finalTargets = collectPartialPhase4Targets(args.year, dateJst, readiness, partialPhase4Signatures)
-        const precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
+        precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
         runPlayerDerivationPrecompute(args.year, precomputedGameIds, args.dryRun)
       }
-      const decision = buildDecisionContext(dateJst, readiness, {
-        year: args.year,
-        triggerReason: "all_ready",
-        finalizeMode: "finalize-precomputed",
-      })
-      log(
-        `必要データが全試合で揃ったため、v2 pipeline を起動します ` +
-        `(reason=all_ready total=${decision.totalGames} finished=${decision.finishedGames} allFinished=${decision.allGamesFinished})`,
-      )
-      appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `all_ready date=${dateJst}`)
-      pushWatchSummaryEvent(summary, "finalizeDecisions", {
-        kind: "all_ready",
-        detail: decision,
-      })
-      summary.status = "handoff-to-finalize"
-      writeWatchSummary(dateJst, summary)
-      if (!args.dryRun) {
-        writeLock(dateJst, {
-          state: "handoff-to-finalize",
-          ranAtJst: formatJstTimestamp(),
-          reason: "all_data_ready",
-          triggerReason: "all_ready",
-        })
-      }
-      const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+      handoffToFinalize(args, dateJst, summary, readiness, {
         reason: "all_ready",
-        detail: JSON.stringify({
-          totalGames: decision.totalGames,
-          finishedGames: decision.finishedGames,
-          allGamesFinished: decision.allGamesFinished,
-        }),
+        lockReason: "all_data_ready",
+        triggerDetail: { precomputedGames: precomputedGameIds },
+        detail: { precomputedGames: precomputedGameIds },
       })
-      const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
-      summary.status = pipelineCompletion.summaryStatus
-      summary.completedAtJst = formatJstTimestamp()
-      summary.pipelineRunId = runId
-      summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
-      writeWatchSummary(dateJst, summary)
-      if (!args.dryRun) {
-        writeLock(dateJst, {
-          state: pipelineCompletion.lockState,
-          completedAtJst: formatJstTimestamp(),
-          reason: pipelineCompletion.reason,
-          pipelineRunId: runId,
-        })
-      }
       return
     }
 
@@ -971,59 +986,24 @@ async function main() {
       runTargetedScoreRawRepair(args.year, dateJst, finishedPendingIds, args.dryRun)
       readiness = gateReadinessUntilScheduleFinal(dateJst, checkLocalReady(args.year, dateJst))
       if (readiness.ready) {
+        let precomputedGameIds = []
         if (args.partialPhase4) {
           const finalTargets = collectPartialPhase4Targets(args.year, dateJst, readiness, partialPhase4Signatures)
-          const precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
+          precomputedGameIds = runPartialPhase4(args.year, finalTargets, partialPhase4Signatures, args.dryRun)
           runPlayerDerivationPrecompute(args.year, precomputedGameIds, args.dryRun)
         }
-        const decision = buildDecisionContext(dateJst, readiness, {
-          year: args.year,
-          triggerReason: "all_ready_after_repair",
-          repairGameIds: finishedPendingIds,
-          finalizeMode: "finalize-precomputed",
-        })
-        log(
-          `再取得後に必要データが揃ったため、v2 pipeline を起動します ` +
-          `(reason=all_ready_after_repair total=${decision.totalGames} finished=${decision.finishedGames} allFinished=${decision.allGamesFinished})`,
-        )
-        appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `all_ready_after_repair date=${dateJst}`)
-        pushWatchSummaryEvent(summary, "finalizeDecisions", {
-          kind: "all_ready_after_repair",
-          detail: decision,
-        })
-        summary.status = "handoff-to-finalize"
-        writeWatchSummary(dateJst, summary)
-        if (!args.dryRun) {
-          writeLock(dateJst, {
-            state: "handoff-to-finalize",
-            ranAtJst: formatJstTimestamp(),
-            reason: "all_data_ready_after_repair",
-            triggerReason: "all_ready_after_repair",
-          })
-        }
-        const runId = runPipelineV2(args.year, dateJst, args.dryRun, args.autoDeployProduction, {
+        handoffToFinalize(args, dateJst, summary, readiness, {
           reason: "all_ready_after_repair",
-          detail: JSON.stringify({
-            totalGames: decision.totalGames,
-            finishedGames: decision.finishedGames,
-            allGamesFinished: decision.allGamesFinished,
+          lockReason: "all_data_ready_after_repair",
+          detail: {
+            repairGameIds: finishedPendingIds,
+            precomputedGames: precomputedGameIds,
+          },
+          triggerDetail: {
             repairedGames: finishedPendingIds,
-          }),
+            precomputedGames: precomputedGameIds,
+          },
         })
-        const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
-        summary.status = pipelineCompletion.summaryStatus
-        summary.completedAtJst = formatJstTimestamp()
-        summary.pipelineRunId = runId
-        summary.pipelineCompletion = pipelineCompletion.pipeline?.completion ?? null
-        writeWatchSummary(dateJst, summary)
-        if (!args.dryRun) {
-          writeLock(dateJst, {
-            state: pipelineCompletion.lockState,
-            completedAtJst: formatJstTimestamp(),
-            reason: pipelineCompletion.reason,
-            pipelineRunId: runId,
-          })
-        }
         return
       }
     }
@@ -1043,6 +1023,17 @@ async function main() {
       if (partialTargets.length > 0) {
         const precomputedGameIds = runPartialPhase4(args.year, partialTargets, partialPhase4Signatures, args.dryRun)
         runPlayerDerivationPrecompute(args.year, precomputedGameIds, args.dryRun)
+        readiness = gateReadinessUntilScheduleFinal(dateJst, checkLocalReady(args.year, dateJst))
+        if (readiness.ready) {
+          handoffToFinalize(args, dateJst, summary, readiness, {
+            reason: "all_ready_after_partial_phase4",
+            lockReason: "all_data_ready_after_partial_phase4",
+            detail: { precomputedGames: precomputedGameIds },
+            triggerDetail: { precomputedGames: precomputedGameIds },
+          })
+          return
+        }
+        log(`部分更新後も未完了: ${readiness.pending.join(", ")}`)
       } else {
         log("部分更新: 新しく Phase4 へ進める ready 試合はありません")
       }
