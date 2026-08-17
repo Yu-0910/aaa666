@@ -84,6 +84,13 @@ const currentRosterSlugByName = new Map<string, string>()
 const currentRosterSlugByRoman = new Map<string, string>()
 const currentRosterSlugByNpbId = new Map<string, string>()
 
+function stripLeadingRosterInitialJa(name: string): string {
+  return String(name ?? "")
+    .normalize("NFKC")
+    .replace(/^[A-ZＡ-Ｚ][.．]\s*/u, "")
+    .trim()
+}
+
 function setCurrentRosterRomanSlug(romanName: string, slug: string): void {
   const romanSlug = slugifyPlayerRomanName(romanName)
   if (romanSlug && !currentRosterSlugByRoman.has(romanSlug)) currentRosterSlugByRoman.set(romanSlug, slug)
@@ -96,6 +103,11 @@ for (const entry of CURRENT_ROSTER_PLAYER_ENTRIES) {
   if (name) {
     currentRosterSlugByName.set(rosterNameMatchKey(name), entry.slug)
     currentRosterSlugByName.set(compactPlayerName(name), entry.slug)
+    const strippedName = stripLeadingRosterInitialJa(name)
+    if (strippedName && strippedName !== name) {
+      currentRosterSlugByName.set(rosterNameMatchKey(strippedName), entry.slug)
+      currentRosterSlugByName.set(compactPlayerName(strippedName), entry.slug)
+    }
   }
   setCurrentRosterRomanSlug(entry.romanFull, entry.slug)
   for (const romanShort of romanShortCandidatesFromFull(entry.romanFull)) {
@@ -135,9 +147,12 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
     const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId] ?? currentRosterSlugByNpbId.get(npbId)
     if (rosterSlug) return rosterSlug
   }
+  const strippedLinkName = stripLeadingRosterInitialJa(link.name ?? "")
   const currentRosterNameSlug =
     currentRosterSlugByName.get(rosterNameMatchKey(link.name ?? "")) ??
-    currentRosterSlugByName.get(compactPlayerName(link.name ?? ""))
+    currentRosterSlugByName.get(compactPlayerName(link.name ?? "")) ??
+    currentRosterSlugByName.get(rosterNameMatchKey(strippedLinkName)) ??
+    currentRosterSlugByName.get(compactPlayerName(strippedLinkName))
   if (currentRosterNameSlug) return currentRosterNameSlug
   const currentRosterRomanSlug = currentRosterSlugByRoman.get(slugifyPlayerRomanName(link.romanName || ""))
   if (currentRosterRomanSlug) return currentRosterRomanSlug
