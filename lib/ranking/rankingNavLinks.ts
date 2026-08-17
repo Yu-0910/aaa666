@@ -69,20 +69,20 @@ function buildLeagueWeeklyNavRow(
     links: [
       {
         href: rankingHref(year, league, "batting", "season"),
-        label: `${shortLeague}野手 通常`,
+        label: `${shortLeague}野手`,
       },
       {
         href: rankingHref(year, league, "batting", "weekly", weekKey),
-        label: `${shortLeague}野手 週間`,
+        label: `${shortLeague}野手\n週間`,
         active: activeKind === "batting" && league === activeLeague,
       },
       {
         href: rankingHref(year, league, "pitching", "season"),
-        label: `${shortLeague}投手 通常`,
+        label: `${shortLeague}投手`,
       },
       {
         href: rankingHref(year, league, "pitching", "weekly", weekKey),
-        label: `${shortLeague}投手 週間`,
+        label: `${shortLeague}投手\n週間`,
         active: activeKind === "pitching" && league === activeLeague,
       },
     ],
