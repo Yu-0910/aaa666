@@ -214,7 +214,9 @@ function collectFastFiles(year) {
   const standingsRoot = path.join(ROOT, "public", "data", "standings")
   for (const f of walkJsonFiles(standingsRoot)) {
     const rel = path.relative(standingsRoot, f).replace(/\\/g, "/")
-    if (!rel.startsWith(`${year}/`)) continue
+    const match =
+      rel.startsWith(`${year}/`) || rel.startsWith(`weekly/${year}/`)
+    if (!match) continue
     files.push({ local: f, key: `data/standings/${rel}` })
   }
 

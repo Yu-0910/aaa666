@@ -10,7 +10,7 @@
  *
  * 用法:
  *   npm run display:r2:upload              # 全年度（1936〜2026）
- *   npm run display:r2:upload:2026         # 2026 + top-leaders のみ（本番復旧向け）
+ *   npm run display:r2:upload:2026         # 2026年の display JSON 一式（weekly standings 含む）
  *   npm run display:r2:upload -- --dry-run
  *   npm run display:r2:upload -- --year 2026
  */
@@ -155,7 +155,8 @@ async function main() {
           u.keyPrefix === 'data/top-leaders' &&
           (rel.startsWith(`${y}/`) || rel.startsWith(`weekly/${y}/`))
         const matchStandings =
-          u.keyPrefix === 'data/standings' && rel.startsWith(`${y}/`)
+          u.keyPrefix === 'data/standings' &&
+          (rel.startsWith(`${y}/`) || rel.startsWith(`weekly/${y}/`))
         const matchProbables =
           u.keyPrefix === 'data/top-probables' && rel.startsWith(`${y}/`)
         if (!matchRankings && !matchTop && !matchStandings && !matchProbables) continue
