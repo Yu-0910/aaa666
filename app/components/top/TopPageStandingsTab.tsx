@@ -107,6 +107,7 @@ function standingsMetricHeaderNowrap(key: StandingsMetricKey): boolean {
 
 export function TeamStandingsTable({
   rows,
+  league,
   layout,
   year,
   jumpRequest,
@@ -118,6 +119,7 @@ export function TeamStandingsTable({
   showMetricLeagueRanks = true,
 }: {
   rows: TeamStandingRow[]
+  league: StandingsLeague
   layout: TopPageLayoutMode
   year: number
   jumpRequest?: StandingsMetricJumpRequest | null
@@ -455,6 +457,7 @@ export function StandingsLeagueSection({
       </div>
       <TeamStandingsTable
         rows={data.rows}
+        league={league}
         layout={layout}
         year={year}
         jumpRequest={jumpRequest}
