@@ -1,13 +1,1636 @@
 {
   "schemaVersion": "top-probables-v1",
   "seasonYear": "2026",
-  "generatedAt": "2026-08-18T16:27:04.749Z",
-  "asOfDateJst": "2026-08-19",
+  "generatedAt": "2026-08-18T17:48:53.545Z",
+  "asOfDateJst": "2026-08-18",
   "source": {
-    "sportingNewsFetchedAt": null,
-    "scheduleIndexBuiltAt": "2026-08-18T14:54:02.172Z",
+    "sportingNewsFetchedAt": "2026-08-18T17:40:15.646Z",
+    "scheduleIndexBuiltAt": "2026-08-18T17:40:29.794Z",
     "matchupDerivedPhase": "phase30"
   },
-  "cards": [],
-  "warnings": []
+  "cards": [
+    {
+      "cardKey": "Bs-L",
+      "teamCodes": [
+        "Bs",
+        "L"
+      ],
+      "teamNames": [
+        "オリックス",
+        "西武"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039301",
+          "homeTeamCode": "L",
+          "awayTeamCode": "Bs",
+          "homeProbable": {
+            "teamCode": "L",
+            "pitcherNameJa": "渡邉勇太朗",
+            "pitcherNpbId": "53155138",
+            "pitcherPublicId": "53155138",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "紅林 弘太郎",
+                "opponentNpbId": "91995151",
+                "opponentPublicId": "91995151",
+                "ops": "1.667",
+                "avg": ".600",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "杉澤 龍",
+                "opponentNpbId": "61965157",
+                "opponentPublicId": "61965157",
+                "ops": "1.667",
+                "avg": ".333",
+                "hr": 1,
+                "ab": 3
+              },
+              {
+                "opponentName": "西野 真弘",
+                "opponentNpbId": "91495130",
+                "opponentPublicId": "91495130",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "山中 稜真",
+                "opponentNpbId": "33335150",
+                "opponentPublicId": "33335150",
+                "ops": "1.000",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "若月 健矢",
+                "opponentNpbId": "41645139",
+                "opponentPublicId": "41645139",
+                "ops": "1.000",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "宗 佑磨",
+                "opponentNpbId": "11815130",
+                "opponentPublicId": "11815130",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "3.09",
+            "seasonWins": 6,
+            "seasonLosses": 6,
+            "seasonKbbPct": "12.1"
+          },
+          "awayProbable": {
+            "teamCode": "Bs",
+            "pitcherNameJa": "Ｓ．ジェリー",
+            "pitcherNpbId": "03505152",
+            "pitcherPublicId": "03505152",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "古賀 悠斗",
+                "opponentNpbId": "81785155",
+                "opponentPublicId": "81785155",
+                "ops": "1.600",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "蛭間 拓哉",
+                "opponentNpbId": "61665157",
+                "opponentPublicId": "61665157",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "西川 愛也",
+                "opponentNpbId": "51455136",
+                "opponentPublicId": "51455136",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "滝澤 夏央",
+                "opponentNpbId": "51255155",
+                "opponentPublicId": "51255155",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "林 安可",
+                "opponentNpbId": "33935152",
+                "opponentPublicId": "33935152",
+                "ops": ".667",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "源田 壮亮",
+                "opponentNpbId": "71775134",
+                "opponentPublicId": "71775134",
+                "ops": ".400",
+                "avg": ".200",
+                "hr": 0,
+                "ab": 5
+              }
+            ],
+            "seasonEra": "2.41",
+            "seasonWins": 6,
+            "seasonLosses": 7,
+            "seasonKbbPct": "12.9"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039307",
+          "homeTeamCode": "L",
+          "awayTeamCode": "Bs",
+          "homeProbable": {
+            "teamCode": "L",
+            "pitcherNameJa": "杉山遙希",
+            "pitcherNpbId": "91095159",
+            "pitcherPublicId": "91095159",
+            "source": "sportingnews",
+            "topOpponentBatters": []
+          },
+          "awayProbable": {
+            "teamCode": "Bs",
+            "pitcherNameJa": "Ａ．エスピノーザ",
+            "pitcherNpbId": "43545159",
+            "pitcherPublicId": "43545159",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "古賀 悠斗",
+                "opponentNpbId": "81785155",
+                "opponentPublicId": "81785155",
+                "ops": "1.750",
+                "avg": ".500",
+                "hr": 1,
+                "ab": 4
+              },
+              {
+                "opponentName": "佐藤 太陽",
+                "opponentNpbId": "51055150",
+                "opponentPublicId": "51055150",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "長谷川 信哉",
+                "opponentNpbId": "81685153",
+                "opponentPublicId": "81685153",
+                "ops": "1.000",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "Ｔ．ネビン",
+                "opponentNpbId": "53755150",
+                "opponentPublicId": "53755150",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "石井 一成",
+                "opponentNpbId": "21125134",
+                "opponentPublicId": "21125134",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 9
+              },
+              {
+                "opponentName": "Ａ．カナリオ",
+                "opponentNpbId": "23325152",
+                "opponentPublicId": "23325152",
+                "ops": ".664",
+                "avg": ".300",
+                "hr": 0,
+                "ab": 10
+              }
+            ],
+            "seasonEra": "2.48",
+            "seasonWins": 11,
+            "seasonLosses": 4,
+            "seasonKbbPct": "15.9"
+          }
+        }
+      ]
+    },
+    {
+      "cardKey": "C-D",
+      "teamCodes": [
+        "C",
+        "D"
+      ],
+      "teamNames": [
+        "広島",
+        "中日"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039298",
+          "homeTeamCode": "C",
+          "awayTeamCode": "D",
+          "homeProbable": {
+            "teamCode": "C",
+            "pitcherNameJa": "鈴木健矢",
+            "pitcherNpbId": "61065151",
+            "pitcherPublicId": "61065151",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "阿部 寿樹",
+                "opponentNpbId": "61165132",
+                "opponentPublicId": "61165132",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "鵜飼 航丞",
+                "opponentNpbId": "71375155",
+                "opponentPublicId": "71375155",
+                "ops": "1.500",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "Ｊ．ボスラー",
+                "opponentNpbId": "83785150",
+                "opponentPublicId": "83785150",
+                "ops": ".500",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "細川 成也",
+                "opponentNpbId": "31835134",
+                "opponentPublicId": "31835134",
+                "ops": ".500",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "村松 開人",
+                "opponentNpbId": "03105157",
+                "opponentPublicId": "03105157",
+                "ops": ".500",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "Ｍ．サノー",
+                "opponentNpbId": "73575152",
+                "opponentPublicId": "73575152",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              }
+            ],
+            "seasonEra": "2.18",
+            "seasonWins": 0,
+            "seasonLosses": 2,
+            "seasonKbbPct": "5.5"
+          },
+          "awayProbable": {
+            "teamCode": "D",
+            "pitcherNameJa": "櫻井頼之介",
+            "pitcherNpbId": "21925152",
+            "pitcherPublicId": "21925152",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "Ｆ．ターノック",
+                "opponentNpbId": "43545152",
+                "opponentPublicId": "43545152",
+                "ops": "1.500",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "Ｓ．ファビアン",
+                "opponentNpbId": "43745150",
+                "opponentPublicId": "43745150",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "佐々木 泰",
+                "opponentNpbId": "11015150",
+                "opponentPublicId": "11015150",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "小園 海斗",
+                "opponentNpbId": "01705138",
+                "opponentPublicId": "01705138",
+                "ops": ".333",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "坂倉 将吾",
+                "opponentNpbId": "11915134",
+                "opponentPublicId": "11915134",
+                "ops": ".250",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "菊池 涼介",
+                "opponentNpbId": "61565135",
+                "opponentPublicId": "61565135",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              }
+            ],
+            "seasonEra": "4.38",
+            "seasonWins": 2,
+            "seasonLosses": 4,
+            "seasonKbbPct": "15.9"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039304",
+          "homeTeamCode": "C",
+          "awayTeamCode": "D",
+          "homeProbable": {
+            "teamCode": "C",
+            "pitcherNameJa": "栗林良吏",
+            "pitcherNpbId": "91995153",
+            "pitcherPublicId": "91995153",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "阿部 寿樹",
+                "opponentNpbId": "61165132",
+                "opponentPublicId": "61165132",
+                "ops": "1.667",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "石伊 雄太",
+                "opponentNpbId": "21125150",
+                "opponentPublicId": "21125150",
+                "ops": ".762",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "高橋 周平",
+                "opponentNpbId": "91095135",
+                "opponentPublicId": "91095135",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "細川 成也",
+                "opponentNpbId": "31835134",
+                "opponentPublicId": "31835134",
+                "ops": ".629",
+                "avg": ".200",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "村松 開人",
+                "opponentNpbId": "03105157",
+                "opponentPublicId": "03105157",
+                "ops": ".571",
+                "avg": ".286",
+                "hr": 0,
+                "ab": 7
+              },
+              {
+                "opponentName": "板山 祐太郎",
+                "opponentNpbId": "91395132",
+                "opponentPublicId": "91395132",
+                "ops": ".400",
+                "avg": ".200",
+                "hr": 0,
+                "ab": 5
+              }
+            ],
+            "seasonEra": "2.25",
+            "seasonWins": 6,
+            "seasonLosses": 4,
+            "seasonKbbPct": "19.4"
+          },
+          "awayProbable": {
+            "teamCode": "D",
+            "pitcherNameJa": "金丸夢斗",
+            "pitcherNpbId": "61565150",
+            "pitcherPublicId": "61565150",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "二俣 翔一",
+                "opponentNpbId": "91895153",
+                "opponentPublicId": "91895153",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "菊池 涼介",
+                "opponentNpbId": "61565135",
+                "opponentPublicId": "61565135",
+                "ops": "1.000",
+                "avg": ".429",
+                "hr": 0,
+                "ab": 7
+              },
+              {
+                "opponentName": "Ｓ．ファビアン",
+                "opponentNpbId": "43745150",
+                "opponentPublicId": "43745150",
+                "ops": ".833",
+                "avg": ".167",
+                "hr": 1,
+                "ab": 6
+              },
+              {
+                "opponentName": "中村 奨成",
+                "opponentNpbId": "81285136",
+                "opponentPublicId": "81285136",
+                "ops": ".750",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "Ｅ．モンテロ",
+                "opponentNpbId": "53955150",
+                "opponentPublicId": "53955150",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "小園 海斗",
+                "opponentNpbId": "01705138",
+                "opponentPublicId": "01705138",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "2.67",
+            "seasonWins": 5,
+            "seasonLosses": 9,
+            "seasonKbbPct": "17.4"
+          }
+        }
+      ]
+    },
+    {
+      "cardKey": "DB-G",
+      "teamCodes": [
+        "DB",
+        "G"
+      ],
+      "teamNames": [
+        "DeNA",
+        "巨人"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039296",
+          "homeTeamCode": "DB",
+          "awayTeamCode": "G",
+          "homeProbable": {
+            "teamCode": "DB",
+            "pitcherNameJa": "東克樹",
+            "pitcherNpbId": "51155136",
+            "pitcherPublicId": "51155136",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "泉口 友汰",
+                "opponentNpbId": "61165159",
+                "opponentPublicId": "61165159",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "岸田 行倫",
+                "opponentNpbId": "91595136",
+                "opponentPublicId": "91595136",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "若林 楽人",
+                "opponentNpbId": "53555153",
+                "opponentPublicId": "53555153",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "松本 剛",
+                "opponentNpbId": "21625135",
+                "opponentPublicId": "21625135",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "Ｂ．ダルベック",
+                "opponentNpbId": "63565152",
+                "opponentPublicId": "63565152",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "Ｔ．キャベッジ",
+                "opponentNpbId": "73575150",
+                "opponentPublicId": "73575150",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "2.70",
+            "seasonWins": 9,
+            "seasonLosses": 7,
+            "seasonKbbPct": "14.3"
+          },
+          "awayProbable": {
+            "teamCode": "G",
+            "pitcherNameJa": "井上温大",
+            "pitcherNpbId": "51355151",
+            "pitcherPublicId": "51355151",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "三森 大貴",
+                "opponentNpbId": "33135134",
+                "opponentPublicId": "33135134",
+                "ops": ".909",
+                "avg": ".455",
+                "hr": 0,
+                "ab": 11
+              },
+              {
+                "opponentName": "松尾 汐恩",
+                "opponentNpbId": "21825157",
+                "opponentPublicId": "21825157",
+                "ops": ".833",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "度会 隆輝",
+                "opponentNpbId": "33535159",
+                "opponentPublicId": "33535159",
+                "ops": ".764",
+                "avg": ".300",
+                "hr": 0,
+                "ab": 10
+              },
+              {
+                "opponentName": "佐野 恵太",
+                "opponentNpbId": "91995134",
+                "opponentPublicId": "91995134",
+                "ops": ".557",
+                "avg": ".143",
+                "hr": 1,
+                "ab": 14
+              },
+              {
+                "opponentName": "Ｃ．ヒュンメル",
+                "opponentNpbId": "13715152",
+                "opponentPublicId": "13715152",
+                "ops": ".500",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "蝦名 達夫",
+                "opponentNpbId": "51555151",
+                "opponentPublicId": "51555151",
+                "ops": ".500",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              }
+            ],
+            "seasonEra": "2.36",
+            "seasonWins": 10,
+            "seasonLosses": 6,
+            "seasonKbbPct": "18.8"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039302",
+          "homeTeamCode": "DB",
+          "awayTeamCode": "G",
+          "homeProbable": {
+            "teamCode": "DB",
+            "pitcherNameJa": "若松尚輝",
+            "pitcherNpbId": "63365150",
+            "pitcherPublicId": "63365150",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "浦田 俊輔",
+                "opponentNpbId": "81385150",
+                "opponentPublicId": "81385150",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "Ｂ．ダルベック",
+                "opponentNpbId": "63565152",
+                "opponentPublicId": "63565152",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              }
+            ],
+            "seasonEra": "2.60",
+            "seasonWins": 0,
+            "seasonLosses": 0,
+            "seasonKbbPct": "6.8"
+          },
+          "awayProbable": {
+            "teamCode": "G",
+            "pitcherNameJa": "又木鉄平",
+            "pitcherNpbId": "33135159",
+            "pitcherPublicId": "33135159",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "勝又 温史",
+                "opponentNpbId": "41545138",
+                "opponentPublicId": "41545138",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "牧 秀悟",
+                "opponentNpbId": "13115153",
+                "opponentPublicId": "13115153",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "度会 隆輝",
+                "opponentNpbId": "33535159",
+                "opponentPublicId": "33535159",
+                "ops": ".500",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "Ｃ．ヒュンメル",
+                "opponentNpbId": "13715152",
+                "opponentPublicId": "13715152",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "蝦名 達夫",
+                "opponentNpbId": "51555151",
+                "opponentPublicId": "51555151",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "梶原 昂希",
+                "opponentNpbId": "51555155",
+                "opponentPublicId": "51555155",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 1
+              }
+            ],
+            "seasonEra": "4.80",
+            "seasonWins": 1,
+            "seasonLosses": 1,
+            "seasonKbbPct": "2.8"
+          }
+        }
+      ]
+    },
+    {
+      "cardKey": "E-M",
+      "teamCodes": [
+        "E",
+        "M"
+      ],
+      "teamNames": [
+        "楽天",
+        "ロッテ"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039300",
+          "homeTeamCode": "E",
+          "awayTeamCode": "M",
+          "homeProbable": {
+            "teamCode": "E",
+            "pitcherNameJa": "岸孝之",
+            "pitcherNpbId": "91795114",
+            "pitcherPublicId": "91795114",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [],
+            "seasonEra": "2.72",
+            "seasonWins": 3,
+            "seasonLosses": 3,
+            "seasonKbbPct": "10.4"
+          },
+          "awayProbable": {
+            "teamCode": "M",
+            "pitcherNameJa": "Ｓ．ロング",
+            "pitcherNpbId": "03905152",
+            "pitcherPublicId": "03905152",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "平良 竜哉",
+                "opponentNpbId": "11015157",
+                "opponentPublicId": "11015157",
+                "ops": "4.000",
+                "avg": "1.000",
+                "hr": 2,
+                "ab": 3
+              },
+              {
+                "opponentName": "黒川 史陽",
+                "opponentNpbId": "01905151",
+                "opponentPublicId": "01905151",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "小郷 裕哉",
+                "opponentNpbId": "81385138",
+                "opponentPublicId": "81385138",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "浅村 栄斗",
+                "opponentNpbId": "51155118",
+                "opponentPublicId": "51155118",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "中島 大輔",
+                "opponentNpbId": "21425159",
+                "opponentPublicId": "21425159",
+                "ops": "2.000",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "渡邊 佳明",
+                "opponentNpbId": "73175138",
+                "opponentPublicId": "73175138",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              }
+            ],
+            "seasonEra": "4.04",
+            "seasonWins": 1,
+            "seasonLosses": 5,
+            "seasonKbbPct": "5.8"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039306",
+          "homeTeamCode": "E",
+          "awayTeamCode": "M",
+          "homeProbable": {
+            "teamCode": "E",
+            "pitcherNameJa": "前田健太",
+            "pitcherNpbId": "51655114",
+            "pitcherPublicId": "51655114",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "Ｇ．ポランコ",
+                "opponentNpbId": "63065155",
+                "opponentPublicId": "63065155",
+                "ops": "2.500",
+                "avg": ".500",
+                "hr": 1,
+                "ab": 2
+              },
+              {
+                "opponentName": "井上 広大",
+                "opponentNpbId": "31335151",
+                "opponentPublicId": "31335151",
+                "ops": "2.500",
+                "avg": ".500",
+                "hr": 1,
+                "ab": 2
+              },
+              {
+                "opponentName": "友杉 篤輝",
+                "opponentNpbId": "71275157",
+                "opponentPublicId": "71275157",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "西川 史礁",
+                "opponentNpbId": "21625150",
+                "opponentPublicId": "21625150",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "藤原 恭大",
+                "opponentNpbId": "31635138",
+                "opponentPublicId": "31635138",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "山本 大斗",
+                "opponentNpbId": "33535153",
+                "opponentPublicId": "33535153",
+                "ops": ".000",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              }
+            ],
+            "seasonEra": "2.73",
+            "seasonWins": 3,
+            "seasonLosses": 3,
+            "seasonKbbPct": "12.7"
+          },
+          "awayProbable": {
+            "teamCode": "M",
+            "pitcherNameJa": "田中晴也",
+            "pitcherNpbId": "01005157",
+            "pitcherPublicId": "01005157",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "浅村 栄斗",
+                "opponentNpbId": "51155118",
+                "opponentPublicId": "51155118",
+                "ops": "2.667",
+                "avg": ".667",
+                "hr": 1,
+                "ab": 3
+              },
+              {
+                "opponentName": "村林 一輝",
+                "opponentNpbId": "41845132",
+                "opponentPublicId": "41845132",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "中島 大輔",
+                "opponentNpbId": "21425159",
+                "opponentPublicId": "21425159",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "伊藤 光",
+                "opponentNpbId": "81185116",
+                "opponentPublicId": "81185116",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "辰己 涼介",
+                "opponentNpbId": "11015138",
+                "opponentPublicId": "11015138",
+                "ops": "1.000",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "小深田 大翔",
+                "opponentNpbId": "61965151",
+                "opponentPublicId": "61965151",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "4.41",
+            "seasonWins": 2,
+            "seasonLosses": 6,
+            "seasonKbbPct": "11.0"
+          }
+        }
+      ]
+    },
+    {
+      "cardKey": "F-Hs",
+      "teamCodes": [
+        "F",
+        "Hs"
+      ],
+      "teamNames": [
+        "日本ハム",
+        "ソフトバンク"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039299",
+          "homeTeamCode": "F",
+          "awayTeamCode": "Hs",
+          "homeProbable": {
+            "teamCode": "F",
+            "pitcherNameJa": "細野晴希",
+            "pitcherNpbId": "61865159",
+            "pitcherPublicId": "61865159",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "牧原 大成",
+                "opponentNpbId": "61465133",
+                "opponentPublicId": "61465133",
+                "ops": "2.333",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "柳田 悠岐",
+                "opponentNpbId": "31835133",
+                "opponentPublicId": "31835133",
+                "ops": "1.200",
+                "avg": ".600",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "近藤 健介",
+                "opponentNpbId": "41745135",
+                "opponentPublicId": "41745135",
+                "ops": ".650",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "山本 祐大",
+                "opponentNpbId": "23125136",
+                "opponentPublicId": "23125136",
+                "ops": ".650",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "周東 佑京",
+                "opponentNpbId": "21925136",
+                "opponentPublicId": "21925136",
+                "ops": ".650",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              },
+              {
+                "opponentName": "今宮 健太",
+                "opponentNpbId": "31335131",
+                "opponentPublicId": "31335131",
+                "ops": ".500",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              }
+            ],
+            "seasonEra": "2.76",
+            "seasonWins": 4,
+            "seasonLosses": 5,
+            "seasonKbbPct": "20.9"
+          },
+          "awayProbable": {
+            "teamCode": "Hs",
+            "pitcherNameJa": "上沢直之",
+            "pitcherNpbId": "51355135",
+            "pitcherPublicId": "51355135",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "万波 中正",
+                "opponentNpbId": "11815138",
+                "opponentPublicId": "11815138",
+                "ops": "1.417",
+                "avg": ".500",
+                "hr": 1,
+                "ab": 12
+              },
+              {
+                "opponentName": "水谷 瞬",
+                "opponentNpbId": "31835138",
+                "opponentPublicId": "31835138",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "水野 達稀",
+                "opponentNpbId": "63165155",
+                "opponentPublicId": "63165155",
+                "ops": ".855",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 10
+              },
+              {
+                "opponentName": "清宮 幸太郎",
+                "opponentNpbId": "41545136",
+                "opponentPublicId": "41545136",
+                "ops": ".846",
+                "avg": ".308",
+                "hr": 1,
+                "ab": 13
+              },
+              {
+                "opponentName": "矢澤 宏太",
+                "opponentNpbId": "73375157",
+                "opponentPublicId": "73375157",
+                "ops": ".833",
+                "avg": ".167",
+                "hr": 1,
+                "ab": 6
+              },
+              {
+                "opponentName": "奈良間 大己",
+                "opponentNpbId": "31435157",
+                "opponentPublicId": "31435157",
+                "ops": ".800",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              }
+            ],
+            "seasonEra": "2.43",
+            "seasonWins": 8,
+            "seasonLosses": 5,
+            "seasonKbbPct": "17.7"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039305",
+          "homeTeamCode": "F",
+          "awayTeamCode": "Hs",
+          "homeProbable": {
+            "teamCode": "F",
+            "pitcherNameJa": "山﨑福也",
+            "pitcherNpbId": "21825130",
+            "pitcherPublicId": "21825130",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "近藤 健介",
+                "opponentNpbId": "41745135",
+                "opponentPublicId": "41745135",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "牧原 大成",
+                "opponentNpbId": "61465133",
+                "opponentPublicId": "61465133",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "栗原 陵矢",
+                "opponentNpbId": "01705130",
+                "opponentPublicId": "01705130",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "山川 穂高",
+                "opponentNpbId": "21425139",
+                "opponentPublicId": "21425139",
+                "ops": "1.167",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "川瀬 晃",
+                "opponentNpbId": "11715132",
+                "opponentPublicId": "11715132",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "柳田 悠岐",
+                "opponentNpbId": "31835133",
+                "opponentPublicId": "31835133",
+                "ops": "1.000",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "2.76",
+            "seasonWins": 6,
+            "seasonLosses": 0,
+            "seasonKbbPct": "2.7"
+          },
+          "awayProbable": {
+            "teamCode": "Hs",
+            "pitcherNameJa": "前田悠伍",
+            "pitcherNpbId": "13115159",
+            "pitcherPublicId": "13115159",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "進藤 勇也",
+                "opponentNpbId": "11015159",
+                "opponentPublicId": "11015159",
+                "ops": "2.000",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 1
+              },
+              {
+                "opponentName": "野村 佑希",
+                "opponentNpbId": "31435138",
+                "opponentPublicId": "31435138",
+                "ops": "1.600",
+                "avg": ".400",
+                "hr": 1,
+                "ab": 5
+              },
+              {
+                "opponentName": "吉田 賢吾",
+                "opponentNpbId": "13515157",
+                "opponentPublicId": "13515157",
+                "ops": "1.000",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "郡司 裕也",
+                "opponentNpbId": "21925151",
+                "opponentPublicId": "21925151",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "水野 達稀",
+                "opponentNpbId": "63165155",
+                "opponentPublicId": "63165155",
+                "ops": ".800",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "Ｆ．レイエス",
+                "opponentNpbId": "73075159",
+                "opponentPublicId": "73075159",
+                "ops": ".650",
+                "avg": ".250",
+                "hr": 0,
+                "ab": 4
+              }
+            ],
+            "seasonEra": "1.75",
+            "seasonWins": 10,
+            "seasonLosses": 0,
+            "seasonKbbPct": "12.7"
+          }
+        }
+      ]
+    },
+    {
+      "cardKey": "H-S",
+      "teamCodes": [
+        "H",
+        "S"
+      ],
+      "teamNames": [
+        "阪神",
+        "ヤクルト"
+      ],
+      "seriesStart": "2026-08-18",
+      "seriesEnd": "2026-08-20",
+      "games": [
+        {
+          "dateJst": "2026-08-19",
+          "gameId": "2021039297",
+          "homeTeamCode": "H",
+          "awayTeamCode": "S",
+          "homeProbable": {
+            "teamCode": "H",
+            "pitcherNameJa": "伊藤将司",
+            "pitcherNpbId": "71375153",
+            "pitcherPublicId": "71375153",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "高橋 奎二",
+                "opponentNpbId": "51055132",
+                "opponentPublicId": "51055132",
+                "ops": "1.500",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "内山 壮真",
+                "opponentNpbId": "91595153",
+                "opponentPublicId": "91595153",
+                "ops": "1.000",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "鈴木 叶",
+                "opponentNpbId": "01005159",
+                "opponentPublicId": "01005159",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "長岡 秀樹",
+                "opponentNpbId": "51455151",
+                "opponentPublicId": "51455151",
+                "ops": ".833",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "Ｄ．サンタナ",
+                "opponentNpbId": "53755153",
+                "opponentPublicId": "53755153",
+                "ops": ".733",
+                "avg": ".200",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "赤羽 由紘",
+                "opponentNpbId": "51155153",
+                "opponentPublicId": "51155153",
+                "ops": ".600",
+                "avg": ".000",
+                "hr": 0,
+                "ab": 2
+              }
+            ],
+            "seasonEra": "3.03",
+            "seasonWins": 1,
+            "seasonLosses": 1,
+            "seasonKbbPct": "12.4"
+          },
+          "awayProbable": {
+            "teamCode": "S",
+            "pitcherNameJa": "山野太一",
+            "pitcherNpbId": "63365153",
+            "pitcherPublicId": "63365153",
+            "source": "yahoo-schedule",
+            "topOpponentBatters": [
+              {
+                "opponentName": "梅野 隆太郎",
+                "opponentNpbId": "21325139",
+                "opponentPublicId": "21325139",
+                "ops": "1.500",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "大山 悠輔",
+                "opponentNpbId": "21325134",
+                "opponentPublicId": "21325134",
+                "ops": "1.056",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "岡城 快生",
+                "opponentNpbId": "91595152",
+                "opponentPublicId": "91595152",
+                "ops": "1.000",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "濱田 太貴",
+                "opponentNpbId": "91495138",
+                "opponentPublicId": "91495138",
+                "ops": "1.000",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "中野 拓夢",
+                "opponentNpbId": "41445153",
+                "opponentPublicId": "41445153",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "福島 圭音",
+                "opponentNpbId": "11815159",
+                "opponentPublicId": "11815159",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 3
+              }
+            ],
+            "seasonEra": "2.42",
+            "seasonWins": 10,
+            "seasonLosses": 5,
+            "seasonKbbPct": "15.4"
+          }
+        },
+        {
+          "dateJst": "2026-08-20",
+          "gameId": "2021039303",
+          "homeTeamCode": "H",
+          "awayTeamCode": "S",
+          "homeProbable": {
+            "teamCode": "H",
+            "pitcherNameJa": "下村海翔",
+            "pitcherNpbId": "61965159",
+            "pitcherPublicId": "61965159",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "内山 壮真",
+                "opponentNpbId": "91595153",
+                "opponentPublicId": "91595153",
+                "ops": "2.500",
+                "avg": "1.000",
+                "hr": 0,
+                "ab": 2
+              },
+              {
+                "opponentName": "松下 歩叶",
+                "opponentNpbId": "61865152",
+                "opponentPublicId": "61865152",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "長岡 秀樹",
+                "opponentNpbId": "51455151",
+                "opponentPublicId": "51455151",
+                "ops": "1.267",
+                "avg": ".600",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "赤羽 由紘",
+                "opponentNpbId": "51155153",
+                "opponentPublicId": "51155153",
+                "ops": ".833",
+                "avg": ".167",
+                "hr": 1,
+                "ab": 6
+              },
+              {
+                "opponentName": "岩田 幸宏",
+                "opponentNpbId": "51355155",
+                "opponentPublicId": "51355155",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "増田 珠",
+                "opponentNpbId": "11815136",
+                "opponentPublicId": "11815136",
+                "ops": ".667",
+                "avg": ".333",
+                "hr": 0,
+                "ab": 6
+              }
+            ],
+            "seasonEra": "2.33",
+            "seasonWins": 1,
+            "seasonLosses": 1,
+            "seasonKbbPct": "20.2"
+          },
+          "awayProbable": {
+            "teamCode": "S",
+            "pitcherNameJa": "高橋奎二",
+            "pitcherNpbId": "51055132",
+            "pitcherPublicId": "51055132",
+            "source": "sportingnews",
+            "topOpponentBatters": [
+              {
+                "opponentName": "坂本 誠志郎",
+                "opponentNpbId": "11915132",
+                "opponentPublicId": "11915132",
+                "ops": "1.800",
+                "avg": ".600",
+                "hr": 1,
+                "ab": 5
+              },
+              {
+                "opponentName": "森下 翔太",
+                "opponentNpbId": "43145157",
+                "opponentPublicId": "43145157",
+                "ops": "1.700",
+                "avg": ".400",
+                "hr": 1,
+                "ab": 5
+              },
+              {
+                "opponentName": "近本 光司",
+                "opponentNpbId": "71075138",
+                "opponentPublicId": "71075138",
+                "ops": "1.333",
+                "avg": ".667",
+                "hr": 0,
+                "ab": 3
+              },
+              {
+                "opponentName": "大山 悠輔",
+                "opponentNpbId": "21325134",
+                "opponentPublicId": "21325134",
+                "ops": "1.333",
+                "avg": ".500",
+                "hr": 0,
+                "ab": 6
+              },
+              {
+                "opponentName": "佐藤 輝明",
+                "opponentNpbId": "41045153",
+                "opponentPublicId": "41045153",
+                "ops": ".900",
+                "avg": ".400",
+                "hr": 0,
+                "ab": 5
+              },
+              {
+                "opponentName": "中野 拓夢",
+                "opponentNpbId": "41445153",
+                "opponentPublicId": "41445153",
+                "ops": ".333",
+                "avg": ".167",
+                "hr": 0,
+                "ab": 6
+              }
+            ],
+            "seasonEra": "4.92",
+            "seasonWins": 2,
+            "seasonLosses": 6,
+            "seasonKbbPct": "13.2"
+          }
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "予想投手名が揃わない試合を非表示: 6件"
+  ]
 }
