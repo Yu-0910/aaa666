@@ -1282,6 +1282,12 @@ export function PlayerPageClient({
     showSeasonCareerTabs &&
     statsTab === "career" &&
     showCareerPitchingRankingTable
+  /** 通算タブは大野雄大ページのプロフィール→サブタブ→見出しの間隔に揃える */
+  const careerSubTabTightLayout =
+    showSeasonCareerTabs &&
+    statsTab === "career" &&
+    ((showPitcherSeasonSuganoUi && showCareerPitchingRankingTable) ||
+      (!showPitcherSeasonSuganoUi && showFielderSeasonPilotUi && showCareerBattingSection))
 
   const pitcherProfileScaleStyle =
     showPitcherSeasonSuganoUi || showFielderSeasonPilotUi
@@ -1891,7 +1897,7 @@ export function PlayerPageClient({
         {/* Profile Table */}
         <div
           className={
-            pitcherCareerPitchingTightLayout
+            careerSubTabTightLayout
               ? undefined
               : showPitcherSeasonSuganoUi
                 ? statsTab === "season" ||
@@ -1911,8 +1917,8 @@ export function PlayerPageClient({
                     : "mb-12"
           }
           style={
-            pitcherCareerPitchingTightLayout
-              ? undefined
+            careerSubTabTightLayout
+              ? careerProfileScaleShellStyle()
               : showSeasonSubTabPinLayout
                 ? undefined
                 : pitcherProfileScaleStyle
@@ -1993,7 +1999,7 @@ export function PlayerPageClient({
                 statsTab === "career" &&
                 showPitcherSeasonSuganoUi &&
                 showCareerPitchingRankingTable &&
-                !pitcherCareerPitchingTightLayout &&
+                !careerSubTabTightLayout &&
                 renderPitcherCareerSubTabBar(true)}
               {showSeasonCareerTabs &&
                 statsTab === "season" &&
@@ -2024,6 +2030,7 @@ export function PlayerPageClient({
             !showPitcherSeasonSuganoUi &&
             showFielderSeasonPilotUi &&
             showCareerBattingSection &&
+            !careerSubTabTightLayout &&
             renderFielderCareerSubTabBar(true)}
           {showCareerOnlyShell &&
             !showPitcherSeasonSuganoUi &&
@@ -2052,6 +2059,11 @@ export function PlayerPageClient({
         {pitcherCareerPitchingTightLayout && (
           <div style={careerSubTabScaleShellStyle()}>
             {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
+          </div>
+        )}
+        {careerSubTabTightLayout && !showPitcherSeasonSuganoUi && (
+          <div style={careerSubTabScaleShellStyle()}>
+            {renderFielderCareerSubTabBar(true, fielderCareerInlineSubTabBarShellClass)}
           </div>
         )}
 
