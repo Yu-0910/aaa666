@@ -402,6 +402,30 @@ function gameIdsForDate(dateJst) {
   return games.map((g) => String(g?.gameId ?? "").trim()).filter(Boolean)
 }
 
+function seasonIndexGameIdsForDate(year, dateJst) {
+  const indexPath = path.join(root, "_data", "sportsnavi_schedule_index", `season_${year}.json`)
+  const index = readJsonOrNull(indexPath)
+  const ids = index?.byDate?.[dateJst]
+  return Array.isArray(ids) ? ids.map(String).map((id) => id.trim()).filter(Boolean) : []
+}
+
+function gameIdsForDateWithFallback(year, dateJst) {
+  const snapshotIds = gameIdsForDate(dateJst)
+  if (snapshotIds.length > 0) return snapshotIds
+  const indexIds = seasonIndexGameIdsForDate(year, dateJst)
+  if (indexIds.length > 0) {
+    appendPipelineBulkLog(
+      root,
+      "daily:npb-pipeline:v2",
+      `schedule snapshot missing/empty; season index fallback date=${dateJst} gameIds=${indexIds.join(",")}`,
+    )
+    console.warn(
+      `[daily:npb-pipeline:v2] WARN: ${dateJst} の日別schedule snapshotが空/欠落のため、season indexから対象試合を補完します: ${indexIds.join(",")}`,
+    )
+  }
+  return indexIds
+}
+
 function scheduleStatusMapForDate(dateJst) {
   const snapPath = path.join(root, "_data", "sportsnavi_schedule_snapshots", "by_date", `${dateJst}.json`)
   const snap = readJsonOrNull(snapPath)
@@ -542,11 +566,12 @@ function affectedYahooBatterIdsForDateRange(from, to) {
   return collectYahooBatterIdsForGames([...gameIds])
 }
 
-function targetGameIdsForArgs({ from, to, gameIds }) {
+function targetGameIdsForArgs({ year, from, to, gameIds }) {
   if (Array.isArray(gameIds) && gameIds.length > 0) return [...new Set(gameIds)].sort()
+  const targetYear = String(year || from || to || todayJstYmd()).slice(0, 4)
   const ids = new Set()
   for (const dateJst of eachDateYmd(from, to)) {
-    for (const gameId of gameIdsForDate(dateJst)) ids.add(gameId)
+    for (const gameId of gameIdsForDateWithFallback(targetYear, dateJst)) ids.add(gameId)
   }
   return [...ids].sort()
 }
@@ -561,6 +586,46 @@ function canonicalDomainPitchEventCountForGame(gameId) {
   const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
   const canonical = readJsonOrNull(canonicalPath)
   return Array.isArray(canonical?.domain?.pitchEvents) ? canonical.domain.pitchEvents.length : 0
+}
+
+function rawSportsnaviFileExists(kind, gameId) {
+  const dir = kind === "stats" ? "raw_sportsnavi_stats" : "raw_sportsnavi_text"
+  return fs.existsSync(path.join(root, "_data", "scraped_games", dir, `${gameId}.html`))
+}
+
+function canonicalCoverageGapsForPrefetch(gameIds) {
+  return nonCancelledGameIds(gameIds).filter((gameId) => {
+    const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+    if (fs.existsSync(canonicalPath)) return false
+    // Stats/text can be fetched independently of the top page. This is the
+    // exact state in which Phase2b previously succeeded without producing a canonical file.
+    return rawSportsnaviFileExists("stats", gameId) || rawSportsnaviFileExists("text", gameId)
+  })
+}
+
+function ensureCanonicalCoverageAfterPrefetch({ year, gameIds, dryRun }) {
+  if (dryRun) return
+  const gaps = canonicalCoverageGapsForPrefetch(gameIds)
+  if (gaps.length === 0) return
+
+  const ids = gaps.join(",")
+  console.warn(
+    `[daily:npb-pipeline:v2] canonical未生成を検知したため対象試合を強制再生成します: ${ids}`,
+  )
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `canonical coverage gap detected; force rebuild gameIds=${ids}`)
+  run(
+    `Phase2b canonical 強制再生成（coverage gap・${gaps.length}試合）`,
+    `node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year ${year} --game-ids ${ids} --force`,
+    { dryRun },
+  )
+
+  const remaining = canonicalCoverageGapsForPrefetch(gaps)
+  if (remaining.length > 0) {
+    throw new Error(
+      `canonical coverage gate failed: stats/text raw exists but canonical is missing for ${remaining.join(",")}. ` +
+        "Phase1 top-page raw acquisition must be repaired before publishing.",
+    )
+  }
 }
 
 function collectPhase4ConsistencyFailures(args) {
@@ -2859,7 +2924,7 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
     `npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year ${year} --from ${from} --to ${to} --merge`,
     { dryRun },
   )
-  const gameIds = dryRun ? [] : targetGameIdsForArgs({ from, to, gameIds: [] })
+  const gameIds = dryRun ? [] : targetGameIdsForArgs({ year, from, to, gameIds: [] })
   const phase1GameIdsArg = gameIds.length > 0 ? ` --game-ids ${gameIds.join(",")}` : ""
   run(
     "Phase1 試合ページ raw（トップ）",
@@ -2868,6 +2933,7 @@ function runPrefetchStage({ year, from, to, noStatsText, noScoreRaw, forceCanoni
   )
   runPhase2FetchBlock({ year, from, to, noStatsText, noScoreRaw, dryRun })
   runPhase2bCanonical({ year, from, to, forceCanonical, dryRun })
+  ensureCanonicalCoverageAfterPrefetch({ year, gameIds, dryRun })
 }
 
 function readPhase4FailedGameIds(year, notBeforeMs, expectedTargetGameIds = []) {
