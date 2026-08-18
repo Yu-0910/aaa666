@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
 import { LeadersPanel, type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
-import type { LeadersConfig } from "@/app/components/top/topPageConstants"
+import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
 import { fetchTopWeeklyLeadersForPage } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import {
@@ -18,6 +18,7 @@ type TopPagePitchingLeadersClientProps = {
   layout?: TopPageLayoutMode
   weekKey?: string
   weekLabel?: string
+  initialData?: LeadersConfig
 }
 
 const leagueColors: Record<string, string> = {

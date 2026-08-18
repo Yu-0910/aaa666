@@ -17,7 +17,11 @@ import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
 import { TopPageInstallButton } from "@/app/components/top/TopPageInstallButton"
 import SiteFooter from "@/app/components/common/SiteFooter"
-import RankingBottomNav, { type TopSeasonStatView, type TopWeeklyView } from "@/app/components/common/RankingBottomNav"
+import RankingBottomNav, {
+  type TopSeasonStatView,
+  type TopStandingsView,
+  type TopWeeklyView,
+} from "@/app/components/common/RankingBottomNav"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 export type TopPageClientProps = {
@@ -43,7 +47,8 @@ export function TopPageClient({
   const [selectedYear, setSelectedYear] = useState(initialYear)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [topSeasonView, setTopSeasonView] = useState<TopSeasonStatView>("cl-batting")
-  const [topWeeklyView, setTopWeeklyView] = useState<TopWeeklyView>("cl")
+  const [topWeeklyView, setTopWeeklyView] = useState<TopWeeklyView>("cl-batting")
+  const [standingsView, setStandingsView] = useState<TopStandingsView>("cl-season")
   const isWeeklyMainTab = activeMainTab === 1
   const isTopBattingModernPage = usesTopBattingModernLayout(selectedYear, isWeeklyMainTab)
 
@@ -135,12 +140,14 @@ export function TopPageClient({
             ))}
           </div>
         ))}
-      {activeMainTab === 4 && <TopPageStandingsTab year={selectedYear} layout={layout} />}
+      {activeMainTab === 4 && (
+        <TopPageStandingsTab year={selectedYear} layout={layout} activeView={standingsView} />
+      )}
     </>
   )
 
   return (
-    <div className={`min-h-screen bg-black text-white ${activeMainTab === 0 || activeMainTab === 1 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen bg-black text-white ${activeMainTab === 0 || activeMainTab === 1 || activeMainTab === 4 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
@@ -221,6 +228,9 @@ export function TopPageClient({
       )}
       {activeMainTab === 1 && (
         <RankingBottomNav mode="weekly" activeView={topWeeklyView} onViewChange={setTopWeeklyView} />
+      )}
+      {activeMainTab === 4 && (
+        <RankingBottomNav mode="standings" activeView={standingsView} onViewChange={setStandingsView} />
       )}
       <SiteFooter className="mt-12" />
     </div>

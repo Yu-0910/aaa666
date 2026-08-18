@@ -1,16 +1,6 @@
-export type LeaderEntry = {
-  rank: 1 | 2 | 3
-  name: string
-  team: string
-  teamName: string
-  value: string | number
-}
+import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
 
-export type LeadersConfig = {
-  top3Metrics: string[]
-  miniMetrics: string[]
-  leaders: Record<string, LeaderEntry[]>
-}
+export type { LeadersConfig }
 
 export type StandingRow = {
   pos: number

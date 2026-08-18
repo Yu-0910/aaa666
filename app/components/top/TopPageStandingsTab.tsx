@@ -7,6 +7,10 @@ import { teamPageNavEnabledForYear, teamPageNavHref } from "@/lib/teamPage/teamP
 import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import { fetchStandingsJson } from "@/lib/standings/fetchStandingsJson"
+import { fetchWeeklyStandingsJson } from "@/lib/standings/fetchStandingsJson"
+import { fetchWeeklyStandingsWithFallback } from "@/lib/standings/weeklyStandingsFallback"
+import { fetchCurrentWeekMeta } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
+import type { TopStandingsView } from "@/app/components/common/RankingBottomNav"
 import { formatStandingsCell } from "@/lib/standings/formatStandingsCell"
 import {
   teamDisplayNameFromStandingRow,
@@ -24,6 +28,7 @@ import type { StandingsLeague, TeamStandingRow, TeamStandingsJson } from "@/lib/
 type TopPageStandingsTabProps = {
   year: number
   layout: TopPageLayoutMode
+  activeView: TopStandingsView
 }
 
 type StandingsMetricJumpTarget = "batting" | "pitching"
@@ -110,6 +115,7 @@ export function TeamStandingsTable({
   league,
   layout,
   year,
+  source = "canonical",
   jumpRequest,
   compactRowScale = 1,
   teamRowScale = 1,
@@ -122,6 +128,7 @@ export function TeamStandingsTable({
   league: StandingsLeague
   layout: TopPageLayoutMode
   year: number
+  source?: TeamStandingsJson["source"]
   jumpRequest?: StandingsMetricJumpRequest | null
   /** 行の縦スケール（セ・リーグUIテスト） */
   compactRowScale?: number
@@ -142,7 +149,7 @@ export function TeamStandingsTable({
   const leftBlockWidth = RANK_WIDTH + TEAM_BAR_WIDTH + teamNameWidth
   const metricColumns = useMemo(
     () => {
-      const columns = standingsMetricColumnsForSource((rows[0]?.source ?? "canonical") as any).filter(
+      const columns = standingsMetricColumnsForSource(source as any).filter(
         (col) => col.key !== "g",
       )
       const pctIndex = columns.findIndex((col) => col.key === "pct")
@@ -156,7 +163,7 @@ export function TeamStandingsTable({
       }
       return columns
     },
-    [rows],
+    [rows, source],
   )
 
   const metricsBlockWidth = metricColumns.reduce(
@@ -460,6 +467,7 @@ export function StandingsLeagueSection({
         league={league}
         layout={layout}
         year={year}
+        source={data.source}
         jumpRequest={jumpRequest}
         compactRowScale={1.2}
         teamRowScale={0.85}
@@ -477,11 +485,16 @@ export function StandingsLeagueSection({
   )
 }
 
-export function TopPageStandingsTab({ year, layout }: TopPageStandingsTabProps) {
+export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandingsTabProps) {
   const [cl, setCl] = useState<TeamStandingsJson | null>(null)
   const [pl, setPl] = useState<TeamStandingsJson | null>(null)
+  const [weeklyCl, setWeeklyCl] = useState<TeamStandingsJson | null>(null)
+  const [weeklyPl, setWeeklyPl] = useState<TeamStandingsJson | null>(null)
+  const [weeklyLabel, setWeeklyLabel] = useState("")
   const [loading, setLoading] = useState(true)
+  const [weeklyLoading, setWeeklyLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [weeklyError, setWeeklyError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -508,6 +521,48 @@ export function TopPageStandingsTab({ year, layout }: TopPageStandingsTabProps) 
     }
   }, [year])
 
+  useEffect(() => {
+    if (!activeView.endsWith("weekly")) return
+
+    let cancelled = false
+    setWeeklyLoading(true)
+    setWeeklyError(null)
+
+    fetchCurrentWeekMeta(year)
+      .then(async (weekMeta) => {
+        const [clData, plData] = await Promise.all([
+          fetchWeeklyStandingsWithFallback(
+            year,
+            weekMeta.weekKey,
+            "CL",
+            weekMeta.availableWeekKeys,
+            fetchWeeklyStandingsJson,
+          ),
+          fetchWeeklyStandingsWithFallback(
+            year,
+            weekMeta.weekKey,
+            "PL",
+            weekMeta.availableWeekKeys,
+            fetchWeeklyStandingsJson,
+          ),
+        ])
+        if (cancelled) return
+        setWeeklyCl(clData.data)
+        setWeeklyPl(plData.data)
+        setWeeklyLabel(clData.resolvedWeekLabel)
+        setWeeklyLoading(false)
+      })
+      .catch((err: Error) => {
+        if (cancelled) return
+        setWeeklyError(err.message || "今週の順位表データの取得に失敗しました")
+        setWeeklyLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeView, year])
+
   if (loading) {
     return (
       <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="読み込み中">
@@ -516,21 +571,40 @@ export function TopPageStandingsTab({ year, layout }: TopPageStandingsTabProps) 
     )
   }
 
-  if (error || !cl || !pl) {
+  const isWeekly = activeView.endsWith("weekly")
+  const league: StandingsLeague = activeView.startsWith("cl") ? "CL" : "PL"
+  const data = isWeekly ? (league === "CL" ? weeklyCl : weeklyPl) : league === "CL" ? cl : pl
+
+  if ((!isWeekly && (error || !cl || !pl)) || (isWeekly && (weeklyError || weeklyLoading === false && !data))) {
     return (
       <div className="text-white text-center py-8 text-sm space-y-2">
-        <p>{error || "順位表データの取得に失敗しました"}</p>
+        <p>{(isWeekly ? weeklyError : error) || "順位表データの取得に失敗しました"}</p>
         <p className="text-gray-400 text-xs">
-          {year} 年度のデータが未生成の場合は、ビルド後に R2 へ反映してください。
+          {isWeekly
+            ? `今週の順位表データが未生成の場合は、${year}年度の週次集計を確認してください。`
+            : `${year} 年度のデータが未生成の場合は、ビルド後に R2 へ反映してください。`}
         </p>
       </div>
     )
   }
 
+  if (isWeekly && weeklyLoading) {
+    return (
+      <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="読み込み中">
+        <Spinner className="size-8 text-[#FFFF44]" />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8">
-      <StandingsLeagueSection league="CL" data={cl} layout={layout} year={year} />
-      <StandingsLeagueSection league="PL" data={pl} layout={layout} year={year} />
-    </div>
+    <StandingsLeagueSection
+      league={league}
+      data={data!}
+      layout={layout}
+      year={year}
+      titleSuffix={isWeekly ? "今週の順位表" : undefined}
+      subtitle={isWeekly ? `Weekly Standings (${weeklyLabel})` : undefined}
+      showTeamPageNote={!isWeekly}
+    />
   )
 }
