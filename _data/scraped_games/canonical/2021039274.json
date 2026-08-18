@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039274",
-  "builtAt": "2026-08-18T09:03:34.751Z",
+  "builtAt": "2026-08-18T09:34:26.106Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "7bbae28b5c85c4433edefe9efb926f9454a1cae87b25a86de3bfe3d8a48184aa",
-  "normalizedFetchedAt": "2026-08-18T07:43:28.573Z",
+  "sourceCompositeFingerprint": "00a3276dd3caf122c04c68ac620e312cb01f4407da922a9b64236789518e7469",
+  "normalizedFetchedAt": "2026-08-18T09:34:26.106Z",
   "game": {
     "meta": {
       "documentTitle": "2026年8月14日 広島東洋カープvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -6777,13 +6777,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039274-score-1",
+        "eventId": "2021039274-runner-1",
         "inningHalf": "8回裏",
         "kind": "SB",
         "yahooRunnerId": "2107887",
-        "runnerNameJa": "辰見",
-        "sourceLine": "[0820300] 盗塁成功（辰見）、ランナー2塁 69 辰見 1 1 見逃し 次の打者 森下 暢仁 打者 石原 貴規 #32 右打 打率 .200 (85-17) 空三振 、 右飛 、 遊ゴロ 投手 セベリーノ #97 左投 投球数 打者数 防御率 8 2 4.26",
-        "sourceTier": "score"
+        "sourceLine": "3： 8番 石原 貴規 一死一塁 一塁けん制:ランナー 辰見 帰塁 一塁走者 辰見 :盗塁成功 二塁 ショートゴロ 2アウト三塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

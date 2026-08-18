@@ -65,6 +65,12 @@ if ($From) { $backfillArgs += @("--from",$From) }
 if ($To)   { $backfillArgs += @("--to",$To) }
 RunNpm -label "backfill:canonical:plate-appearances-from-text" -npmArgs $backfillArgs
 
+# 2.5) 日程にある完了試合とcanonicalを突合し、欠落試合を取得からやり直す
+$scheduleRepairArgs = @("run","repair:canonical-from-schedule","--","--year",$Year)
+if ($From) { $scheduleRepairArgs += @("--from",$From) }
+if ($To)   { $scheduleRepairArgs += @("--to",$To) }
+RunNpm -label "repair:canonical-from-schedule" -npmArgs $scheduleRepairArgs
+
 # 3) 検証（警告の有無はログ/JSONに残る。ここでは運用を止めない）
 $validateBattingArgs = @("run","validate:canonical-batting-completeness","--","--year",$Year)
 if ($From) { $validateBattingArgs += @("--from",$From) }

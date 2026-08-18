@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039261",
-  "builtAt": "2026-08-18T09:03:59.124Z",
+  "builtAt": "2026-08-18T09:34:26.106Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "fedcbadb66cd674db5832d1f06335264b91d9c8f5dadec5dd24a4bf76e77afb5",
-  "normalizedFetchedAt": "2026-08-18T07:43:28.573Z",
+  "sourceCompositeFingerprint": "dddc421ce6acc72257bc9ba9c26e91c6e1f2ffe297dc0b936c95a7f284784cca",
+  "normalizedFetchedAt": "2026-08-18T09:34:26.106Z",
   "game": {
     "meta": {
       "documentTitle": "2026年8月12日 東京ヤクルトスワローズvs.広島東洋カープ 試合出場成績 - プロ野球 - スポーツナビ",
@@ -7881,13 +7881,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039261-score-1",
+        "eventId": "2021039261-runner-1",
         "inningHalf": "1回裏",
         "kind": "SB",
         "yahooRunnerId": "2109495",
-        "runnerNameJa": "鈴木叶",
-        "sourceLine": "[0120600] 盗塁成功（鈴木叶）、ランナー2塁 65 鈴木叶 1 2 3 4 1 ボール 2 ボール 3 ファウル 4 見逃し 次の打者 内山 壮真 打者 西村 瑠伊斗 #36 左打 打率 .333 (6-2) 投手 栗林 良吏 #20 右投 投球数 打者数 防御率 25 5 1.61",
-        "sourceTier": "score"
+        "sourceLine": "6： 6番 西村 瑠伊斗 二死一塁 一塁けん制:ランナー 鈴木叶 帰塁 一塁走者 鈴木叶 :盗塁成功 二塁 当てるだけのバッティングでセカンドゴロ 3アウト",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

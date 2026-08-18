@@ -1,10 +1,10 @@
 {
   "schemaVersion": "yahoo-game-canonical-v1",
   "gameId": "2021039286",
-  "builtAt": "2026-08-18T09:03:51.940Z",
+  "builtAt": "2026-08-18T09:34:26.106Z",
   "sourceSchema": "sportsnavi-stats-text-v1",
-  "sourceCompositeFingerprint": "58570a3fa778039a08dbc468e2208fe9ddeeb8798061c3f591d4c06705068a8b",
-  "normalizedFetchedAt": "2026-08-18T07:43:28.573Z",
+  "sourceCompositeFingerprint": "29a43bfb4252cc3c89c43059206304ea518df3dab9fbe818fc7ff67fed9aee05",
+  "normalizedFetchedAt": "2026-08-18T09:34:26.106Z",
   "game": {
     "meta": {
       "documentTitle": "2026年8月16日 広島東洋カープvs.阪神タイガース 試合出場成績 - プロ野球 - スポーツナビ",
@@ -8026,13 +8026,12 @@
     ],
     "runnerEvents": [
       {
-        "eventId": "2021039286-score-1",
+        "eventId": "2021039286-runner-1",
         "inningHalf": "8回表",
         "kind": "SB",
         "yahooRunnerId": "2000057",
-        "runnerNameJa": "髙寺",
-        "sourceLine": "[0810400] 盗塁成功（髙寺）、ランナー2,3塁 67 髙寺 8 佐藤 投手 塹江 敦哉 #36 左投 投球数 打者数 防御率 9 3 2.70",
-        "sourceTier": "score"
+        "sourceLine": "4： 7番 坂本 誠志郎 一死一三塁 一塁走者 髙寺 :すかさず初球から走って盗塁成功 二三塁 ランナー二三塁の2-2からレフトへ2点タイムリーツーベース！ 広 1-6 神 二塁",
+        "sourceTier": "rawTextSteal"
       }
     ],
     "battingLines": [

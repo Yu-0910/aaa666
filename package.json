@@ -291,6 +291,7 @@
     "verify:cs-runner-events-appearance-slots": "tsx scripts/verify_cs_runner_events_appearance_slots.ts",
     "verify:merge-phase10-2021038735-inning5-omote": "tsx scripts/verify_merge_phase10_2021038735_inning5_omote.ts",
     "bulk:update:selfheal": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/invoke_bulk_update_selfheal.ps1",
+    "repair:canonical-from-schedule": "node scripts/repair_missing_canonical_from_schedule.mjs",
     "unknown-players:after-publish": "tsx scripts/resolve_unknown_players_after_publish.ts --year 2026"
   },
   "dependencies": {
