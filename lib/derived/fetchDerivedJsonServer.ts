@@ -1,7 +1,7 @@
 /**
  * 個人ページ用派生 JSON（_data/derived/*）のサーバー読み取り。
- * 本番: RANKINGS_BASE_URL → R2 直
- * ローカル: R2 失敗時は _data/derived を fs で読む
+ * まずローカル `_data/derived` を優先し、無いときだけ R2 を見る。
+ * 個人ページは R2 の遅延反映より repo 内の派生JSONを正としたい。
  */
 
 import fs from 'node:fs'
@@ -47,14 +47,14 @@ async function fetchDerivedJsonFromR2<T>(category: string, ...parts: string[]): 
   }
 }
 
-/** R2 → ローカル fs。API Route 用。 */
+/** ローカル fs → R2。API Route 用。 */
 export async function fetchDerivedJsonServer<T>(
   category: string,
   ...parts: string[]
 ): Promise<T | null> {
-  const fromR2 = await fetchDerivedJsonFromR2<T>(category, ...parts)
-  if (fromR2 != null) return fromR2
-  return readDerivedJsonLocalSync<T>(category, ...parts)
+  const fromLocal = readDerivedJsonLocalSync<T>(category, ...parts)
+  if (fromLocal != null) return fromLocal
+  return fetchDerivedJsonFromR2<T>(category, ...parts)
 }
 
 /** 派生ファイルの存在確認（R2 → ローカル） */
