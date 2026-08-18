@@ -40,6 +40,7 @@ export type WeeklyTabWeekMeta = {
   calendarWeekKey: string
   calendarWeekLabel: string
   isFallbackWeek: boolean
+  availableWeekKeys: string[]
 }
 
 export async function fetchCurrentWeekMeta(
@@ -56,6 +57,7 @@ export async function fetchCurrentWeekMeta(
     calendarWeekKey,
     calendarWeekLabel: raw.calendarWeekLabel ?? weekLabelForKey(calendarWeekKey),
     isFallbackWeek: raw.isFallbackWeek ?? false,
+    availableWeekKeys: Array.isArray(raw.availableWeekKeys) ? raw.availableWeekKeys : [raw.weekKey],
   }
 }
 

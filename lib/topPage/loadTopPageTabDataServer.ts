@@ -192,6 +192,10 @@ export async function loadWeeklyTabPayloadServer(
       calendarWeekLabel:
         metaRaw.calendarWeekLabel ?? weekLabelForKey(calendarWeekKey),
       isFallbackWeek: metaRaw.isFallbackWeek ?? false,
+      availableWeekKeys:
+        Array.isArray(metaRaw.availableWeekKeys) && metaRaw.availableWeekKeys.length > 0
+          ? metaRaw.availableWeekKeys
+          : [metaRaw.weekKey],
     }
 
     const weekKey = weekMeta.weekKey

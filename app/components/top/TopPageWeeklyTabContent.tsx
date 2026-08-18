@@ -11,6 +11,7 @@ import {
   fetchTopWeeklyLeadersForPage,
 } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import { fetchWeeklyStandingsJson } from "@/lib/standings/fetchStandingsJson"
+import { fetchWeeklyStandingsWithFallback } from "@/lib/standings/weeklyStandingsFallback"
 import { TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/weeklyLeadersSnapshotShared"
 import type { WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 import type { TopWeeklyView } from "@/app/components/common/RankingBottomNav"
@@ -34,6 +35,24 @@ export function TopPageWeeklyTabContent({
   const [standings, setStandings] = useState<WeeklyTabPayload["standings"] | null>(
     initialPayload?.standings ?? null,
   )
+  const [standingsWeekMeta, setStandingsWeekMeta] = useState<{
+    CL?: { resolvedWeekKey: string; resolvedWeekLabel: string; fellBack: boolean }
+    PL?: { resolvedWeekKey: string; resolvedWeekLabel: string; fellBack: boolean }
+  } | null>(() => {
+    if (!initialPayload?.standings) return null
+    return {
+      CL: {
+        resolvedWeekKey: initialPayload.weekMeta.weekKey,
+        resolvedWeekLabel: initialPayload.weekMeta.weekLabel,
+        fellBack: false,
+      },
+      PL: {
+        resolvedWeekKey: initialPayload.weekMeta.weekKey,
+        resolvedWeekLabel: initialPayload.weekMeta.weekLabel,
+        fellBack: false,
+      },
+    }
+  })
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [standingsError, setStandingsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(!initialPayload)
@@ -47,6 +66,22 @@ export function TopPageWeeklyTabContent({
     if (initialPayload) {
       setPayload(initialPayload)
       setStandings(initialPayload.standings ?? null)
+      setStandingsWeekMeta(
+        initialPayload.standings
+          ? {
+              CL: {
+                resolvedWeekKey: initialPayload.weekMeta.weekKey,
+                resolvedWeekLabel: initialPayload.weekMeta.weekLabel,
+                fellBack: false,
+              },
+              PL: {
+                resolvedWeekKey: initialPayload.weekMeta.weekKey,
+                resolvedWeekLabel: initialPayload.weekMeta.weekLabel,
+                fellBack: false,
+              },
+            }
+          : null
+      )
       setLoading(false)
       setError(null)
       return
@@ -73,6 +108,7 @@ export function TopPageWeeklyTabContent({
           pitching: { CL: clPitch.config, PL: plPitch.config },
         })
         setStandings(null)
+        setStandingsWeekMeta(null)
         setLoading(false)
       })
       .catch((err: Error) => {
@@ -96,12 +132,36 @@ export function TopPageWeeklyTabContent({
     setStandingsError(null)
 
     Promise.all([
-      fetchWeeklyStandingsJson(year, payload.weekMeta.weekKey, "CL"),
-      fetchWeeklyStandingsJson(year, payload.weekMeta.weekKey, "PL"),
+      fetchWeeklyStandingsWithFallback(
+        year,
+        payload.weekMeta.weekKey,
+        "CL",
+        payload.weekMeta.availableWeekKeys,
+        fetchWeeklyStandingsJson,
+      ),
+      fetchWeeklyStandingsWithFallback(
+        year,
+        payload.weekMeta.weekKey,
+        "PL",
+        payload.weekMeta.availableWeekKeys,
+        fetchWeeklyStandingsJson,
+      ),
     ])
       .then(([clData, plData]) => {
         if (cancelled) return
-        setStandings({ CL: clData, PL: plData })
+        setStandings({ CL: clData.data, PL: plData.data })
+        setStandingsWeekMeta({
+          CL: {
+            resolvedWeekKey: clData.resolvedWeekKey,
+            resolvedWeekLabel: clData.resolvedWeekLabel,
+            fellBack: clData.fellBack,
+          },
+          PL: {
+            resolvedWeekKey: plData.resolvedWeekKey,
+            resolvedWeekLabel: plData.resolvedWeekLabel,
+            fellBack: plData.fellBack,
+          },
+        })
         setStandingsLoading(false)
       })
       .catch((err: Error) => {
@@ -168,6 +228,7 @@ export function TopPageWeeklyTabContent({
   if (activeView === "cl-standings" || activeView === "pl-standings") {
     const league: StandingsLeague = activeView === "cl-standings" ? "CL" : "PL"
     const data: TeamStandingsJson | undefined = standings?.[league]
+    const resolvedWeek = standingsWeekMeta?.[league]
     if (standingsLoading) {
       return (
         <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="読み込み中">
@@ -192,7 +253,7 @@ export function TopPageWeeklyTabContent({
         layout={layout}
         year={year}
         titleSuffix="今週の順位表"
-        subtitle={`Weekly Standings (${weekLabel})`}
+        subtitle={`Weekly Standings (${resolvedWeek?.resolvedWeekLabel ?? weekLabel})`}
         showTeamPageNote={false}
       />
     )

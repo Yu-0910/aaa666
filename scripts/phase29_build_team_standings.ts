@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import {
+  aggregateTeamStandingsFromCanonical,
   aggregateTeamStandingsBucketCountsFromCanonical,
   aggregateTeamStandingsByLeagueFromCanonical,
   deserializeTeamStandingsBucketMap,
@@ -25,13 +26,17 @@ import {
 } from "@/lib/standings/aggregateTeamStandingsFromCanonical"
 import {
   derivedTeamStandingsRelPath,
+  derivedWeeklyTeamStandingsRelPath,
   publicTeamStandingsRelPath,
+  publicWeeklyTeamStandingsRelPath,
 } from "@/lib/standings/paths"
 import {
   TEAM_STANDINGS_JSON_SCHEMA,
   type StandingsLeague,
   type TeamStandingsJson,
 } from "@/lib/standings/types"
+import { tuesdayWeekKeyFromYmd } from "@/lib/yahooGame/jstPeriodKeys"
+import { parseGameDateYmdFromCanonical } from "@/lib/yahooGame/gameDateFromCanonical"
 import type { CanonicalGameDocument } from "@/lib/yahooGame/types"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
 
@@ -324,6 +329,94 @@ function buildPayload(
   }
 }
 
+function addDaysToYmd(ymd: string, days: number): string {
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ymd
+  const date = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10) + days, 3, 0, 0))
+  const yy = date.getUTCFullYear()
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0")
+  const dd = String(date.getUTCDate()).padStart(2, "0")
+  return `${yy}-${mm}-${dd}`
+}
+
+function collectWeekKeysFromDocs(
+  docs: CanonicalGameDocument[],
+  year: string,
+): string[] {
+  const keys = new Set<string>()
+  for (const doc of docs) {
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    if (!ymd || !ymd.startsWith(`${year}-`)) continue
+    const weekKey = tuesdayWeekKeyFromYmd(ymd)
+    if (weekKey) keys.add(weekKey)
+  }
+  return [...keys].sort()
+}
+
+function collectTargetWeekKeys(
+  year: string,
+  from?: string,
+  to?: string,
+): string[] | null {
+  const keys = new Set<string>()
+  for (const ymd of [from, to]) {
+    if (!ymd || !ymd.startsWith(`${year}-`)) continue
+    const weekKey = tuesdayWeekKeyFromYmd(ymd)
+    if (weekKey) keys.add(weekKey)
+  }
+  return keys.size > 0 ? [...keys].sort() : null
+}
+
+function buildWeeklyStandingsForWeek(
+  year: string,
+  weekKey: string,
+  options?: { includeToday?: boolean },
+): void {
+  const weekEnd = addDaysToYmd(weekKey, 5)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, {
+    year,
+    from: weekKey,
+    to: weekEnd,
+  })
+
+  for (const league of ["CL", "PL"] as const) {
+    const rows = aggregateTeamStandingsFromCanonical(docs, year, league, {
+      projectRoot,
+      includeToday: options?.includeToday,
+    })
+    if (!rows.some((row) => row.g > 0)) continue
+
+    const payload = buildPayload(year, league, rows)
+    const derivedPath = join(projectRoot, derivedWeeklyTeamStandingsRelPath(year, weekKey, league))
+    const publicPath = join(projectRoot, publicWeeklyTeamStandingsRelPath(year, weekKey, league))
+    writeStandingsJson(derivedPath, payload)
+    writeStandingsJson(publicPath, payload)
+    console.log(
+      `[phase29] weekly ${weekKey} ${league}: ${rows.length} rows → ${derivedWeeklyTeamStandingsRelPath(year, weekKey, league)}`,
+    )
+  }
+}
+
+function buildWeeklyStandings(
+  year: string,
+  seasonDocs: CanonicalGameDocument[] | null,
+  from?: string,
+  to?: string,
+  options?: { includeToday?: boolean },
+): void {
+  const targetWeekKeys = collectTargetWeekKeys(year, from, to)
+  const weekKeys =
+    targetWeekKeys ??
+    collectWeekKeysFromDocs(
+      seasonDocs ?? loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }),
+      year,
+    )
+
+  for (const weekKey of weekKeys) {
+    buildWeeklyStandingsForWeek(year, weekKey, options)
+  }
+}
+
 function main(): void {
   process.chdir(projectRoot)
   const { year, from, to, includeToday, requireTargetGameCacheNonEmpty } = parseArgs()
@@ -355,6 +448,9 @@ function main(): void {
     writeStandingsJson(publicPath, payload)
     console.log(`[phase29] ${league}: ${rows.length} rows → ${derivedTeamStandingsRelPath(year, league)}`)
   }
+
+  const docsForWeekly = from || to ? null : loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  buildWeeklyStandings(year, docsForWeekly, from, to, { includeToday })
 
   console.log("[phase29] done")
 }
