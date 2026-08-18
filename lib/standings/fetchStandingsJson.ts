@@ -8,8 +8,17 @@ function parseUsableStandingsJson(raw: unknown): TeamStandingsJson | null {
 }
 
 async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamStandingsJson> {
-  const r2Url = displaySitePathToPublicUrl(sitePath)
+  const res = await fetch(sitePath, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  })
 
+  if (res.ok) {
+    const json = parseUsableStandingsJson(await res.json())
+    if (json) return json
+  }
+
+  const r2Url = displaySitePathToPublicUrl(sitePath)
   if (r2Url) {
     try {
       const r2Res = await fetch(r2Url, {
@@ -21,25 +30,11 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
         if (r2Json) return r2Json
       }
     } catch {
-      // Fall back to the same-origin /data proxy below.
+      // Prefer the same-origin /data proxy because it can fall back to local public/data.
     }
   }
 
-  const res = await fetch(sitePath, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  })
-
-  if (!res.ok) {
-    throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
-  }
-
-  const json = parseUsableStandingsJson(await res.json())
-  if (!json) {
-    throw new Error(`順位表データの形式が不正です: ${sitePath}`)
-  }
-
-  return json
+  throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
 }
 
 export async function fetchStandingsJson(
