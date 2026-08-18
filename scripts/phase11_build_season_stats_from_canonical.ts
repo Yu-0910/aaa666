@@ -27,6 +27,7 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { dedupePlateAppearancesByInningHalfOrder } from "../lib/yahooGame/dedupePlateAppearances"
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import type { CanonicalGameDocument } from "../lib/yahooGame/types"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 import { writeJsonFileWithRetrySync, writeTextFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -180,7 +181,11 @@ async function main(): Promise<void> {
     console.error("[phase11] invalid --from/--to. expected YYYY-MM-DD")
     process.exit(1)
   }
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }).filter((doc) => {
+    const ymd = extractCanonicalGameYmd(doc)
+    const title = doc.game?.meta?.documentTitle
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+  })
   if (docs.length === 0) {
     console.error("[phase11] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)

@@ -8,6 +8,7 @@ import {
   leagueBucketForTeamShort,
   rosterTeamToRankingShort,
 } from "./canonicalPitchingSeasonAgg"
+import { isRegularSeasonCanonicalGame } from "../npbRegularSeason"
 
 export type TeamGamesByLeague = {
   CL: Record<string, number>
@@ -88,6 +89,8 @@ function shouldCountGame(
   if (isCancelledCanonicalGame(doc)) return false
   const ymd = parseGameDateYmdFromCanonical(doc)
   if (!ymd || !ymd.startsWith(`${year}-`)) return false
+  const title = doc.game?.meta?.documentTitle
+  if (!isRegularSeasonCanonicalGame(year, ymd, title)) return false
   if (isFutureOrTodayGameYmd(ymd)) return false
   if (weekKey && !isYmdInWeek(ymd, weekKey)) return false
   return true

@@ -32,6 +32,12 @@ function isCancelled(game) {
   return /中止|ノーゲーム|cancel|no.?game/i.test(text)
 }
 
+function isRegularSeasonScheduleGame(year, ymd, game) {
+  if (year === "2026" && ymd < "2026-03-27") return false
+  const teams = `${game?.homeTeamShort ?? ""} ${game?.awayTeamShort ?? ""}`
+  return !/オールセリーグ|オールパリーグ|全セ|全パ/.test(teams)
+}
+
 function isCanonicalUsable(doc) {
   const domain = doc?.domain
   if (!domain || !Array.isArray(domain.battingLines) || domain.battingLines.length === 0) return false
@@ -65,7 +71,7 @@ function main() {
     for (const rawId of Array.isArray(ids) ? ids : []) {
       const gameId = String(rawId).trim()
       const scheduleGame = index.scheduleGameByGameId[gameId]
-      if (!gameId || isCancelled(scheduleGame)) continue
+      if (!gameId || isCancelled(scheduleGame) || !isRegularSeasonScheduleGame(year, ymd, scheduleGame)) continue
       const canonical = readJson(path.join(canonicalDir, `${gameId}.json`))
       if (!isCanonicalUsable(canonical)) missing.push(gameId)
     }

@@ -4,6 +4,7 @@
 
 import { teamForYahooPlayerId } from "@/lib/yahooGame/pitcherPocHelpers"
 import { parseGameDateYmdFromCanonical } from "@/lib/yahooGame/gameDateFromCanonical"
+import { isRegularSeasonCanonicalGame } from "@/lib/npbRegularSeason"
 import {
   isCancelledCanonicalGame,
   isFutureOrTodayGameYmd,
@@ -171,6 +172,7 @@ export function shouldIncludeStandingsGame(
   if (isCancelledCanonicalGame(doc)) return false
   const ymd = parseGameDateYmdFromCanonical(doc)
   if (!ymd || !ymd.startsWith(`${year}-`)) return false
+  if (!isRegularSeasonCanonicalGame(year, ymd, doc.game?.meta?.documentTitle)) return false
   if (isExcludedStandingsGame(year, league, String(doc.gameId ?? "").trim())) return false
   if (!options?.includeToday && isFutureOrTodayGameYmd(ymd)) return false
   if (!isLeagueStandingsGame(doc, league)) return false
