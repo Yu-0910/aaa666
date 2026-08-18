@@ -1,0 +1,210 @@
+{
+  "schemaVersion": "pipeline-v2-run-summary-1",
+  "runId": "2026-08-18_20260818235350_pid13060_prefetch-only",
+  "status": "completed-prefetch",
+  "startedAtJst": "2026-08-18 23:53:50 JST",
+  "args": {
+    "runId": "2026-08-18_20260818235350_pid13060_prefetch-only",
+    "year": "2026",
+    "from": "2026-08-18",
+    "to": "2026-08-18",
+    "gameIds": [],
+    "mode": "prefetch-only",
+    "dryRun": false,
+    "skipPrefetch": false,
+    "noStatsText": false,
+    "noScoreRaw": false,
+    "strictQuality": true,
+    "forceCanonical": false,
+    "yahooForce": false,
+    "phase4Sleep": "1.2",
+    "skipScoreRawGate": false,
+    "strictFullDerivedValidate": false,
+    "strictPhase13Validate": false,
+    "skipVsHandValidate": false,
+    "strictVsHandValidate": false,
+    "skipFastPublish": false,
+    "noPublish": false,
+    "autoDeployProduction": false,
+    "build": false
+  },
+  "trigger": {
+    "reason": "",
+    "detail": ""
+  },
+  "progressState": "completed_prefetch_only",
+  "progressMessage": "事前取得のみ完了。公開完了とは判定しない。",
+  "publishProgress": {
+    "fastPublish": "not_started",
+    "fastVerify": "not_started",
+    "fullDisplayPublish": "not_started",
+    "fullPublish": "not_started",
+    "fullVerify": "not_started",
+    "finalState": "not_published",
+    "finalMessage": "prefetch-only のため公開なし。"
+  },
+  "completedSteps": [
+    {
+      "atJst": "2026-08-18 23:54:04 JST",
+      "label": "Phase0 日程スナップショット（当日分のみ）",
+      "stepId": "tsx:phase0_fetch_sportsnavi_schedule",
+      "elapsed": "0:13",
+      "command": "npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year 2026 --from 2026-08-18 --to 2026-08-18 --merge",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-18 23:54:07 JST",
+      "label": "Phase1 試合ページ raw（トップ）",
+      "stepId": "node:phase1_fetch_sportsnavi_games",
+      "elapsed": "0:02",
+      "command": "node scripts/phase1_fetch_sportsnavi_games.mjs --year 2026 --game-ids 2021039290,2021039291,2021039292,2021039293,2021039294,2021039295",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-18 23:54:14 JST",
+      "label": "Phase2a 出場成績・テキスト速報 raw",
+      "stepId": "node:phase2_fetch_sportsnavi_stats_text",
+      "elapsed": "0:07",
+      "command": "node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year 2026 --from 2026-08-18 --to 2026-08-18",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-18 23:54:17 JST",
+      "label": "Phase2a-repair 不完全な stats/text のみ再取得（--only-incomplete・日付範囲内）",
+      "stepId": "node:phase2_fetch_sportsnavi_stats_text",
+      "elapsed": "0:02",
+      "command": "node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year 2026 --only-incomplete --from 2026-08-18 --to 2026-08-18",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-19 00:05:10 JST",
+      "label": "Phase2a-b 一球速報 score?index= raw（全打席・テキストと同じインデックス・to まで）",
+      "stepId": "py:fetch_sportsnavi_score_raw_snapshot",
+      "elapsed": "10:52",
+      "command": "python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year 2026 --sleep 1.2 --from-date 2026-08-18 --to-date 2026-08-18",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-19 00:05:17 JST",
+      "label": "Phase2b canonical 生成（raw 指紋不一致・thin のみ再生成。Phase10 一球ログは保持）",
+      "stepId": "node:phase2_build_canonical_from_raw_sportsnavi",
+      "elapsed": "0:04",
+      "command": "node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year 2026 --from 2026-08-18 --to 2026-08-18 --only-stale",
+      "attempts": 1
+    },
+    {
+      "atJst": "2026-08-19 00:05:18 JST",
+      "label": "検証: canonical pitchingLines 列ずれガード",
+      "stepId": "node:validate_canonical_pitching_lines_sanity",
+      "elapsed": "0:00",
+      "command": "node scripts/validate_canonical_pitching_lines_sanity.mjs --year 2026 --from 2026-08-18 --to 2026-08-18 --fail",
+      "attempts": 1
+    }
+  ],
+  "stepProgress": {
+    "current": null,
+    "totals": {
+      "started": 7,
+      "completed": 7,
+      "failed": 0,
+      "failedTry": 0,
+      "skippedDryRun": 0,
+      "skippedResume": 0
+    },
+    "byStepId": {
+      "tsx:phase0_fetch_sportsnavi_schedule": {
+        "label": "Phase0 日程スナップショット（当日分のみ）",
+        "command": "npx tsx scripts/phase0_fetch_sportsnavi_schedule.ts --year 2026 --from 2026-08-18 --to 2026-08-18 --merge",
+        "stepId": "tsx:phase0_fetch_sportsnavi_schedule",
+        "kind": "phase0_fetch",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-18 23:53:50 JST",
+        "lastStartedAtJst": "2026-08-18 23:53:50 JST",
+        "elapsed": "0:13",
+        "attempts": 1,
+        "completedAtJst": "2026-08-18 23:54:04 JST"
+      },
+      "node:phase1_fetch_sportsnavi_games": {
+        "label": "Phase1 試合ページ raw（トップ）",
+        "command": "node scripts/phase1_fetch_sportsnavi_games.mjs --year 2026 --game-ids 2021039290,2021039291,2021039292,2021039293,2021039294,2021039295",
+        "stepId": "node:phase1_fetch_sportsnavi_games",
+        "kind": "phase1_fetch",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-18 23:54:04 JST",
+        "lastStartedAtJst": "2026-08-18 23:54:04 JST",
+        "elapsed": "0:02",
+        "attempts": 1,
+        "completedAtJst": "2026-08-18 23:54:07 JST"
+      },
+      "node:phase2_fetch_sportsnavi_stats_text": {
+        "label": "Phase2a-repair 不完全な stats/text のみ再取得（--only-incomplete・日付範囲内）",
+        "command": "node scripts/phase2_fetch_sportsnavi_stats_text.mjs --year 2026 --only-incomplete --from 2026-08-18 --to 2026-08-18",
+        "stepId": "node:phase2_fetch_sportsnavi_stats_text",
+        "kind": "phase2a_fetch",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-18 23:54:15 JST",
+        "lastStartedAtJst": "2026-08-18 23:54:15 JST",
+        "elapsed": "0:02",
+        "attempts": 1,
+        "completedAtJst": "2026-08-18 23:54:17 JST"
+      },
+      "py:fetch_sportsnavi_score_raw_snapshot": {
+        "label": "Phase2a-b 一球速報 score?index= raw（全打席・テキストと同じインデックス・to まで）",
+        "command": "python -u scripts/fetch_sportsnavi_score_raw_snapshot.py --year 2026 --sleep 1.2 --from-date 2026-08-18 --to-date 2026-08-18",
+        "stepId": "py:fetch_sportsnavi_score_raw_snapshot",
+        "kind": "phase2a_fetch",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-18 23:54:17 JST",
+        "lastStartedAtJst": "2026-08-18 23:54:17 JST",
+        "elapsed": "10:52",
+        "attempts": 1,
+        "completedAtJst": "2026-08-19 00:05:10 JST"
+      },
+      "node:phase2_build_canonical_from_raw_sportsnavi": {
+        "label": "Phase2b canonical 生成（raw 指紋不一致・thin のみ再生成。Phase10 一球ログは保持）",
+        "command": "node scripts/phase2_build_canonical_from_raw_sportsnavi.mjs --year 2026 --from 2026-08-18 --to 2026-08-18 --only-stale",
+        "stepId": "node:phase2_build_canonical_from_raw_sportsnavi",
+        "kind": "phase2b_fetch",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-19 00:05:13 JST",
+        "lastStartedAtJst": "2026-08-19 00:05:13 JST",
+        "elapsed": "0:04",
+        "attempts": 1,
+        "completedAtJst": "2026-08-19 00:05:17 JST"
+      },
+      "node:validate_canonical_pitching_lines_sanity": {
+        "label": "検証: canonical pitchingLines 列ずれガード",
+        "command": "node scripts/validate_canonical_pitching_lines_sanity.mjs --year 2026 --from 2026-08-18 --to 2026-08-18 --fail",
+        "stepId": "node:validate_canonical_pitching_lines_sanity",
+        "kind": "validation",
+        "state": "completed",
+        "tryMode": false,
+        "startedAtJst": "2026-08-19 00:05:18 JST",
+        "lastStartedAtJst": "2026-08-19 00:05:18 JST",
+        "elapsed": "0:00",
+        "attempts": 1,
+        "completedAtJst": "2026-08-19 00:05:18 JST"
+      }
+    }
+  },
+  "stepFailures": [],
+  "warnings": [],
+  "repairs": [],
+  "retries": [],
+  "publishes": [],
+  "notes": [],
+  "completedAtJst": "2026-08-19 00:05:19 JST",
+  "lastStep": "検証: canonical pitchingLines 列ずれガード",
+  "completion": {
+    "status": "completed-prefetch",
+    "logLabel": "事前取得完了",
+    "consoleLabel": "事前取得完了。",
+    "runId": "2026-08-18_20260818235350_pid13060_prefetch-only"
+  },
+  "updatedAtJst": "2026-08-19 00:05:19 JST"
+}

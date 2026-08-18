@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-08-11",
+  "fetchedAt": "2026-08-18T11:27:02.178Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-08-11",
+  "gameIds": [
+    "2021039254",
+    "2021039255",
+    "2021039256",
+    "2021039257",
+    "2021039258",
+    "2021039259"
+  ],
+  "games": [
+    {
+      "gameId": "2021039254",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "H"
+    },
+    {
+      "gameId": "2021039255",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "広島",
+      "statusText": "試合中止",
+      "gameState": "cancelled",
+      "homeTeamCode": "S",
+      "awayTeamCode": "C"
+    },
+    {
+      "gameId": "2021039256",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039257",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "F",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021039258",
+      "stadiumName": "楽天モバイル",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "E",
+      "awayTeamCode": "Bs"
+    },
+    {
+      "gameId": "2021039259",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "M"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039254": "東京ドーム",
+    "2021039255": "神宮球場",
+    "2021039256": "バンテリンD",
+    "2021039257": "エスコンＦ",
+    "2021039258": "楽天モバイル",
+    "2021039259": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039254": "試合終了",
+    "2021039255": "試合中止",
+    "2021039256": "試合終了",
+    "2021039257": "試合終了",
+    "2021039258": "試合終了",
+    "2021039259": "試合終了"
+  }
+}

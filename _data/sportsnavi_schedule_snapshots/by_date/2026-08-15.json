@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-08-15",
+  "fetchedAt": "2026-08-18T11:27:02.178Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-08-15",
+  "gameIds": [
+    "2021039278",
+    "2021039279",
+    "2021039280",
+    "2021039281",
+    "2021039282",
+    "2021039283"
+  ],
+  "games": [
+    {
+      "gameId": "2021039278",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "S",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039279",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "巨人",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039280",
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "C",
+      "awayTeamCode": "H"
+    },
+    {
+      "gameId": "2021039281",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "L",
+      "awayTeamCode": "M"
+    },
+    {
+      "gameId": "2021039282",
+      "stadiumName": "京セラD大阪",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "F"
+    },
+    {
+      "gameId": "2021039283",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "E"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039278": "神宮球場",
+    "2021039279": "バンテリンD",
+    "2021039280": "マツダ",
+    "2021039281": "ベルーナD",
+    "2021039282": "京セラD大阪",
+    "2021039283": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039278": "試合終了",
+    "2021039279": "試合終了",
+    "2021039280": "試合終了",
+    "2021039281": "試合終了",
+    "2021039282": "試合終了",
+    "2021039283": "試合終了"
+  }
+}

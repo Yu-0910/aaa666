@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-08-01",
+  "fetchedAt": "2026-08-18T11:27:02.178Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-08-01",
+  "gameIds": [
+    "2021039207",
+    "2021039208",
+    "2021039209",
+    "2021039210",
+    "2021039211",
+    "2021039212"
+  ],
+  "games": [
+    {
+      "gameId": "2021039207",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "DB"
+    },
+    {
+      "gameId": "2021039208",
+      "stadiumName": "神宮球場",
+      "homeTeamShort": "ヤクルト",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "S",
+      "awayTeamCode": "H"
+    },
+    {
+      "gameId": "2021039209",
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "中日",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "C",
+      "awayTeamCode": "D"
+    },
+    {
+      "gameId": "2021039210",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "ロッテ",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "F",
+      "awayTeamCode": "M"
+    },
+    {
+      "gameId": "2021039211",
+      "stadiumName": "楽天モバイル",
+      "homeTeamShort": "楽天",
+      "awayTeamShort": "ソフトバンク",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "E",
+      "awayTeamCode": "Hs"
+    },
+    {
+      "gameId": "2021039212",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "オリックス",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "L",
+      "awayTeamCode": "Bs"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039207": "東京ドーム",
+    "2021039208": "神宮球場",
+    "2021039209": "マツダ",
+    "2021039210": "エスコンＦ",
+    "2021039211": "楽天モバイル",
+    "2021039212": "ベルーナD"
+  },
+  "scheduleStatusByGameId": {
+    "2021039207": "試合終了",
+    "2021039208": "試合終了",
+    "2021039209": "試合終了",
+    "2021039210": "試合終了",
+    "2021039211": "試合終了",
+    "2021039212": "試合終了"
+  }
+}

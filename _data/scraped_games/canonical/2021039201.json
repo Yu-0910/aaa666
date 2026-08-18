@@ -1,0 +1,7327 @@
+{
+  "schemaVersion": "yahoo-game-canonical-v1",
+  "gameId": "2021039201",
+  "builtAt": "2026-08-18T11:49:29.920Z",
+  "sourceSchema": "sportsnavi-stats-text-v1",
+  "sourceCompositeFingerprint": "d40cce91a8210d3637cdf11150cf5d44e62b17432e1002142d66dc6ad0595412",
+  "normalizedFetchedAt": "2026-08-18T11:41:02.982Z",
+  "game": {
+    "meta": {
+      "documentTitle": "2026年7月31日 読売ジャイアンツvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ",
+      "ogTitle": "2026年7月31日 読売ジャイアンツvs.横浜DeNAベイスターズ 試合出場成績 - プロ野球 - スポーツナビ"
+    },
+    "scoreboard": [],
+    "teams": [
+      {
+        "yahooTeamId": "3",
+        "teamName": "DeNA",
+        "startingLineup": [
+          {
+            "battingOrder": "1",
+            "fieldingPosition": "中",
+            "playerName": "勝又 温史",
+            "yahooPlayerId": "1800046",
+            "bats": null,
+            "avgDisplay": ".312"
+          },
+          {
+            "battingOrder": "2",
+            "fieldingPosition": "左",
+            "playerName": "度会 隆輝",
+            "yahooPlayerId": "1850873",
+            "bats": null,
+            "avgDisplay": ".274"
+          },
+          {
+            "battingOrder": "3",
+            "fieldingPosition": "一",
+            "playerName": "筒香 嘉智",
+            "yahooPlayerId": "1000002",
+            "bats": null,
+            "avgDisplay": ".239"
+          },
+          {
+            "battingOrder": "4",
+            "fieldingPosition": "右",
+            "playerName": "エンカーナシオン",
+            "yahooPlayerId": "2108195",
+            "bats": null,
+            "avgDisplay": ".310"
+          },
+          {
+            "battingOrder": "5",
+            "fieldingPosition": "三",
+            "playerName": "宮﨑 敏郎",
+            "yahooPlayerId": "1200053",
+            "bats": null,
+            "avgDisplay": ".271"
+          },
+          {
+            "battingOrder": "6",
+            "fieldingPosition": "遊",
+            "playerName": "京田 陽太",
+            "yahooPlayerId": "1600107",
+            "bats": null,
+            "avgDisplay": ".243"
+          },
+          {
+            "battingOrder": "7",
+            "fieldingPosition": "捕",
+            "playerName": "松尾 汐恩",
+            "yahooPlayerId": "2100277",
+            "bats": null,
+            "avgDisplay": ".260"
+          },
+          {
+            "battingOrder": "8",
+            "fieldingPosition": "二",
+            "playerName": "林 琢真",
+            "yahooPlayerId": "1850208",
+            "bats": null,
+            "avgDisplay": ".242"
+          },
+          {
+            "battingOrder": "9",
+            "fieldingPosition": "投",
+            "playerName": "平良 拳太郎",
+            "yahooPlayerId": "1300031",
+            "bats": null,
+            "avgDisplay": ".000"
+          }
+        ]
+      },
+      {
+        "yahooTeamId": "1",
+        "teamName": "巨人",
+        "startingLineup": [
+          {
+            "battingOrder": "1",
+            "fieldingPosition": "二",
+            "playerName": "浦田 俊輔",
+            "yahooPlayerId": "1951153",
+            "bats": null,
+            "avgDisplay": ".281"
+          },
+          {
+            "battingOrder": "2",
+            "fieldingPosition": "左",
+            "playerName": "松本 剛",
+            "yahooPlayerId": "1100095",
+            "bats": null,
+            "avgDisplay": ".273"
+          },
+          {
+            "battingOrder": "3",
+            "fieldingPosition": "遊",
+            "playerName": "泉口 友汰",
+            "yahooPlayerId": "1750321",
+            "bats": null,
+            "avgDisplay": ".250"
+          },
+          {
+            "battingOrder": "4",
+            "fieldingPosition": "一",
+            "playerName": "ダルベック",
+            "yahooPlayerId": "1561820",
+            "bats": null,
+            "avgDisplay": ".262"
+          },
+          {
+            "battingOrder": "5",
+            "fieldingPosition": "捕",
+            "playerName": "大城 卓三",
+            "yahooPlayerId": "1700044",
+            "bats": null,
+            "avgDisplay": ".274"
+          },
+          {
+            "battingOrder": "6",
+            "fieldingPosition": "中",
+            "playerName": "キャベッジ",
+            "yahooPlayerId": "2118420",
+            "bats": null,
+            "avgDisplay": ".242"
+          },
+          {
+            "battingOrder": "7",
+            "fieldingPosition": "三",
+            "playerName": "石塚 裕惺",
+            "yahooPlayerId": "2116069",
+            "bats": null,
+            "avgDisplay": ".214"
+          },
+          {
+            "battingOrder": "8",
+            "fieldingPosition": "右中",
+            "playerName": "佐々木 俊輔",
+            "yahooPlayerId": "2106178",
+            "bats": null,
+            "avgDisplay": ".254"
+          },
+          {
+            "battingOrder": "9",
+            "fieldingPosition": "投",
+            "playerName": "ハワード",
+            "yahooPlayerId": "1961886",
+            "bats": null,
+            "avgDisplay": ".000"
+          }
+        ]
+      }
+    ],
+    "textPlayByPlay": [
+      {
+        "sectionTitle": "試合前情報",
+        "lines": [
+          "先発ピッチャーは巨人が ハワード 、DeNAが 平良 先攻:DeNAのスターティングラインアップは1番: 勝又 (中)、2番: 度会 (左)、3番: 筒香 (一)、4番: エンカーナシオン (右)、5番: 宮﨑 (三)、6番: 京田 (遊)、7番: 松尾 (捕)、8番: 林 (二)、9番: 平良 (投) 後攻:巨人のスターティングラインアップは1番: 浦田 (二)、2番: 松本 (左)、3番: 泉口 (遊)、4番: ダルベック (一)、5番: 大城 (捕)、6番: キャベッジ (中)、7番: 石塚 (三)、8番: 佐々木 (右)、9番: ハワード (投)"
+        ],
+        "playHeadlineJa": [
+          null
+        ]
+      },
+      {
+        "sectionTitle": "1回表",
+        "lines": [
+          "1： 1番 勝又 温史 無死走者なし 空振りの三振を喫する 1アウト",
+          "2： 2番 度会 隆輝 一死走者なし ピッチャーゴロ 2アウト",
+          "3： 3番 筒香 嘉智 二死走者なし 低めの球を打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "1回裏",
+        "lines": [
+          "1： 1番 浦田 俊輔 無死走者なし セカンドゴロ 1アウト",
+          "2： 2番 松本 剛 一死走者なし カウント2-2からレフトスタンドへの先制ホームラン！ 巨 1-0 デ 0:50 7/31【巨人vsDeNA】1回裏 松本剛 移籍後第1号となる先制ソロホームラン！",
+          "3： 3番 泉口 友汰 一死走者なし ショートゴロ 2アウト",
+          "4： 4番 ダルベック 二死走者なし レフトへのヒットで出塁 一塁",
+          "5： 5番 大城 卓三 二死一塁 一度もバットを振ることなく三球三振 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          "7/31【巨人vsDeNA】1回裏 松本剛 移籍後第1号となる先制ソロホームラン！",
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "2回表",
+        "lines": [
+          "1： 4番 エンカーナシオン 無死走者なし セカンドフライ 1アウト",
+          "2： 5番 宮﨑 敏郎 一死走者なし 低めのスライダーを打つもセカンドライナー 2アウト",
+          "3： 6番 京田 陽太 二死走者なし ショートゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "2回裏",
+        "lines": [
+          "1： 6番 キャベッジ 無死走者なし ファウルフライを 松尾 (捕)が捕球してバッターアウト 1アウト",
+          "2： 7番 石塚 裕惺 一死走者なし ど真ん中の真っ直ぐを打つもライトフライ 2アウト",
+          "3： 8番 佐々木 俊輔 二死走者なし 外角のスライダーを打つもセンターフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "3回表",
+        "lines": [
+          "1： 7番 松尾 汐恩 無死走者なし 見逃し三振でバッターアウト！ 1アウト",
+          "2： 8番 林 琢真 一死走者なし 外角高めの変化球を打つもセンターフライ 2アウト",
+          "3： 9番 平良 拳太郎 二死走者なし サードゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "3回裏",
+        "lines": [
+          "1： 9番 ハワード 無死走者なし ファーストゴロ 1アウト",
+          "2： 1番 浦田 俊輔 一死走者なし サードゴロ 2アウト",
+          "3： 2番 松本 剛 二死走者なし セカンドフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "4回表",
+        "lines": [
+          "1： 1番 勝又 温史 無死走者なし 空振り三振 1アウト",
+          "2： 2番 度会 隆輝 一死走者なし 空振りの三振を喫する 2アウト",
+          "3： 3番 筒香 嘉智 二死走者なし ショートゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "4回裏",
+        "lines": [
+          "1： 3番 泉口 友汰 無死走者なし センターへのヒットで出塁 一塁",
+          "2： 4番 ダルベック 無死一塁 空振り三振でバッターアウト 1アウト",
+          "3： 5番 大城 卓三 一死一塁 空振り三振に倒れるもスタートを切っていた一塁走者 泉口 が盗塁成功 2アウト二塁",
+          "4： 6番 キャベッジ 二死二塁 2アウト二塁から内角高めのカットボールを打つもライトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "5回表",
+        "lines": [
+          "1： 4番 エンカーナシオン 無死走者なし 空振り三振でバッターアウト 1アウト",
+          "2： 5番 宮﨑 敏郎 一死走者なし ショートゴロ 2アウト",
+          "3： 6番 京田 陽太 二死走者なし 外角高めのストレートを打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "5回裏",
+        "lines": [
+          "1： 7番 石塚 裕惺 無死走者なし ピッチャーゴロ 1アウト",
+          "2： 8番 佐々木 俊輔 一死走者なし ライトスタンドへのホームラン 巨 2-0 デ",
+          "3： 9番 ハワード 一死走者なし 見逃し三振でバッターアウト！ 2アウト",
+          "4： 1番 浦田 俊輔 二死走者なし レフトへのヒットを放つ 一塁",
+          "5： 2番 松本 剛 二死一塁 一塁けん制:ランナー 浦田 帰塁 一塁けん制:ランナー 浦田 帰塁 また一塁けん制:ランナー 浦田 帰塁 一塁走者 浦田 :盗塁成功 二塁 カウント1-2から空振り三振でバッターアウト 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "6回表",
+        "lines": [
+          "1： 7番 松尾 汐恩 無死走者なし セカンドフライ 1アウト",
+          "2： 8番 林 琢真 一死走者なし レフトへのヒットで出塁 一塁",
+          "3： 代打 高見澤 郁魅 一死一塁 平良 →代打: 高見澤 ショートフライ 2アウト",
+          "4： 1番 勝又 温史 二死一塁 一塁けん制:ランナー 林 帰塁 空振り三振 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "6回裏",
+        "lines": [
+          "1： 3番 泉口 友汰 無死走者なし 投手交代: 平良 → 中川颯 フルカウントから左中間へのホームラン 巨 3-0 デ",
+          "2： 4番 ダルベック 無死走者なし ファーストゴロ 1アウト",
+          "3： 5番 大城 卓三 一死走者なし ファウルフライを 筒香 (一)が捕球してバッターアウト 2アウト",
+          "4： 6番 キャベッジ 二死走者なし 外角の球を打つもレフトフライ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "7回表",
+        "lines": [
+          "1： 2番 度会 隆輝 無死走者なし 守備交代:ライト 笹原 守備変更: 佐々木 ライト→センター 外角のストレートを打つもライトフライ 1アウト",
+          "2： 3番 筒香 嘉智 一死走者なし フェンス直撃のツーベースを放つ 二塁",
+          "3： 4番 エンカーナシオン 一死二塁 －巨人:コーチマウンドへむかう－ 1アウト二塁から外角の球を打つもライトフライ 2アウト",
+          "4： 5番 宮﨑 敏郎 二死二塁 2アウト二塁からセンターへのヒットで出塁 一三塁",
+          "5： 6番 京田 陽太 二死一三塁 セカンドゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "7回裏",
+        "lines": [
+          "1： 7番 石塚 裕惺 無死走者なし ショートゴロ 1アウト",
+          "2： 8番 佐々木 俊輔 一死走者なし セカンドゴロ 2アウト",
+          "3： 代打 知念 大成 二死走者なし ハワード →代打: 知念 ショートゴロ 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "8回表",
+        "lines": [
+          "1： 7番 松尾 汐恩 無死走者なし ピッチャー ハワード に代わって 田中瑛 がマウンドにあがる フォアボールを選ぶ 一塁",
+          "2： 8番 林 琢真 無死一塁 DeNA・林の一塁アウトの判定を巡り、DeNAがリクエスト リプレー検証後判定変わらず ダブルプレー 2アウト",
+          "3： 代打 梶原 昂希 二死走者なし 中川颯 →代打: 梶原 代打で登場するも見逃し三振に倒れる 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "8回裏",
+        "lines": [
+          "1： 1番 浦田 俊輔 無死走者なし 投手交代: 中川颯 → 岩田 ライトへのヒットで出塁 一塁",
+          "2： 2番 松本 剛 無死一塁 一塁けん制:ランナー 浦田 帰塁 一塁けん制:ランナー 浦田 帰塁 内角の真っ直ぐをライトへ打ってヒット 一三塁",
+          "3： 3番 泉口 友汰 無死一三塁 低めのツーシームを打つもセンターフライ 1アウト",
+          "4： 4番 ダルベック 一死一三塁 一塁走者 松本 :盗塁成功 二三塁 満塁策で敬遠される 満塁",
+          "5： 5番 大城 卓三 一死満塁 1アウト満塁からセンターへ2点タイムリーツーベース！ 巨 5-0 デ 二三塁",
+          "6： 6番 笹原 操希 一死二三塁 二塁走者 大城 →代走: 山瀬 ショートゴロの間に巨人1点をあげる 巨 6-0 デ 2アウト三塁",
+          "7： 7番 石塚 裕惺 二死三塁 内角の変化球を打つもファーストライナー 3アウト"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      {
+        "sectionTitle": "9回表",
+        "lines": [
+          "1： 1番 勝又 温史 無死走者なし 投手交代: 田中瑛 → 泉 守備交代:ファースト 増田大 守備変更: 山瀬 →キャッチャー 外角高めの球を打つもサードライナー 1アウト",
+          "2： 2番 度会 隆輝 一死走者なし セカンドゴロ 2アウト",
+          "3： 3番 筒香 嘉智 二死走者なし ライトへの二塁打 二塁",
+          "4： 4番 エンカーナシオン 二死二塁 セカンドゴロ 3アウト 試合終了"
+        ],
+        "playHeadlineJa": [
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    ],
+    "statsPlayerLinkedRows": [
+      {
+        "yahooPlayerId": "1800046",
+        "playerName": "勝又 温史",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(中)",
+          "勝又 温史",
+          ".312",
+          "4",
+          "0",
+          "0",
+          "0",
+          "3",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "空三振",
+          "",
+          "",
+          "空三振",
+          "",
+          "空三振",
+          "",
+          "",
+          "三直",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850873",
+        "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(左)",
+          "度会 隆輝",
+          ".274",
+          "4",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "投ゴロ",
+          "",
+          "",
+          "空三振",
+          "",
+          "",
+          "右飛",
+          "",
+          "二ゴロ",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1000002",
+        "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(一)",
+          "筒香 嘉智",
+          ".239",
+          "4",
+          "0",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "左飛",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          "左２",
+          "",
+          "右２",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2108195",
+        "playerName": "エンカーナシオン",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(右)",
+          "エンカーナシオン",
+          ".310",
+          "4",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "二飛",
+          "",
+          "",
+          "空三振",
+          "",
+          "右飛",
+          "",
+          "二ゴロ",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1200053",
+        "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(三)",
+          "宮﨑 敏郎",
+          ".271",
+          "3",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "二直",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "中安",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1600107",
+        "playerName": "京田 陽太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(遊)",
+          "京田 陽太",
+          ".243",
+          "3",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          "左飛",
+          "",
+          "二ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100277",
+        "playerName": "松尾 汐恩",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(捕)",
+          "松尾 汐恩",
+          ".260",
+          "2",
+          "0",
+          "0",
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "見三振",
+          "",
+          "",
+          "二飛",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850208",
+        "playerName": "林 琢真",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(二)",
+          "林 琢真",
+          ".242",
+          "3",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "中飛",
+          "",
+          "",
+          "左安",
+          "",
+          "遊併打",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1300031",
+        "playerName": "平良 拳太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "(投)",
+          "平良 拳太郎",
+          ".000",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2104256",
+        "playerName": "高見澤 郁魅",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "打",
+          "高見澤 郁魅",
+          ".000",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000099",
+        "playerName": "中川 颯",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "投",
+          "中川 颯",
+          ".333",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2103703",
+        "playerName": "梶原 昂希",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "打",
+          "梶原 昂希",
+          ".203",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "見三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000059",
+        "playerName": "岩田 将貴",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "cells": [
+          "投",
+          "岩田 将貴",
+          "-",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1951153",
+        "playerName": "浦田 俊輔",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(二)",
+          "浦田 俊輔",
+          ".281",
+          "4",
+          "1",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "二ゴロ",
+          "",
+          "三ゴロ",
+          "",
+          "左安",
+          "",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1100095",
+        "playerName": "松本 剛",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(左)",
+          "松本 剛",
+          ".273",
+          "4",
+          "2",
+          "2",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "1",
+          "左本",
+          "",
+          "二飛",
+          "",
+          "空三振",
+          "",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1750321",
+        "playerName": "泉口 友汰",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(遊)",
+          "泉口 友汰",
+          ".250",
+          "4",
+          "1",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "1",
+          "遊ゴロ",
+          "",
+          "",
+          "中安",
+          "",
+          "左中本",
+          "",
+          "中飛",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1561820",
+        "playerName": "ダルベック",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(一)",
+          "ダルベック",
+          ".262",
+          "3",
+          "1",
+          "1",
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "左安",
+          "",
+          "",
+          "空三振",
+          "",
+          "一ゴロ",
+          "",
+          "故意四",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800111",
+        "playerName": "泉 圭輔",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "投",
+          "泉 圭輔",
+          "-",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700044",
+        "playerName": "大城 卓三",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(捕)",
+          "大城 卓三",
+          ".274",
+          "4",
+          "0",
+          "1",
+          "2",
+          "2",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "見三振",
+          "",
+          "",
+          "空三振",
+          "",
+          "一邪飛",
+          "",
+          "中２",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900020",
+        "playerName": "山瀬 慎之助",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "走捕",
+          "山瀬 慎之助",
+          ".222",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2118420",
+        "playerName": "キャベッジ",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(中)",
+          "キャベッジ",
+          ".242",
+          "3",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "捕邪飛",
+          "",
+          "右飛",
+          "",
+          "左飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100225",
+        "playerName": "笹原 操希",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "右",
+          "笹原 操希",
+          ".246",
+          "1",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2116069",
+        "playerName": "石塚 裕惺",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(三)",
+          "石塚 裕惺",
+          ".214",
+          "4",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "右飛",
+          "",
+          "",
+          "投ゴロ",
+          "",
+          "遊ゴロ",
+          "一直",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106178",
+        "playerName": "佐々木 俊輔",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(右中)",
+          "佐々木 俊輔",
+          ".254",
+          "3",
+          "1",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "",
+          "中飛",
+          "",
+          "",
+          "右本",
+          "",
+          "二ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1961886",
+        "playerName": "ハワード",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "(投)",
+          "ハワード",
+          ".000",
+          "2",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "一ゴロ",
+          "",
+          "見三振",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2103888",
+        "playerName": "知念 大成",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "打",
+          "知念 大成",
+          ".267",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700027",
+        "playerName": "田中 瑛斗",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "投",
+          "田中 瑛斗",
+          "-",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1500054",
+        "playerName": "増田 大輝",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "cells": [
+          "一",
+          "増田 大輝",
+          ".333",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    ],
+    "yahooPlayersMentioned": {
+      "1000002": "筒香 嘉智",
+      "1100095": "松本 剛",
+      "1200053": "宮﨑 敏郎",
+      "1300031": "平良 拳太郎",
+      "1500054": "増田 大輝",
+      "1561820": "ダルベック",
+      "1600107": "京田 陽太",
+      "1700027": "田中 瑛斗",
+      "1700044": "大城 卓三",
+      "1750321": "泉口 友汰",
+      "1800046": "勝又 温史",
+      "1800111": "泉 圭輔",
+      "1850208": "林 琢真",
+      "1850873": "度会 隆輝",
+      "1900020": "山瀬 慎之助",
+      "1951153": "浦田 俊輔",
+      "1961886": "ハワード",
+      "2000059": "岩田 将貴",
+      "2000099": "中川 颯",
+      "2100225": "笹原 操希",
+      "2100277": "松尾 汐恩",
+      "2103703": "梶原 昂希",
+      "2103888": "知念 大成",
+      "2104256": "高見澤 郁魅",
+      "2106178": "佐々木 俊輔",
+      "2108195": "エンカーナシオン",
+      "2116069": "石塚 裕惺",
+      "2118420": "キャベッジ"
+    },
+    "missingOrPartial": [
+      "rawMainPath=_data/scraped_games/raw_sportsnavi/2021039201.html",
+      "rawStatsPath=_data/scraped_games/raw_sportsnavi_stats/2021039201.html",
+      "rawTextPath=_data/scraped_games/raw_sportsnavi_text/2021039201.html",
+      "seasonYear=2026"
+    ],
+    "pitchByPitchNote": {
+      "status": "restored_phase10",
+      "note": "pitch rows=229"
+    },
+    "pickoffCatchMissInvestigations": []
+  },
+  "domain": {
+    "plateAppearances": [
+      {
+        "paId": "2021039201-1-表-1",
+        "inningHalf": "1回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": null,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 7,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": null,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 14,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 127,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 24,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-表-2",
+        "inningHalf": "1回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "投ゴロ[投手直撃]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 140,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 139,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 16,
+            "resultJa": "投ゴロ[投手直撃]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-表-3",
+        "inningHalf": "1回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 147,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 140,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 148,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 151,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 150,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 142,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 7,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 128,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 22,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 8,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 128,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 23,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 9,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 143,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 23,
+            "resultJa": "左飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-裏-1",
+        "inningHalf": "1回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 140,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 6,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 139,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 140,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 138,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 19,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 136,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 7,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 142,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 7,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 135,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 8,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 8,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 125,
+            "pitchTypeJa": "フォーク",
+            "zoneId": 24,
+            "resultJa": "二ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-裏-2",
+        "inningHalf": "1回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左本",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 130,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 2,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 125,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 16,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 127,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "左本"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-裏-3",
+        "inningHalf": "1回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 127,
+            "pitchTypeJa": "フォーク",
+            "zoneId": 21,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 137,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 19,
+            "resultJa": "遊ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-裏-4",
+        "inningHalf": "1回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "resultSummaryJa": "左安",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 139,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "左安"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-1-裏-5",
+        "inningHalf": "1回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "見三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 121,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 9,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 141,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "見三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-表-1",
+        "inningHalf": "2回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "resultSummaryJa": "二飛[後ろ向きにキャッチ、スライディングキャッチ、好プレイ]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 136,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 22,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 11,
+            "resultJa": "二飛[後ろ向きにキャッチ、スライディングキャッチ、好プレイ]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-表-2",
+        "inningHalf": "2回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二直",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 148,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 148,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 140,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 18,
+            "resultJa": "二直"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-表-3",
+        "inningHalf": "2回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 121,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 21,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 123,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 4,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 124,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 14,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 118,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 13,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 8,
+            "resultJa": "遊ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-裏-1",
+        "inningHalf": "2回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2118420",
+        "resultSummaryJa": "捕邪飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2118420",
+            "speedKmh": 119,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2118420",
+            "speedKmh": 135,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 7,
+            "resultJa": "捕邪飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-裏-2",
+        "inningHalf": "2回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 22,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 136,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 4,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 13,
+            "resultJa": "右飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-2-裏-3",
+        "inningHalf": "2回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2106178",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "中飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2106178",
+            "speedKmh": 124,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "中飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-表-1",
+        "inningHalf": "3回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "見三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 115,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 139,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 16,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": null,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 23,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "見三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-表-2",
+        "inningHalf": "3回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "中飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 147,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 4,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 23,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 20,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 121,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 22,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 121,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 9,
+            "resultJa": "中飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-表-3",
+        "inningHalf": "3回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1300031",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "三ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1300031",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1300031",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 3,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1300031",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1300031",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 8,
+            "resultJa": "三ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-裏-1",
+        "inningHalf": "3回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "resultSummaryJa": "一ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 140,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 13,
+            "resultJa": "一ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-裏-2",
+        "inningHalf": "3回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "三ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 137,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 7,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 134,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 136,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 7,
+            "resultJa": "ファウル[詰り、バット折れる]"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 3,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "三ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-3-裏-3",
+        "inningHalf": "3回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二飛[バットの先、当てただけ]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "二飛[バットの先、当てただけ]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-表-1",
+        "inningHalf": "4回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 134,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 142,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 3,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 125,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 23,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-表-2",
+        "inningHalf": "4回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 117,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 22,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 1,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 136,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 147,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-表-3",
+        "inningHalf": "4回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ[内野一塁寄り、逆シングル]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 15,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 126,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 14,
+            "resultJa": "遊ゴロ[内野一塁寄り、逆シングル]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-裏-1",
+        "inningHalf": "4回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "中安[打球がマウンドに当たる]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 136,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 2,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 135,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 137,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1750321",
+            "speedKmh": 141,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 14,
+            "resultJa": "中安[打球がマウンドに当たる]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-裏-2",
+        "inningHalf": "4回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 137,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 16,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1561820",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 7,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-裏-3",
+        "inningHalf": "4回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振[ランエンドヒット]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 139,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 6,
+            "resultJa": "ファウル[自打球]"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 136,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 135,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 123,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 10,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 139,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1700044",
+            "speedKmh": 139,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "空三振[ランエンドヒット]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-4-裏-4",
+        "inningHalf": "4回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2118420",
+        "resultSummaryJa": "右飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2118420",
+            "speedKmh": 137,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 7,
+            "resultJa": "右飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-表-1",
+        "inningHalf": "5回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 142,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 23,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 138,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 1,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 117,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 19,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 147,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-表-2",
+        "inningHalf": "5回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 18,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 123,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 22,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 137,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "遊ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-表-3",
+        "inningHalf": "5回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "左飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-裏-1",
+        "inningHalf": "5回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "投ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 135,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "空振り[ハーフスイング]"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2116069",
+            "speedKmh": 126,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "投ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-裏-2",
+        "inningHalf": "5回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2106178",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右本[スタンドギリギリ]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "2106178",
+            "speedKmh": 141,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 8,
+            "resultJa": "右本[スタンドギリギリ]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-裏-3",
+        "inningHalf": "5回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "resultSummaryJa": "見三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 141,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 142,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 128,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1961886",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 22,
+            "resultJa": "見三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-裏-4",
+        "inningHalf": "5回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左安",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 126,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 7,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 136,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 24,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 137,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 19,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1951153",
+            "speedKmh": 137,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 4,
+            "resultJa": "左安"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-5-裏-5",
+        "inningHalf": "5回裏",
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 138,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 12,
+            "resultJa": "見逃し[送球がバウンド]"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1300031",
+            "yahooBatterId": "1100095",
+            "speedKmh": 139,
+            "pitchTypeJa": "シンカー",
+            "zoneId": 11,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-表-1",
+        "inningHalf": "6回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二飛[詰り]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 141,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 140,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 6,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2100277",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "二飛[詰り]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-表-2",
+        "inningHalf": "6回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左安",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 134,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850208",
+            "speedKmh": 123,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 14,
+            "resultJa": "左安"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-表-3",
+        "inningHalf": "6回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2104256",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2104256",
+            "speedKmh": 122,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2104256",
+            "speedKmh": 142,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2104256",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2104256",
+            "speedKmh": 135,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "遊飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-表-4",
+        "inningHalf": "6回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "空三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 122,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 9,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 133,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 18,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 146,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1800046",
+            "speedKmh": 145,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "空三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-裏-1",
+        "inningHalf": "6回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左中本[スタンドギリギリ]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 133,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 133,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 8,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 100,
+            "pitchTypeJa": "カーブ",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 134,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 9,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 134,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 17,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 7,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 135,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 8,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1750321",
+            "speedKmh": 133,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "左中本[スタンドギリギリ]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-裏-2",
+        "inningHalf": "6回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "resultSummaryJa": "一ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1561820",
+            "speedKmh": 132,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 8,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1561820",
+            "speedKmh": 105,
+            "pitchTypeJa": "カーブ",
+            "zoneId": 23,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1561820",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1561820",
+            "speedKmh": 123,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1561820",
+            "speedKmh": 133,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 24,
+            "resultJa": "一ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-裏-3",
+        "inningHalf": "6回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1700044",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "一邪飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "1700044",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 3,
+            "resultJa": "一邪飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-6-裏-4",
+        "inningHalf": "6回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2118420",
+        "resultSummaryJa": "左飛[フェンスギリギリ]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2118420",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "左飛[フェンスギリギリ]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-表-1",
+        "inningHalf": "7回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右飛",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 134,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 21,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 112,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 4,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1850873",
+            "speedKmh": 143,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 13,
+            "resultJa": "右飛"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-表-2",
+        "inningHalf": "7回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "左２[フェンス直撃]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 124,
+            "pitchTypeJa": "チェンジアップ",
+            "zoneId": 17,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1000002",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 14,
+            "resultJa": "左２[フェンス直撃]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-表-3",
+        "inningHalf": "7回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "resultSummaryJa": "右飛[走者動けず]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "2108195",
+            "speedKmh": 134,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "右飛[走者動けず]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-表-4",
+        "inningHalf": "7回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": null
+        },
+        "resultSummaryJa": "中安",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1200053",
+            "speedKmh": 144,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 12,
+            "resultJa": "中安"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-表-5",
+        "inningHalf": "7回表",
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": "1"
+        },
+        "resultSummaryJa": "二ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 113,
+            "pitchTypeJa": "ナックルカーブ",
+            "zoneId": 4,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1961886",
+            "yahooBatterId": "1600107",
+            "speedKmh": 133,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 18,
+            "resultJa": "二ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-裏-1",
+        "inningHalf": "7回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2116069",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2116069",
+            "speedKmh": 133,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 19,
+            "resultJa": "遊ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-裏-2",
+        "inningHalf": "7回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2106178",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2106178",
+            "speedKmh": 122,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2106178",
+            "speedKmh": 132,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 23,
+            "resultJa": "二ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-7-裏-3",
+        "inningHalf": "7回裏",
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2103888",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2103888",
+            "speedKmh": 123,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 19,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2103888",
+            "speedKmh": 130,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 2,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "2000099",
+            "yahooBatterId": "2103888",
+            "speedKmh": 133,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "遊ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-表-1",
+        "inningHalf": "8回表",
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "四球",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 147,
+            "pitchTypeJa": "シュート",
+            "zoneId": 2,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 130,
+            "pitchTypeJa": "スイーパー",
+            "zoneId": 16,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 146,
+            "pitchTypeJa": "シュート",
+            "zoneId": 9,
+            "resultJa": "見逃し[セーフティバント、バント構え]"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 147,
+            "pitchTypeJa": "シュート",
+            "zoneId": 9,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 147,
+            "pitchTypeJa": "シュート",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2100277",
+            "speedKmh": 133,
+            "pitchTypeJa": "スイーパー",
+            "zoneId": 16,
+            "resultJa": "四球"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-表-2",
+        "inningHalf": "8回表",
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "1850208",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "遊併打[リプレー検証後判定変わらず]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "1850208",
+            "speedKmh": 148,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 14,
+            "resultJa": "遊併打[リプレー検証後判定変わらず]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-表-3",
+        "inningHalf": "8回表",
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "見三振",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2103703",
+            "speedKmh": 136,
+            "pitchTypeJa": "フォーク",
+            "zoneId": 21,
+            "resultJa": "ボール[ワンバウンド]"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2103703",
+            "speedKmh": 135,
+            "pitchTypeJa": "フォーク",
+            "zoneId": 24,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2103703",
+            "speedKmh": 150,
+            "pitchTypeJa": "シュート",
+            "zoneId": 19,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2103703",
+            "speedKmh": 137,
+            "pitchTypeJa": "フォーク",
+            "zoneId": 14,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1700027",
+            "yahooBatterId": "2103703",
+            "speedKmh": 125,
+            "pitchTypeJa": "カーブ",
+            "zoneId": 19,
+            "resultJa": "見三振"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-1",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右安",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 131,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 12,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 128,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 24,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 129,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 14,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 130,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 17,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 118,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 20,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1951153",
+            "speedKmh": 130,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 24,
+            "resultJa": "右安"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-2",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右安[ランエンドヒット]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 133,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 11,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 134,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 25,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 131,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 3,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 135,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 24,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 132,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 19,
+            "resultJa": "見逃し"
+          },
+          {
+            "pitchIndex": 6,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1100095",
+            "speedKmh": 133,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 14,
+            "resultJa": "右安[ランエンドヒット]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-3",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1750321",
+        "baseBefore": {
+          "r1": "1",
+          "r2": null,
+          "r3": "1"
+        },
+        "resultSummaryJa": "中飛[走者動けず]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1750321",
+            "speedKmh": 133,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 12,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1750321",
+            "speedKmh": 134,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 23,
+            "resultJa": "中飛[走者動けず]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-4",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1561820",
+        "resultSummaryJa": "故意四",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1561820",
+            "speedKmh": 118,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "空振り[ランエンドヒット]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-5",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1700044",
+        "baseBefore": {
+          "r1": "1",
+          "r2": "1",
+          "r3": "1"
+        },
+        "resultSummaryJa": "中２",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "1700044",
+            "speedKmh": 131,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 18,
+            "resultJa": "中２"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-6",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "2100225",
+        "baseBefore": {
+          "r1": null,
+          "r2": "1",
+          "r3": "1"
+        },
+        "resultSummaryJa": "遊ゴロ[内野前進]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "2100225",
+            "speedKmh": 119,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 22,
+            "resultJa": "遊ゴロ[内野前進]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-8-裏-7",
+        "inningHalf": "8回裏",
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "2116069",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": "1"
+        },
+        "resultSummaryJa": "一直",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "2116069",
+            "speedKmh": 133,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 10,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "2000059",
+            "yahooBatterId": "2116069",
+            "speedKmh": 119,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 14,
+            "resultJa": "一直"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-9-表-1",
+        "inningHalf": "9回表",
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "三直[痛烈な当たり、野手の正面をつく]",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1800046",
+            "speedKmh": 138,
+            "pitchTypeJa": "ツーシーム",
+            "zoneId": 7,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1800046",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 3,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1800046",
+            "speedKmh": 150,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 1,
+            "resultJa": "ボール[高めのつり球を要求]"
+          },
+          {
+            "pitchIndex": 4,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1800046",
+            "speedKmh": 150,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 6,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 5,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1800046",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 4,
+            "resultJa": "三直[痛烈な当たり、野手の正面をつく]"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-9-表-2",
+        "inningHalf": "9回表",
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1850873",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "二ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1850873",
+            "speedKmh": 110,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 4,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1850873",
+            "speedKmh": 139,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 14,
+            "resultJa": "二ゴロ"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-9-表-3",
+        "inningHalf": "9回表",
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1000002",
+        "baseBefore": {
+          "r1": null,
+          "r2": null,
+          "r3": null
+        },
+        "resultSummaryJa": "右２",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1000002",
+            "speedKmh": 108,
+            "pitchTypeJa": "スライダー",
+            "zoneId": 2,
+            "resultJa": "ボール"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1000002",
+            "speedKmh": 150,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 19,
+            "resultJa": "ファウル"
+          },
+          {
+            "pitchIndex": 3,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "1000002",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 18,
+            "resultJa": "右２"
+          }
+        ]
+      },
+      {
+        "paId": "2021039201-9-表-4",
+        "inningHalf": "9回表",
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "2108195",
+        "resultSummaryJa": "二ゴロ",
+        "pitchEvents": [
+          {
+            "pitchIndex": 1,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "2108195",
+            "speedKmh": 149,
+            "pitchTypeJa": "ストレート",
+            "zoneId": 3,
+            "resultJa": "空振り"
+          },
+          {
+            "pitchIndex": 2,
+            "yahooPitcherId": "1800111",
+            "yahooBatterId": "2108195",
+            "speedKmh": 139,
+            "pitchTypeJa": "カットボール",
+            "zoneId": 19,
+            "resultJa": "二ゴロ"
+          }
+        ]
+      }
+    ],
+    "pitchEvents": [
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": null,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 7,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": null,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 14,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 127,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 24,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 140,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 139,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 16,
+        "resultJa": "投ゴロ[投手直撃]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 147,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 140,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 148,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 151,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 150,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 142,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 7,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 128,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 22,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 8,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 128,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 23,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 9,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 143,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 23,
+        "resultJa": "左飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 140,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 6,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 139,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 140,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 138,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 19,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 136,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 7,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 142,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 7,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 135,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 8,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 8,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 125,
+        "pitchTypeJa": "フォーク",
+        "zoneId": 24,
+        "resultJa": "二ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 130,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 2,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 125,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 16,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 127,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "左本"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 127,
+        "pitchTypeJa": "フォーク",
+        "zoneId": 21,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 137,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 19,
+        "resultJa": "遊ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 139,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "左安"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 121,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 9,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 141,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "見三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 136,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 22,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 11,
+        "resultJa": "二飛[後ろ向きにキャッチ、スライディングキャッチ、好プレイ]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 148,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 148,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 140,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 18,
+        "resultJa": "二直"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 121,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 21,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 123,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 4,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 124,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 14,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 118,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 13,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 8,
+        "resultJa": "遊ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2118420",
+        "speedKmh": 119,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2118420",
+        "speedKmh": 135,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 7,
+        "resultJa": "捕邪飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 22,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 136,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 4,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 13,
+        "resultJa": "右飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2106178",
+        "speedKmh": 124,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "中飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 115,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 139,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 16,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": null,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 23,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "見三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 147,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 4,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 23,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 20,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 121,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 22,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 121,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 9,
+        "resultJa": "中飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1300031",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1300031",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 3,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1300031",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1300031",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 8,
+        "resultJa": "三ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 140,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 13,
+        "resultJa": "一ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 137,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 7,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 134,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 136,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 7,
+        "resultJa": "ファウル[詰り、バット折れる]"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 3,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "三ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "二飛[バットの先、当てただけ]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 134,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 142,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 3,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 125,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 23,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 117,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 22,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 1,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 136,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 147,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 15,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 126,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 14,
+        "resultJa": "遊ゴロ[内野一塁寄り、逆シングル]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 136,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 2,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 135,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 137,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1750321",
+        "speedKmh": 141,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 14,
+        "resultJa": "中安[打球がマウンドに当たる]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 137,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 16,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1561820",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 7,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 139,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 6,
+        "resultJa": "ファウル[自打球]"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 136,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 135,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 123,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 10,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 139,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1700044",
+        "speedKmh": 139,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "空三振[ランエンドヒット]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2118420",
+        "speedKmh": 137,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 7,
+        "resultJa": "右飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 142,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 23,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 138,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 1,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 117,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 19,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 147,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 18,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 123,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 22,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 137,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "遊ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "左飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 135,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "空振り[ハーフスイング]"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2116069",
+        "speedKmh": 126,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "投ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "2106178",
+        "speedKmh": 141,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 8,
+        "resultJa": "右本[スタンドギリギリ]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 141,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 142,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 128,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1961886",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 22,
+        "resultJa": "見三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 126,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 7,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 136,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 24,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 137,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 19,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1951153",
+        "speedKmh": 137,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 4,
+        "resultJa": "左安"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 138,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 12,
+        "resultJa": "見逃し[送球がバウンド]"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1300031",
+        "yahooBatterId": "1100095",
+        "speedKmh": 139,
+        "pitchTypeJa": "シンカー",
+        "zoneId": 11,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 141,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 140,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 6,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2100277",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "二飛[詰り]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 134,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850208",
+        "speedKmh": 123,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 14,
+        "resultJa": "左安"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2104256",
+        "speedKmh": 122,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2104256",
+        "speedKmh": 142,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2104256",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2104256",
+        "speedKmh": 135,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "遊飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 122,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 9,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 133,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 18,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 146,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1800046",
+        "speedKmh": 145,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "空三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 133,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 133,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 8,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 100,
+        "pitchTypeJa": "カーブ",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 134,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 9,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 134,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 17,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 7,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 135,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 8,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1750321",
+        "speedKmh": 133,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "左中本[スタンドギリギリ]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "speedKmh": 132,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 8,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "speedKmh": 105,
+        "pitchTypeJa": "カーブ",
+        "zoneId": 23,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "speedKmh": 123,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1561820",
+        "speedKmh": 133,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 24,
+        "resultJa": "一ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "1700044",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 3,
+        "resultJa": "一邪飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2118420",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "左飛[フェンスギリギリ]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 134,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 21,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 112,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 4,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1850873",
+        "speedKmh": 143,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 13,
+        "resultJa": "右飛"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 124,
+        "pitchTypeJa": "チェンジアップ",
+        "zoneId": 17,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1000002",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 14,
+        "resultJa": "左２[フェンス直撃]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "2108195",
+        "speedKmh": 134,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "右飛[走者動けず]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1200053",
+        "speedKmh": 144,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 12,
+        "resultJa": "中安"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 113,
+        "pitchTypeJa": "ナックルカーブ",
+        "zoneId": 4,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1961886",
+        "yahooBatterId": "1600107",
+        "speedKmh": 133,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 18,
+        "resultJa": "二ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2116069",
+        "speedKmh": 133,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 19,
+        "resultJa": "遊ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2106178",
+        "speedKmh": 122,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2106178",
+        "speedKmh": 132,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 23,
+        "resultJa": "二ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2103888",
+        "speedKmh": 123,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 19,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2103888",
+        "speedKmh": 130,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 2,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "2000099",
+        "yahooBatterId": "2103888",
+        "speedKmh": 133,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "遊ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 147,
+        "pitchTypeJa": "シュート",
+        "zoneId": 2,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 130,
+        "pitchTypeJa": "スイーパー",
+        "zoneId": 16,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 146,
+        "pitchTypeJa": "シュート",
+        "zoneId": 9,
+        "resultJa": "見逃し[セーフティバント、バント構え]"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 147,
+        "pitchTypeJa": "シュート",
+        "zoneId": 9,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 147,
+        "pitchTypeJa": "シュート",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2100277",
+        "speedKmh": 133,
+        "pitchTypeJa": "スイーパー",
+        "zoneId": 16,
+        "resultJa": "四球"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "1850208",
+        "speedKmh": 148,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 14,
+        "resultJa": "遊併打[リプレー検証後判定変わらず]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "speedKmh": 136,
+        "pitchTypeJa": "フォーク",
+        "zoneId": 21,
+        "resultJa": "ボール[ワンバウンド]"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "speedKmh": 135,
+        "pitchTypeJa": "フォーク",
+        "zoneId": 24,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "speedKmh": 150,
+        "pitchTypeJa": "シュート",
+        "zoneId": 19,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "speedKmh": 137,
+        "pitchTypeJa": "フォーク",
+        "zoneId": 14,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1700027",
+        "yahooBatterId": "2103703",
+        "speedKmh": 125,
+        "pitchTypeJa": "カーブ",
+        "zoneId": 19,
+        "resultJa": "見三振"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 131,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 12,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 128,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 24,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 129,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 14,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 130,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 17,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 118,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 20,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1951153",
+        "speedKmh": 130,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 24,
+        "resultJa": "右安"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 133,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 11,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 134,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 25,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 131,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 3,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 135,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 24,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 132,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 19,
+        "resultJa": "見逃し"
+      },
+      {
+        "pitchIndex": 6,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1100095",
+        "speedKmh": 133,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 14,
+        "resultJa": "右安[ランエンドヒット]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1750321",
+        "speedKmh": 133,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 12,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1750321",
+        "speedKmh": 134,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 23,
+        "resultJa": "中飛[走者動けず]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1561820",
+        "speedKmh": 118,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "空振り[ランエンドヒット]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "1700044",
+        "speedKmh": 131,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 18,
+        "resultJa": "中２"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "2100225",
+        "speedKmh": 119,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 22,
+        "resultJa": "遊ゴロ[内野前進]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "2116069",
+        "speedKmh": 133,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 10,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "2000059",
+        "yahooBatterId": "2116069",
+        "speedKmh": 119,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 14,
+        "resultJa": "一直"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "speedKmh": 138,
+        "pitchTypeJa": "ツーシーム",
+        "zoneId": 7,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 3,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "speedKmh": 150,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 1,
+        "resultJa": "ボール[高めのつり球を要求]"
+      },
+      {
+        "pitchIndex": 4,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "speedKmh": 150,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 6,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 5,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1800046",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 4,
+        "resultJa": "三直[痛烈な当たり、野手の正面をつく]"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1850873",
+        "speedKmh": 110,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 4,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1850873",
+        "speedKmh": 139,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 14,
+        "resultJa": "二ゴロ"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1000002",
+        "speedKmh": 108,
+        "pitchTypeJa": "スライダー",
+        "zoneId": 2,
+        "resultJa": "ボール"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1000002",
+        "speedKmh": 150,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 19,
+        "resultJa": "ファウル"
+      },
+      {
+        "pitchIndex": 3,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "1000002",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 18,
+        "resultJa": "右２"
+      },
+      {
+        "pitchIndex": 1,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "2108195",
+        "speedKmh": 149,
+        "pitchTypeJa": "ストレート",
+        "zoneId": 3,
+        "resultJa": "空振り"
+      },
+      {
+        "pitchIndex": 2,
+        "yahooPitcherId": "1800111",
+        "yahooBatterId": "2108195",
+        "speedKmh": 139,
+        "pitchTypeJa": "カットボール",
+        "zoneId": 19,
+        "resultJa": "二ゴロ"
+      }
+    ],
+    "runnerEvents": [
+      {
+        "eventId": "2021039201-score-1",
+        "inningHalf": "4回裏",
+        "kind": "SB",
+        "yahooRunnerId": "1750321",
+        "runnerNameJa": "泉口",
+        "sourceLine": "[0420300] 盗塁成功（泉口）、ランナー2塁 35 泉口 1 2 3 4 5 6 1 ファウル 2 ボール 3 ボール 4 ボール 5 ファウル 6 空三振 次の打者 キャベッジ 打者 大城 卓三 #24 左打 打率 .273 (187-51) 見三振 投手 平良 拳太郎 #59 右投 投球数 打者数 防御率 55 13 3.60",
+        "sourceTier": "score"
+      },
+      {
+        "eventId": "2021039201-score-2",
+        "inningHalf": "5回裏",
+        "kind": "SB",
+        "yahooRunnerId": "1951153",
+        "runnerNameJa": "浦田",
+        "sourceLine": "[0520500] 盗塁成功（浦田）、ランナー2塁 32 浦田 1 2 3 1 ファウル 2 ボール 3 見逃し 次の打者 泉口 友汰 打者 松本 剛 #9 右打 打率 .271 (229-62) 左本 、 二飛 投手 平良 拳太郎 #59 右投 投球数 打者数 防御率 72 19 3.66",
+        "sourceTier": "score"
+      },
+      {
+        "eventId": "2021039201-score-3",
+        "inningHalf": "8回裏",
+        "kind": "SB",
+        "yahooRunnerId": "1100095",
+        "runnerNameJa": "松本",
+        "sourceLine": "[0820400] 盗塁成功（松本）、ランナー2,3塁 9 松本 32 浦田 1 1 空振り 次の打者 大城 卓三 打者 ダルベック #29 右打 打率 .262 (328-86) 左安 、 空三振 、 一ゴロ 投手 岩田 将貴 #68 左投 投球数 打者数 防御率 15 3 0.86",
+        "sourceTier": "score"
+      }
+    ],
+    "battingLines": [
+      {
+        "yahooPlayerId": "1800046",
+        "playerName": "勝又 温史",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(中)",
+        "avg": ".312",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 3,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "空三振",
+          "",
+          "",
+          "空三振",
+          "",
+          "空三振",
+          "",
+          "",
+          "三直",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850873",
+        "playerName": "度会 隆輝",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(左)",
+        "avg": ".274",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "投ゴロ",
+          "",
+          "",
+          "空三振",
+          "",
+          "",
+          "右飛",
+          "",
+          "二ゴロ",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1000002",
+        "playerName": "筒香 嘉智",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(一)",
+        "avg": ".239",
+        "ab": 4,
+        "r": 0,
+        "h": 2,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 2,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "左飛",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          "左２",
+          "",
+          "右２",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2108195",
+        "playerName": "エンカーナシオン",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(右)",
+        "avg": ".310",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "二飛",
+          "",
+          "",
+          "空三振",
+          "",
+          "右飛",
+          "",
+          "二ゴロ",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1200053",
+        "playerName": "宮﨑 敏郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(三)",
+        "avg": ".271",
+        "ab": 3,
+        "r": 0,
+        "h": 1,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "二直",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "中安",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1600107",
+        "playerName": "京田 陽太",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(遊)",
+        "avg": ".243",
+        "ab": 3,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          "左飛",
+          "",
+          "二ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100277",
+        "playerName": "松尾 汐恩",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(捕)",
+        "avg": ".260",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "見三振",
+          "",
+          "",
+          "二飛",
+          "",
+          "四球",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1850208",
+        "playerName": "林 琢真",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(二)",
+        "avg": ".242",
+        "ab": 3,
+        "r": 0,
+        "h": 1,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "中飛",
+          "",
+          "",
+          "左安",
+          "",
+          "遊併打",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1300031",
+        "playerName": "平良 拳太郎",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "(投)",
+        "avg": ".000",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "三ゴロ",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2104256",
+        "playerName": "高見澤 郁魅",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "打",
+        "avg": ".000",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2000099",
+        "playerName": "中川 颯",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "投",
+        "avg": ".333",
+        "ab": 0,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2103703",
+        "playerName": "梶原 昂希",
+        "teamName": "DeNA",
+        "yahooTeamId": "3",
+        "positionCell": "打",
+        "avg": ".203",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "見三振",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1951153",
+        "playerName": "浦田 俊輔",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(二)",
+        "avg": ".281",
+        "ab": 4,
+        "r": 1,
+        "h": 2,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 1,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "二ゴロ",
+          "",
+          "三ゴロ",
+          "",
+          "左安",
+          "",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1100095",
+        "playerName": "松本 剛",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(左)",
+        "avg": ".273",
+        "ab": 4,
+        "r": 2,
+        "h": 2,
+        "rbi": 1,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 1,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "左本",
+          "",
+          "二飛",
+          "",
+          "空三振",
+          "",
+          "",
+          "右安",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1750321",
+        "playerName": "泉口 友汰",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(遊)",
+        "avg": ".250",
+        "ab": 4,
+        "r": 1,
+        "h": 2,
+        "rbi": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 1,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "遊ゴロ",
+          "",
+          "",
+          "中安",
+          "",
+          "左中本",
+          "",
+          "中飛",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1561820",
+        "playerName": "ダルベック",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(一)",
+        "avg": ".262",
+        "ab": 3,
+        "r": 1,
+        "h": 1,
+        "rbi": 0,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "左安",
+          "",
+          "",
+          "空三振",
+          "",
+          "一ゴロ",
+          "",
+          "故意四",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1700044",
+        "playerName": "大城 卓三",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(捕)",
+        "avg": ".274",
+        "ab": 4,
+        "r": 0,
+        "h": 1,
+        "rbi": 2,
+        "so": 2,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "h2": 1,
+        "h3": 0,
+        "appearancePaSlotsJa": [
+          "見三振",
+          "",
+          "",
+          "空三振",
+          "",
+          "一邪飛",
+          "",
+          "中２",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1900020",
+        "playerName": "山瀬 慎之助",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "走捕",
+        "avg": ".222",
+        "ab": 0,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2118420",
+        "playerName": "キャベッジ",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(中)",
+        "avg": ".242",
+        "ab": 3,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "捕邪飛",
+          "",
+          "右飛",
+          "",
+          "左飛",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2100225",
+        "playerName": "笹原 操希",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "右",
+        "avg": ".246",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2116069",
+        "playerName": "石塚 裕惺",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(三)",
+        "avg": ".214",
+        "ab": 4,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "右飛",
+          "",
+          "",
+          "投ゴロ",
+          "",
+          "遊ゴロ",
+          "一直",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2106178",
+        "playerName": "佐々木 俊輔",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(右中)",
+        "avg": ".254",
+        "ab": 3,
+        "r": 1,
+        "h": 1,
+        "rbi": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 1,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "中飛",
+          "",
+          "",
+          "右本",
+          "",
+          "二ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1961886",
+        "playerName": "ハワード",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "(投)",
+        "avg": ".000",
+        "ab": 2,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 1,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "一ゴロ",
+          "",
+          "見三振",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "2103888",
+        "playerName": "知念 大成",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "打",
+        "avg": ".267",
+        "ab": 1,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "遊ゴロ",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1500054",
+        "playerName": "増田 大輝",
+        "teamName": "巨人",
+        "yahooTeamId": "1",
+        "positionCell": "一",
+        "avg": ".333",
+        "ab": 0,
+        "r": 0,
+        "h": 0,
+        "rbi": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "sh": 0,
+        "sb": 0,
+        "e": 0,
+        "hr": 0,
+        "inferredFrom": "stats_row_v0",
+        "appearancePaSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    ],
+    "pitchingLines": [
+      {
+        "yahooPlayerId": "1300031",
+        "playerName": "平良 拳太郎",
+        "era": "3.65",
+        "ip": "5",
+        "pitches": 74,
+        "bf": 20,
+        "h": 5,
+        "hr": 2,
+        "so": 5,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 2,
+        "er": 2,
+        "decision": "loss",
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "2000099",
+        "playerName": "中川 颯",
+        "era": "3.86",
+        "ip": "2",
+        "pitches": 21,
+        "bf": 7,
+        "h": 1,
+        "hr": 1,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 1,
+        "er": 1,
+        "decision": null,
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "2000059",
+        "playerName": "岩田 将貴",
+        "era": "2.08",
+        "ip": "1",
+        "pitches": 19,
+        "bf": 7,
+        "h": 3,
+        "hr": 0,
+        "so": 0,
+        "bb": 1,
+        "hbp": 0,
+        "bk": 0,
+        "r": 3,
+        "er": 3,
+        "decision": null,
+        "inferredFrom": "score_table_v0",
+        "appearanceVsBfSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1961886",
+        "playerName": "ハワード",
+        "era": "2.20",
+        "ip": "7",
+        "pitches": 91,
+        "bf": 24,
+        "h": 3,
+        "hr": 0,
+        "so": 6,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": "win",
+        "inferredFrom": "score_table_v0"
+      },
+      {
+        "yahooPlayerId": "1700027",
+        "playerName": "田中 瑛斗",
+        "era": "1.59",
+        "ip": "1",
+        "pitches": 12,
+        "bf": 3,
+        "h": 0,
+        "hr": 0,
+        "so": 1,
+        "bb": 1,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": "hold",
+        "inferredFrom": "score_table_v0",
+        "appearanceVsBfSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      {
+        "yahooPlayerId": "1800111",
+        "playerName": "泉 圭輔",
+        "era": "1.35",
+        "ip": "1",
+        "pitches": 12,
+        "bf": 4,
+        "h": 1,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "decision": null,
+        "inferredFrom": "score_table_v0",
+        "appearanceVsBfSlotsJa": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    ]
+  },
+  "eventsFingerprint": "bcfdb3d104eafd1a83fdaebb05e167b3e6ba9b744073ac3d6eacd6957fcd6e9b"
+}

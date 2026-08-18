@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "sportsnavi-schedule-day-v4",
+  "year": "2026",
+  "dateJst": "2026-08-05",
+  "fetchedAt": "2026-08-18T11:27:02.178Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-08-05",
+  "gameIds": [
+    "2021039225",
+    "2021039226",
+    "2021039227",
+    "2021039228",
+    "2021039229",
+    "2021039230"
+  ],
+  "games": [
+    {
+      "gameId": "2021039225",
+      "stadiumName": "横浜スタジアム",
+      "homeTeamShort": "DeNA",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "DB",
+      "awayTeamCode": "H"
+    },
+    {
+      "gameId": "2021039226",
+      "stadiumName": "バンテリンD",
+      "homeTeamShort": "中日",
+      "awayTeamShort": "ヤクルト",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "D",
+      "awayTeamCode": "S"
+    },
+    {
+      "gameId": "2021039227",
+      "stadiumName": "マツダ",
+      "homeTeamShort": "広島",
+      "awayTeamShort": "巨人",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "C",
+      "awayTeamCode": "G"
+    },
+    {
+      "gameId": "2021039228",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "西武",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "M",
+      "awayTeamCode": "L"
+    },
+    {
+      "gameId": "2021039229",
+      "stadiumName": "京セラD大阪",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "E"
+    },
+    {
+      "gameId": "2021039230",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "日本ハム",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "F"
+    }
+  ],
+  "stadiumByGameId": {
+    "2021039225": "横浜スタジアム",
+    "2021039226": "バンテリンD",
+    "2021039227": "マツダ",
+    "2021039228": "ZOZOマリン",
+    "2021039229": "京セラD大阪",
+    "2021039230": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021039225": "試合終了",
+    "2021039226": "試合終了",
+    "2021039227": "試合終了",
+    "2021039228": "試合終了",
+    "2021039229": "試合終了",
+    "2021039230": "試合終了"
+  }
+}

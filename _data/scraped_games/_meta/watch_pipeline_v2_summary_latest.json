@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "watch-pipeline-v2-summary-1",
+  "dateJst": "2026-08-18",
+  "year": "2026",
+  "status": "waiting-or-running",
+  "startedAtJst": "2026-08-18 23:53:50 JST",
+  "dryRun": false,
+  "autoDeployProduction": true,
+  "partialPhase4": true,
+  "pollMinutes": 12,
+  "endgamePollMinutes": 2,
+  "deadline": "02:30",
+  "warnings": [],
+  "repairs": [
+    {
+      "atJst": "2026-08-19 00:05:42 JST",
+      "kind": "score_raw_repair_finished",
+      "gameIds": [
+        "2021039290",
+        "2021039291",
+        "2021039292",
+        "2021039293",
+        "2021039294",
+        "2021039295"
+      ],
+      "reasonsByGame": {
+        "2021039290": [
+          "2021039290:raw_before_game_finished=text",
+          "2021039290:canonical_before_score_raw",
+          "2021039290:phase4_missing",
+          "score_raw_gate:unknown"
+        ],
+        "2021039291": [
+          "2021039291:raw_before_game_finished=text",
+          "2021039291:canonical_before_score_raw",
+          "2021039291:phase4_missing",
+          "score_raw_gate:unknown"
+        ],
+        "2021039292": [
+          "2021039292:raw_before_game_finished=text",
+          "2021039292:canonical_before_score_raw",
+          "2021039292:phase4_missing",
+          "score_raw_gate:unknown"
+        ],
+        "2021039293": [
+          "2021039293:raw_before_game_finished=text",
+          "2021039293:canonical_before_score_raw",
+          "2021039293:phase4_missing",
+          "score_raw_gate:unknown"
+        ],
+        "2021039294": [
+          "2021039294:raw_before_game_finished=text",
+          "2021039294:canonical_before_score_raw",
+          "2021039294:phase4_missing",
+          "score_raw_gate:unknown"
+        ],
+        "2021039295": [
+          "2021039295:raw_before_game_finished=text",
+          "2021039295:canonical_before_score_raw",
+          "2021039295:phase4_missing",
+          "score_raw_gate:unknown"
+        ]
+      }
+    }
+  ],
+  "finalizeDecisions": [],
+  "pendingSnapshots": [
+    {
+      "atJst": "2026-08-19 00:17:57 JST",
+      "pending": [
+        "2021039290:phase4_missing",
+        "2021039291:phase4_missing",
+        "2021039292:phase4_missing",
+        "2021039293:phase4_missing",
+        "2021039294:phase4_missing",
+        "2021039295:phase4_missing"
+      ],
+      "totalGames": 6,
+      "finishedGames": 6,
+      "allGamesFinished": true
+    }
+  ],
+  "updatedAtJst": "2026-08-19 00:17:57 JST"
+}

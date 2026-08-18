@@ -1,49 +1,93 @@
 {
-  "schemaVersion": "sportsnavi-schedule-day-v2",
+  "schemaVersion": "sportsnavi-schedule-day-v4",
   "year": "2026",
   "dateJst": "2026-03-17",
-  "fetchedAt": "2026-05-30T14:34:49.388Z",
-  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/league?date=2026-03-17",
+  "fetchedAt": "2026-08-18T11:27:02.178Z",
+  "sourceUrl": "https://baseball.yahoo.co.jp/npb/schedule/first/all?date=2026-03-17",
   "gameIds": [
-    "2021038622",
-    "2021038623",
-    "2021038624",
-    "2021038625",
-    "2021038626",
-    "2021038627"
+    "2021040085",
+    "2021040086",
+    "2021040087",
+    "2021040088",
+    "2021040089",
+    "2021040090"
   ],
   "games": [
     {
-      "gameId": "2021038622",
-      "stadiumName": "東京ドーム"
+      "gameId": "2021040085",
+      "stadiumName": "エスコンＦ",
+      "homeTeamShort": "日本ハム",
+      "awayTeamShort": "DeNA",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "F",
+      "awayTeamCode": "DB"
     },
     {
-      "gameId": "2021038623",
-      "stadiumName": "横浜スタジアム"
+      "gameId": "2021040086",
+      "stadiumName": "ベルーナD",
+      "homeTeamShort": "西武",
+      "awayTeamShort": "楽天",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "L",
+      "awayTeamCode": "E"
     },
     {
-      "gameId": "2021038624",
-      "stadiumName": "マツダ"
+      "gameId": "2021040087",
+      "stadiumName": "ZOZOマリン",
+      "homeTeamShort": "ロッテ",
+      "awayTeamShort": "阪神",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "M",
+      "awayTeamCode": "H"
     },
     {
-      "gameId": "2021038625",
-      "stadiumName": "ZOZOマリン"
+      "gameId": "2021040088",
+      "stadiumName": "東京ドーム",
+      "homeTeamShort": "巨人",
+      "awayTeamShort": "ヤクルト",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "G",
+      "awayTeamCode": "S"
     },
     {
-      "gameId": "2021038626",
-      "stadiumName": "京セラD大阪"
+      "gameId": "2021040089",
+      "stadiumName": "京セラD大阪",
+      "homeTeamShort": "オリックス",
+      "awayTeamShort": "広島",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Bs",
+      "awayTeamCode": "C"
     },
     {
-      "gameId": "2021038627",
-      "stadiumName": "みずほPayPay"
+      "gameId": "2021040090",
+      "stadiumName": "みずほPayPay",
+      "homeTeamShort": "ソフトバンク",
+      "awayTeamShort": "中日",
+      "statusText": "試合終了",
+      "gameState": "completed",
+      "homeTeamCode": "Hs",
+      "awayTeamCode": "D"
     }
   ],
   "stadiumByGameId": {
-    "2021038622": "東京ドーム",
-    "2021038623": "横浜スタジアム",
-    "2021038624": "マツダ",
-    "2021038625": "ZOZOマリン",
-    "2021038626": "京セラD大阪",
-    "2021038627": "みずほPayPay"
+    "2021040085": "エスコンＦ",
+    "2021040086": "ベルーナD",
+    "2021040087": "ZOZOマリン",
+    "2021040088": "東京ドーム",
+    "2021040089": "京セラD大阪",
+    "2021040090": "みずほPayPay"
+  },
+  "scheduleStatusByGameId": {
+    "2021040085": "試合終了",
+    "2021040086": "試合終了",
+    "2021040087": "試合終了",
+    "2021040088": "試合終了",
+    "2021040089": "試合終了",
+    "2021040090": "試合終了"
   }
 }
