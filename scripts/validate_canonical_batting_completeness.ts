@@ -13,6 +13,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
+import { isRegularSeasonCanonicalGame } from "@/lib/npbRegularSeason"
 
 type CanonicalDoc = {
   gameId: string
@@ -113,6 +114,12 @@ function extractSfCountFromText(doc: CanonicalDoc): number {
   return n
 }
 
+function extractGameDateFromTitle(title: string | undefined, year: string): string {
+  const match = String(title ?? "").match(/(\d{4})年(\d{1,2})月(\d{1,2})日/)
+  if (!match || match[1] !== year) return ""
+  return `${match[1]}-${match[2]!.padStart(2, "0")}-${match[3]!.padStart(2, "0")}`
+}
+
 function main(): void {
   const root = process.cwd()
   const { year, failOnWarn, from, to, gameIds } = parseArgs(process.argv.slice(2))
@@ -148,10 +155,16 @@ function main(): void {
   }> = []
 
   let warnCount = 0
+  let regularSeasonGameCount = 0
   for (const gameId of ids) {
     const p = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
     const doc = readJson<CanonicalDoc>(p)
     if (!doc) continue
+
+    const title = doc.game?.meta?.documentTitle
+    const gameDate = extractGameDateFromTitle(title, year)
+    if (gameDate && !isRegularSeasonCanonicalGame(year, gameDate, title)) continue
+    regularSeasonGameCount += 1
 
     const paRows = doc.domain?.plateAppearances?.length ?? 0
     const bl = doc.domain?.battingLines ?? []
@@ -181,7 +194,7 @@ function main(): void {
       warnCount += 1
       findings.push({
         gameId,
-        title: doc.game?.meta?.documentTitle,
+        title,
         paRows,
         battingLines: bl.length,
         sfMentionsInText,
@@ -193,7 +206,7 @@ function main(): void {
   const report = {
     schemaVersion: "validate-canonical-batting-completeness-v0",
     year,
-    canonicalGames: ids.length,
+    canonicalGames: regularSeasonGameCount,
     warnings: warnCount,
     findings: findings.slice(0, 200), // 量が多い場合に備えて上限
   }
@@ -208,7 +221,7 @@ function main(): void {
     )
     if (failOnWarn) process.exit(2)
   } else {
-    console.log(`[validate_canonical_batting_completeness] ok (games=${ids.length})`)
+    console.log(`[validate_canonical_batting_completeness] ok (games=${regularSeasonGameCount})`)
   }
 }
 
