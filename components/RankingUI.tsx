@@ -469,6 +469,7 @@ export default function RankingUI({
                                     playerId: row.playerId,
                                     name: row.name,
                                     romanName: romanNameForUrl,
+                                    season,
                                   })
                                   const nameNode = (
                                     <span className="text-white text-[13px] font-semibold truncate">

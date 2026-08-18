@@ -25,6 +25,7 @@ export type PlayerLinkIds = {
   playerId?: string
   name?: string
   romanName?: string
+  season?: string | number
 }
 
 function romanSlugTokens(romanName: string): string[] {
@@ -143,10 +144,27 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
     MANUAL_YAHOO_TO_NPB[publicId]?.trim() ?? "",
     publicId,
   ].filter(Boolean)
+
+  // Historical IDs are authoritative. Resolve them before any current-roster
+  // fallback because short roman names such as "S.Abe" are not unique.
+  for (const npbId of npbIdCandidates) {
+    const historicalIdSlug = historicalSlugOverrideById(npbId)?.slug
+    if (historicalIdSlug) return historicalIdSlug
+  }
   for (const npbId of npbIdCandidates) {
     const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId] ?? currentRosterSlugByNpbId.get(npbId)
     if (rosterSlug) return rosterSlug
   }
+
+  const historicalSlug =
+    historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
+  if (historicalSlug) return historicalSlug
+
+  // Ranking rows from prior seasons must not be resolved against the 2026
+  // roster by name or abbreviated roman name.
+  const season = String(link.season ?? "").trim()
+  if (season && season !== "2026") return null
+
   const strippedLinkName = stripLeadingRosterInitialJa(link.name ?? "")
   const currentRosterNameSlug =
     currentRosterSlugByName.get(rosterNameMatchKey(link.name ?? "")) ??
@@ -156,13 +174,6 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   if (currentRosterNameSlug) return currentRosterNameSlug
   const currentRosterRomanSlug = currentRosterSlugByRoman.get(slugifyPlayerRomanName(link.romanName || ""))
   if (currentRosterRomanSlug) return currentRosterRomanSlug
-  const historicalSlug =
-    historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
-  if (historicalSlug) return historicalSlug
-  for (const npbId of npbIdCandidates) {
-    const historicalIdSlug = historicalSlugOverrideById(npbId)?.slug
-    if (historicalIdSlug) return historicalIdSlug
-  }
   return null
 }
 
