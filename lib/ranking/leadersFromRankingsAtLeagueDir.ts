@@ -112,17 +112,27 @@ function metricJsonPath(leagueDir: string, metricLabel: string, kind: "batting" 
   return path.join(leagueDir, `${fileBase}.json`)
 }
 
-function readMetricJson(leagueDir: string, metricLabel: string, kind: "batting" | "pitching"): RankingJsonRow[] | null {
+function readMetricJson(
+  leagueDir: string,
+  metricLabel: string,
+  kind: "batting" | "pitching",
+  fallbackToAll = false
+): RankingJsonRow[] | null {
   const p = metricJsonPath(leagueDir, metricLabel, kind)
-  if (!fs.existsSync(p)) return null
+  const allPath = fallbackToAll ? p.replace(/\.json$/, "_all.json") : null
+  const candidatePaths = [p, ...(allPath ? [allPath] : [])]
   try {
-    const raw = JSON.parse(fs.readFileSync(p, "utf-8")) as unknown
-    if (!Array.isArray(raw)) return null
-    return (raw as RankingJsonRow[]).map((row) =>
-      kind === "batting"
-        ? enrichBattingRankingDerivedMetrics(row)
-        : enrichPitchingRankingDerivedMetrics(row)
-    )
+    for (const candidatePath of candidatePaths) {
+      if (!fs.existsSync(candidatePath)) continue
+      const raw = JSON.parse(fs.readFileSync(candidatePath, "utf-8")) as unknown
+      if (!Array.isArray(raw) || raw.length === 0) continue
+      return (raw as RankingJsonRow[]).map((row) =>
+        kind === "batting"
+          ? enrichBattingRankingDerivedMetrics(row)
+          : enrichPitchingRankingDerivedMetrics(row)
+      )
+    }
+    return null
   } catch {
     return null
   }
@@ -330,10 +340,21 @@ export function buildBattingLeadersConfigAtLeagueDir(
     : BATTING_ALL_METRICS
 
   for (const metricLabel of battingMetrics) {
-    const rows = readMetricJson(leagueDir, metricLabel, "batting")
+    const primaryRows = readMetricJson(leagueDir, metricLabel, "batting")
+    const usedAllFallback = Boolean(options.weekKey && !primaryRows?.length)
+    const rows = usedAllFallback
+      ? readMetricJson(leagueDir, metricLabel, "batting", true)
+      : primaryRows
     if (!rows?.length) continue
     const topN = battingTopN(metricLabel, year, options.weekKey)
-    const top = extractBattingTop(rows, metricLabel, topN, year, upperLeague, options)
+    const top = extractBattingTop(
+      rows,
+      metricLabel,
+      topN,
+      year,
+      upperLeague,
+      usedAllFallback ? { ...options, skipQualifyingFilters: true } : options
+    )
     if (top.length > 0) leaders[metricLabel] = top
   }
 
@@ -376,10 +397,21 @@ export function buildPitchingLeadersConfigAtLeagueDir(
   const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
 
   for (const metricLabel of allMetrics) {
-    const rows = readMetricJson(leagueDir, metricLabel, "pitching")
+    const primaryRows = readMetricJson(leagueDir, metricLabel, "pitching")
+    const usedAllFallback = Boolean(options.weekKey && !primaryRows?.length)
+    const rows = usedAllFallback
+      ? readMetricJson(leagueDir, metricLabel, "pitching", true)
+      : primaryRows
     if (!rows?.length) continue
     const topN = pitchingTopN(metricLabel, year)
-    const top = extractPitchingTop(rows, metricLabel, topN, year, upperLeague, options)
+    const top = extractPitchingTop(
+      rows,
+      metricLabel,
+      topN,
+      year,
+      upperLeague,
+      usedAllFallback ? { ...options, skipQualifyingFilters: true } : options
+    )
     if (top.length > 0) leaders[metricLabel] = top
   }
 
