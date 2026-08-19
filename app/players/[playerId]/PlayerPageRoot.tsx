@@ -21,7 +21,10 @@ function PlayerPageClientLoader(props: PlayerPageClientProps) {
     let active = true
     import("./PlayerPageClient")
       .then(({ PlayerPageClient: LoadedClient }) => {
-        if (active) setClient(() => LoadedClient)
+        if (active) {
+          document.getElementById("player-initial-html-snapshot")?.setAttribute("hidden", "")
+          setClient(() => LoadedClient)
+        }
       })
       .catch(() => {
         if (active) setLoadError(true)

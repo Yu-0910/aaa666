@@ -118,8 +118,7 @@ export default function PlayerInitialHtmlSnapshot({ entry, profileMerged }: Prop
   const teamName = String(entry.teamCode ?? "").trim()
 
   return (
-    <noscript>
-      <article>
+    <article id="player-initial-html-snapshot" className="player-initial-html-snapshot">
         <h1>{displayName}</h1>
         {romanName ? <p>{romanName}</p> : null}
         {teamName ? <p>球団: {teamName}</p> : null}
@@ -152,7 +151,6 @@ export default function PlayerInitialHtmlSnapshot({ entry, profileMerged }: Prop
           rows: pitchingRows,
           columns: PITCHING_INITIAL_COLUMNS,
         })}
-      </article>
-    </noscript>
+    </article>
   )
 }

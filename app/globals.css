@@ -807,3 +807,36 @@
   --font-noto-sans-jp: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
   --font-bebas-neue: "Bebas Neue", "Arial Narrow", Arial, sans-serif;
 }
+
+.player-initial-html-snapshot {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  padding: 1.5rem;
+}
+
+.player-initial-html-snapshot h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.player-initial-html-snapshot h2 {
+  margin-top: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.player-initial-html-snapshot table {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  overflow-x: auto;
+}
+
+.player-initial-html-snapshot th,
+.player-initial-html-snapshot td {
+  border: 1px solid #333;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  white-space: nowrap;
+}
