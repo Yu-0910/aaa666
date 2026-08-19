@@ -30,6 +30,7 @@ import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { classifySportsnaviGameForDailyPipeline } from "../lib/yahooGame/sportsnaviGameWatchStatus.mjs"
 import { appendPipelineBulkLog } from "./pipelineBulkLog.mjs"
+import { writeJsonFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -167,7 +168,7 @@ function alreadyRanToday(dateJst, force) {
 function writeLock(dateJst, payload) {
   const p = lockPath(dateJst)
   fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf8")
+  writeJsonFileWithRetrySync(p, payload)
 }
 
 function refreshPhase0ForDate(year, dateJst) {

@@ -209,6 +209,36 @@ function readLockPayload(dateJst) {
   }
 }
 
+function warnWriteFailure(label, error) {
+  const message = String(error?.message || error)
+  log(`WARN ${label} 書き込み失敗: ${message}`)
+}
+
+function tryWriteJsonFile(filePath, payload, label) {
+  try {
+    writeJsonFileWithRetrySync(filePath, payload)
+    return true
+  } catch (error) {
+    warnWriteFailure(label, error)
+    return false
+  }
+}
+
+function extractPipelineWindowFromReason(reason) {
+  const text = String(reason || "")
+  const match = text.match(/--from (\d{4}-\d{2}-\d{2}) --to (\d{4}-\d{2}-\d{2})/)
+  if (!match) return null
+  return { from: match[1], to: match[2] }
+}
+
+function shouldAutoReplaceFailedLock(dateJst, existing) {
+  if (!existing || existing.state !== "failed") return false
+  if (existing.dateJst && String(existing.dateJst) !== String(dateJst)) return true
+  const window = extractPipelineWindowFromReason(existing.reason)
+  if (!window) return false
+  return window.from !== dateJst || window.to !== dateJst
+}
+
 function writeWatchSummary(dateJst, summary) {
   const dir = path.join(root, "_data", "scraped_games", "_meta")
   fs.mkdirSync(dir, { recursive: true })
@@ -216,8 +246,8 @@ function writeWatchSummary(dateJst, summary) {
     ...summary,
     updatedAtJst: formatJstTimestamp(),
   }
-  writeJsonFileWithRetrySync(watchSummaryPath(dateJst), payload)
-  writeJsonFileWithRetrySync(watchSummaryLatestPath(), payload)
+  tryWriteJsonFile(watchSummaryPath(dateJst), payload, `watch summary ${dateJst}`)
+  tryWriteJsonFile(watchSummaryLatestPath(), payload, "watch summary latest")
 }
 
 function pushWatchSummaryEvent(summary, key, event, { limit = 80 } = {}) {
@@ -230,10 +260,14 @@ function pushWatchSummaryEvent(summary, key, event, { limit = 80 } = {}) {
   summary[key] = next
 }
 
-function writeLockPayload(dateJst, payload) {
+function writeLockPayload(dateJst, payload, { bestEffort = false } = {}) {
   const p = lockPath(dateJst)
   fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf8")
+  if (bestEffort) {
+    return tryWriteJsonFile(p, payload, `watch lock ${dateJst}`)
+  }
+  writeJsonFileWithRetrySync(p, payload)
+  return true
 }
 
 function acquireStartupLock(dateJst, { force, year, dryRun }) {
@@ -260,7 +294,17 @@ function acquireStartupLock(dateJst, { force, year, dryRun }) {
     return { acquired: true, payload, replaced: false }
   } catch (error) {
     if (error?.code === "EEXIST") {
-      return { acquired: false, existing: readLockPayload(dateJst) }
+      const existing = readLockPayload(dateJst)
+      if (shouldAutoReplaceFailedLock(dateJst, existing)) {
+        writeLockPayload(dateJst, {
+          ...payload,
+          autoReplacedFailedLock: true,
+          replacedFailedLockState: existing?.state || null,
+          replacedFailedLockReason: existing?.reason || null,
+        })
+        return { acquired: true, payload, replaced: true, replacedExisting: existing }
+      }
+      return { acquired: false, existing }
     }
     throw error
   }
@@ -276,7 +320,7 @@ function writeLock(dateJst, payload) {
     ...existing,
     ...payload,
     updatedAtJst: formatJstTimestamp(),
-  })
+  }, { bestEffort: true })
 }
 
 function deadlineMsForWatchDate(dateJst, deadlineHm) {
@@ -362,18 +406,14 @@ function readScheduleFinishSeen() {
 function writeScheduleFinishSeen(payload) {
   const p = scheduleFinishSeenPath()
   fs.mkdirSync(path.dirname(p), { recursive: true })
-  fs.writeFileSync(
+  tryWriteJsonFile(
     p,
-    JSON.stringify(
-      {
-        schemaVersion: "schedule-finish-seen-v1",
-        games: payload?.games && typeof payload.games === "object" ? payload.games : {},
-        updatedAtJst: formatJstTimestamp(),
-      },
-      null,
-      2,
-    ),
-    "utf8",
+    {
+      schemaVersion: "schedule-finish-seen-v1",
+      games: payload?.games && typeof payload.games === "object" ? payload.games : {},
+      updatedAtJst: formatJstTimestamp(),
+    },
+    "schedule finish seen",
   )
 }
 
@@ -918,6 +958,17 @@ async function main() {
     })
     writeWatchSummary(dateJst, summary)
     return
+  }
+  if (lockAcquired.replacedExisting) {
+    log(
+      `前回 failed lock を自動置換して再開します。 previousReason=${lockAcquired.replacedExisting.reason || "-"}`,
+    )
+    pushWatchSummaryEvent(summary, "warnings", {
+      kind: "auto_replaced_failed_lock",
+      message: "failed lock from another pipeline window was automatically replaced",
+      previous: lockAcquired.replacedExisting,
+    })
+    writeWatchSummary(dateJst, summary)
   }
 
   log(
