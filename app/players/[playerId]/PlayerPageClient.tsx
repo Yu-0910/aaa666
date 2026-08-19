@@ -1602,6 +1602,7 @@ export function PlayerPageClient({
     mergedFaDisplay,
     profileMerged,
     tableClassName: [
+      "player-page-profile-table-base",
       isItoDaiyaPage ? "player-page-profile-table" : "",
       useRosterFielderPcTableCss ? "roster-fielder-profile-table" : "",
       useRosterPitcherPcTableCss ? "roster-pitcher-profile-table" : "",
