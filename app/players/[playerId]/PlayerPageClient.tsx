@@ -1298,17 +1298,17 @@ export function PlayerPageClient({
         }
       : undefined
 
-  const normalFlowProfileScaleStyle =
-    showSeasonCareerTabs && statsTab === "season" && !showSeasonSubTabPinLayout
-      ? pitcherProfileScaleStyle
-      : undefined
-
   /** 投手・野手の今季: プロフィール表の下でサブタブをヘッダー下に固定 */
   const showSeasonSubTabPinLayout =
     showLegacySeasonSubTabs &&
     showSeasonCareerTabs &&
     statsTab === "season" &&
     (showPitcherSeasonSuganoUi || showFielderSeasonPilotUi)
+
+  const normalFlowProfileScaleStyle =
+    showSeasonCareerTabs && statsTab === "season" && !showSeasonSubTabPinLayout
+      ? pitcherProfileScaleStyle
+      : undefined
 
   const seasonSubTabRail = usePinnedSeasonSubTabRail(showSeasonSubTabPinLayout)
   const pilotProfileScaleCollapse = useScaleLayoutCollapse(showSeasonSubTabPinLayout)
@@ -1602,6 +1602,7 @@ export function PlayerPageClient({
     mergedFaDisplay,
     profileMerged,
     tableClassName: [
+      "player-page-profile-table-base",
       isItoDaiyaPage ? "player-page-profile-table" : "",
       useRosterFielderPcTableCss ? "roster-fielder-profile-table" : "",
       useRosterPitcherPcTableCss ? "roster-pitcher-profile-table" : "",

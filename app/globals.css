@@ -209,6 +209,15 @@
     font-weight: 600 !important;
   }
 
+  /* 選手ページの名前・プロフィール表だけ、既存の太字を少し厚く見せる */
+  .player-page-fonts .player-page-display-name,
+  .player-page-fonts .player-page-profile-table-base tbody,
+  .player-page-fonts .player-page-profile-table-base th,
+  .player-page-fonts .player-page-profile-table-base td {
+    -webkit-text-stroke: 0.006em currentColor;
+    paint-order: stroke fill;
+  }
+
   /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
   .player-page-fonts .pa-round-pitch-row-label {
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
