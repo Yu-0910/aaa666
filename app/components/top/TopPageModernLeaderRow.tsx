@@ -1,6 +1,4 @@
 "use client"
-
-import Link from "next/link"
 import { formatRankingStatDisplay } from "@/lib/formatStat"
 import { abbreviatedRomanForUrl, fullRomanForPlayerUrl } from "@/lib/topPageLeaderName"
 import type { TopLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
@@ -69,7 +67,7 @@ export function TopPageModernLeaderRow({
         className={`${typography.teamBarWidth ?? "w-1"} ${typography.teamBarInset ?? ""} mr-0.5 shrink-0 rounded-[1px] ${modernLeaderRow ? `self-center ${teamBarHeight}` : "h-6 self-center"}`}
         style={{ backgroundColor: teamColors[teamKey] || rankingTeamStripeColor(teamKey) }}
       />
-      <Link
+      <a
         href={playerPageHref({
           npbPlayerId: l.npbPlayerId,
           playerId: l.playerId,
@@ -112,7 +110,7 @@ export function TopPageModernLeaderRow({
             )}
           </>
         )}
-      </Link>
+      </a>
       {!modernLeaderRow && (
         <div className={`text-white ${typography.statValue} bebas tabular-nums font-normal self-center shrink-0`}>
           {formattedValue}

@@ -1,6 +1,4 @@
 "use client"
-
-import Link from "next/link"
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -435,7 +433,7 @@ function OpponentBatterTable({
                 style={{ backgroundColor: "#1a1a1a", fontSize: "1.3em" }}
               >
                 {opponentLinkId ? (
-                  <Link
+                  <a
                     href={playerPageHref({
                       playerId: batter.opponentPublicId ?? undefined,
                       npbPlayerId: opponentLinkId,
@@ -444,7 +442,7 @@ function OpponentBatterTable({
                     className="hover:text-[#FFFF44] transition-colors"
                   >
                     {displayName}
-                  </Link>
+                  </a>
                 ) : (
                   displayName
                 )}
@@ -611,7 +609,7 @@ function OpponentBatterRows({
         const rankLabel = `${index + 1}.\u3000`
         const opponentLinkId = b.opponentNpbId ?? b.opponentPublicId ?? null
         const nameContent = opponentLinkId ? (
-          <Link
+          <a
             href={playerPageHref({
               playerId: b.opponentPublicId ?? undefined,
               npbPlayerId: opponentLinkId,
@@ -621,7 +619,7 @@ function OpponentBatterRows({
             style={opponentBatterNameStyle}
           >
             {displayName}
-          </Link>
+          </a>
         ) : (
           <span className={`min-w-0 truncate ${opponentBatterNameClass}`} style={opponentBatterNameStyle}>
             {displayName}
@@ -764,14 +762,14 @@ function PitcherBlock({
 
   const nameEl =
     pitcherHref != null ? (
-      <Link
+      <a
         href={pitcherHref}
         className="block truncate text-center"
       >
         <span className={`${nameTextClass} hover:text-white transition-colors truncate block text-center`}>
           {name}
         </span>
-      </Link>
+      </a>
     ) : (
       <span className={`${nameTextClass} truncate block text-center`}>{name}</span>
     )

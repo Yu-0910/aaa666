@@ -1,6 +1,4 @@
 "use client"
-
-import Link from "next/link"
 import {
   TEAM_CATCHER_COLUMNS,
   type TeamCatcherSortKey,
@@ -246,7 +244,7 @@ export default function TeamCatcherStatsTable({
                             className="flex-1 min-w-0 flex flex-col justify-center leading-[1.05]"
                             style={{ height: playerNameBlockHeight }}
                           >
-                            <Link
+                            <a
                               href={playerPageHref({
                                 npbPlayerId: row.npbPlayerId,
                                 name: row.nameJa,
@@ -257,7 +255,7 @@ export default function TeamCatcherStatsTable({
                               <span className="text-white hover:text-[#ffff44] text-[13px] font-semibold truncate">
                                 {row.nameJa.replace(/\s+/g, "")}
                               </span>
-                            </Link>
+                            </a>
                             {hasRomanName && row.romanName && (
                               <span className="text-[10px] text-gray-400 latin truncate line-clamp-1">
                                 {formatRomanNameForRanking(row.romanName, { nameJa: row.nameJa })}
