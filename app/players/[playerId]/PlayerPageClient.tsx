@@ -1298,6 +1298,11 @@ export function PlayerPageClient({
         }
       : undefined
 
+  const normalFlowProfileScaleStyle =
+    showSeasonCareerTabs && statsTab === "season" && !showSeasonSubTabPinLayout
+      ? pitcherProfileScaleStyle
+      : undefined
+
   /** 投手・野手の今季: プロフィール表の下でサブタブをヘッダー下に固定 */
   const showSeasonSubTabPinLayout =
     showLegacySeasonSubTabs &&
@@ -1921,7 +1926,7 @@ export function PlayerPageClient({
               ? careerProfileScaleShellStyle()
               : showSeasonSubTabPinLayout
                 ? undefined
-                : pitcherProfileScaleStyle
+                : normalFlowProfileScaleStyle
           }
         >
           {showSeasonSubTabPinLayout ? (
