@@ -136,7 +136,7 @@ export function pitchingMetricsFromAgg(
 > {
   const bf = overall.bf
   const nonIntentionalBb = Math.max(0, overall.bb - overall.ibb)
-  const bbPct = bf > 0 ? (nonIntentionalBb / bf) * 100 : null
+  const bbPct = bf > 0 ? (overall.bb / bf) * 100 : null
   /** 投手 K率（K/9）= 奪三振×9÷投球回。SO/BF ではない */
   const kPct = overall.ipOuts > 0 ? (overall.so * 27) / overall.ipOuts : null
   const kBbPct = bf > 0 ? ((overall.so - overall.bb) / bf) * 100 : null
