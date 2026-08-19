@@ -307,6 +307,20 @@ function writeJsonFileWithRetrySync(filePath, payload) {
   writeTextFileWithRetrySync(filePath, JSON.stringify(payload, null, 2))
 }
 
+function warnMetaWriteFailure(label, error) {
+  console.warn(`[daily:npb-pipeline:v2] WARN ${label} write failed: ${String(error?.message || error)}`)
+}
+
+function tryWriteJsonMeta(filePath, payload, label) {
+  try {
+    writeJsonFileWithRetrySync(filePath, payload)
+    return true
+  } catch (error) {
+    warnMetaWriteFailure(label, error)
+    return false
+  }
+}
+
 function parseIsoMs(value) {
   const d = value ? new Date(String(value)) : null
   return d && !Number.isNaN(d.getTime()) ? d.getTime() : 0
@@ -355,11 +369,11 @@ function readScheduleFinishSeen() {
 }
 
 function writeScheduleFinishSeen(payload) {
-  writeJsonFileWithRetrySync(scheduleFinishSeenPath(), {
+  tryWriteJsonMeta(scheduleFinishSeenPath(), {
     schemaVersion: "schedule-finish-seen-v1",
     games: payload?.games && typeof payload.games === "object" ? payload.games : {},
     updatedAtJst: formatJstTimestamp(),
-  })
+  }, "schedule_finish_seen")
 }
 
 function rememberFirstFinishedSeenFromSnapshot(dateJst, snap) {
@@ -1597,8 +1611,8 @@ function writeRunSummary() {
     ...runSummary,
     updatedAtJst: formatJstTimestamp(),
   }
-  if (runSummaryPath) writeJsonFileWithRetrySync(runSummaryPath, payload)
-  if (runSummaryLatestPath) writeJsonFileWithRetrySync(runSummaryLatestPath, payload)
+  if (runSummaryPath) tryWriteJsonMeta(runSummaryPath, payload, "run_summary")
+  if (runSummaryLatestPath) tryWriteJsonMeta(runSummaryLatestPath, payload, "run_summary_latest")
 }
 
 function pushRunSummaryEvent(key, event, { limit = 120 } = {}) {
@@ -1991,8 +2005,8 @@ function writePipelineCheckpoint(status, label, command = "", extra = {}) {
   const latestPath = pipelineCheckpointPath()
   const runPath = pipelineCheckpointRunPath()
   fs.mkdirSync(path.dirname(latestPath), { recursive: true })
-  writeJsonFileWithRetrySync(runPath, checkpoint)
-  writeJsonFileWithRetrySync(latestPath, checkpoint)
+  tryWriteJsonMeta(runPath, checkpoint, "checkpoint_run")
+  tryWriteJsonMeta(latestPath, checkpoint, "checkpoint_latest")
 }
 
 function normalizeResumeText(value) {
@@ -3082,9 +3096,7 @@ function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate,
 function runPhase19WithRetry({ dryRun, affectedNpbPitcherIds = [] }) {
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   runTry("名簿: NPB 英字名更新（phase19 前）", "npm run roster:fetch-npb-en", { dryRun })
-  run("NPB公式: 2026完投・完封を更新（phase19 前）", "npm run npb:official-cg:fetch:2026", {
-    dryRun,
-  })
+  ensureOfficialCg2026({ dryRun })
   try {
     run("ランキング JSON: phase19 pitching rankings", `npm run phase19:build:pitching-rankings${affectedNpbPitcherArg}`, { dryRun })
   } catch (e) {
@@ -3097,6 +3109,75 @@ function runPhase19WithRetry({ dryRun, affectedNpbPitcherIds = [] }) {
     })
     runTry("名簿: NPB 英字名再取得", "npm run roster:fetch-npb-en", { dryRun })
     run("ランキング JSON: phase19 pitching rankings（再試行）", `npm run phase19:build:pitching-rankings${affectedNpbPitcherArg}`, { dryRun })
+  }
+}
+
+function officialCg2026JsonPath() {
+  return path.join(root, "_data", "derived", "npb_official_pitching_cg_2026.json")
+}
+
+function hasUsableOfficialCg2026Json() {
+  const filePath = officialCg2026JsonPath()
+  if (!fs.existsSync(filePath)) return false
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"))
+    return Array.isArray(parsed?.players) && parsed.players.length > 0
+  } catch {
+    return false
+  }
+}
+
+function ensureOfficialCg2026({ dryRun }) {
+  if (dryRun) {
+    run("NPB公式: 2026完投・完封を更新（phase19 前）", "npm run npb:official-cg:fetch:2026", {
+      dryRun,
+    })
+    return
+  }
+
+  const label = "NPB公式: 2026完投・完封を更新（phase19 前）"
+  const primaryCommand = "npm run npb:official-cg:fetch:2026"
+  try {
+    run(label, primaryCommand, { dryRun: false })
+    return
+  } catch (primaryError) {
+    const primaryMessage = String(primaryError?.message ?? primaryError ?? "")
+    const fallbackCommands = [
+      "py -3 scripts/fetch_npb_official_pitching_cg_2026.py",
+      "python scripts/fetch_npb_official_pitching_cg_2026.py",
+    ]
+    for (const command of fallbackCommands) {
+      const ok = runTry(`${label}（フォールバック）`, command, { dryRun: false, transientRetry: false })
+      if (ok && hasUsableOfficialCg2026Json()) {
+        pushRunSummaryEvent("retries", {
+          kind: "official_cg_fetch_fallback",
+          command,
+          recoveredFrom: primaryCommand,
+        })
+        appendPipelineBulkLog(
+          root,
+          "daily:npb-pipeline:v2",
+          `official_cg_fetch fallback recovered via ${command}`,
+        )
+        return
+      }
+    }
+    if (hasUsableOfficialCg2026Json()) {
+      console.warn(
+        `\n[daily:npb-pipeline:v2] ${label} は失敗しましたが、既存の完投・完封JSONが有効なため続行します。\n`,
+      )
+      pushRunSummaryEvent("retries", {
+        kind: "official_cg_fetch_existing_json_continue",
+        recoveredFrom: primaryCommand,
+      })
+      appendPipelineBulkLog(
+        root,
+        "daily:npb-pipeline:v2",
+        "official_cg_fetch failed but existing npb_official_pitching_cg_2026.json was usable",
+      )
+      return
+    }
+    throw primaryError instanceof Error ? primaryError : new Error(primaryMessage)
   }
 }
 
