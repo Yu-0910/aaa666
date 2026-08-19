@@ -204,15 +204,6 @@
     font-weight: 900 !important;
   }
 
-  /* 選手個人ページ: 名前とプロフィール表の文字を少しだけ厚く見せる */
-  .player-page-fonts .player-page-display-name,
-  .player-page-fonts .player-page-profile-table-base tbody,
-  .player-page-fonts .player-page-profile-table-base th,
-  .player-page-fonts .player-page-profile-table-base td {
-    -webkit-text-stroke: 0.012em currentColor;
-    paint-order: stroke fill;
-  }
-
   .player-page-fonts.ito-daiya-profile-ui .player-page-display-name .latin {
     font-family: var(--font-inter), "Inter", sans-serif !important;
     font-weight: 600 !important;
