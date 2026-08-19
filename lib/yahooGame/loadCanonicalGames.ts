@@ -9,6 +9,27 @@ export type LoadCanonicalGamesOptions = {
   gameIds?: Iterable<string>
 }
 
+const canonicalGamesCache = new Map<string, CanonicalGameDocument[]>()
+
+function canonicalGamesCacheKey(
+  projectRoot: string,
+  options?: LoadCanonicalGamesOptions,
+): string {
+  const gameIds = options?.gameIds
+    ? [...options.gameIds]
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean)
+        .sort()
+    : []
+  return JSON.stringify({
+    projectRoot,
+    year: options?.year ?? "",
+    from: options?.from ?? "",
+    to: options?.to ?? "",
+    gameIds,
+  })
+}
+
 export function extractCanonicalGameYmd(doc: CanonicalGameDocument): string {
   const meta = doc?.game?.meta ?? {}
   const candidates = [meta.documentTitle, meta.ogTitle]
@@ -26,8 +47,15 @@ export function loadCanonicalGames(
   projectRoot: string,
   options?: LoadCanonicalGamesOptions,
 ): CanonicalGameDocument[] {
+  const cacheKey = canonicalGamesCacheKey(projectRoot, options)
+  const cached = canonicalGamesCache.get(cacheKey)
+  if (cached) return cached
+
   const dir = join(projectRoot, "_data", "scraped_games", "canonical")
-  if (!existsSync(dir)) return []
+  if (!existsSync(dir)) {
+    canonicalGamesCache.set(cacheKey, [])
+    return []
+  }
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"))
   const out: CanonicalGameDocument[] = []
   const targetGameIds = options?.gameIds ? new Set([...options.gameIds].map((v) => String(v ?? "").trim())) : null
@@ -53,5 +81,6 @@ export function loadCanonicalGames(
       // ignore
     }
   }
+  canonicalGamesCache.set(cacheKey, out)
   return out
 }

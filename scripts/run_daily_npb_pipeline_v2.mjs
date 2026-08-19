@@ -558,6 +558,34 @@ function collectNpbPitcherIdsForGames(gameIds) {
   return [...npbIds].sort()
 }
 
+const TEAM_NAME_TO_LEAGUE = {
+  "中日ドラゴンズ": "CL",
+  "広島東洋カープ": "CL",
+  "東京ヤクルトスワローズ": "CL",
+  "読売ジャイアンツ": "CL",
+  "阪神タイガース": "CL",
+  "横浜DeNAベイスターズ": "CL",
+  "オリックス・バファローズ": "PL",
+  "千葉ロッテマリーンズ": "PL",
+  "北海道日本ハムファイターズ": "PL",
+  "東北楽天ゴールデンイーグルス": "PL",
+  "埼玉西武ライオンズ": "PL",
+  "福岡ソフトバンクホークス": "PL",
+}
+
+function collectAffectedLeaguesForGames(gameIds) {
+  const leagues = new Set()
+  for (const gameId of gameIds) {
+    const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+    const doc = readJsonOrNull(canonicalPath)
+    for (const team of doc?.game?.teams ?? []) {
+      const league = TEAM_NAME_TO_LEAGUE[String(team?.teamName ?? "").trim()]
+      if (league) leagues.add(league)
+    }
+  }
+  return [...leagues].sort()
+}
+
 function affectedYahooBatterIdsForDateRange(from, to) {
   const gameIds = new Set()
   for (const dateJst of eachDateYmd(from, to)) {
@@ -721,6 +749,13 @@ function gameIdsOrDateRangeTsxArgsArg({ year, from, to, gameIds = [] } = {}) {
 
 function onlyNpbIdsArg(ids) {
   return ids.length > 0 ? ` -- --only-npb-ids ${ids.join(",")}` : ""
+}
+
+function topLeadersArgsArg({ leagues = [], categories = [] } = {}) {
+  const args = []
+  if (Array.isArray(leagues) && leagues.length > 0) args.push("--league", [...new Set(leagues)].join(","))
+  if (Array.isArray(categories) && categories.length > 0) args.push("--category", [...new Set(categories)].join(","))
+  return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
 function canonicalJsonFiles() {
@@ -3698,10 +3733,11 @@ function runFastStage({
   autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
-  const affectedArg = onlyYahooIdsArg(affectedYahooIds)
   const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
-  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const targetGameIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIds)
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
+  const affectedLeagues = collectAffectedLeaguesForGames(targetGameIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   if (affectedYahooIds.length > 0) {
     console.log(
@@ -3724,12 +3760,12 @@ function runFastStage({
   run("派生: phase17 period", `npm run phase17:build:period${derivedAffectedArg}`, { dryRun })
   ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
   run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
-  run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
+  run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
   runPhase19WithRetry({ dryRun })
-  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
   run("ランキング JSON: phase29 team standings", phase29Command({ from, to, includeToday: true }), { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
-  run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
+  run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
   run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   if (skipPhase15) {
@@ -3789,10 +3825,11 @@ function runFinalPrecomputedPublishStage({
   autoDeployProduction = false,
 }) {
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
-  const affectedArg = onlyYahooIdsArg(affectedYahooIds)
   const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
-  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const targetGameIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIds)
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
+  const affectedLeagues = collectAffectedLeaguesForGames(targetGameIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップリーダーを1回目公開向けに最終再計算します。\n")
   run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
@@ -3807,16 +3844,16 @@ function runFinalPrecomputedPublishStage({
     dryRun,
     rebuildPitchingPeriod: true,
   })
-  run("ランキング JSON: phase12 batting rankings", "npm run phase12:build:rankings", { dryRun })
+  run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
   runPhase19WithRetry({ dryRun })
-  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
   run(
     "ランキング JSON: phase29 team standings",
     phase29Command({ from, to, includeToday: true, requireTargetGameCacheNonEmpty: true }),
     { dryRun },
   )
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
-  run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
+  run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
   run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
 
@@ -3938,8 +3975,10 @@ function runFullStage({
   const affectedYahooIds = affectedYahooBatterIdsForArgs({ from, to, gameIds })
   const affectedArg = onlyYahooIdsArg(affectedYahooIds)
   const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
-  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIdsForArgs({ from, to, gameIds }))
+  const targetGameIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetGameIds)
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
+  const affectedLeagues = collectAffectedLeaguesForGames(targetGameIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
   const phase13BuildCommand = `npm run phase13:build:context${affectedArg}`
   const phase15BuildCommand = `npm run phase15:build:batting-splits${derivedAffectedArg}`
@@ -4019,7 +4058,7 @@ function runFullStage({
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため top leaders 再生成をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full repeated top leaders builds")
   } else {
-    run("トップ表示: 通算リーダー", "npm run top-leaders:build:2026", { dryRun })
+    run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
     run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   }
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })

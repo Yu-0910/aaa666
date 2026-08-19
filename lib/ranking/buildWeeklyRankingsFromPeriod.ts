@@ -51,6 +51,8 @@ export type BuildWeeklyRankingsOptions = {
   /** 省略時は JST 今日から今週 + 直近週 */
   weekKeys?: string[]
   anchorYmd?: string
+  affectedYahooIds?: readonly string[]
+  affectedNpbIds?: readonly string[]
 }
 
 export type BuildWeeklyRankingsResult = {
@@ -121,12 +123,18 @@ function writeJsonFileWithRetry(
 
 function loadBattingWeekRows(
   periodDir: string,
-  weekKey: string
+  weekKey: string,
+  onlyYahooIds?: readonly string[]
 ): Array<{ yahooId: string; row: SeasonStatsRow }> {
   if (!existsSync(periodDir)) return []
   const out: Array<{ yahooId: string; row: SeasonStatsRow }> = []
-  for (const f of readdirSync(periodDir)) {
-    if (!f.startsWith("yahoo_") || !f.endsWith(".json")) continue
+  const targetIds = onlyYahooIds?.length
+    ? [...new Set(onlyYahooIds.map((v) => String(v).trim()).filter(Boolean))].sort()
+    : null
+  const files = targetIds
+    ? targetIds.map((yahooId) => `yahoo_${yahooId}.json`)
+    : readdirSync(periodDir).filter((f) => f.startsWith("yahoo_") && f.endsWith(".json"))
+  for (const f of files) {
     const yahooId = f.slice("yahoo_".length, -".json".length)
     try {
       const raw = JSON.parse(readFileSync(join(periodDir, f), "utf8")) as PeriodBattingFile
@@ -143,12 +151,18 @@ function loadBattingWeekRows(
 
 function loadPitchingWeekRows(
   periodDir: string,
-  weekKey: string
+  weekKey: string,
+  onlyNpbIds?: readonly string[]
 ): Array<{ npbId: string; row: PitcherSeasonPitchingPeriodRow }> {
   if (!existsSync(periodDir)) return []
   const out: Array<{ npbId: string; row: PitcherSeasonPitchingPeriodRow }> = []
-  for (const f of readdirSync(periodDir)) {
-    if (!f.startsWith("npb_") || !f.endsWith(".json")) continue
+  const targetIds = onlyNpbIds?.length
+    ? [...new Set(onlyNpbIds.map((v) => String(v).trim()).filter(Boolean))].sort()
+    : null
+  const files = targetIds
+    ? targetIds.map((npbId) => `npb_${npbId}.json`)
+    : readdirSync(periodDir).filter((f) => f.startsWith("npb_") && f.endsWith(".json"))
+  for (const f of files) {
     const npbId = f.slice("npb_".length, -".json".length)
     try {
       const raw = JSON.parse(readFileSync(join(periodDir, f), "utf8")) as PeriodPitchingFile
@@ -161,6 +175,16 @@ function loadPitchingWeekRows(
     }
   }
   return out
+}
+
+function readRankingRows(filePath: string): Record<string, unknown>[] | null {
+  if (!existsSync(filePath)) return null
+  try {
+    const raw = JSON.parse(readFileSync(filePath, "utf8")) as unknown
+    return Array.isArray(raw) ? raw.filter((row): row is Record<string, unknown> => !!row && typeof row === "object") : null
+  } catch {
+    return null
+  }
 }
 
 function metaForPitcher(yahooId: string, npbId: string, metaMap: Map<string, { name: string; team: string }>) {
@@ -182,6 +206,23 @@ export function buildWeeklyRankingsFromPeriod(
 ): BuildWeeklyRankingsResult {
   const { year } = options
   const anchor = options.anchorYmd ?? todayYmdJst()
+  const affectedYahooIds =
+    options.affectedYahooIds && options.affectedYahooIds.length > 0
+      ? [...new Set(options.affectedYahooIds.map((v) => String(v).trim()).filter(Boolean))]
+      : null
+  const affectedNpbIds =
+    options.affectedNpbIds && options.affectedNpbIds.length > 0
+      ? [...new Set(options.affectedNpbIds.map((v) => String(v).trim()).filter(Boolean))]
+      : null
+  const affectedYahooIdSet = affectedYahooIds ? new Set(affectedYahooIds) : null
+  const affectedPitcherYahooIdSet = affectedNpbIds
+    ? new Set(
+        affectedNpbIds
+          .map((npbId) => resolveYahooPilotIdForStats(npbId))
+          .map((yahooId) => String(yahooId ?? "").trim())
+          .filter(Boolean)
+      )
+    : null
   const weekKeys =
     options.weekKeys && options.weekKeys.length > 0
       ? options.weekKeys
@@ -211,7 +252,7 @@ export function buildWeeklyRankingsFromPeriod(
       docs.length > 0 ? aggregateWeeklyTeamGamesFromCanonical(docs, year, weekKey) : { CL: {}, PL: {} }
     writeWeeklyTeamGamesFromAggregate(projectRoot, year, weekKey, weekTeamGames)
 
-    const batters = loadBattingWeekRows(battingPeriodDir, weekKey)
+    const batters = loadBattingWeekRows(battingPeriodDir, weekKey, affectedYahooIds)
     const byLeagueBat: Record<"CL" | "PL", Array<{ yahooId: string; row: SeasonStatsRow }>> = {
       CL: [],
       PL: [],
@@ -229,33 +270,50 @@ export function buildWeeklyRankingsFromPeriod(
       mkdirSync(outDir, { recursive: true })
       const list = byLeagueBat[lg]
       const romanMap = lg === "CL" ? romanCL : romanPL
+      const incremental = Boolean(affectedYahooIdSet && affectedYahooIdSet.size > 0)
+      const affectedRowsBase = list.map(({ yahooId, row }) => {
+        const meta = metaForRankingRow(yahooId, metaMap)
+        const roman = resolveRomanNameForRanking(yahooId, meta.name, meta.team, romanMap)
+        return buildBattingRankingRowBase(yahooId, row, meta, roman)
+      })
 
       for (const m of metricsBat) {
         const metricKey = getJsonKey(m.label)
-        const rows = list.map(({ yahooId, row }) => {
-          const meta = metaForRankingRow(yahooId, metaMap)
-          const roman = resolveRomanNameForRanking(yahooId, meta.name, meta.team, romanMap)
-          const base = buildBattingRankingRowBase(yahooId, row, meta, roman)
-          base.metric = m.label
-          return base
+        const rows = affectedRowsBase.map((base) => {
+          const row = { ...base }
+          row.metric = m.label
+          return row
         })
-        const sorted = [...rows].sort(
+        const fileBase = sanitizeMetricForPath(m.label)
+        const publicPath = join(outDir, `${fileBase}.json`)
+        const allPath = join(outDir, `${fileBase}_all.json`)
+        const seedRows =
+          incremental
+            ? (() => {
+                const existingAll = readRankingRows(allPath)
+                if (!existingAll) return rows
+                return [
+                  ...existingAll.filter((row) => !affectedYahooIdSet?.has(String(row.playerId ?? "").trim())),
+                  ...rows,
+                ]
+              })()
+            : rows
+        const sorted = [...seedRows].sort(
           (a, b) => sortValueForBattingMetricKey(metricKey, b) - sortValueForBattingMetricKey(metricKey, a)
         )
         const teamGames = weekTeamGames[lg]
         const filtered = filterBattingRowsForQualifyingAtBuild(sorted, metricKey, year, lg, teamGames)
         const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
-        const fileBase = sanitizeMetricForPath(m.label)
-        writeJsonFileWithRetry(join(outDir, `${fileBase}.json`), ranked)
-        writeJsonFileWithRetry(join(outDir, `${fileBase}_all.json`), allRanked, {
+        writeJsonFileWithRetry(publicPath, ranked)
+        writeJsonFileWithRetry(allPath, allRanked, {
           allowExistingFallback: true,
         })
         battingFiles += 2
       }
     }
 
-    const pitchers = loadPitchingWeekRows(pitchingPeriodDir, weekKey)
+    const pitchers = loadPitchingWeekRows(pitchingPeriodDir, weekKey, affectedNpbIds)
     const byLeaguePitch: Record<
       "CL" | "PL",
       Array<{ yahooId: string; npbId: string; row: PitcherSeasonPitchingPeriodRow }>
@@ -289,18 +347,36 @@ export function buildWeeklyRankingsFromPeriod(
       mkdirSync(outDir, { recursive: true })
       const list = byLeaguePitch[lg]
       const romanMap = lg === "CL" ? romanCL : romanPL
+      const incremental = Boolean(affectedPitcherYahooIdSet && affectedPitcherYahooIdSet.size > 0)
+      const affectedRowsBase = list.map(({ yahooId, npbId, row }) => {
+        const meta = metaForPitcher(yahooId, npbId, metaMap)
+        const roman = resolveRomanNameForRanking(yahooId, meta.name, meta.team, romanMap)
+        return buildPitchingRankingRowFromPeriodRow(yahooId, row, meta, roman)
+      })
 
       for (const m of metricsPitch) {
         const metricKey = getPitchingJsonKey(m.label)
         const asc = pitchingMetricSortAsc(metricKey)
-        const rows = list.map(({ yahooId, npbId, row }) => {
-          const meta = metaForPitcher(yahooId, npbId, metaMap)
-          const roman = resolveRomanNameForRanking(yahooId, meta.name, meta.team, romanMap)
-          const base = buildPitchingRankingRowFromPeriodRow(yahooId, row, meta, roman)
-          base.metric = m.label
-          return base
+        const rows = affectedRowsBase.map((base) => {
+          const row = { ...base }
+          row.metric = m.label
+          return row
         })
-        const sorted = [...rows].sort((a, b) => {
+        const fileBase = sanitizeMetricForPath(m.label)
+        const publicPath = join(outDir, `${fileBase}.json`)
+        const allPath = join(outDir, `${fileBase}_all.json`)
+        const seedRows =
+          incremental
+            ? (() => {
+                const existingAll = readRankingRows(allPath)
+                if (!existingAll) return rows
+                return [
+                  ...existingAll.filter((row) => !affectedPitcherYahooIdSet?.has(String(row.playerId ?? "").trim())),
+                  ...rows,
+                ]
+              })()
+            : rows
+        const sorted = [...seedRows].sort((a, b) => {
           const av = sortValueForPitchingMetricKey(metricKey, a)
           const bv = sortValueForPitchingMetricKey(metricKey, b)
           return asc ? av - bv : bv - av
@@ -309,9 +385,8 @@ export function buildWeeklyRankingsFromPeriod(
         const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
         const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
-        const fileBase = sanitizeMetricForPath(m.label)
-        writeJsonFileWithRetry(join(outDir, `${fileBase}.json`), ranked)
-        writeJsonFileWithRetry(join(outDir, `${fileBase}_all.json`), allRanked, {
+        writeJsonFileWithRetry(publicPath, ranked)
+        writeJsonFileWithRetry(allPath, allRanked, {
           allowExistingFallback: true,
         })
         pitchingFiles += 2

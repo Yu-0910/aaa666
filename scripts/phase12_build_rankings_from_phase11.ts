@@ -50,16 +50,23 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyYahooIds: string[] | null = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = String(args[i + 1])
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, onlyYahooIds }
 }
 
 function rosterTeamToRankingShort(fullTeam: string): string {
@@ -159,12 +166,20 @@ type Phase11DerivedPayload = {
   rows?: SeasonStatsRow[]
 }
 
-function loadBattingRowsFromPhase11(year: string): Array<{ yahooId: string; row: SeasonStatsRow }> {
+function loadBattingRowsFromPhase11(
+  year: string,
+  onlyYahooIds?: readonly string[] | null
+): Array<{ yahooId: string; row: SeasonStatsRow }> {
   const dir = join(projectRoot, "_data", "derived", "player_season_batting", year)
   if (!existsSync(dir)) return []
   const out: Array<{ yahooId: string; row: SeasonStatsRow }> = []
-  for (const file of readdirSync(dir)) {
-    if (!/^yahoo_.+\.json$/.test(file)) continue
+  const targetIds = onlyYahooIds?.length
+    ? [...new Set(onlyYahooIds.map((v) => String(v).trim()).filter(Boolean))].sort()
+    : null
+  const files = targetIds
+    ? targetIds.map((yahooId) => `yahoo_${yahooId}.json`)
+    : readdirSync(dir).filter((file) => /^yahoo_.+\.json$/.test(file))
+  for (const file of files) {
     const yahooId = file.replace(/^yahoo_/, "").replace(/\.json$/, "")
     try {
       const raw = JSON.parse(readFileSync(join(dir, file), "utf8")) as Phase11DerivedPayload
@@ -181,6 +196,16 @@ function loadBattingRowsFromPhase11(year: string): Array<{ yahooId: string; row:
     }
   }
   return out
+}
+
+function readRankingRows(filePath: string): Record<string, unknown>[] | null {
+  if (!existsSync(filePath)) return null
+  try {
+    const raw = JSON.parse(readFileSync(filePath, "utf8")) as unknown
+    return Array.isArray(raw) ? raw.filter((row): row is Record<string, unknown> => !!row && typeof row === "object") : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -211,7 +236,12 @@ function resolveBattingRankingLeagueBucket(
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year } = parseArgs()
+  const { year, onlyYahooIds } = parseArgs()
+  const affectedYahooIds =
+    onlyYahooIds && onlyYahooIds.length > 0
+      ? [...new Set(onlyYahooIds.map((v) => String(v).trim()).filter(Boolean))]
+      : null
+  const affectedYahooIdSet = affectedYahooIds ? new Set(affectedYahooIds) : null
 
   const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
   if (docs.length === 0) {
@@ -261,8 +291,12 @@ function main(): void {
       metaMap.set(id, { name, team: teamForYahooId(doc, id) })
     }
   }
-  const batting = loadBattingRowsFromPhase11(year)
+  const batting = loadBattingRowsFromPhase11(year, affectedYahooIds)
   if (batting.length === 0) {
+    if (affectedYahooIds) {
+      console.log(`[phase12] no affected phase11 batting rows for ${affectedYahooIds.length} target ids; nothing to update`)
+      return
+    }
     console.error(`[phase12] no phase11 derived batting files under _data/derived/player_season_batting/${year}`)
     console.error("  run: npm run phase11:build:batting")
     process.exit(1)
@@ -295,18 +329,41 @@ function main(): void {
     mkdirSync(outDir, { recursive: true })
     const list = lg === "CL" ? battingCL : battingPL
     const romanMap = lg === "CL" ? romanMapCL : romanMapPL
+    const incremental = Boolean(affectedYahooIdSet && affectedYahooIdSet.size > 0)
+    const affectedRowsBase = list.map(({ yahooId, row }) => {
+      const meta = metaForRankingRow(yahooId, metaMap)
+      const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap)
+      return buildBattingRankingRowBase(yahooId, row, meta, roman)
+    })
 
     for (const m of metrics) {
       const metricKey = getJsonKey(m.label)
-      const rows: Record<string, unknown>[] = list.map(({ yahooId, row }) => {
-        const meta = metaForRankingRow(yahooId, metaMap)
-        const roman = resolveRomanName(yahooId, meta.name, meta.team, romanMap)
-        const base = buildBattingRankingRowBase(yahooId, row, meta, roman)
-        base.metric = m.label
-        return base
+      const rows: Record<string, unknown>[] = affectedRowsBase.map((base) => {
+        const row = { ...base }
+        row.metric = m.label
+        return row
       })
 
-      const sorted = [...rows].sort(
+      const fileBase = sanitizeMetricForPath(m.label)
+      const publicPath = join(outDir, `${fileBase}.json`)
+      const allPath = join(outDir, `${fileBase}_all.json`)
+      const seedRows =
+        incremental
+          ? (() => {
+              const existingAll = readRankingRows(allPath)
+              if (!existingAll) return rows
+              return [
+                ...existingAll.filter((row) => !affectedYahooIdSet?.has(String(row.playerId ?? "").trim())),
+                ...rows,
+              ]
+            })()
+          : rows.map((base) => {
+              const row = { ...base }
+              row.metric = m.label
+              return row
+            })
+
+      const sorted = [...seedRows].sort(
         (a, b) => sortValueForBattingMetricKey(metricKey, b) - sortValueForBattingMetricKey(metricKey, a)
       )
       const rankedAll = assignRanks(sorted)
@@ -314,12 +371,13 @@ function main(): void {
       const filtered = filterBattingRowsForQualifyingAtBuild(sorted, metricKey, year, lg, teamGames)
       const rankedPublic = assignRanks(filtered)
 
-      const fileBase = sanitizeMetricForPath(m.label)
-      writeJsonFileWithRetrySync(join(outDir, `${fileBase}.json`), rankedPublic)
-      writeJsonFileWithRetrySync(join(outDir, `${fileBase}_all.json`), rankedAll)
+      writeJsonFileWithRetrySync(publicPath, rankedPublic)
+      writeJsonFileWithRetrySync(allPath, rankedAll)
     }
 
-    console.log(`[phase12] wrote ${lg} rankings (${metrics.length} metrics, ${list.length} batters) → ${outDir}`)
+    console.log(
+      `[phase12] wrote ${lg} rankings (${metrics.length} metrics, ${list.length} ${incremental ? "affected" : "season"} batters) → ${outDir}`
+    )
   }
 
   if (excluded > 0) {
@@ -327,6 +385,8 @@ function main(): void {
     console.warn(`[phase12] unresolved batters: ${excludedDetails.join(", ")}`)
   }
 
+  if (affectedYahooIds) {
+    console.log(`[phase12] incremental update complete for ${affectedYahooIds.length} yahoo ids`)
+  }
 }
-
 main()

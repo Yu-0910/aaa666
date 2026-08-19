@@ -19,13 +19,23 @@ import { weekKeysToBuild } from "@/lib/ranking/weeklyRankingsWeekKeys"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string; week?: string; anchor?: string; from?: string; to?: string } {
+function parseArgs(): {
+  year: string
+  week?: string
+  anchor?: string
+  from?: string
+  to?: string
+  onlyYahooIds?: string[]
+  onlyNpbIds?: string[]
+} {
   const args = process.argv.slice(2)
   let year = "2026"
   let week: string | undefined
   let anchor: string | undefined
   let from: string | undefined
   let to: string | undefined
+  let onlyYahooIds: string[] | undefined
+  let onlyNpbIds: string[] | undefined
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]!
@@ -42,14 +52,26 @@ function parseArgs(): { year: string; week?: string; anchor?: string; from?: str
     } else if (args[i] === "--to" && args[i + 1]) {
       to = args[i + 1]!
       i++
+    } else if (args[i] === "--only-yahoo-ids" && args[i + 1]) {
+      onlyYahooIds = args[i + 1]!
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+      i++
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+      onlyNpbIds = args[i + 1]!
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year, week, anchor, from, to }
+  return { year, week, anchor, from, to, onlyYahooIds, onlyNpbIds }
 }
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year, week, anchor, from, to } = parseArgs()
+  const { year, week, anchor, from, to, onlyYahooIds, onlyNpbIds } = parseArgs()
 
   if (year !== "2026") {
     console.error("[phase28] v1 は --year 2026 のみ")
@@ -83,7 +105,13 @@ function main(): void {
   }
 
   console.log(`[phase28] building weekly rankings for ${year}...`)
-  const result = buildWeeklyRankingsFromPeriod(projectRoot, { year, weekKeys, anchorYmd: anchor })
+  const result = buildWeeklyRankingsFromPeriod(projectRoot, {
+    year,
+    weekKeys,
+    anchorYmd: anchor,
+    affectedYahooIds: onlyYahooIds,
+    affectedNpbIds: onlyNpbIds,
+  })
 
   console.log(`[phase28] weeks: ${result.weekKeys.join(", ")}`)
   console.log(

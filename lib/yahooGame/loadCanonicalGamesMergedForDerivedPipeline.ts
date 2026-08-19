@@ -4,6 +4,27 @@ import { loadCanonicalGames, type LoadCanonicalGamesOptions } from "@/lib/yahooG
 import { enrichPlateAppearancesWithResolvedPitcherIds } from "@/lib/yahooGame/resolvePitcherIdByPaId"
 import { injectTeamsFromSportsnaviStatsIfMissing } from "@/lib/yahooGame/injectTeamsFromSportsnaviStats.mjs"
 
+const mergedCanonicalGamesCache = new Map<string, CanonicalGameDocument[]>()
+
+function mergedCanonicalGamesCacheKey(
+  projectRoot: string,
+  options?: LoadCanonicalGamesOptions,
+): string {
+  const gameIds = options?.gameIds
+    ? [...options.gameIds]
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean)
+        .sort()
+    : []
+  return JSON.stringify({
+    projectRoot,
+    year: options?.year ?? "",
+    from: options?.from ?? "",
+    to: options?.to ?? "",
+    gameIds,
+  })
+}
+
 /**
  * Phase 11 および「canonical から派生 JSON を書く」スクリプトの共通入力。
  *
@@ -19,7 +40,11 @@ export function loadCanonicalGamesMergedForDerivedPipeline(
   projectRoot: string,
   options?: LoadCanonicalGamesOptions,
 ): CanonicalGameDocument[] {
-  return loadCanonicalGames(projectRoot, options).map((d) => {
+  const cacheKey = mergedCanonicalGamesCacheKey(projectRoot, options)
+  const cached = mergedCanonicalGamesCache.get(cacheKey)
+  if (cached) return cached
+
+  const mergedDocs = loadCanonicalGames(projectRoot, options).map((d) => {
     const merged = enrichPlateAppearancesWithResolvedPitcherIds(
       mergePhase10RestoredIntoDocIfPresent(d),
     )
@@ -28,4 +53,6 @@ export function loadCanonicalGamesMergedForDerivedPipeline(
       projectRoot,
     ) as CanonicalGameDocument
   })
+  mergedCanonicalGamesCache.set(cacheKey, mergedDocs)
+  return mergedDocs
 }
