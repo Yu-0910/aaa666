@@ -11,7 +11,7 @@
  * 集計は Phase11 と同じ `aggregateBattingForBatterInGameForProfiles`（出場成績スロット優先）を試合×打者で適用する。
  */
 
-import { mkdirSync, readdirSync, unlinkSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from "fs"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 import type { CanonicalGameDocument, PlateAppearance } from "../lib/yahooGame/types"
@@ -36,6 +36,17 @@ import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
+
+type Phase17Payload = {
+  schemaVersion?: string
+  seasonYear?: string
+  yahooBatterId?: string
+  generatedAt?: string
+  source?: {
+    canonicalGames?: string[]
+  }
+  rows?: SeasonStatsRow[]
+}
 
 function parseArgs(): { year: string; from: string | null; to: string | null; onlyYahooIds: string[] | null } {
   const args = process.argv.slice(2)
@@ -191,13 +202,51 @@ function monthLabel(mk: string): string {
   return `${parseInt(m[2], 10)}月`
 }
 
+function sortPeriodRows(rows: readonly SeasonStatsRow[]): SeasonStatsRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.split_type !== b.split_type) {
+      if (a.split_type === "calendar_month") return -1
+      if (b.split_type === "calendar_month") return 1
+    }
+    return String(a.split_value ?? "").localeCompare(String(b.split_value ?? ""))
+  })
+}
+
+function readExistingPhase17Rows(outDir: string, yahooId: string): SeasonStatsRow[] {
+  const filePath = join(outDir, `yahoo_${yahooId}.json`)
+  if (!existsSync(filePath)) return []
+  try {
+    const raw = JSON.parse(readFileSync(filePath, "utf8")) as Phase17Payload
+    return Array.isArray(raw.rows) ? raw.rows : []
+  } catch {
+    return []
+  }
+}
+
+function readExistingPhase17MetaGames(outDir: string): string[] {
+  const metaPath = join(outDir, "_meta.json")
+  if (!existsSync(metaPath)) return []
+  try {
+    const raw = JSON.parse(readFileSync(metaPath, "utf8")) as Phase17Payload
+    return Array.isArray(raw.source?.canonicalGames)
+      ? raw.source.canonicalGames.map((v) => String(v).trim()).filter(Boolean)
+      : []
+  } catch {
+    return []
+  }
+}
+
 function main(): void {
   const { year, from, to, onlyYahooIds } = parseArgs()
   if ((from && !isYmd(from)) || (to && !isYmd(to))) {
     console.error("[phase17] invalid --from/--to. expected YYYY-MM-DD")
     process.exit(1)
   }
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const isIncrementalRange = Boolean(from || to)
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(
+    projectRoot,
+    isIncrementalRange ? { year, from: from ?? undefined, to: to ?? undefined } : { year }
+  )
   if (docs.length === 0) {
     console.error("[phase17] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
@@ -219,6 +268,8 @@ function main(): void {
   const canonicalGames = docs.map((d) => d.gameId).sort()
   const byBatterMonth = new Map<string, Map<string, BattingSeasonAggYahoo>>()
   const byBatterWeek = new Map<string, Map<string, BattingSeasonAggYahoo>>()
+  const touchedMonthKeys = new Set<string>()
+  const touchedWeekKeys = new Set<string>()
 
   function ensureMonthMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterMonth.get(bid)
@@ -244,6 +295,8 @@ function main(): void {
     const mk = monthKeyFromYmd(ymd)
     const wk = tuesdayWeekKeyFromYmd(ymd)
     if (!wk) continue
+    touchedMonthKeys.add(mk)
+    touchedWeekKeys.add(wk)
 
     const batterIds = new Set<string>()
     for (const line of doc.domain?.battingLines ?? []) {
@@ -278,15 +331,19 @@ function main(): void {
 
   const outDir = join(projectRoot, "_data", "derived", "player_season_batting_period", year)
   mkdirSync(outDir, { recursive: true })
+  const touchedMonthKeySet = new Set(touchedMonthKeys)
+  const touchedWeekKeySet = new Set(touchedWeekKeys)
 
-  for (const f of readdirSync(outDir)) {
-    if (f.startsWith("yahoo_") && f.endsWith(".json")) {
-      const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
-      if (targetYahooIds && !targetYahooIds.includes(yid)) continue
-      try {
-        unlinkSync(join(outDir, f))
-      } catch {
-        // ignore
+  if (!isIncrementalRange) {
+    for (const f of readdirSync(outDir)) {
+      if (f.startsWith("yahoo_") && f.endsWith(".json")) {
+        const yid = f.replace(/^yahoo_/, "").replace(/\.json$/, "")
+        if (targetYahooIds && !targetYahooIds.includes(yid)) continue
+        try {
+          unlinkSync(join(outDir, f))
+        } catch {
+          // ignore
+        }
       }
     }
   }
@@ -295,7 +352,18 @@ function main(): void {
   const batterIds = (targetYahooIds ?? [...allIds]).slice().sort()
 
   for (const bid of batterIds) {
-    const rows: SeasonStatsRow[] = []
+    const existingRows = isIncrementalRange ? readExistingPhase17Rows(outDir, bid) : []
+    const rows: SeasonStatsRow[] = isIncrementalRange
+      ? existingRows.filter((row) => {
+          if (row.split_type === "calendar_month") {
+            return !touchedMonthKeySet.has(String(row.split_value ?? ""))
+          }
+          if (row.split_type === "calendar_week") {
+            return !touchedWeekKeySet.has(String(row.split_value ?? ""))
+          }
+          return true
+        })
+      : []
     const mm = byBatterMonth.get(bid)
     if (mm) {
       const keys = [...mm.keys()].sort()
@@ -315,6 +383,7 @@ function main(): void {
           )
       }
     }
+    const mergedRows = sortPeriodRows(rows)
 
     const payload = {
       schemaVersion: "phase17-player-season-batting-period-v0",
@@ -327,9 +396,11 @@ function main(): void {
         battingAgg: "aggregateBattingForBatterInGameForProfiles（Phase11/12 と同一）",
       },
       source: {
-        canonicalGames,
+        canonicalGames: isIncrementalRange
+          ? [...new Set([...readExistingPhase17MetaGames(outDir), ...canonicalGames])].sort()
+          : canonicalGames,
       },
-      rows,
+      rows: mergedRows,
     }
     writeJsonFileWithRetrySync(join(outDir, `yahoo_${bid}.json`), payload)
   }
@@ -339,7 +410,9 @@ function main(): void {
     seasonYear: year,
     generatedAt,
     source: {
-      canonicalGames,
+      canonicalGames: isIncrementalRange
+        ? [...new Set([...readExistingPhase17MetaGames(outDir), ...canonicalGames])].sort()
+        : canonicalGames,
     },
     writtenPlayerFiles: batterIds.length,
   }

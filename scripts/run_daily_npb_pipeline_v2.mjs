@@ -717,12 +717,19 @@ function dateRangeNpmArgsArg({ from, to } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
-function phase29Command({ from, to, includeToday = false, requireTargetGameCacheNonEmpty = false } = {}) {
+function phase29Command({ from, to, gameIds = [], includeToday = false, requireTargetGameCacheNonEmpty = false } = {}) {
+  if (!includeToday && Array.isArray(gameIds) && gameIds.length > 0) {
+    return `npm run phase29:build:standings -- --game-ids ${gameIds.join(",")}`
+  }
   const rangeArg = dateRangeNpmArgsArg({ from, to })
   if (!includeToday) return `npm run phase29:build:standings${rangeArg}`
   const args = []
-  if (from) args.push("--from", from)
-  if (to) args.push("--to", to)
+  if (Array.isArray(gameIds) && gameIds.length > 0) {
+    args.push("--game-ids", gameIds.join(","))
+  } else {
+    if (from) args.push("--from", from)
+    if (to) args.push("--to", to)
+  }
   args.push("--include-today")
   if (requireTargetGameCacheNonEmpty) args.push("--require-target-game-cache-nonempty")
   return `npm run phase29:build:standings -- ${args.join(" ")}`
@@ -758,15 +765,6 @@ function topLeadersArgsArg({ leagues = [], categories = [] } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
-function canonicalJsonFiles() {
-  const dir = path.join(root, "_data", "scraped_games", "canonical")
-  if (!fs.existsSync(dir)) return []
-  return fs
-    .readdirSync(dir)
-    .filter((f) => /^\d+\.json$/.test(f))
-    .map((f) => path.join(dir, f))
-}
-
 function canonicalMtimeMsForGameId(gameId) {
   const p = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
   try {
@@ -776,7 +774,7 @@ function canonicalMtimeMsForGameId(gameId) {
   }
 }
 
-function readPhase17PeriodSourceSnapshot(periodDir, periodFiles) {
+function readPhase17PeriodSourceSnapshot(periodDir) {
   const metaPath = path.join(periodDir, "_meta.json")
   const meta = readJsonOrNull(metaPath)
   const metaIds = Array.isArray(meta?.source?.canonicalGames)
@@ -790,44 +788,19 @@ function readPhase17PeriodSourceSnapshot(periodDir, periodFiles) {
       sourceRef: "_meta.json",
     }
   }
-
-  let best = null
-  for (const file of periodFiles) {
-    const payload = readJsonOrNull(path.join(periodDir, file))
-    const sourceIds = Array.isArray(payload?.source?.canonicalGames)
-      ? payload.source.canonicalGames.map(String).filter(Boolean)
-      : []
-    const generatedAt = String(payload?.generatedAt ?? "")
-    if (sourceIds.length === 0 || !generatedAt) continue
-    const candidate = {
-      sourceIds,
-      generatedAt,
-      generatedAtMs: parseIsoMs(generatedAt),
-      sourceRef: file,
-    }
-    if (
-      !best ||
-      candidate.generatedAtMs > best.generatedAtMs ||
-      (candidate.generatedAtMs === best.generatedAtMs && candidate.sourceIds.length > best.sourceIds.length)
-    ) {
-      best = candidate
-    }
+  return {
+    sourceIds: [],
+    generatedAt: "",
+    sourceRef: "",
   }
-
-  if (!best) {
-    return {
-      sourceIds: [],
-      generatedAt: "",
-      sourceRef: "",
-    }
-  }
-  return best
 }
 
 function battingPeriodFreshnessReport({ year, gameIds = [] }) {
   const periodDir = path.join(root, "_data", "derived", "player_season_batting_period", year)
-  const canonicalFiles = canonicalJsonFiles()
-  const currentCanonicalCount = canonicalFiles.length
+  const targetIds = [...new Set(gameIds.map(String).filter(Boolean))].sort()
+  const canonicalTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) > 0)
+  const ignoredTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) <= 0)
+  const currentCanonicalCount = canonicalTargetGameIds.length
   if (!fs.existsSync(periodDir)) {
     return {
       ok: false,
@@ -840,30 +813,25 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
     }
   }
 
-  const periodFiles = fs
-    .readdirSync(periodDir)
-    .filter((f) => f.startsWith("yahoo_") && f.endsWith(".json"))
-    .sort()
-  if (periodFiles.length === 0) {
+  const snapshot = readPhase17PeriodSourceSnapshot(periodDir)
+  if (!snapshot.generatedAt) {
     return {
       ok: false,
-      reason: "period_files_missing",
+      reason: "period_meta_missing",
       currentCanonicalCount,
       periodSourceCount: 0,
       generatedAt: "",
+      sourceRef: "",
       staleTargetGameIds: [],
-      missingTargetGameIds: [],
+      missingTargetGameIds: canonicalTargetGameIds,
+      ignoredTargetGameIds,
     }
   }
 
-  const snapshot = readPhase17PeriodSourceSnapshot(periodDir, periodFiles)
   const sourceIds = snapshot.sourceIds
   const generatedAt = snapshot.generatedAt
   const generatedAtMs = parseIsoMs(generatedAt)
   const sourceSet = new Set(sourceIds)
-  const targetIds = [...new Set(gameIds.map(String).filter(Boolean))].sort()
-  const canonicalTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) > 0)
-  const ignoredTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) <= 0)
   const missingTargetGameIds = canonicalTargetGameIds.filter((id) => !sourceSet.has(id))
   const staleTargetGameIds =
     generatedAtMs > 0
@@ -871,7 +839,6 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
       : canonicalTargetGameIds
 
   const reasons = []
-  if (sourceIds.length < currentCanonicalCount) reasons.push("source_count_behind_canonical")
   if (missingTargetGameIds.length > 0) reasons.push("target_games_missing_from_period_source")
   if (staleTargetGameIds.length > 0) reasons.push("target_canonical_newer_than_period")
 
@@ -895,7 +862,7 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   const before = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (before.ok) {
     console.log(
-      `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK: source=${before.periodSourceCount}, canonical=${before.currentCanonicalCount}, generatedAt=${before.generatedAt}\n`,
+      `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK: source=${before.periodSourceCount}, targetCanonical=${before.currentCanonicalCount}, generatedAt=${before.generatedAt}\n`,
     )
     return
   }
@@ -904,7 +871,7 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     "\n[daily:npb-pipeline:v2] phase17 period 鮮度 NG → canonical 更新後の期間別集計を再生成します:",
   )
   console.warn(
-    `  reason=${before.reason || "-"} source=${before.periodSourceCount} canonical=${before.currentCanonicalCount} generatedAt=${before.generatedAt || "-"} sourceRef=${before.sourceRef || "-"}`,
+    `  reason=${before.reason || "-"} source=${before.periodSourceCount} targetCanonical=${before.currentCanonicalCount} generatedAt=${before.generatedAt || "-"} sourceRef=${before.sourceRef || "-"}`,
   )
   if (before.missingTargetGameIds.length > 0) {
     console.warn(`  missingTargetGameIds=${before.missingTargetGameIds.join(",")}`)
@@ -918,7 +885,7 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   appendPipelineBulkLog(
     root,
     "daily:npb-pipeline:v2",
-    `phase17 period stale reason=${before.reason || "-"} source=${before.periodSourceCount} canonical=${before.currentCanonicalCount}`,
+    `phase17 period stale reason=${before.reason || "-"} source=${before.periodSourceCount} targetCanonical=${before.currentCanonicalCount}`,
   )
   pushRunSummaryEvent("repairs", {
     kind: "phase17_period_rebuild",
@@ -947,11 +914,11 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   const after = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (!after.ok) {
     throw new Error(
-      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} canonical=${after.currentCanonicalCount}`,
+      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} targetCanonical=${after.currentCanonicalCount}`,
     )
   }
   console.log(
-    `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, canonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
+    `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, targetCanonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
   )
 }
 
@@ -3112,13 +3079,14 @@ function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate,
   }
 }
 
-function runPhase19WithRetry({ dryRun }) {
+function runPhase19WithRetry({ dryRun, affectedNpbPitcherIds = [] }) {
+  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   runTry("名簿: NPB 英字名更新（phase19 前）", "npm run roster:fetch-npb-en", { dryRun })
   run("NPB公式: 2026完投・完封を更新（phase19 前）", "npm run npb:official-cg:fetch:2026", {
     dryRun,
   })
   try {
-    run("ランキング JSON: phase19 pitching rankings", "npm run phase19:build:pitching-rankings", { dryRun })
+    run("ランキング JSON: phase19 pitching rankings", `npm run phase19:build:pitching-rankings${affectedNpbPitcherArg}`, { dryRun })
   } catch (e) {
     console.warn(
       "\n[daily:npb-pipeline:v2] phase19 失敗 → 名簿再取得後に1回だけ再試行します。\n",
@@ -3128,7 +3096,7 @@ function runPhase19WithRetry({ dryRun }) {
       message: "phase19 pitching rankings failed once and was retried after roster refresh.",
     })
     runTry("名簿: NPB 英字名再取得", "npm run roster:fetch-npb-en", { dryRun })
-    run("ランキング JSON: phase19 pitching rankings（再試行）", "npm run phase19:build:pitching-rankings", { dryRun })
+    run("ランキング JSON: phase19 pitching rankings（再試行）", `npm run phase19:build:pitching-rankings${affectedNpbPitcherArg}`, { dryRun })
   }
 }
 
@@ -3761,9 +3729,9 @@ function runFastStage({
   ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
   run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
   run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
-  runPhase19WithRetry({ dryRun })
+  runPhase19WithRetry({ dryRun, affectedNpbPitcherIds })
   run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
-  run("ランキング JSON: phase29 team standings", phase29Command({ from, to, includeToday: true }), { dryRun })
+  run("ランキング JSON: phase29 team standings", phase29Command({ from, to, gameIds: targetGameIds, includeToday: true }), { dryRun })
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
   run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
   run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
@@ -3845,11 +3813,11 @@ function runFinalPrecomputedPublishStage({
     rebuildPitchingPeriod: true,
   })
   run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
-  runPhase19WithRetry({ dryRun })
+  runPhase19WithRetry({ dryRun, affectedNpbPitcherIds })
   run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
   run(
     "ランキング JSON: phase29 team standings",
-    phase29Command({ from, to, includeToday: true, requireTargetGameCacheNonEmpty: true }),
+    phase29Command({ from, to, gameIds: targetGameIds, includeToday: true, requireTargetGameCacheNonEmpty: true }),
     { dryRun },
   )
   run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })

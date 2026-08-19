@@ -10,7 +10,7 @@
  *   public/data/standings/{year}/{CL|PL}.json
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs"
+import { existsSync, mkdirSync, readFileSync } from "fs"
 import { dirname, join } from "path"
 import { fileURLToPath } from "url"
 import {
@@ -39,6 +39,7 @@ import { tuesdayWeekKeyFromYmd } from "@/lib/yahooGame/jstPeriodKeys"
 import { parseGameDateYmdFromCanonical } from "@/lib/yahooGame/gameDateFromCanonical"
 import type { CanonicalGameDocument } from "@/lib/yahooGame/types"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "@/lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { writeJsonFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -48,6 +49,7 @@ function parseArgs(): {
   year: string
   from?: string
   to?: string
+  gameIds: string[]
   includeToday: boolean
   requireTargetGameCacheNonEmpty: boolean
 } {
@@ -55,6 +57,7 @@ function parseArgs(): {
   let year = "2026"
   let from: string | undefined
   let to: string | undefined
+  let gameIds: string[] = []
   let includeToday = false
   let requireTargetGameCacheNonEmpty = false
   for (let i = 0; i < args.length; i++) {
@@ -67,18 +70,31 @@ function parseArgs(): {
     } else if (args[i] === "--to" && args[i + 1]) {
       to = args[i + 1]!
       i++
+    } else if (args[i] === "--game-ids" && args[i + 1]) {
+      gameIds = args[i + 1]!
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+      i++
     } else if (args[i] === "--include-today") {
       includeToday = true
     } else if (args[i] === "--require-target-game-cache-nonempty") {
       requireTargetGameCacheNonEmpty = true
     }
   }
-  return { year, from, to, includeToday, requireTargetGameCacheNonEmpty }
+  return {
+    year,
+    from,
+    to,
+    gameIds: [...new Set(gameIds)].sort(),
+    includeToday,
+    requireTargetGameCacheNonEmpty,
+  }
 }
 
 function writeStandingsJson(absPath: string, payload: TeamStandingsJson): void {
   mkdirSync(dirname(absPath), { recursive: true })
-  writeFileSync(absPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
+  writeJsonFileWithRetrySync(absPath, payload)
 }
 
 type TeamStandingsGameCache = {
@@ -119,7 +135,21 @@ function readJsonFile<T>(absPath: string): T | null {
 
 function writeJsonFile(absPath: string, payload: unknown): void {
   mkdirSync(dirname(absPath), { recursive: true })
-  writeFileSync(absPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
+  writeJsonFileWithRetrySync(absPath, payload)
+}
+
+function readCanonicalDocByGameId(gameId: string): CanonicalGameDocument | null {
+  const absPath = join(projectRoot, "_data", "scraped_games", "canonical", `${gameId}.json`)
+  return readJsonFile<CanonicalGameDocument>(absPath)
+}
+
+function loadCanonicalDocsByGameIds(gameIds: string[]): CanonicalGameDocument[] {
+  const docs: CanonicalGameDocument[] = []
+  for (const gameId of gameIds) {
+    const doc = readCanonicalDocByGameId(gameId)
+    if (doc) docs.push(doc)
+  }
+  return docs
 }
 
 function readValidManifest(year: string): TeamStandingsGameCacheManifest | null {
@@ -285,6 +315,7 @@ function buildIncrementalRows(
   year: string,
   from: string | undefined,
   to: string | undefined,
+  gameIds: string[],
   options?: { includeToday?: boolean; requireTargetGameCacheNonEmpty?: boolean },
 ): Record<StandingsLeague, TeamStandingsJson["rows"]> {
   const manifest = readValidManifest(year)
@@ -293,7 +324,10 @@ function buildIncrementalRows(
     return buildAllGameCaches(year, { includeToday: options?.includeToday })
   }
 
-  const targetDocs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year, from, to })
+  const targetDocs =
+    gameIds.length > 0
+      ? loadCanonicalDocsByGameIds(gameIds)
+      : loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year, from, to })
   for (const doc of targetDocs) {
     writeGameCache(year, doc, {
       includeToday: options?.includeToday,
@@ -400,11 +434,14 @@ function buildWeeklyStandingsForWeek(
 function buildWeeklyStandings(
   year: string,
   seasonDocs: CanonicalGameDocument[] | null,
+  targetDocs: CanonicalGameDocument[] | null,
   from?: string,
   to?: string,
   options?: { includeToday?: boolean },
 ): void {
-  const targetWeekKeys = collectTargetWeekKeys(year, from, to)
+  const targetWeekKeys = targetDocs && targetDocs.length > 0
+    ? collectWeekKeysFromDocs(targetDocs, year)
+    : collectTargetWeekKeys(year, from, to)
   const weekKeys =
     targetWeekKeys ??
     collectWeekKeysFromDocs(
@@ -419,15 +456,16 @@ function buildWeeklyStandings(
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year, from, to, includeToday, requireTargetGameCacheNonEmpty } = parseArgs()
+  const { year, from, to, gameIds, includeToday, requireTargetGameCacheNonEmpty } = parseArgs()
 
   console.log(`[phase29] building team standings for ${year}...`)
   if (includeToday) {
     console.log("[phase29] include-today mode: scored current-day games are eligible for standings.")
   }
+  const hasIncrementalTarget = gameIds.length > 0 || Boolean(from || to)
   const byLeague =
-    from || to
-      ? buildIncrementalRows(year, from, to, { includeToday, requireTargetGameCacheNonEmpty })
+    hasIncrementalTarget
+      ? buildIncrementalRows(year, from, to, gameIds, { includeToday, requireTargetGameCacheNonEmpty })
       : buildAllGameCaches(year, { includeToday })
 
   for (const league of ["CL", "PL"] as const) {
@@ -449,8 +487,9 @@ function main(): void {
     console.log(`[phase29] ${league}: ${rows.length} rows → ${derivedTeamStandingsRelPath(year, league)}`)
   }
 
-  const docsForWeekly = from || to ? null : loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
-  buildWeeklyStandings(year, docsForWeekly, from, to, { includeToday })
+  const weeklyTargetDocs = gameIds.length > 0 ? loadCanonicalDocsByGameIds(gameIds) : null
+  const docsForWeekly = hasIncrementalTarget ? null : loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  buildWeeklyStandings(year, docsForWeekly, weeklyTargetDocs, from, to, { includeToday })
 
   console.log("[phase29] done")
 }

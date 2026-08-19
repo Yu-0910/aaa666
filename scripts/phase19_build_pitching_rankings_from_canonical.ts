@@ -45,16 +45,23 @@ import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
 
-function parseArgs(): { year: string } {
+function parseArgs(): { year: string; onlyNpbIds: string[] } {
   const args = process.argv.slice(2)
   let year = "2026"
+  let onlyNpbIds: string[] = []
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--year" && args[i + 1]) {
       year = args[i + 1]
       i++
+    } else if (args[i] === "--only-npb-ids" && args[i + 1]) {
+      onlyNpbIds = args[i + 1]
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+      i++
     }
   }
-  return { year }
+  return { year, onlyNpbIds: [...new Set(onlyNpbIds)].sort() }
 }
 
 function resolveRomanName(
@@ -148,11 +155,15 @@ function numFromLoose(value: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
-function loadPitcherPocPayloads(year: string): PitcherSeasonPocPayload[] {
+function loadPitcherPocPayloads(year: string, onlyNpbIds: string[] = []): PitcherSeasonPocPayload[] {
   const dir = join(projectRoot, "_data", "derived", "player_season_pitching_poc", year)
   if (!existsSync(dir)) return []
   const out: PitcherSeasonPocPayload[] = []
-  for (const file of readdirSync(dir)) {
+  const files =
+    onlyNpbIds.length > 0
+      ? onlyNpbIds.map((npbId) => `npb_${npbId}.json`)
+      : readdirSync(dir).filter((file) => /^npb_.+\.json$/.test(file))
+  for (const file of files) {
     if (!/^npb_.+\.json$/.test(file)) continue
     try {
       const raw = JSON.parse(readFileSync(join(dir, file), "utf8")) as PitcherSeasonPocPayload
@@ -177,6 +188,16 @@ function loadTeamGamesByLeague(year: string): Record<"CL" | "PL", Record<string,
   }
   console.warn("[phase19] season team-games.json missing; falling back to canonical scan")
   return aggregateSeasonTeamGamesFromCanonical(docs, year)
+}
+
+function readExistingRankingRows(absPath: string): Record<string, unknown>[] {
+  if (!existsSync(absPath)) return []
+  try {
+    const parsed = JSON.parse(readFileSync(absPath, "utf8"))
+    return Array.isArray(parsed) ? parsed.filter((row) => row && typeof row === "object") : []
+  } catch {
+    return []
+  }
 }
 
 function buildPitchingRowFromPoc(
@@ -264,14 +285,18 @@ function buildPitchingRowFromPoc(
 
 function main(): void {
   process.chdir(projectRoot)
-  const { year } = parseArgs()
+  const { year, onlyNpbIds } = parseArgs()
   if (year !== "2026") {
     console.error("[phase19] 完成品は 2026 のみ。--year 2026 を指定してください。")
     process.exit(1)
   }
 
-  const payloads = loadPitcherPocPayloads(year)
+  const payloads = loadPitcherPocPayloads(year, onlyNpbIds)
   if (payloads.length === 0) {
+    if (onlyNpbIds.length > 0) {
+      console.warn(`[phase19] no pitching poc payloads matched --only-npb-ids (${onlyNpbIds.join(",")})`)
+      return
+    }
     console.error(`[phase19] player_season_pitching_poc が _data/derived/player_season_pitching_poc/${year}/ にありません`)
     console.error("  run: npm run phase:pitcher:poc1")
     process.exit(1)
@@ -286,6 +311,7 @@ function main(): void {
   const romanMapCL = getRomanNameMap(year, "CL")
   const romanMapPL = getRomanNameMap(year, "PL")
   const baseOut = join(projectRoot, "public", "data", "rankings", "pitching", year)
+  const incremental = onlyNpbIds.length > 0
 
   const byLeague: Record<"CL" | "PL", Array<{ yahooId: string; row: Record<string, unknown> }>> = {
     CL: [],
@@ -328,15 +354,25 @@ function main(): void {
     const outDir = join(baseOut, lg)
     mkdirSync(outDir, { recursive: true })
     const list = byLeague[lg]
+    const affectedYahooIds = new Set(list.map(({ yahooId }) => yahooId))
 
     for (const m of metrics) {
       const metricKey = getPitchingJsonKey(m.label)
       const asc = metricSortAsc(metricKey)
-      const rows = list.map(({ row }) => ({
+      const rebuiltRows = list.map(({ row }) => ({
         ...row,
         metric: m.label,
       }))
-      const sorted = [...rows].sort((a, b) => {
+      const fileBase = sanitizeMetricForPath(m.label)
+      const allPath = join(outDir, `${fileBase}_all.json`)
+      const mergedRows =
+        incremental
+          ? [
+              ...readExistingRankingRows(allPath).filter((row) => !affectedYahooIds.has(String(row.playerId ?? "").trim())),
+              ...rebuiltRows,
+            ]
+          : rebuiltRows
+      const sorted = [...mergedRows].sort((a, b) => {
         const av = sortValue(metricKey, a)
         const bv = sortValue(metricKey, b)
         return asc ? av - bv : bv - av
@@ -346,12 +382,13 @@ function main(): void {
       const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
       const rankedPublic = assignRanks(filtered)
 
-      const fileBase = sanitizeMetricForPath(m.label)
       writeJsonFileWithRetrySync(join(outDir, `${fileBase}.json`), rankedPublic)
-      writeJsonFileWithRetrySync(join(outDir, `${fileBase}_all.json`), rankedAll)
+      writeJsonFileWithRetrySync(allPath, rankedAll)
     }
 
-    console.log(`[phase19] wrote ${lg} (${metrics.length} metrics, ${list.length} pitchers) → ${outDir}`)
+    console.log(
+      `[phase19] wrote ${lg} (${metrics.length} metrics, ${list.length} pitchers${incremental ? ", incremental" : ""}) → ${outDir}`,
+    )
   }
 
   console.log(`[phase19] source games: ${[...sourceGames].sort().join(", ")}`)
