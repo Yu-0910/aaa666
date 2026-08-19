@@ -51,7 +51,9 @@ export function unwrapSeasonStatsApiJson(json: unknown): SeasonStatsUnpacked {
   }
   const src = inner.battingTotalRowSource
   const battingTotalRowSource: BattingTotalRowSource =
-    src === "phase11" || src === "csv" || src === "batting_lines_fallback" ? src : null
+    src === "phase11" || src === "rankings" || src === "csv" || src === "batting_lines_fallback"
+      ? src
+      : null
   const rec = inner.battingVsHandReconciliation
   const battingVsHandReconciliation: BattingVsHandTotalReconciliation | null =
     rec != null && typeof rec === "object" &&
