@@ -5,7 +5,8 @@
 
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import RankingUI from "@/components/RankingUI"
 import type { RankingViewModel } from "@/lib/ranking/types"
 import { getDefaultBattingSortOrder } from "@/lib/ranking/battingSortOrder"
@@ -21,8 +22,10 @@ interface RankingPageClientProps {
 
 export default function RankingPageClient({ initialViewModel }: RankingPageClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { sortKey, order, yahooPoc, yahooGameId, rowsFromJson, sortedRows, loading, loadError } =
     useBattingRankingTable({ initialViewModel })
+  const pinActiveMetric = useMemo(() => searchParams.get("pinActiveMetric") === "1", [searchParams])
 
   const handleSortChange = (metricKey: string) => {
     const currentSort = sortKey
@@ -35,9 +38,10 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
       newOrder = getDefaultBattingSortOrder(metricKey)
     }
 
+    const pinExtra = pinActiveMetric ? "&pinActiveMetric=1" : ""
     const extra = yahooPoc ? `&yahooPoc=1&yahooGameId=${encodeURIComponent(yahooGameId)}` : ""
     router.replace(
-      `/ranking/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}${extra}`,
+      `/ranking/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}${pinExtra}${extra}`,
     )
   }
 
@@ -83,6 +87,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
         onSortChange={handleSortChange}
         titleSubNote={titleSubNote}
         headerNavGroups={headerNavGroups}
+        pinActiveMetricNextToPlayer={pinActiveMetric}
       />
     </div>
   )

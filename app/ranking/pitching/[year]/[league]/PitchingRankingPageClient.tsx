@@ -4,7 +4,8 @@
 
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import RankingUI from "@/components/RankingUI"
 import type { RankingViewModel } from "@/lib/ranking/types"
 import { shouldRequireQualifyingPitching } from "@/lib/ranking/qualifyingPitching"
@@ -20,8 +21,10 @@ interface PitchingRankingPageClientProps {
 
 export default function PitchingRankingPageClient({ initialViewModel }: PitchingRankingPageClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { sortKey, order, rowsFromJson, sortedRows, loadError, fetchSettled, metricDef } =
     usePitchingRankingTable({ initialViewModel })
+  const pinActiveMetric = useMemo(() => searchParams.get("pinActiveMetric") === "1", [searchParams])
 
   const handleSortChange = (metricKey: string) => {
     let newOrder: "asc" | "desc"
@@ -31,7 +34,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
       newOrder = getPitchingSortOrderForKey(metricKey)
     }
     router.replace(
-      `/ranking/pitching/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}`,
+      `/ranking/pitching/${initialViewModel.season}/${initialViewModel.league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}${pinActiveMetric ? "&pinActiveMetric=1" : ""}`,
     )
   }
 
@@ -93,6 +96,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
         metricLabelFallback="投球成績"
         titleSubNote={titleSubNote}
         headerNavGroups={headerNavGroups}
+        pinActiveMetricNextToPlayer={pinActiveMetric}
       />
     </div>
   )

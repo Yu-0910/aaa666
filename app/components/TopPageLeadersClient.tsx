@@ -33,6 +33,11 @@ import {
 } from "@/lib/topPage/weeklyTabDisplayTitle"
 import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
 
+function withPinnedMetricParam(url: string): string {
+  const separator = url.includes("?") ? "&" : "?"
+  return `${url}${separator}pinActiveMetric=1`
+}
+
 type LeadersConfig = {
   top3Metrics: string[]
   miniMetrics: string[]
@@ -133,11 +138,13 @@ export default function TopPageLeadersClient({
   const getRankingUrl = (metric: string): string => {
     const yearStr = String(year)
     if (weekKey) {
-      return getWeeklyBattingRankingUrl(yearStr, weekKey, upperLeague, metric)
+      return withPinnedMetricParam(getWeeklyBattingRankingUrl(yearStr, weekKey, upperLeague, metric))
     }
     const metricKey = normalizeMetricKey(metric)
     const order = metricKey === "kpct" || metricKey === "k%" ? "asc" : "desc"
-    return `/ranking/${yearStr}/${upperLeague}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+    return withPinnedMetricParam(
+      `/ranking/${yearStr}/${upperLeague}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+    )
   }
 
   const getStatsListUrl = (metric: string): string => {

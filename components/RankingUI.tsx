@@ -9,7 +9,7 @@
 
 "use client"
 
-import { Fragment, useRef } from "react"
+import { Fragment, useMemo, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
@@ -58,6 +58,8 @@ interface RankingUIProps {
   onYearChange?: (year: number) => void
   /** 規定到達ブロック末尾の順位（黄線をその行の直下に表示） */
   qualifyingDividerAfterRank?: number | null
+  /** Top/今週タブ経由時: アクティブ指標を選手名列の直後に表示 */
+  pinActiveMetricNextToPlayer?: boolean
 }
 
 // 左ブロック（順＋フレーム＋選手）を1層にまとめ、隙間を防ぐ（問題29・二層構造の理想に合わせる）
@@ -238,6 +240,7 @@ export default function RankingUI({
   titleScopeName,
   onYearChange,
   qualifyingDividerAfterRank = null,
+  pinActiveMetricNextToPlayer = false,
 }: RankingUIProps) {
   const { season, league, metrics } = viewModel
   const router = useRouter()
@@ -247,8 +250,16 @@ export default function RankingUI({
   const playerNameBlockHeight = compactTableUi ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
   const metricColMinWidth = compactTableUi ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
   const metricValueTextClass = compactTableUi ? 'text-[16.83px]' : 'text-lg'
-  const gpaMetricIdx = metrics.findIndex((m) => m.key === 'gpa' || m.label === 'GPA')
-  const metricBgMaxIdx = gpaMetricIdx >= 0 ? gpaMetricIdx : metrics.length - 1
+  const displayMetrics = useMemo(() => {
+    if (!pinActiveMetricNextToPlayer) return metrics
+    const activeMetricIdx = metrics.findIndex((metric) => metric.key === sortKey)
+    if (activeMetricIdx <= 0) return metrics
+    const activeMetric = metrics[activeMetricIdx]
+    if (!activeMetric) return metrics
+    return [activeMetric, ...metrics.slice(0, activeMetricIdx), ...metrics.slice(activeMetricIdx + 1)]
+  }, [metrics, pinActiveMetricNextToPlayer, sortKey])
+  const gpaMetricIdx = displayMetrics.findIndex((m) => m.key === 'gpa' || m.label === 'GPA')
+  const metricBgMaxIdx = gpaMetricIdx >= 0 ? gpaMetricIdx : displayMetrics.length - 1
   const displayRows = dedupeRankingRowsForDisplay(sortedRows)
 
   // 表示中の指標名を取得（2024年以前と同様に metrics をそのまま使用）
@@ -273,7 +284,7 @@ export default function RankingUI({
     : `${scopeName}　${metricLabel}ランキング (${season}年)`
 
   const yearSelectOptions = yearOptions ?? Array.from({ length: 77 }, (_, i) => 2026 - i)
-  const tableMinWidthPx = rankingTableMinWidthPx(leftBlockWidth, metricColMinWidth, metrics.length)
+  const tableMinWidthPx = rankingTableMinWidthPx(leftBlockWidth, metricColMinWidth, displayMetrics.length)
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const bottomScrollRef = useRef<HTMLDivElement>(null)
   const scrollSyncLock = useRef(false)
@@ -361,7 +372,7 @@ export default function RankingUI({
             >
               <colgroup>
                 <col style={{ width: `${leftBlockWidth}px` }} />
-                {metrics.map((metric) => (
+                {displayMetrics.map((metric) => (
                   <col key={metric.key} style={{ width: `${metricColMinWidth}px` }} />
                 ))}
               </colgroup>
@@ -371,7 +382,7 @@ export default function RankingUI({
                   leftBlockWidth={leftBlockWidth}
                   playerWidth={playerWidth}
                   metricColMinWidth={metricColMinWidth}
-                  metrics={metrics}
+                  metrics={displayMetrics}
                   sortKey={sortKey}
                   onSortChange={onSortChange}
                 />
@@ -397,7 +408,7 @@ export default function RankingUI({
                           leftBlockWidth={leftBlockWidth}
                           playerWidth={playerWidth}
                           metricColMinWidth={metricColMinWidth}
-                          metrics={metrics}
+                          metrics={displayMetrics}
                           sortKey={sortKey}
                           onSortChange={onSortChange}
                         />
@@ -499,7 +510,7 @@ export default function RankingUI({
                         </div>
                       </td>
                       {/* 層2: 指標の値のみ */}
-                      {metrics.map((metric, metricIdx) => {
+                      {displayMetrics.map((metric, metricIdx) => {
                         const value = row[metric.key]
                         const formattedValue = value !== null && value !== undefined && !isNaN(Number(value))
                           ? formatStat(metric.label, value)
@@ -539,7 +550,7 @@ export default function RankingUI({
                         row.rank === qualifyingDividerAfterRank && (
                           <tr key={`qual-divider-${row.playerId}-${idx}`} aria-hidden>
                             <td
-                              colSpan={metrics.length + 1}
+                              colSpan={displayMetrics.length + 1}
                               className="p-0 leading-none"
                               style={{ height: 0, border: "none" }}
                             >

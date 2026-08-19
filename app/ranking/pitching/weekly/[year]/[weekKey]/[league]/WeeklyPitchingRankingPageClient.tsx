@@ -153,6 +153,11 @@ export default function WeeklyPitchingRankingPageClient({
     return { sortKey: sk, order: ord }
 
   }, [clientSearch])
+  const pinActiveMetric = useMemo(() => {
+    const q = clientSearch.replace(/^\?/, "")
+    const sp = new URLSearchParams(q)
+    return sp.get("pinActiveMetric") === "1"
+  }, [clientSearch])
 
 
 
@@ -412,7 +417,7 @@ export default function WeeklyPitchingRankingPageClient({
 
     router.replace(
 
-      `/ranking/pitching/weekly/${year}/${weekKey}/${league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}`
+      `/ranking/pitching/weekly/${year}/${weekKey}/${league}?sort=${encodeURIComponent(metricKey)}&order=${newOrder}${pinActiveMetric ? "&pinActiveMetric=1" : ""}`
 
     )
 
@@ -424,7 +429,7 @@ export default function WeeklyPitchingRankingPageClient({
 
     router.push(
 
-      `/ranking/pitching/weekly/${year}/${newWeekKey}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}`
+      `/ranking/pitching/weekly/${year}/${newWeekKey}/${league}?sort=${encodeURIComponent(sortKey)}&order=${order}${pinActiveMetric ? "&pinActiveMetric=1" : ""}`
 
     )
 
@@ -520,6 +525,7 @@ export default function WeeklyPitchingRankingPageClient({
 
         }}
         headerNavGroups={headerNavGroups}
+        pinActiveMetricNextToPlayer={pinActiveMetric}
 
       />
 

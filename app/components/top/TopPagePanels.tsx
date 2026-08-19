@@ -36,6 +36,11 @@ import {
 } from "@/lib/topPage/weeklyRankingUrl"
 import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
 
+function withPinnedMetricParam(url: string): string {
+  const separator = url.includes("?") ? "&" : "?"
+  return `${url}${separator}pinActiveMetric=1`
+}
+
 export type TopPageLayoutMode = "mobile" | "desktop"
 
 type LeadersPanelProps = {
@@ -101,19 +106,23 @@ export function LeadersPanel({
 
   const getRankingUrl = (metric: string): string => {
     if (statsCategory === "pitching" && league && weekKey) {
-      return getWeeklyPitchingRankingUrl(year, weekKey, league, metric)
+      return withPinnedMetricParam(getWeeklyPitchingRankingUrl(year, weekKey, league, metric))
     }
     if (statsCategory === "pitching" && league) {
       const metricKey = normalizePitchingMetricKey(metric)
       const order = getPitchingSortOrderForKey(metricKey)
-      return `/ranking/pitching/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+      return withPinnedMetricParam(
+        `/ranking/pitching/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+      )
     }
     if (year && league) {
       const metricKey = normalizeBattingMetricKey(metric)
       const order = metricKey === "kpct" || metricKey === "k%" ? "asc" : "desc"
-      return `/ranking/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+      return withPinnedMetricParam(
+        `/ranking/${year}/${league}?sort=${encodeURIComponent(metricKey)}&order=${order}`
+      )
     }
-    return `/ranking/${encodeURIComponent(metric)}`
+    return withPinnedMetricParam(`/ranking/${encodeURIComponent(metric)}`)
   }
 
   const getStatsListUrl = (metric: string): string => {
