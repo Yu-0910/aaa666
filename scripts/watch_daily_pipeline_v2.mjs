@@ -17,6 +17,7 @@ import path from "node:path"
 import { execSync, spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
+import { writeJsonFileWithRetrySync } from "./writeFileWithRetry.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -215,8 +216,8 @@ function writeWatchSummary(dateJst, summary) {
     ...summary,
     updatedAtJst: formatJstTimestamp(),
   }
-  fs.writeFileSync(watchSummaryPath(dateJst), JSON.stringify(payload, null, 2), "utf8")
-  fs.writeFileSync(watchSummaryLatestPath(), JSON.stringify(payload, null, 2), "utf8")
+  writeJsonFileWithRetrySync(watchSummaryPath(dateJst), payload)
+  writeJsonFileWithRetrySync(watchSummaryLatestPath(), payload)
 }
 
 function pushWatchSummaryEvent(summary, key, event, { limit = 80 } = {}) {
