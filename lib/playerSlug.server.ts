@@ -31,7 +31,8 @@ type PlayerSlugIndex = {
   byRomanKey: Map<string, PlayerSlugEntry>
 }
 
-let cachedIndex: PlayerSlugIndex | null = null
+let cachedBaseIndex: PlayerSlugIndex | null = null
+let cachedExtendedIndex: PlayerSlugIndex | null = null
 
 const LEGACY_PLAYER_SLUG_ALIASES: Record<string, string> = {
   "sato-t": "teruaki-sato",
@@ -96,12 +97,45 @@ function resolveHistoricalOverrideEntry(raw: string): PlayerSlugEntry | null {
   return null
 }
 
-function buildSlugIndex(): PlayerSlugIndex {
-  if (cachedIndex) return cachedIndex
-  const entries = [
+function buildIndexFromEntries(entries: PlayerSlugEntry[]): PlayerSlugIndex {
+  const bySlug = new Map<string, PlayerSlugEntry>()
+  const byNpbId = new Map<string, PlayerSlugEntry>()
+  const byNameKey = new Map<string, PlayerSlugEntry>()
+  const byRomanKey = new Map<string, PlayerSlugEntry>()
+  for (const entry of entries) {
+    if (!bySlug.has(entry.slug)) bySlug.set(entry.slug, entry)
+    const historicalOverride = historicalSlugOverrideById(entry.npbPlayerId)
+    for (const legacySlug of historicalOverride?.legacySlugs ?? []) {
+      if (!bySlug.has(legacySlug)) bySlug.set(legacySlug, entry)
+    }
+    for (const romanShort of romanShortCandidatesFromFull(entry.romanFull)) {
+      const shortSlug = slugifyPlayerRomanName(romanShort)
+      if (shortSlug && !bySlug.has(shortSlug)) bySlug.set(shortSlug, entry)
+    }
+    if (!byNpbId.has(entry.npbPlayerId)) byNpbId.set(entry.npbPlayerId, entry)
+    const rosterNameKey = rosterNameMatchKey(entry.nameJa)
+    if (rosterNameKey && !byNameKey.has(rosterNameKey)) byNameKey.set(rosterNameKey, entry)
+    const compactNameKey = compactPlayerName(entry.nameJa)
+    if (compactNameKey && !byNameKey.has(compactNameKey)) byNameKey.set(compactNameKey, entry)
+    const romanKey = compactPlayerName(entry.romanFull).toLowerCase()
+    if (romanKey && !byRomanKey.has(romanKey)) byRomanKey.set(romanKey, entry)
+  }
+  return { entries, bySlug, byNpbId, byNameKey, byRomanKey }
+}
+
+function buildBaseSlugIndex(): PlayerSlugIndex {
+  if (cachedBaseIndex) return cachedBaseIndex
+  cachedBaseIndex = buildIndexFromEntries([
     ...CURRENT_ROSTER_PLAYER_ENTRIES,
     ...HISTORICAL_PLAYER_SLUG_OVERRIDES.map(entryFromHistoricalOverride),
-  ]
+  ])
+  return cachedBaseIndex
+}
+
+function buildExtendedSlugIndex(): PlayerSlugIndex {
+  if (cachedExtendedIndex) return cachedExtendedIndex
+  const base = buildBaseSlugIndex()
+  const entries = [...base.entries]
   const byKnownNpbId = new Set(entries.map((entry) => entry.npbPlayerId))
   try {
     const mergedDir = derivedLocalPath("player_profile", "merged")
@@ -133,46 +167,24 @@ function buildSlugIndex(): PlayerSlugIndex {
   } catch {
     // local derived data が無い環境では 2026名簿のみで継続
   }
-  const bySlug = new Map<string, PlayerSlugEntry>()
-  const byNpbId = new Map<string, PlayerSlugEntry>()
-  const byNameKey = new Map<string, PlayerSlugEntry>()
-  const byRomanKey = new Map<string, PlayerSlugEntry>()
-  for (const entry of entries) {
-    if (!bySlug.has(entry.slug)) bySlug.set(entry.slug, entry)
-    const historicalOverride = historicalSlugOverrideById(entry.npbPlayerId)
-    for (const legacySlug of historicalOverride?.legacySlugs ?? []) {
-      if (!bySlug.has(legacySlug)) bySlug.set(legacySlug, entry)
-    }
-    for (const romanShort of romanShortCandidatesFromFull(entry.romanFull)) {
-      const shortSlug = slugifyPlayerRomanName(romanShort)
-      if (shortSlug && !bySlug.has(shortSlug)) bySlug.set(shortSlug, entry)
-    }
-    if (!byNpbId.has(entry.npbPlayerId)) byNpbId.set(entry.npbPlayerId, entry)
-    const rosterNameKey = rosterNameMatchKey(entry.nameJa)
-    if (rosterNameKey && !byNameKey.has(rosterNameKey)) byNameKey.set(rosterNameKey, entry)
-    const compactNameKey = compactPlayerName(entry.nameJa)
-    if (compactNameKey && !byNameKey.has(compactNameKey)) byNameKey.set(compactNameKey, entry)
-    const romanKey = compactPlayerName(entry.romanFull).toLowerCase()
-    if (romanKey && !byRomanKey.has(romanKey)) byRomanKey.set(romanKey, entry)
-  }
-  cachedIndex = { entries, bySlug, byNpbId, byNameKey, byRomanKey }
-  return cachedIndex
+  cachedExtendedIndex = buildIndexFromEntries(entries)
+  return cachedExtendedIndex
 }
 
 export function getAllPlayerSlugEntries(): PlayerSlugEntry[] {
-  return buildSlugIndex().entries
+  return buildExtendedSlugIndex().entries
 }
 
 export function getPlayerSlugEntryBySlug(slug: string): PlayerSlugEntry | null {
   const clean = String(slug ?? "").trim().toLowerCase()
   if (!clean) return null
-  return buildSlugIndex().bySlug.get(clean) ?? null
+  return buildBaseSlugIndex().bySlug.get(clean) ?? buildExtendedSlugIndex().bySlug.get(clean) ?? null
 }
 
 export function getPlayerSlugEntryByNpbId(npbPlayerId: string): PlayerSlugEntry | null {
   const clean = String(npbPlayerId ?? "").trim()
   if (!clean) return null
-  return buildSlugIndex().byNpbId.get(clean) ?? null
+  return buildBaseSlugIndex().byNpbId.get(clean) ?? buildExtendedSlugIndex().byNpbId.get(clean) ?? null
 }
 
 export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
@@ -194,13 +206,17 @@ export function resolvePlayerSlugEntry(raw: string): PlayerSlugEntry | null {
     const npbPlayerId = resolveNpbPlayerIdFromPublicId(decoded)
     return getPlayerSlugEntryByNpbId(npbPlayerId) ?? getPlayerSlugEntryByNpbId(decoded)
   }
-  const index = buildSlugIndex()
+  let index = buildBaseSlugIndex()
   const nameKey = rosterNameMatchKey(decoded)
-  const byName = index.byNameKey.get(nameKey) ?? index.byNameKey.get(compactPlayerName(decoded))
+  let byName = index.byNameKey.get(nameKey) ?? index.byNameKey.get(compactPlayerName(decoded))
+  if (!byName) {
+    index = buildExtendedSlugIndex()
+    byName = index.byNameKey.get(nameKey) ?? index.byNameKey.get(compactPlayerName(decoded))
+  }
   if (byName) return byName
   const romanKey = compactPlayerName(decoded).toLowerCase()
   if (romanKey) {
-    const byRoman = index.byRomanKey.get(romanKey)
+    const byRoman = index.byRomanKey.get(romanKey) ?? buildExtendedSlugIndex().byRomanKey.get(romanKey)
     if (byRoman) return byRoman
   }
   const historicalOverride = resolveHistoricalOverrideEntry(decoded)
