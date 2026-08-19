@@ -27,7 +27,12 @@ function PlayerPageClientLoader(props: PlayerPageClientProps) {
         }
       })
       .catch(() => {
-        if (active) setLoadError(true)
+        if (active) {
+          const snapshot = document.getElementById("player-initial-html-snapshot")
+          snapshot?.removeAttribute("hidden")
+          if (snapshot instanceof HTMLElement) snapshot.style.display = ""
+          setLoadError(true)
+        }
       })
     return () => {
       active = false

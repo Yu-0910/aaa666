@@ -118,7 +118,11 @@ export default function PlayerInitialHtmlSnapshot({ entry, profileMerged }: Prop
   const teamName = String(entry.teamCode ?? "").trim()
 
   return (
-    <article id="player-initial-html-snapshot" className="player-initial-html-snapshot">
+    <article
+      id="player-initial-html-snapshot"
+      className="player-initial-html-snapshot"
+      style={{ display: "none" }}
+    >
         <h1>{displayName}</h1>
         {romanName ? <p>{romanName}</p> : null}
         {teamName ? <p>球団: {teamName}</p> : null}
