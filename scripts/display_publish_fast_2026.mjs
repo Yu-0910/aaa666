@@ -48,6 +48,12 @@ const fromArg =
 const toArg =
   process.argv.find((a) => a.startsWith("--to="))?.split("=")[1] ??
   (process.argv.includes("--to") ? process.argv[process.argv.indexOf("--to") + 1] : null)
+const leaguesArg =
+  process.argv.find((a) => a.startsWith("--league="))?.split("=")[1] ??
+  (process.argv.includes("--league") ? process.argv[process.argv.indexOf("--league") + 1] : null)
+const LEAGUES = leaguesArg
+  ? new Set(leaguesArg.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean))
+  : null
 const WEEK_KEYS = weekKeysForRange(fromArg?.trim(), toArg?.trim())
 
 function loadDotEnvFile(filePath) {
@@ -144,6 +150,16 @@ function matchesWeeklyScope(rel, weekKeys) {
   return true
 }
 
+function matchesLeagueScope(rel, leagues) {
+  if (!leagues || leagues.size === 0) return true
+  const normalized = rel.replace(/\\/g, "/")
+  const parts = normalized.split("/")
+  const league =
+    parts.find((part) => /^[A-Z]{2}$/.test(part)) ||
+    ""
+  return !league || leagues.has(league)
+}
+
 function matchesTopLeadersWeeklyScope(rel, weekKeys) {
   if (!weekKeys) return true
   const normalized = rel.replace(/\\/g, "/")
@@ -208,6 +224,7 @@ function collectFastFiles(year) {
       rel.startsWith(`weekly/${year}/`)
     if (!match) continue
     if (!matchesWeeklyScope(rel, WEEK_KEYS)) continue
+    if (!matchesLeagueScope(rel, LEAGUES)) continue
     files.push({ local: f, key: `data/rankings/${rel}` })
   }
 
@@ -217,6 +234,7 @@ function collectFastFiles(year) {
     const match =
       rel.startsWith(`${year}/`) || rel.startsWith(`weekly/${year}/`)
     if (!match) continue
+    if (!matchesLeagueScope(rel, LEAGUES)) continue
     files.push({ local: f, key: `data/standings/${rel}` })
   }
 
@@ -225,6 +243,7 @@ function collectFastFiles(year) {
     const rel = path.relative(topLeadersRoot, f).replace(/\\/g, "/")
     if (!(rel.startsWith(`${year}/`) || rel.startsWith(`weekly/${year}/`))) continue
     if (!matchesTopLeadersWeeklyScope(rel, WEEK_KEYS)) continue
+    if (!matchesLeagueScope(rel, LEAGUES)) continue
     files.push({ local: f, key: `data/top-leaders/${rel}` })
   }
 

@@ -238,8 +238,21 @@ function writeReport(args: Args, rows: UnknownPlayerReportRow[], scannedGameIds:
   const payload = reportPayload(args, rows, scannedGameIds)
   const reportPath = path.join(outDir, `${stamp}.json`)
   const latestPath = path.join(outDir, "latest.json")
-  fs.writeFileSync(reportPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
-  fs.writeFileSync(latestPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
+  const body = `${JSON.stringify(payload, null, 2)}\n`
+  for (const filePath of [reportPath, latestPath]) {
+    let lastError: unknown = null
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        fs.writeFileSync(filePath, body, "utf8")
+        lastError = null
+        break
+      } catch (error) {
+        lastError = error
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 120 * attempt)
+      }
+    }
+    if (lastError) throw lastError
+  }
   return reportPath
 }
 

@@ -769,12 +769,13 @@ function runPlayerDerivationPrecompute(year, gameIds, dryRun) {
   const idCsv = yahooIds.join(",")
   const cmds = [
     ["phase11 batting 差分", `npm run phase11:build:batting -- --only-yahoo-ids ${idCsv}`],
+    ["phase16 batting count 差分", `npm run phase16:build:batting-count -- --only-yahoo-ids ${idCsv}`],
     ["phase13 context 差分", `npm run phase13:build:context -- --only-yahoo-ids ${idCsv}`],
   ]
   appendPipelineBulkLog(
     root,
     "watch:daily-pipeline:v2",
-    `player_derivation_precompute_light gameIds=${gameIds.join(",")} yahooIds=${yahooIds.length} phases=phase11,phase13 phase15=defer_to_finalize`,
+    `player_derivation_precompute_light gameIds=${gameIds.join(",")} yahooIds=${yahooIds.length} phases=phase11,phase16,phase13 phase15=defer_to_finalize`,
   )
   for (const [label, cmd] of cmds) {
     log(`選手派生先行: ${label}: ${yahooIds.length}人`)

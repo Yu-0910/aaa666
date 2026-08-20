@@ -126,7 +126,18 @@ function loadConfiguredUrls(year: string): Set<string> {
 
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8")
+  const body = `${JSON.stringify(value, null, 2)}\n`
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      fs.writeFileSync(filePath, body, "utf8")
+      return
+    } catch (error) {
+      lastError = error
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 120 * attempt)
+    }
+  }
+  throw lastError
 }
 
 async function main(): Promise<void> {
