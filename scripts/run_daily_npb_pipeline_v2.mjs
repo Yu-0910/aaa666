@@ -793,6 +793,16 @@ function derivedYahooArgsArg(ids, { from, to } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
+function phase17WindowValidateArg(ids, { year, from, to, fail = true } = {}) {
+  const args = []
+  if (year) args.push("--year", year)
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  if (Array.isArray(ids) && ids.length > 0) args.push("--only-yahoo-ids", ids.join(","))
+  if (fail) args.push("--fail")
+  return args.length > 0 ? ` ${args.join(" ")}` : ""
+}
+
 function dateRangeNpmArgsArg({ from, to } = {}) {
   const args = []
   if (from) args.push("--from", from)
@@ -1115,6 +1125,13 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     `npm run phase17:build:period${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
     { dryRun },
   )
+  if (repairYahooIds.length > 0) {
+    run(
+      `検証: phase17 period window（差分 ${repairYahooIds.length}人）`,
+      `npm run validate:phase17-period-window --${phase17WindowValidateArg(repairYahooIds, { year, from, to })}`,
+      { dryRun },
+    )
+  }
   if (rebuildPitchingPeriod) {
     run(
       repairNpbPitcherIds.length > 0
@@ -1478,6 +1495,17 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
       staleYahooIds: report.staleYahooIds.slice(0, 20),
     })
     run(plan.rebuildLabel, plan.command, { dryRun })
+  }
+}
+
+function runPhase17PeriodAndValidate({ year, from, to, affectedYahooIds, dryRun, label = "派生: phase17 period" }) {
+  run(label, `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`, { dryRun })
+  if (affectedYahooIds.length > 0) {
+    run(
+      `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
+      `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
+      { dryRun },
+    )
   }
 }
 
@@ -4339,7 +4367,14 @@ function runFastStage({
   run("検証: 出場成績 打数列 vs 末尾スロット", "npm run validate:appearance-slots-vs-line-ab:fail", { dryRun })
   run("検証: appearance_slots の CS と代走のみ SB", "npm run verify:cs-runner-events-appearance-slots", { dryRun })
   if (shouldRunDeltaPhase("batting_period")) {
-    run("派生: phase17 period", `npm run phase17:build:period${derivedAffectedArg}`, { dryRun })
+    runPhase17PeriodAndValidate({
+      year,
+      from,
+      to,
+      affectedYahooIds,
+      dryRun,
+      label: "派生: phase17 period",
+    })
     ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
   } else {
     logDeltaSkip("派生: phase17 period", "batting_period")
@@ -4453,6 +4488,13 @@ function runFinalPrecomputedPublishStage({
       dryRun,
       rebuildPitchingPeriod: true,
     })
+    if (affectedYahooIds.length > 0) {
+      run(
+        `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
+        `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
+        { dryRun },
+      )
+    }
   } else {
     logDeltaSkip("派生: phase17 period", "batting_period")
   }
