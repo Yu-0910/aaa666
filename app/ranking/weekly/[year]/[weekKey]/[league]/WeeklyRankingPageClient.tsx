@@ -22,17 +22,9 @@ import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWe
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
 import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
-import { shouldRequireQualifyingPA, calculateMinPA } from "@/lib/ranking/qualifyingPA"
-
-import { computeDynamicMinPAByTeam } from "@/lib/ranking/dynamicQualifyingPA"
-
-import {
-
-  fetchMinPAByTeamClient,
-
-  rowPassesQualifyingPAWithMinMap,
-
-} from "@/lib/ranking/qualifyingThresholdsShared"
+import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
+import { fetchMinPAByTeamClient } from "@/lib/ranking/qualifyingThresholdsShared"
+import { sortBattingRankingRows } from "@/lib/ranking/sortBattingRankingRows"
 
 
 import { FullPageLoading } from "@/components/ui/spinner"
@@ -452,115 +444,20 @@ export default function WeeklyRankingPageClient({
 
 
 
-  const sortedRows = useMemo(() => {
-
-    const rows = rowsFromJson
-
-    const metric = initialViewModel.metrics.find((m) => m.key === sortKey)
-
-    if (!metric) return rows
-
-
-
-    const requiresQualifyingPA = shouldRequireQualifyingPA(metric.key)
-
-    const fallbackMinPA = requiresQualifyingPA ? calculateMinPA(year, leagueUpper) : 0
-
-
-
-    let filteredRows = rows
-
-    if (requiresQualifyingPA && fallbackMinPA > 0) {
-
-      if (is2026 && minPAByTeamCanonical && minPAByTeamCanonical.size > 0) {
-
-        filteredRows = rows.filter((row) =>
-
-          rowPassesQualifyingPAWithMinMap(
-
-            row as Record<string, unknown>,
-
-            minPAByTeamCanonical,
-
-            fallbackMinPA
-
-          )
-
-        )
-
-      } else if (is2026) {
-
-        const dynamicMinPAByTeam = computeDynamicMinPAByTeam(rows, year)
-
-        filteredRows = rows.filter((row) => {
-
-          const team = String(row.team ?? "").trim()
-
-          const effectiveMinPA = (team && dynamicMinPAByTeam.get(team)) ?? fallbackMinPA
-
-          const pa = row.pa ?? row.PA ?? row["打席"]
-
-          const paValue = typeof pa === "number" ? pa : Number(pa)
-
-          return Number.isFinite(paValue) && paValue >= effectiveMinPA
-
-        })
-
-      }
-
-    }
-
-
-
-    const sorted = [...filteredRows].sort((a, b) => {
-
-      const aValue = a[metric.key]
-
-      const bValue = b[metric.key]
-
-      if (aValue === null || aValue === undefined) return 1
-
-      if (bValue === null || bValue === undefined) return -1
-
-      if (isNaN(Number(aValue))) return 1
-
-      if (isNaN(Number(bValue))) return -1
-
-      if (order === "asc") return Number(aValue) - Number(bValue)
-
-      return Number(bValue) - Number(aValue)
-
-    })
-
-
-
-    return sorted.map((row, index) => ({
-
-      ...row,
-
-      rank: index + 1,
-
-    }))
-
-  }, [
-
-    rowsFromJson,
-
-    initialViewModel.metrics,
-
-    year,
-
-    leagueUpper,
-
-    sortKey,
-
-    order,
-
-    is2026,
-
-    minPAByTeamCanonical,
-
-  ])
+  const { rows: sortedRows, qualifyingDividerAfterRank } = useMemo(
+    () =>
+      sortBattingRankingRows({
+        rows: rowsFromJson,
+        metrics: initialViewModel.metrics,
+        sortKey,
+        order,
+        season: year,
+        league,
+        is2026,
+        minPAByTeamCanonical,
+      }),
+    [rowsFromJson, initialViewModel.metrics, sortKey, order, year, league, is2026, minPAByTeamCanonical]
+  )
 
 
 
@@ -673,6 +570,7 @@ export default function WeeklyRankingPageClient({
         }}
         headerNavGroups={headerNavGroups}
         pinActiveMetricNextToPlayer={pinActiveMetric}
+        qualifyingDividerAfterRank={qualifyingDividerAfterRank}
 
       />
 

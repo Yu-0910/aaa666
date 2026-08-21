@@ -134,7 +134,6 @@ export function useBattingRankingTable({
         is2026,
         minPAByTeamCanonical,
         teamCode,
-        skipTeamQualifyingFilter: Boolean(teamCode && weekKey),
       }),
     [
       rowsFromJson,
