@@ -30,6 +30,7 @@ import crypto from "node:crypto"
 import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
+import { leagueFromTeamShort, teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -622,28 +623,15 @@ function collectNpbPitcherSourceThresholdMsById(gameIds) {
   return thresholds
 }
 
-const TEAM_NAME_TO_LEAGUE = {
-  "中日ドラゴンズ": "CL",
-  "広島東洋カープ": "CL",
-  "東京ヤクルトスワローズ": "CL",
-  "読売ジャイアンツ": "CL",
-  "阪神タイガース": "CL",
-  "横浜DeNAベイスターズ": "CL",
-  "オリックス・バファローズ": "PL",
-  "千葉ロッテマリーンズ": "PL",
-  "北海道日本ハムファイターズ": "PL",
-  "東北楽天ゴールデンイーグルス": "PL",
-  "埼玉西武ライオンズ": "PL",
-  "福岡ソフトバンクホークス": "PL",
-}
-
 function collectAffectedLeaguesForGames(gameIds) {
   const leagues = new Set()
   for (const gameId of gameIds) {
     const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
     const doc = readJsonOrNull(canonicalPath)
     for (const team of doc?.game?.teams ?? []) {
-      const league = TEAM_NAME_TO_LEAGUE[String(team?.teamName ?? "").trim()]
+      const short = teamRankingShortFromGameTeamName(String(team?.teamName ?? "").trim())
+      if (!short) continue
+      const league = leagueFromTeamShort(short)
       if (league) leagues.add(league)
     }
   }
