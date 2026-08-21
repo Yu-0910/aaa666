@@ -89,7 +89,7 @@ function MetricPanel({
   const panelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
 
   return (
-    <div className={`bg-black border border-[#555] rounded-xl relative min-w-0 ${panelClass}`}>
+    <div className={`bg-black border border-[#555] rounded-lg relative min-w-0 ${panelClass}`}>
       <div className={`relative mb-1 flex ${typography.metricHeaderMinH} items-center`}>
         <Link
           href={getRankingUrl(metricKey)}
