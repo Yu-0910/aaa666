@@ -208,6 +208,13 @@ function pitchingGameIdTotal(cache: TeamStandingsGameCache, gameId: string): num
   return total
 }
 
+function isCancelledCanonicalGame(doc: CanonicalGameDocument): boolean {
+  const missing = Array.isArray(doc?.game?.missingOrPartial) ? doc.game.missingOrPartial : []
+  if (missing.some((entry) => /game cancelled|試合中止|ノーゲーム/i.test(String(entry)))) return true
+  const title = String(doc?.game?.meta?.documentTitle ?? doc?.game?.meta?.ogTitle ?? "").trim()
+  return /試合中止|ノーゲーム/.test(title)
+}
+
 function writeGameCache(
   year: string,
   doc: CanonicalGameDocument,
@@ -215,6 +222,7 @@ function writeGameCache(
 ): void {
   const gameId = String(doc.gameId ?? "").trim()
   if (!gameId) return
+  const cancelled = isCancelledCanonicalGame(doc)
   const aggregateOptions = { projectRoot, includeToday: options?.includeToday === true }
   const cache = {
     schemaVersion: GAME_CACHE_SCHEMA,
@@ -237,11 +245,11 @@ function writeGameCache(
     },
   } satisfies TeamStandingsGameCache
 
-  if (options?.requireNonEmpty && recordGameTotal(payload) === 0) {
+  if (options?.requireNonEmpty && !cancelled && recordGameTotal(payload) === 0) {
     throw new Error(`[phase29] standings game-cache is empty for final target game ${gameId}`)
   }
 
-  if (options?.requireNonEmpty) {
+  if (options?.requireNonEmpty && !cancelled) {
     const battingTeams = battingGameIdTotal(payload, gameId)
     const pitchingTeams = pitchingGameIdTotal(payload, gameId)
     if (battingTeams < 2 || pitchingTeams < 2) {
