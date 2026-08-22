@@ -1661,7 +1661,11 @@ function classifyStepFailure({ label, command, error, timedOut, exitCode, tryMod
   return {
     kind,
     severity: tryMode ? "warning" : "fatal",
-    retryable: Boolean(timedOut || /ebusy|etimedout|econnreset|temporar|一時的|open 失敗/i.test(lower)),
+    retryable: Boolean(
+      timedOut ||
+        ((/ebusy|etimedout|econnreset|temporar|一時的|open 失敗/i.test(lower) &&
+          !/standings game-cache is empty|standings game-cache missing batting\/pitching gameid/i.test(lower))),
+    ),
   }
 }
 
@@ -2266,15 +2270,24 @@ function execPipelineStepWithRetry(label, command, opts = {}) {
     } catch (e) {
       lastError = e
       const timedOut = Boolean(e?.signal) || /timed out/i.test(String(e?.message ?? ""))
-      if (timedOut || attempt >= maxAttempts) break
+      const failure = classifyStepFailure({
+        label,
+        command,
+        error: e,
+        timedOut,
+        exitCode: typeof e?.status === "number" ? e.status : undefined,
+        tryMode: true,
+      })
+      if (!failure.retryable || attempt >= maxAttempts) break
       const waitMs = attempt === 1 ? 5000 : 15000
-      const message = `一時的なファイル open 失敗の可能性があるため再試行します: ${label} attempt=${attempt + 1}/${maxAttempts} wait=${Math.round(waitMs / 1000)}s`
+      const message = `一時的エラーの可能性があるため再試行します: ${label} attempt=${attempt + 1}/${maxAttempts} wait=${Math.round(waitMs / 1000)}s`
       console.warn(`\n[daily:npb-pipeline:v2] ${message}\n`)
       appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `retry_transient_step ${message}`)
       pushRunSummaryEvent("retries", {
         kind: "transient_step_retry",
         label,
         command,
+        failureKind: failure.kind,
         attempt: attempt + 1,
         maxAttempts,
         waitMs,
