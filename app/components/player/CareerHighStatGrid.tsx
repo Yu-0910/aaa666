@@ -74,7 +74,7 @@ export function CareerHighStatGrid({
                 width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
                 height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
                 backgroundColor: "#FFFF44",
-                borderRadius: `${CAREER_HIGH_LABEL_EM * 0.28}em`,
+                borderRadius: "0.25rem",
               }}
             />
             <div
