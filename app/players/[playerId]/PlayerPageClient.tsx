@@ -1346,7 +1346,7 @@ export function PlayerPageClient({
   const careerProfileToSubTabGap = "-2rem"
   const seasonSubTabToContentGap = "1rem"
   const sharedInlineSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden rounded mt-2 mb-2"
 
   const seasonProfileScaleShellStyle = (): React.CSSProperties | undefined =>
     profileTableScaleStyle(seasonProfileToSubTabGap)
@@ -1364,12 +1364,12 @@ export function PlayerPageClient({
   const fielderCareerInlineSubTabBarShellClass = sharedInlineSubTabBarShellClass
   /** 通常フロー: プロフィール表との間隔はスケール補正側で確保 */
   const pitcherStickySubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden rounded mt-0 mb-0"
   /** 固定時: プロフィール表に近づけるためタブ自体の下余白だけ抑える */
   const fielderStickySubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-0 mb-0"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden rounded mt-0 mb-0"
   const pitcherCareerSubTabBarShellClass =
-    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-3 mb-2"
+    "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden rounded mt-3 mb-2"
   const pitcherSubTabButtonClass =
     "relative z-10 m-0 flex min-h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-none border-0 bg-transparent px-4 py-2 text-xs font-bold transition-colors duration-150 hover:bg-[#2a2a2a]/50"
   const fielderCareerH2Class = careerUsesRankingCareerHeading ? "mb-3 mt-0" : `${tb} mb-4 pl-4`
@@ -1387,8 +1387,8 @@ export function PlayerPageClient({
         (inlineInProfileShell
           ? sharedInlineSubTabBarShellClass
           : isMobile
-            ? "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
-            : "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
+            ? "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden rounded"
+            : "relative isolate box-border mb-6 mt-4 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden rounded")
       }
       style={{
         border: "1px solid #555",
@@ -1461,8 +1461,8 @@ export function PlayerPageClient({
           (inlineInProfileShell
             ? pitcherInlineSubTabBarShellClass
             : isMobile
-              ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden"
-              : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden")
+              ? "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+2.5rem)] max-w-none shrink-0 -mx-5 items-stretch overflow-hidden rounded"
+              : "relative isolate box-border mb-6 flex min-h-10 w-[calc(100%+4rem)] max-w-none shrink-0 -mx-8 items-stretch overflow-hidden rounded")
         }
         style={{
           border: "1px solid #555",
@@ -1502,7 +1502,7 @@ export function PlayerPageClient({
       ref={shellRef}
       className={
         shellClassOverride ??
-        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden mt-2 mb-2"
+        "relative isolate box-border flex min-h-10 w-full min-w-0 shrink-0 items-stretch overflow-x-auto overflow-y-hidden rounded mt-2 mb-2"
       }
       style={{
         border: "1px solid #555",
