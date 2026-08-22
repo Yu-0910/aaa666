@@ -44,7 +44,7 @@ export function CareerHighStatGrid({
             fontSize: `${CAREER_HIGH_CARD_SCALE_CQW}cqw`,
             backgroundColor: "#000000",
             border: `${CAREER_HIGH_CARD_BORDER_EM}em solid #555555`,
-            borderRadius: "0.14em",
+            borderRadius: "0.25rem",
             boxShadow: "0 0.25em 0.625em rgba(0,0,0,0.5)",
             aspectRatio: "3 / 2",
             display: "flex",
