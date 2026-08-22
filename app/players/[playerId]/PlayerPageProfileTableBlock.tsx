@@ -24,7 +24,7 @@ export function PlayerPageProfileTableBlock({
 }: Props) {
   return (
     <div
-      className="rounded overflow-hidden"
+      className="player-page-profile-table-shell rounded overflow-hidden"
       style={{ border: "1px solid #333333", borderRadius: "0.25rem" }}
     >
       <table
