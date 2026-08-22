@@ -938,7 +938,7 @@ function ProbablesCard({
         </div>
       </div>
 
-      <div className="rounded border border-[#555] bg-black overflow-hidden">
+      <div className="top-page-table-shell rounded border border-[#555] bg-black overflow-hidden">
         {displayCard.games.map((g, idx) => (
           <GameRow
             key={`${g.dateJst}-${g.gameId ?? "tbd"}`}

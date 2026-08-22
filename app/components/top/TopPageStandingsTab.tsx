@@ -208,7 +208,7 @@ export function TeamStandingsTable({
   return (
     <div
       ref={scrollContainerRef}
-      className="rounded border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full"
+      className="top-page-table-shell rounded border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
       <table

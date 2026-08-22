@@ -30,7 +30,6 @@ import crypto from "node:crypto"
 import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
-import { leagueFromTeamShort, teamRankingShortFromGameTeamName } from "@/lib/standings/teamCodes"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -38,6 +37,74 @@ let runSummary = null
 let runSummaryPath = ""
 let runSummaryLatestPath = ""
 let currentRunId = ""
+
+const TEAM_CODE_TO_SHORT = {
+  H: "阪神",
+  G: "巨人",
+  DB: "DeNA",
+  C: "広島",
+  D: "中日",
+  S: "ヤクルト",
+  Bs: "オリックス",
+  M: "ロッテ",
+  F: "日本ハム",
+  E: "楽天",
+  L: "西武",
+  Hs: "ソフトバンク",
+}
+
+const TEAM_SHORT_TO_CODE = {
+  阪神: "H",
+  阪神タイガース: "H",
+  巨人: "G",
+  読売ジャイアンツ: "G",
+  DeNA: "DB",
+  横浜DeNAベイスターズ: "DB",
+  広島: "C",
+  広島東洋カープ: "C",
+  中日: "D",
+  中日ドラゴンズ: "D",
+  ヤクルト: "S",
+  東京ヤクルトスワローズ: "S",
+  オリックス: "Bs",
+  "オリックス・バファローズ": "Bs",
+  ロッテ: "M",
+  千葉ロッテマリーンズ: "M",
+  日本ハム: "F",
+  北海道日本ハムファイターズ: "F",
+  楽天: "E",
+  東北楽天ゴールデンイーグルス: "E",
+  西武: "L",
+  埼玉西武ライオンズ: "L",
+  ソフトバンク: "Hs",
+  福岡ソフトバンクホークス: "Hs",
+}
+
+const CL_TEAM_SHORT_SET = new Set(["巨人", "阪神", "中日", "広島", "DeNA", "ヤクルト"])
+const PL_TEAM_SHORT_SET = new Set(["オリックス", "ロッテ", "日本ハム", "楽天", "西武", "ソフトバンク"])
+
+function teamCodeFromShort(short) {
+  const t = String(short ?? "").trim()
+  if (TEAM_SHORT_TO_CODE[t]) return TEAM_SHORT_TO_CODE[t]
+  for (const [name, code] of Object.entries(TEAM_SHORT_TO_CODE)) {
+    if (t.includes(name) || name.includes(t)) return code
+  }
+  return t
+}
+
+function teamRankingShortFromGameTeamName(teamName) {
+  const t = String(teamName ?? "").trim()
+  if (!t) return ""
+  if (CL_TEAM_SHORT_SET.has(t) || PL_TEAM_SHORT_SET.has(t)) return t
+  const code = teamCodeFromShort(t)
+  return TEAM_CODE_TO_SHORT[code] ?? t
+}
+
+function leagueFromTeamShort(short) {
+  const t = String(short ?? "").trim()
+  if (!t) return "CL"
+  return CL_TEAM_SHORT_SET.has(t) ? "CL" : "PL"
+}
 
 const childEnv = {
   ...process.env,
@@ -1482,8 +1549,26 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
       missingYahooIds: report.missingYahooIds.slice(0, 20),
       staleYahooIds: report.staleYahooIds.slice(0, 20),
     })
-    run(plan.rebuildLabel, plan.command, { dryRun })
+    const repairYahooIds = yahooRepairIdsFromFreshnessReport(report)
+    if (repairYahooIds.length === 0) continue
+    const targetedCommand =
+      plan.category === "player_season_batting"
+        ? `npm run phase11:build:batting${derivedYahooArgsArg(repairYahooIds, { from, to })}`
+        : `npm run phase16:build:batting-count${derivedYahooArgsArg(repairYahooIds, { from, to })}`
+    run(plan.rebuildLabel, targetedCommand, { dryRun })
   }
+}
+
+function uniqueRepairIds(...groups) {
+  return [...new Set(groups.flat().map(String).map((s) => s.trim()).filter(Boolean))].sort()
+}
+
+function yahooRepairIdsFromFreshnessReport(report) {
+  return uniqueRepairIds(report?.missingYahooIds || [], report?.staleYahooIds || [])
+}
+
+function npbRepairIdsFromFreshnessReport(report) {
+  return uniqueRepairIds(report?.missingNpbIds || [], report?.staleNpbIds || [])
 }
 
 function runPhase17PeriodAndValidate({ year, from, to, affectedYahooIds, dryRun, label = "派生: phase17 period" }) {
@@ -1497,12 +1582,31 @@ function runPhase17PeriodAndValidate({ year, from, to, affectedYahooIds, dryRun,
   }
 }
 
+function runProfileTotalsFollowRankingValidation({
+  year,
+  affectedYahooIds = [],
+  affectedNpbPitcherIds = [],
+  dryRun,
+  label = "検証: 個人ページ通算値 ↔ ランキング",
+}) {
+  const yahooIds = uniqueStrings(affectedYahooIds)
+  const npbIds = uniqueStrings(affectedNpbPitcherIds)
+  if (yahooIds.length === 0 && npbIds.length === 0) {
+    console.log(`\n[daily:npb-pipeline:v2] ${label}: 対象選手なしのためスキップします。\n`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${label} no affected players`)
+    return
+  }
+  const parts = [`npx tsx scripts/validate_profile_totals_follow_rankings.ts --year ${year}`]
+  if (yahooIds.length > 0) parts.push(`--yahoo-ids ${yahooIds.join(",")}`)
+  if (npbIds.length > 0) parts.push(`--npb-ids ${npbIds.join(",")}`)
+  run(label, parts.join(" "), { dryRun })
+}
+
 function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
   const npbPitcherSourceThresholdMsById = collectNpbPitcherSourceThresholdMsById(targetIds)
-  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const pitchingReport = derivedNpbCategoryFreshnessReport({
     year,
     category: "player_season_pitching_poc",
@@ -1533,15 +1637,18 @@ function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun }) {
     missingNpbIds: pitchingReport.missingNpbIds.slice(0, 20),
     staleNpbIds: pitchingReport.staleNpbIds.slice(0, 20),
   })
-  run("派生: phase:pitcher-poc1（1回目公開後・鮮度NGのため再生成）", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
+  const repairNpbPitcherIds = npbRepairIdsFromFreshnessReport(pitchingReport)
+  if (repairNpbPitcherIds.length === 0) return
+  const repairNpbPitcherArg = onlyNpbIdsArg(repairNpbPitcherIds)
+  run("派生: phase:pitcher-poc1（1回目公開後・鮮度NGのため再生成）", `npm run phase:pitcher-poc1${repairNpbPitcherArg}`, { dryRun })
   run(
     "派生: phase6 pitcher-catcher splits（1回目公開後・投手PoC再生成に合わせて再生成）",
-    `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`,
+    `npm run phase6:build:pitcher-catcher-splits${repairNpbPitcherArg}`,
     { dryRun },
   )
   run(
     "派生: phase7 pitcher period（1回目公開後・投手PoC再生成に合わせて再生成）",
-    `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`,
+    `npm run phase7:build:pitcher-period${repairNpbPitcherArg}`,
     { dryRun },
   )
 }
@@ -1550,11 +1657,13 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(targetIds)
   const report = derivedCategoryFreshnessReport({
     year,
     category: "player_season_batting_splits",
     yahooIds: affectedYahooIds,
     canonicalThresholdMs,
+    sourceThresholdMsById: yahooSourceThresholdMsById,
   })
   if (report.ok) {
     appendPipelineBulkLog(
@@ -1586,9 +1695,11 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
     missingYahooIds: report.missingYahooIds.slice(0, 20),
     staleYahooIds: report.staleYahooIds.slice(0, 20),
   })
+  const repairYahooIds = yahooRepairIdsFromFreshnessReport(report)
+  if (repairYahooIds.length === 0) return
   run(
     "派生: phase15 batting splits（1回目公開後・2回目公開前の鮮度NG再生成）",
-    `npm run phase15:build:batting-splits${derivedYahooArgsArg(affectedYahooIds, { from, to })}`,
+    `npm run phase15:build:batting-splits${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
     { dryRun },
   )
 }
@@ -2878,6 +2989,55 @@ function writeVsHandFailureReport({ year, validationCommand, dryRun }) {
   return reportPath
 }
 
+function readVsHandRetryYahooIds(reportPath, fallbackYahooIds = []) {
+  const fallbackIds = [...new Set((fallbackYahooIds || []).map(String).filter(Boolean))].sort()
+  const report = readJsonOrNull(reportPath)
+  if (!report || typeof report !== "object") return fallbackIds
+  const mismatchIds = Array.isArray(report.mismatchPlayerIds)
+    ? report.mismatchPlayerIds.map(String).filter(Boolean)
+    : []
+  if (mismatchIds.length === 0) return fallbackIds
+  if (fallbackIds.length === 0) return [...new Set(mismatchIds)].sort()
+  const fallbackSet = new Set(fallbackIds)
+  const filtered = mismatchIds.filter((id) => fallbackSet.has(String(id)))
+  return [...new Set(filtered)].sort()
+}
+
+function readVsHandFailureReportSummary(reportPath, fallbackYahooIds = []) {
+  const fallbackIds = [...new Set((fallbackYahooIds || []).map(String).filter(Boolean))].sort()
+  const report = readJsonOrNull(reportPath)
+  if (!report || typeof report !== "object") {
+    return {
+      retryYahooIds: fallbackIds,
+      mismatchPlayerIds: [],
+      missingSplitsPlayerIds: [],
+      missingSplits: -1,
+      mismatches: -1,
+      negativeReconPlayers: -1,
+      canRetryPhase15: true,
+    }
+  }
+  const mismatchPlayerIds = Array.isArray(report.mismatchPlayerIds)
+    ? [...new Set(report.mismatchPlayerIds.map(String).filter(Boolean))].sort()
+    : []
+  const missingSplitsPlayerIds = Array.isArray(report.missingSplitsPlayerIds)
+    ? [...new Set(report.missingSplitsPlayerIds.map(String).filter(Boolean))].sort()
+    : []
+  const retryYahooIds = readVsHandRetryYahooIds(reportPath, fallbackYahooIds)
+  const missingSplits = Number(report.missingSplits ?? missingSplitsPlayerIds.length)
+  const mismatches = Number(report.mismatches ?? mismatchPlayerIds.length)
+  const negativeReconPlayers = Number(report.negativeReconPlayers ?? -1)
+  return {
+    retryYahooIds,
+    mismatchPlayerIds,
+    missingSplitsPlayerIds,
+    missingSplits,
+    mismatches,
+    negativeReconPlayers,
+    canRetryPhase15: missingSplitsPlayerIds.length > 0,
+  }
+}
+
 function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
   const scopePrefix = vercelScopePrefix()
   const deployCommand = `${VERCEL_CLI}${scopePrefix} --prod --yes`
@@ -3720,7 +3880,28 @@ function runVsHandValidationWithRetry({
     kind: "vs_hand_validation_retry",
     affectedYahooIdsCount: affectedYahooIds.length,
   })
-  run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", phase15BuildCommand, { dryRun })
+  const reportPath = writeVsHandFailureReport({ year, validationCommand, dryRun })
+  const failureSummary = readVsHandFailureReportSummary(reportPath, affectedYahooIds)
+  if (failureSummary.canRetryPhase15) {
+    const retryBuildCommand =
+      failureSummary.retryYahooIds.length > 0
+        ? `npm run phase15:build:batting-splits${derivedYahooArgsArg(failureSummary.retryYahooIds)}`
+        : phase15BuildCommand
+    run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", retryBuildCommand, { dryRun })
+  } else {
+    const skipMessage =
+      `phase11 vs vs_hand 検証NGだが missingSplits=0 のため Phase15 再生成はスキップします。` +
+      ` mismatches=${failureSummary.mismatches} negativeReconPlayers=${failureSummary.negativeReconPlayers}`
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${skipMessage}`)
+    pushRunSummaryEvent("warnings", {
+      kind: "vs_hand_retry_skipped_no_missing_splits",
+      message: skipMessage,
+      reportPath,
+      mismatches: failureSummary.mismatches,
+      negativeReconPlayers: failureSummary.negativeReconPlayers,
+    })
+    console.warn(`\n[daily:npb-pipeline:v2] WARN: ${skipMessage}\n`)
+  }
   const retryOk = runTry(
     affectedYahooIds.length > 0
       ? `検証: phase11 vs vs_hand P0（差分 ${affectedYahooIds.length}人・再実行）`
@@ -3730,7 +3911,6 @@ function runVsHandValidationWithRetry({
   )
   if (retryOk) return
 
-  const reportPath = writeVsHandFailureReport({ year, validationCommand, dryRun })
   const message =
     `phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。report=${reportPath}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
@@ -4130,7 +4310,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
     kind: "full_publish_retry",
     year,
   })
-  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry: true, includeFastDependencies: true, playerIds })
+  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry: true, includeFastDependencies: false, playerIds })
   const retryVerified = runTry(
     "公開確認(2回目・再試行後): 主要表示 + 週次 + 選手成績",
     verifyCommandArgs({
@@ -4377,6 +4557,12 @@ function runFastStage({
   } else {
     logDeltaSkip("ランキング JSON: phase19 pitching rankings", "pitching_rankings")
   }
+  runProfileTotalsFollowRankingValidation({
+    year,
+    affectedYahooIds,
+    dryRun,
+    label: "検証: fast 個人ページ通算値 ↔ ランキング",
+  })
   if (shouldRunDeltaPhase("weekly_rankings")) {
     run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
   } else {
@@ -4496,6 +4682,13 @@ function runFinalPrecomputedPublishStage({
   } else {
     logDeltaSkip("ランキング JSON: phase19 pitching rankings", "pitching_rankings")
   }
+  runProfileTotalsFollowRankingValidation({
+    year,
+    affectedYahooIds,
+    affectedNpbPitcherIds,
+    dryRun,
+    label: "検証: finalize-precomputed 個人ページ通算値 ↔ ランキング",
+  })
   if (shouldRunDeltaPhase("weekly_rankings")) {
     run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
   } else {
@@ -4530,11 +4723,24 @@ function runFinalPrecomputedPublishStage({
       playerIds: affectedDisplayPlayerIds,
     })
     if (affectedYahooIds.length > 0) {
-      run(
-        `派生: phase11 batting（1回目公開後・差分整備 ${affectedYahooIds.length}人）`,
-        `npm run phase11:build:batting${derivedAffectedArg}`,
-        { dryRun },
-      )
+      const postFastPhase11Report = derivedCategoryFreshnessReport({
+        year,
+        category: "player_season_batting",
+        yahooIds: affectedYahooIds,
+        canonicalThresholdMs: targetCanonicalLatestMs,
+        sourceThresholdMsById: yahooSourceThresholdMsById,
+      })
+      const postFastRepairYahooIds = yahooRepairIdsFromFreshnessReport(postFastPhase11Report)
+      if (postFastRepairYahooIds.length > 0) {
+        run(
+          `派生: phase11 batting（1回目公開後・差分整備 ${postFastRepairYahooIds.length}人）`,
+          `npm run phase11:build:batting${derivedYahooArgsArg(postFastRepairYahooIds, { from, to })}`,
+          { dryRun },
+        )
+      } else {
+        console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 追加差分なしのためスキップします。\n")
+        appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 already fresh")
+      }
     } else if (!from && !to && (!Array.isArray(gameIds) || gameIds.length === 0)) {
       run("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", { dryRun })
     } else {
@@ -4742,6 +4948,13 @@ function runFullStage({
     },
   )
   run("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", { dryRun })
+  runProfileTotalsFollowRankingValidation({
+    year,
+    affectedYahooIds,
+    affectedNpbPitcherIds,
+    dryRun,
+    label: "検証: full 個人ページ通算値 ↔ ランキング",
+  })
   if (skipRepeatedTopBuilds) {
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため top leaders 再生成をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full repeated top leaders builds")

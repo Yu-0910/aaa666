@@ -233,10 +233,11 @@ function extractPipelineWindowFromReason(reason) {
 
 function shouldAutoReplaceFailedLock(dateJst, existing) {
   if (!existing || existing.state !== "failed") return false
+  if (existing.dateJst && String(existing.dateJst) === String(dateJst)) return true
   if (existing.dateJst && String(existing.dateJst) !== String(dateJst)) return true
   const window = extractPipelineWindowFromReason(existing.reason)
   if (!window) return false
-  return window.from !== dateJst || window.to !== dateJst
+  return true
 }
 
 function writeWatchSummary(dateJst, summary) {
@@ -724,6 +725,48 @@ function classifyWatchCompletionFromPipeline(runId) {
   return { summaryStatus: "completed", lockState: "completed", reason: "pipeline_completed", pipeline: summary }
 }
 
+function validateStandingsWindowFreshness(year, dateJst, dryRun) {
+  const cmd =
+    `npm run validate:standings-window-freshness -- --year ${year} --from ${dateJst} --to ${dateJst} --fail`
+  log(`順位表 freshness 検証: ${cmd}`)
+  if (dryRun) return
+  execSync(cmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+}
+
+function repairStandingsWindow(year, dateJst, dryRun) {
+  const rebuildCmd =
+    `npm run phase29:build:standings -- --year ${year} --from ${dateJst} --to ${dateJst} --include-today`
+  const publishCmd =
+    `node scripts/display_publish_fast_2026.mjs --year ${year} --from ${dateJst} --to ${dateJst}`
+  const validateCmd =
+    `npm run validate:standings-window-freshness -- --year ${year} --from ${dateJst} --to ${dateJst} --fail`
+  log(`順位表 self-heal: ${rebuildCmd}`)
+  if (dryRun) return
+  execSync(rebuildCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  log(`順位表 self-heal 公開: ${publishCmd}`)
+  execSync(publishCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+  log(`順位表 self-heal 検証: ${validateCmd}`)
+  execSync(validateCmd, { cwd: root, stdio: "inherit", shell: true, env: process.env })
+}
+
+function ensureStandingsFreshAfterFinalize(args, dateJst, summary, runId) {
+  try {
+    validateStandingsWindowFreshness(args.year, dateJst, args.dryRun)
+  } catch (error) {
+    const message = String(error?.message || error)
+    log(`順位表 freshness 検証で不一致を検出したため phase29 を自己修復します: ${message}`)
+    appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `standings_window_repair date=${dateJst}`)
+    pushWatchSummaryEvent(summary, "repairs", {
+      kind: "standings_window_repair",
+      gameDate: dateJst,
+      pipelineRunId: runId,
+      message,
+    })
+    writeWatchSummary(dateJst, summary)
+    repairStandingsWindow(args.year, dateJst, args.dryRun)
+  }
+}
+
 function runPipelineV2(year, dateJst, dryRun, autoDeployProduction, trigger = {}) {
   const runId = `${dateJst}_${formatJstTimestamp().replace(" JST", "").replace(/[-: ]/g, "")}_watchpid${process.pid}`
   const triggerReasonArg = trigger.reason ? ` --trigger-reason ${trigger.reason}` : ""
@@ -902,6 +945,7 @@ function handoffToFinalize(args, dateJst, summary, readiness, options = {}) {
     }),
   })
   const pipelineCompletion = classifyWatchCompletionFromPipeline(runId)
+  ensureStandingsFreshAfterFinalize(args, dateJst, summary, runId)
   summary.status = pipelineCompletion.summaryStatus
   summary.completedAtJst = formatJstTimestamp()
   summary.pipelineRunId = runId
