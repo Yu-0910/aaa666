@@ -74,13 +74,13 @@ export function TopPageClient({
   const pitchingRankingHref = `/ranking/pitching/2026/PL`
 
   const mainTabButtons = (
-    <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-black" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-black"}>
+    <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-[#111111]" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-[#111111]"}>
       {mainTabs.map((tab) => (
         <Link
           key={tab.tabId}
           href={routeHrefForYear(tab.tabId, selectedYear)}
           className={`relative overflow-hidden rounded group transition-all duration-200 flex items-center justify-center ${
-            activeMainTab === tab.tabId ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
+            activeMainTab === tab.tabId ? "bg-[#ffff44] text-black" : "bg-[#242424] text-white hover:bg-[#303030]"
           } border border-[#555] ${isMobile ? "py-1.5 px-3 text-xs" : "py-2 px-3 text-sm"} font-semibold whitespace-nowrap`}
           aria-current={activeMainTab === tab.tabId ? "page" : undefined}
         >
