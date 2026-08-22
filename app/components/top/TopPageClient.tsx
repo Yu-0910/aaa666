@@ -79,7 +79,7 @@ export function TopPageClient({
         <Link
           key={tab.tabId}
           href={routeHrefForYear(tab.tabId, selectedYear)}
-          className={`relative overflow-hidden rounded-sm group transition-all duration-200 flex items-center justify-center ${
+          className={`relative overflow-hidden rounded-md group transition-all duration-200 flex items-center justify-center ${
             activeMainTab === tab.tabId ? "bg-[#ffff44] text-black" : "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]"
           } border border-[#555] ${isMobile ? "py-1.5 px-3 text-xs" : "py-2 px-3 text-sm"} font-semibold whitespace-nowrap`}
           aria-current={activeMainTab === tab.tabId ? "page" : undefined}
