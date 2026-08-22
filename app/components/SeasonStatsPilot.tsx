@@ -740,7 +740,7 @@ export default function SeasonStatsPilot({
                 >
                   週間成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "72px" }} />
@@ -847,7 +847,7 @@ export default function SeasonStatsPilot({
                         >
                           {item.title}
                         </div>
-                        <div className="overflow-x-auto overflow-y-hidden">
+                        <div className="rounded overflow-x-auto overflow-y-hidden">
                           <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                             <colgroup>
                               <col style={{ width: "95px" }} />
@@ -942,7 +942,7 @@ export default function SeasonStatsPilot({
                     <code className="text-xs">npm run phase14:build:pitch</code> 後に再読み込みしてください。
                   </p>
                 )}
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table
                     className="text-xs"
                     style={{
@@ -1037,7 +1037,7 @@ export default function SeasonStatsPilot({
                 >
                   球場別の対戦成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table
                     className="text-xs"
                     style={{
@@ -1142,7 +1142,7 @@ export default function SeasonStatsPilot({
                 >
                   巡目別の打撃成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table
                     className="text-xs"
                     style={{
@@ -1227,7 +1227,7 @@ export default function SeasonStatsPilot({
                 >
                   ホーム&ビジターの対戦成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "61px" }} />
@@ -1318,7 +1318,7 @@ export default function SeasonStatsPilot({
                 >
                   スタメン時守備位置別の打撃成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "64px" }} />
@@ -1391,7 +1391,7 @@ export default function SeasonStatsPilot({
                 >
                   打順別の打撃成績（スタメン1〜9番）
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "36px" }} />
@@ -1475,7 +1475,7 @@ export default function SeasonStatsPilot({
                 >
                   カウント別の打撃成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "54px" }} />
