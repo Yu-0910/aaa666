@@ -1681,7 +1681,7 @@ export default function SeasonStatsPilot({
                 >
                   状況別の打撃成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "52px" }} />
