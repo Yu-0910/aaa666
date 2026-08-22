@@ -63,6 +63,7 @@ import {
   enrichSeasonStatsRowSabermetrics,
 } from '@/lib/seasonStatsPilotShared'
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from '@/lib/battingRateFormat'
+import { buildBattingTotalRowFromRankings } from '@/lib/ranking/playerSeasonTotalsFromRankings'
 
 /** クライアントは `@/lib/seasonStatsPilotShared` を参照（fs を引き込まない） */
 export type { BattingVsHandTotalReconciliation, PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
@@ -1624,102 +1625,6 @@ export function loadVsHandRowsFromCanonicalWithDebug(
  */
 export type BattingTotalRowSource = 'phase11' | 'rankings' | 'csv' | 'batting_lines_fallback' | null
 
-type RankingBattingRow = Record<string, unknown>
-
-function readRankingTotalRow(yahooId: string, year: string): RankingBattingRow | null {
-  const root = getProjectRoot()
-  const leagues = ['CL', 'PL'] as const
-  const fileNames = ['OPS_all.json', '打率_all.json', '安打_all.json'] as const
-  for (const league of leagues) {
-    for (const fileName of fileNames) {
-      const p = path.join(root, 'public', 'data', 'rankings', year, league, fileName)
-      if (!fs.existsSync(p)) continue
-      try {
-        const raw = JSON.parse(fs.readFileSync(p, 'utf8')) as unknown
-        if (!Array.isArray(raw)) continue
-        const row = raw.find((item) => String((item as RankingBattingRow)?.playerId ?? '').trim() === yahooId)
-        if (row && typeof row === 'object') return row as RankingBattingRow
-      } catch {
-        // ignore malformed rankings snapshot and continue to the next candidate
-      }
-    }
-  }
-  return null
-}
-
-function intFromRankingRow(value: unknown, fallback: number = 0): number {
-  const n = parseInt(String(value ?? '').trim(), 10)
-  return Number.isFinite(n) ? n : fallback
-}
-
-function stringFromRankingMetric(value: unknown, fallback: string = ''): string {
-  const text = String(value ?? '').trim()
-  return text || fallback
-}
-
-function buildTotalRowFromRankings(
-  yahooId: string,
-  year: string,
-  fallback: SeasonStatsRow | null,
-): SeasonStatsRow | null {
-  const ranking = readRankingTotalRow(yahooId, year)
-  if (!ranking) return null
-  const hits = intFromRankingRow(ranking.hits ?? ranking.h, fallback?.h ?? 0)
-  const doubles = intFromRankingRow(ranking.doubles ?? ranking.h2, fallback?.h2 ?? 0)
-  const triples = intFromRankingRow(ranking.triples ?? ranking.h3, fallback?.h3 ?? 0)
-  const homers = intFromRankingRow(ranking.hr, fallback?.hr ?? 0)
-  const singles = intFromRankingRow(
-    ranking.singles,
-    Math.max(0, hits - doubles - triples - homers),
-  )
-  return {
-    split_type: 'total',
-    split_value: 'total',
-    split_label: fallback?.split_label || '通算',
-    g: intFromRankingRow(ranking.games ?? ranking.g, fallback?.g ?? 0),
-    pa: intFromRankingRow(ranking.pa, fallback?.pa ?? 0),
-    ab: intFromRankingRow(ranking.ab, fallback?.ab ?? 0),
-    r: intFromRankingRow(ranking.runs ?? ranking.r, fallback?.r ?? 0),
-    h: hits,
-    h1: singles,
-    h2: doubles,
-    h3: triples,
-    hr: homers,
-    tb: intFromRankingRow(ranking.tb, fallback?.tb ?? 0),
-    rbi: intFromRankingRow(ranking.rbi, fallback?.rbi ?? 0),
-    so: intFromRankingRow(ranking.so, fallback?.so ?? 0),
-    bb: intFromRankingRow(ranking.bb, fallback?.bb ?? 0),
-    ibb: intFromRankingRow(ranking.ibb, fallback?.ibb ?? 0),
-    hbp: intFromRankingRow(ranking.hbp, fallback?.hbp ?? 0),
-    sh: intFromRankingRow(ranking.sh, fallback?.sh ?? 0),
-    sf: intFromRankingRow(ranking.sf, fallback?.sf ?? 0),
-    sb: intFromRankingRow(ranking.sb, fallback?.sb ?? 0),
-    cs: intFromRankingRow(ranking.cs, fallback?.cs ?? 0),
-    e: intFromRankingRow(ranking.e, fallback?.e ?? 0),
-    gidp: intFromRankingRow(ranking.gidp, fallback?.gidp ?? 0),
-    avg: stringFromRankingMetric(ranking.avg, fallback?.avg ?? ''),
-    obp: stringFromRankingMetric(ranking.obp, fallback?.obp ?? ''),
-    slg: stringFromRankingMetric(ranking.slg, fallback?.slg ?? ''),
-    ops: stringFromRankingMetric(ranking.ops, fallback?.ops ?? ''),
-    risp_avg: fallback?.risp_avg ?? '—',
-    risp_ab: fallback?.risp_ab ?? 0,
-    risp_h: fallback?.risp_h ?? 0,
-    sb_pct: fallback?.sb_pct ?? '',
-    isop: stringFromRankingMetric(ranking.isop, fallback?.isop ?? ''),
-    isod: stringFromRankingMetric(ranking.isod, fallback?.isod ?? ''),
-    babip: stringFromRankingMetric(ranking.babip, fallback?.babip ?? ''),
-    bb_pct: stringFromRankingMetric(ranking.bbPct ?? ranking.bb_pct, fallback?.bb_pct ?? ''),
-    k_pct: stringFromRankingMetric(ranking.kPct ?? ranking.k_pct, fallback?.k_pct ?? ''),
-    bbk: stringFromRankingMetric(ranking.bbk ?? ranking.bb_k, fallback?.bbk ?? ''),
-    gpa: stringFromRankingMetric(ranking.gpa, fallback?.gpa ?? ''),
-    rc: stringFromRankingMetric(ranking.rc, fallback?.rc ?? ''),
-    xr: stringFromRankingMetric(ranking.xr, fallback?.xr ?? ''),
-    seca: stringFromRankingMetric(ranking.seca, fallback?.seca ?? ''),
-    ta: stringFromRankingMetric(ranking.ta, fallback?.ta ?? ''),
-    noi: stringFromRankingMetric(ranking.noi, fallback?.noi ?? ''),
-  }
-}
-
 /** Phase11 通算の risp_ab が 0 のとき、Phase15 base_sit「得点圏」行から補完（appearance_slots 既存 JSON 向け） */
 function backfillTotalRispFromBaseSitSplit(
   totalRow: SeasonStatsRow,
@@ -1957,7 +1862,7 @@ function mergePilotSeasonStatsCore(
     phase11,
     csvAll
   )
-  const rankingTotal = buildTotalRowFromRankings(yahooId, year, totalRow)
+  const rankingTotal = buildBattingTotalRowFromRankings(yahooId, year, totalRow)
   if (rankingTotal) {
     totalRow = rankingTotal
     totalSource = 'rankings'

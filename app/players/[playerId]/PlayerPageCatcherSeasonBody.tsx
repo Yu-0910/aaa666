@@ -265,7 +265,7 @@ export function PlayerPageCatcherSeasonBody({
                       ]
                       return (
                         <>
-                          <div className="overflow-hidden overflow-x-auto mb-4">
+                          <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                             <table
                               className="text-xs"
                               style={{
@@ -322,7 +322,7 @@ export function PlayerPageCatcherSeasonBody({
                             </table>
                           </div>
 
-                          <div className="overflow-hidden overflow-x-auto mb-4">
+                          <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                             <table
                               className="text-xs"
                               style={{
@@ -376,7 +376,7 @@ export function PlayerPageCatcherSeasonBody({
                             </table>
                           </div>
 
-                          <div className="overflow-hidden overflow-x-auto mb-4">
+                          <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                             <table
                               className="text-xs"
                               style={{
@@ -430,7 +430,7 @@ export function PlayerPageCatcherSeasonBody({
                             </table>
                           </div>
 
-                          <div className="overflow-hidden overflow-x-auto mb-4">
+                          <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                             <table
                               className="text-xs"
                               style={{

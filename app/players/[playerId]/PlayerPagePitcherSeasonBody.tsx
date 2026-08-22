@@ -284,7 +284,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       詳細成績
                     </h2>
 
-                    <div className="overflow-hidden overflow-x-auto mb-4">
+                    <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                       <table
                         className="text-xs"
                         style={{
@@ -325,7 +325,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       </table>
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto mb-4">
+                    <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                       <table
                         className="text-xs"
                         style={{
@@ -366,7 +366,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                       </table>
                     </div>
 
-                    <div className="overflow-hidden overflow-x-auto mb-4">
+                    <div className="player-page-table-shell overflow-hidden overflow-x-auto mb-4">
                       <table
                         className="text-xs"
                         style={{

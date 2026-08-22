@@ -218,6 +218,21 @@
     paint-order: stroke fill;
   }
 
+  .player-page-fonts .player-page-profile-table-shell {
+    border-radius: 0.25rem !important;
+    overflow: hidden !important;
+  }
+
+  .player-page-fonts .player-page-profile-table-shell table {
+    border-radius: 0.25rem !important;
+  }
+
+  .player-page-table-shell,
+  .top-page-table-shell {
+    border-radius: 0.25rem !important;
+    overflow: hidden !important;
+  }
+
   /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
   .player-page-fonts .pa-round-pitch-row-label {
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
@@ -476,6 +491,13 @@
     .player-page-fonts.roster-fielder-pc-table-css .roster-fielder-profile-table {
       zoom: 1.188;
       transform-origin: top left;
+    }
+
+    .player-page-fonts.roster-fielder-pc-table-css .player-page-profile-table-shell,
+    .player-page-fonts.roster-pitcher-pc-table-css .player-page-profile-table-shell,
+    .player-page-fonts.takahashi-haruto-pitcher-pc-table-css .player-page-profile-table-shell {
+      border-radius: 0.25rem !important;
+      overflow: hidden !important;
     }
 
     .player-page-fonts.roster-fielder-pc-table-css
