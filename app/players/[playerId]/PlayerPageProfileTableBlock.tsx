@@ -23,10 +23,13 @@ export function PlayerPageProfileTableBlock({
   showFinancialFields = true,
 }: Props) {
   return (
-    <div className="rounded overflow-hidden">
+    <div
+      className="rounded overflow-hidden"
+      style={{ border: "1px solid #333333", borderRadius: "0.25rem" }}
+    >
       <table
         className={`w-full border-collapse${tableClassName ? ` ${tableClassName}` : ""}`}
-        style={{ border: "1px solid #333333" }}
+        style={{ border: "0" }}
       >
         <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
         <tr>

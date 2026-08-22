@@ -1393,6 +1393,7 @@ export function PlayerPageClient({
       style={{
         border: "1px solid #555",
         backgroundColor: "#1a1a1a",
+        borderRadius: "0.25rem",
       }}
     >
       <div
@@ -1400,6 +1401,7 @@ export function PlayerPageClient({
         style={{
           backgroundColor: "#FFFF44",
           transform: active === "total" ? "translateX(0)" : "translateX(100%)",
+          borderRadius: "0.25rem",
         }}
       />
       <button
@@ -1467,6 +1469,7 @@ export function PlayerPageClient({
         style={{
           border: "1px solid #555",
           backgroundColor: "#1a1a1a",
+          borderRadius: "0.25rem",
         }}
       >
         <div
@@ -1475,6 +1478,7 @@ export function PlayerPageClient({
             backgroundColor: "#FFFF44",
             width: seasonSubTabSliderWidthPct(pitcherSeasonSubTabs.length),
             transform: seasonSubTabSliderTransform(activeIdx),
+            borderRadius: "0.25rem",
           }}
         />
         {pitcherSeasonSubTabs.map((t) => (
@@ -1507,6 +1511,7 @@ export function PlayerPageClient({
       style={{
         border: "1px solid #555",
         backgroundColor: "#1a1a1a",
+        borderRadius: "0.25rem",
       }}
     >
       <div
@@ -1517,6 +1522,7 @@ export function PlayerPageClient({
           transform: seasonSubTabSliderTransform(
             activeSeasonSubTabIndex(fielderSeasonSubTabs, kikuchiSeasonDetailTab),
           ),
+          borderRadius: "0.25rem",
         }}
       />
       {fielderSeasonSubTabs.map((t) => (
@@ -1867,6 +1873,7 @@ export function PlayerPageClient({
               style={{
                 border: "1px solid #555",
                 backgroundColor: "#1a1a1a",
+                borderRadius: "0.25rem",
               }}
             >
               <div
@@ -1874,6 +1881,7 @@ export function PlayerPageClient({
                 style={{
                   backgroundColor: "#FFFF44",
                   transform: statsTab === "career" ? "translateX(100%)" : "translateX(0)",
+                  borderRadius: "0.25rem",
                 }}
               />
               <button
