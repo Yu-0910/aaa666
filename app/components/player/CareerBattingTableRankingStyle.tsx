@@ -141,7 +141,7 @@ export default function CareerBattingTableRankingStyle({
   return (
     <div
       className={[
-        "career-batting-ranking-table-shell mb-4 overflow-hidden rounded-md bg-[#1a1a1a] border border-[#333]",
+        "career-batting-ranking-table-shell mb-4 overflow-hidden rounded bg-[#1a1a1a] border border-[#333]",
         shellClassName ?? "",
       ]
         .filter(Boolean)
