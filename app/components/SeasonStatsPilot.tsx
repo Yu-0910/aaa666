@@ -94,7 +94,7 @@ function PilotTotalRecordBlock({
       >
         通算成績
       </h2>
-      <div className={`overflow-hidden overflow-x-auto ${loose ? "mb-8" : "mb-3"}`}>
+      <div className={`rounded-md overflow-hidden overflow-x-auto ${loose ? "mb-8" : "mb-3"}`}>
         <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed", width: "100%" }}>
           <tbody>
             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -382,7 +382,7 @@ export default function SeasonStatsPilot({
           >
             打撃指標
           </h2>
-          <div className={`overflow-hidden overflow-x-auto ${mbBox}`}>
+          <div className={`rounded-md overflow-hidden overflow-x-auto ${mbBox}`}>
             <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed", width: "100%" }}>
               <tbody>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -475,7 +475,7 @@ export default function SeasonStatsPilot({
                 >
                   対左右別の対戦成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded-md overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "48px" }} />
@@ -565,7 +565,7 @@ export default function SeasonStatsPilot({
                 >
                   チーム別の対戦成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded-md overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table
                     className="text-xs"
                     style={{
@@ -673,7 +673,7 @@ export default function SeasonStatsPilot({
                 >
                   月間成績
                 </h2>
-                <div className={`overflow-x-auto overflow-y-hidden ${mbScroll}`}>
+                <div className={`rounded-md overflow-x-auto overflow-y-hidden ${mbScroll}`}>
                   <table className="text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "separate", borderSpacing: 0, border: "1px solid #555", width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "56px" }} />

@@ -260,7 +260,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           scaleMultiplier={careerTableScaleMultiplier}
           className={isMobile ? "mb-4 grid grid-cols-1 gap-4" : "mb-4 grid grid-cols-2 gap-4"}
         >
-          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+          <div className="rounded-md overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -299,7 +299,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
               </tbody>
             </table>
           </div>
-          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+          <div className="rounded-md overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -380,7 +380,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           scaleMultiplier={careerTableScaleMultiplier}
           className={isMobile ? "mb-12 grid grid-cols-1 gap-4" : "mb-12 grid grid-cols-2 gap-4"}
         >
-          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+          <div className="rounded-md overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -410,7 +410,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
               </tbody>
             </table>
           </div>
-          <div className="rounded overflow-hidden min-w-0 overflow-x-auto">
+          <div className="rounded-md overflow-hidden min-w-0 overflow-x-auto">
             <table className="w-full text-xs" style={{ fontVariantNumeric: "tabular-nums", borderCollapse: "collapse", border: "1px solid #555", tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>

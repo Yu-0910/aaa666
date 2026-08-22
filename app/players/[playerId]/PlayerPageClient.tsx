@@ -1863,7 +1863,7 @@ export function PlayerPageClient({
           {/* Stats Tab Buttons（名簿・パイロット対象のみ。通算専用ページは非表示） */}
           {showSeasonCareerTabs && !isCareerOnlyNonRosterPage && (
             <div
-              className="relative isolate box-border flex min-h-9 shrink-0 items-stretch overflow-hidden"
+              className="relative isolate box-border flex min-h-9 shrink-0 items-stretch overflow-hidden rounded-md"
               style={{
                 border: "1px solid #555",
                 backgroundColor: "#1a1a1a",
