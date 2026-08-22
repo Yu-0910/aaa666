@@ -219,18 +219,22 @@
   }
 
   .player-page-fonts .player-page-profile-table-shell {
-    border-radius: 0.25rem !important;
+    border-radius: 0.625rem !important;
     overflow: hidden !important;
   }
 
   .player-page-fonts .player-page-profile-table-shell table {
-    border-radius: 0.25rem !important;
+    border-radius: 0.625rem !important;
   }
 
-  .player-page-table-shell,
-  .top-page-table-shell {
-    border-radius: 0.25rem !important;
+  .player-page-table-shell {
+    border-radius: 0.625rem !important;
     overflow: hidden !important;
+  }
+
+  .player-page-table-shell table,
+  .top-page-table-shell {
+    border-radius: 0.625rem !important;
   }
 
   /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
