@@ -87,6 +87,14 @@ $phase28Args = @("run","phase28:build:weekly-rankings","--","--year",$Year)
 if ($From) { $phase28Args += @("--from",$From) }
 if ($To)   { $phase28Args += @("--to",$To) }
 
+$phase11Args = @("run","phase11:build:batting","--","--year",$Year)
+if ($From) { $phase11Args += @("--from",$From) }
+if ($To)   { $phase11Args += @("--to",$To) }
+
+$phase29Args = @("run","phase29:build:standings","--","--year",$Year)
+if ($From) { $phase29Args += @("--from",$From) }
+if ($To)   { $phase29Args += @("--to",$To) }
+
 $topWeeklyArgs = @("run","top-weekly-leaders:build:2026","--","--year",$Year)
 if ($From) { $topWeeklyArgs += @("--from",$From) }
 if ($To)   { $topWeeklyArgs += @("--to",$To) }
@@ -94,8 +102,12 @@ if ($To)   { $topWeeklyArgs += @("--to",$To) }
 RunNpm -label "phase12:build:rankings" -npmArgs @("run","phase12:build:rankings")
 RunNpm -label "phase19:build:pitching-rankings" -npmArgs @("run","phase19:build:pitching-rankings")
 RunNpm -label "phase28:build:weekly-rankings" -npmArgs $phase28Args
-RunNpm -label "phase11:build:batting:standings-full" -npmArgs @("run","phase11:build:batting")
-RunNpm -label "phase29:build:standings" -npmArgs @("run","phase29:build:standings")
+RunNpm -label "phase11:build:batting:range" -npmArgs $phase11Args
+RunNpm -label "phase29:build:standings" -npmArgs $phase29Args
+$standingsFreshnessArgs = @("run","validate:standings-window-freshness","--","--year",$Year,"--fail")
+if ($From) { $standingsFreshnessArgs += @("--from",$From) }
+if ($To)   { $standingsFreshnessArgs += @("--to",$To) }
+RunNpm -label "validate:standings-window-freshness" -npmArgs $standingsFreshnessArgs
 RunNpm -label "top-leaders:build:2026" -npmArgs @("run","top-leaders:build:2026")
 RunNpm -label "top-weekly-leaders:build:2026" -npmArgs $topWeeklyArgs
 $phase36Args = @("run","phase36:build:top-probables","--","--year",$Year)
