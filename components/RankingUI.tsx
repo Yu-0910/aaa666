@@ -9,7 +9,7 @@
 
 "use client"
 
-import { Fragment, useMemo, useRef } from "react"
+import { Fragment, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
@@ -58,7 +58,7 @@ interface RankingUIProps {
   onYearChange?: (year: number) => void
   /** 規定到達ブロック末尾の順位（黄線をその行の直下に表示） */
   qualifyingDividerAfterRank?: number | null
-  /** Top/今週タブ経由時: アクティブ指標を選手名列の直後に表示 */
+  /** Top/今週タブ経由時: アクティブ指標が左端に来る初期スクロールを適用 */
   pinActiveMetricNextToPlayer?: boolean
 }
 
@@ -250,14 +250,7 @@ export default function RankingUI({
   const playerNameBlockHeight = compactTableUi ? PLAYER_NAME_BLOCK_HEIGHT_2025 : PLAYER_NAME_BLOCK_HEIGHT
   const metricColMinWidth = compactTableUi ? METRIC_COL_MIN_WIDTH_2025 : METRIC_COL_MIN_WIDTH
   const metricValueTextClass = compactTableUi ? 'text-[16.83px]' : 'text-lg'
-  const displayMetrics = useMemo(() => {
-    if (!pinActiveMetricNextToPlayer) return metrics
-    const activeMetricIdx = metrics.findIndex((metric) => metric.key === sortKey)
-    if (activeMetricIdx <= 0) return metrics
-    const activeMetric = metrics[activeMetricIdx]
-    if (!activeMetric) return metrics
-    return [activeMetric, ...metrics.slice(0, activeMetricIdx), ...metrics.slice(activeMetricIdx + 1)]
-  }, [metrics, pinActiveMetricNextToPlayer, sortKey])
+  const displayMetrics = metrics
   const gpaMetricIdx = displayMetrics.findIndex((m) => m.key === 'gpa' || m.label === 'GPA')
   const metricBgMaxIdx = gpaMetricIdx >= 0 ? gpaMetricIdx : displayMetrics.length - 1
   const displayRows = dedupeRankingRowsForDisplay(sortedRows)
@@ -288,6 +281,29 @@ export default function RankingUI({
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const bottomScrollRef = useRef<HTMLDivElement>(null)
   const scrollSyncLock = useRef(false)
+
+  useEffect(() => {
+    const table = tableScrollRef.current
+    const bottom = bottomScrollRef.current
+    if (!table || !bottom) return
+
+    if (!pinActiveMetricNextToPlayer) {
+      table.scrollLeft = 0
+      bottom.scrollLeft = 0
+      return
+    }
+
+    const activeMetricIdx = metrics.findIndex((metric) => metric.key === sortKey)
+    if (activeMetricIdx <= 0) {
+      table.scrollLeft = 0
+      bottom.scrollLeft = 0
+      return
+    }
+
+    const targetScrollLeft = activeMetricIdx * metricColMinWidth
+    table.scrollLeft = targetScrollLeft
+    bottom.scrollLeft = targetScrollLeft
+  }, [metricColMinWidth, metrics, pinActiveMetricNextToPlayer, sortKey])
 
   const syncRankingTableScroll = (source: "table" | "bottom") => {
     if (scrollSyncLock.current) return
