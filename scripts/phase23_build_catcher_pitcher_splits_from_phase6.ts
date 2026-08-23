@@ -17,9 +17,11 @@ import type {
   CatcherPitcherSplitRow,
   CatcherPitcherSplitsDerived,
 } from "@/lib/catcherPitcherSplits"
+import { catcherYahooIdsFromCanonical } from "@/lib/catcherAppearances"
 import { buildCatcherPitcherSeasonTotals } from "@/lib/catcherPitcherSplits"
 import type { PitcherSeasonPocPayload, PitcherSeasonPocCatcherRow } from "@/lib/pitcherSeasonPocTypes"
 import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
+import { mergePhase10RestoredIntoDocIfPresent } from "@/lib/seasonStatsPilot"
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { writeJsonFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 
@@ -66,6 +68,16 @@ function isYmd(s: string | null): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s)
 }
 
+function readCanonicalFile(p: string): CanonicalGameDocument | null {
+  try {
+    const j = JSON.parse(fs.readFileSync(p, "utf8")) as CanonicalGameDocument
+    if (j?.schemaVersion !== "yahoo-game-canonical-v1" || !j.gameId) return null
+    return mergePhase10RestoredIntoDocIfPresent(j)
+  } catch {
+    return null
+  }
+}
+
 function collectAffectedCatcherIdsFromCanonical(
   root: string,
   year: string,
@@ -76,22 +88,15 @@ function collectAffectedCatcherIdsFromCanonical(
   const dir = path.join(root, "_data", "scraped_games", "canonical")
   if (!fs.existsSync(dir)) return out
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".json"))) {
-    const doc = safeReadJson<{ gameId?: string; game?: { meta?: { documentTitle?: string; ogTitle?: string }; teams?: Array<{ startingLineup?: Array<{ yahooPlayerId?: string; fieldingPosition?: string }> }> } }>(
-      path.join(dir, f),
-    )
-    if (!doc?.gameId) continue
-    const ymd = extractCanonicalGameYmd(doc as any)
+    const doc = readCanonicalFile(path.join(dir, f))
+    if (!doc) continue
+    const ymd = extractCanonicalGameYmd(doc)
     if (!ymd || !ymd.startsWith(`${year}-`)) continue
     if (from && ymd < from) continue
     if (to && ymd > to) continue
-    for (const team of doc.game?.teams ?? []) {
-      for (const p of team.startingLineup ?? []) {
-        const isCatcher = String(p.fieldingPosition ?? "").trim() === "捕"
-        const yahooId = String(p.yahooPlayerId ?? "").trim()
-        if (!isCatcher || !yahooId) continue
-        const npbId = resolveNpbPlayerIdFromPublicId(yahooId)
-        if (npbId) out.add(npbId)
-      }
+    for (const yahooId of catcherYahooIdsFromCanonical(doc)) {
+      const npbId = resolveNpbPlayerIdFromPublicId(String(yahooId).trim())
+      if (npbId) out.add(npbId)
     }
   }
   return out

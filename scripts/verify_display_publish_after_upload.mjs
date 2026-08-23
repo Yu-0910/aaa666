@@ -36,6 +36,14 @@ function argValue(name, fallback = "") {
 const YEAR = argValue("--year", "2026")
 const SCOPE = argValue("--scope", "full").toLowerCase()
 const CHECK_PRODUCTION = !process.argv.includes("--no-production")
+const LEAGUES = argValue("--league", "CL,PL")
+  .split(",")
+  .map((s) => s.trim().toUpperCase())
+  .filter(Boolean)
+const EXPLICIT_WEEK_KEYS = argValue("--week-key", "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
 const SAMPLE_PLAYER_YAHOO_ID = argValue("--sample-player-yahoo-id", "")
 const SAMPLE_PLAYER_NPB_ID = argValue("--sample-player-npb-id", "")
 const DEFAULT_SAMPLE_DERIVED_CATEGORIES =
@@ -62,6 +70,7 @@ const SITE_BASE = (
   DEFAULT_SITE_BASE
 ).replace(/\/+$/, "")
 const CHECK_TOP_PROBABLES = SCOPE !== "fast" && !process.argv.includes("--skip-top-probables")
+const CHECK_WEEKLY_CURRENT_WEEK = !process.argv.includes("--skip-weekly-current-week")
 
 function vercelCliArgs(subcommandArgs) {
   return [...subcommandArgs]
@@ -491,18 +500,24 @@ async function main() {
   console.log(`[verify-display-publish] R2=${R2_BASE}`)
   if (CHECK_PRODUCTION) console.log(`[verify-display-publish] production=${SITE_BASE}`)
 
-  const weeklyCurrent = await verifyWeeklyCurrentWeek()
-  const weeklyWeekKey = String(weeklyCurrent?.weekKey ?? "")
-  if (!weeklyWeekKey) {
-    throw new Error(`weekly current week is missing weekKey for ${YEAR}`)
+  let weeklyWeekKeys = EXPLICIT_WEEK_KEYS.slice()
+  if (CHECK_WEEKLY_CURRENT_WEEK) {
+    const weeklyCurrent = await verifyWeeklyCurrentWeek()
+    const weeklyWeekKey = String(weeklyCurrent?.weekKey ?? "")
+    if (!weeklyWeekKey) {
+      throw new Error(`weekly current week is missing weekKey for ${YEAR}`)
+    }
+    if (weeklyWeekKey) weeklyWeekKeys = [...new Set([...weeklyWeekKeys, weeklyWeekKey])]
   }
 
-  for (const league of ["CL", "PL"]) {
+  for (const league of LEAGUES) {
     await verifyStandingsLeague(league)
     await verifyRankingLeague(league)
     await verifyTopLeadersLeague(league)
-    await verifyWeeklyRankingLeague(weeklyWeekKey, league)
-    await verifyWeeklyTopLeadersLeague(weeklyWeekKey, league)
+    for (const weeklyWeekKey of weeklyWeekKeys) {
+      await verifyWeeklyRankingLeague(weeklyWeekKey, league)
+      await verifyWeeklyTopLeadersLeague(weeklyWeekKey, league)
+    }
   }
   if (CHECK_TOP_PROBABLES) {
     await verifyTopProbables()

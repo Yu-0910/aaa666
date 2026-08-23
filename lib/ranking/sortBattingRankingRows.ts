@@ -21,8 +21,6 @@ export type SortBattingRankingRowsParams = {
   minPAByTeamCanonical: Map<string, number> | null
   /** チームページ: 所属選手のみ */
   teamCode?: string
-  /** チームページ今週タブ: 規定未到達も含めて一覧表示 */
-  skipTeamQualifyingFilter?: boolean
 }
 
 export function sortBattingRankingRows({
@@ -36,7 +34,6 @@ export function sortBattingRankingRows({
   is2026,
   minPAByTeamCanonical,
   teamCode,
-  skipTeamQualifyingFilter = false,
 }: SortBattingRankingRowsParams): SortedRankingResult {
   const scopedRows = teamCode ? filterRankingRowsByTeam(rows, teamCode) : rows
   const metric = metrics.find((m) => m.key === sortKey)
@@ -109,12 +106,12 @@ export function sortBattingRankingRows({
 
   const applyQualifying = requiresQualifyingPA && minPA > 0 && !yahooPoc
 
-  if (applyQualifying && teamCode && !skipTeamQualifyingFilter) {
+  if (applyQualifying && teamCode) {
     return partitionQualifyingRows(scopedRows, rowPassesQualifying, metric.key, order)
   }
 
   let targetRows = scopedRows
-  if (applyQualifying && !skipTeamQualifyingFilter) {
+  if (applyQualifying) {
     targetRows = scopedRows.filter(rowPassesQualifying)
   }
 

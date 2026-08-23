@@ -85,16 +85,10 @@ export type PlayerPagePitcherSeasonBodyProps = {
   onPitchTypeVsHandPanelToggle?: (section: "paRound" | "count", side: "left" | "right") => void
   /** 球種情報タブ初回表示時のみグラフアニメーションを再生 */
   animatePitchCharts?: boolean
-  /** 伊藤大海: カウント別投球成績の打数・被安打列レイアウト */
+  /** 伊藤大海ページ向け個別UI調整 */
   isItoDaiyaPage?: boolean
   /** 髙橋遥人: PC版の投手表倍率パイロット */
   pitcherPcTableCssPilot?: boolean
-}
-
-/** カウント別投球成績: 打数・被安打セルの表示順（伊藤は打数→被安打） */
-function orderCountPitchAbCells(cells: string[], abBeforeH: boolean): string[] {
-  if (!abBeforeH || cells.length < 2) return cells
-  return [cells[1], cells[0], ...cells.slice(2)]
 }
 
 function pitcherCurrentSeasonBasicCards(
@@ -1006,17 +1000,8 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <colgroup>
                             <col style={{ width: "52px" }} />
-                            {isItoDaiyaPage ? (
-                              <>
-                                <col style={{ width: "54px" }} />
-                                <col style={{ width: "54px" }} />
-                              </>
-                            ) : (
-                              <>
-                                <col style={{ width: "50px" }} />
-                                <col style={{ width: "60px" }} />
-                              </>
-                            )}
+                            <col style={{ width: "48px" }} />
+                            <col style={{ width: "48px" }} />
                             {/* K-BB％ / K％ を BB％と同じ横幅に揃える */}
                             <col style={{ width: "51px" }} />
                             <col style={{ width: "51px" }} />
@@ -1029,17 +1014,8 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               <th className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
                                 条件
                               </th>
-                              {isItoDaiyaPage ? (
-                                <>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                                </>
-                              ) : (
-                                <>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
-                                  <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
-                                </>
-                              )}
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">打数</th>
+                              <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">被安打</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K-BB％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">K％</th>
                               <th className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500">BB％</th>
@@ -1073,7 +1049,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                 >
                                   {row.label}
                                 </td>
-                                {orderCountPitchAbCells(row.cells, isItoDaiyaPage).map((cell, i) => (
+                                {row.cells.map((cell, i) => (
                                   <td
                                     key={i}
                                     className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
@@ -1109,17 +1085,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             border: "1px solid #555",
                             width: "100%",
                             tableLayout: "fixed",
-                            minWidth: "513px",
+                            minWidth: "462px",
                           }}
                         >
                           <colgroup>
-                            <col style={{ width: "56px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "34px" }} />
+                            <col style={{ width: "50px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "31px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>

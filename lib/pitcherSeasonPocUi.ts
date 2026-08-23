@@ -514,8 +514,8 @@ export function pitcherPocSituationRows(pp: PitcherSeasonPocPayload): SitRowUi[]
     return {
       label,
       cells: [
-        String(s.h),
         String(s.ab),
+        String(s.h),
         pctStr(s.so - s.bb, s.bf),
         pctStr(s.so, s.bf),
         pctStr(s.bb, s.bf),

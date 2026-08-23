@@ -44,7 +44,7 @@ export function CareerHighStatGrid({
             fontSize: `${CAREER_HIGH_CARD_SCALE_CQW}cqw`,
             backgroundColor: "#000000",
             border: `${CAREER_HIGH_CARD_BORDER_EM}em solid #555555`,
-            borderRadius: "0",
+            borderRadius: "0.25rem",
             boxShadow: "0 0.25em 0.625em rgba(0,0,0,0.5)",
             aspectRatio: "3 / 2",
             display: "flex",
@@ -74,6 +74,7 @@ export function CareerHighStatGrid({
                 width: `min(${CAREER_HIGH_LABEL_BG_WIDTH_EM}em, ${CAREER_HIGH_LABEL_BG_MAX_WIDTH_PERCENT}%)`,
                 height: `${CAREER_HIGH_LABEL_EM * CAREER_HIGH_LABEL_BG_HEIGHT_SCALE}em`,
                 backgroundColor: "#FFFF44",
+                borderRadius: "0.25rem",
               }}
             />
             <div

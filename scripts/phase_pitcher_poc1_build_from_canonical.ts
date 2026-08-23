@@ -869,6 +869,44 @@ function main(): void {
       pm.set(roundKey, agg)
     }
   }
+  function applyGameInningReconcileFromPitchingLines(
+    doc: CanonicalGameDocument,
+    inferredByNpb: Map<string, PaAgg>,
+    lastInningByNpb: Map<string, number>,
+    inferredErByInningByNpb: Map<string, Map<number, number>>,
+  ): void {
+    const mergedLines = mergePitchingLines(doc.domain?.pitchingLines ?? [])
+    for (const line of mergedLines.values()) {
+      const npb = npbByYahooPitcherId.get(line.yahooPlayerId) ?? null
+      if (!npb || !byNpb.has(npb)) continue
+      const inferred = inferredByNpb.get(npb) ?? emptyPaAgg()
+      const officialEr = Math.max(0, line.er)
+      const erDelta = officialEr - inferred.er
+      if (erDelta === 0) continue
+
+      const inning = lastInningByNpb.get(npb) ?? 9
+      const im = ensureInn(npb)
+      const agg = im.get(inning) ?? emptyPaAgg()
+      if (erDelta >= 0) {
+        agg.er += erDelta
+        im.set(inning, agg)
+        continue
+      }
+
+      let remaining = -erDelta
+      const gameErByInning = inferredErByInningByNpb.get(npb) ?? new Map<number, number>()
+      for (const key of [...gameErByInning.keys()].sort((a, b) => b - a)) {
+        if (remaining <= 0) break
+        const gameEr = Math.max(0, gameErByInning.get(key) ?? 0)
+        if (gameEr <= 0) continue
+        const innAgg = im.get(key)
+        if (!innAgg) continue
+        const reduction = Math.min(remaining, gameEr, Math.max(0, innAgg.er))
+        innAgg.er -= reduction
+        remaining -= reduction
+      }
+    }
+  }
   function ensurePaRoundPitchTypes(npb: string) {
     let m = byPaRoundPitchTypes.get(npb)
     if (!m) {
@@ -933,6 +971,9 @@ function main(): void {
     const inferredPaRoundByNpb = new Map<string, PaAgg>()
     const lastPaRoundKeyByNpb = new Map<string, string>()
     const inferredErByRoundByNpb = new Map<string, Map<string, number>>()
+    const inferredInningByNpb = new Map<string, PaAgg>()
+    const lastInningByNpb = new Map<string, number>()
+    const inferredErByInningByNpb = new Map<string, Map<number, number>>()
 
     for (const pa of pas) {
       const pid = yahooPitcherIdForVsHandFromPa(pa)
@@ -1089,6 +1130,15 @@ function main(): void {
         innAgg.outs += outsAdded
         innAgg.er += erDelta
         im.set(parsed.inning, innAgg)
+        const inferred = inferredInningByNpb.get(npb) ?? emptyPaAgg()
+        addPitcherPaCount(inferred, res)
+        inferred.outs += outsAdded
+        inferred.er += erDelta
+        inferredInningByNpb.set(npb, inferred)
+        lastInningByNpb.set(npb, parsed.inning)
+        const gameErByInning = inferredErByInningByNpb.get(npb) ?? new Map<number, number>()
+        gameErByInning.set(parsed.inning, (gameErByInning.get(parsed.inning) ?? 0) + erDelta)
+        inferredErByInningByNpb.set(npb, gameErByInning)
       }
     }
 
@@ -1097,6 +1147,12 @@ function main(): void {
       inferredPaRoundByNpb,
       lastPaRoundKeyByNpb,
       inferredErByRoundByNpb,
+    )
+    applyGameInningReconcileFromPitchingLines(
+      doc,
+      inferredInningByNpb,
+      lastInningByNpb,
+      inferredErByInningByNpb,
     )
 
     const halfGroups = new Map<string, PlateAppearance[]>()

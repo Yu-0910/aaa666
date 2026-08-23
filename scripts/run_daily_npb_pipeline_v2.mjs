@@ -20,12 +20,14 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-after "検証: phase13"
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-full-derived-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase13-validate
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase17-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --phase4-sleep 0.8
  */
 
 import fs from "node:fs"
 import path from "node:path"
+import crypto from "node:crypto"
 import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
@@ -36,6 +38,74 @@ let runSummary = null
 let runSummaryPath = ""
 let runSummaryLatestPath = ""
 let currentRunId = ""
+
+const TEAM_CODE_TO_SHORT = {
+  H: "阪神",
+  G: "巨人",
+  DB: "DeNA",
+  C: "広島",
+  D: "中日",
+  S: "ヤクルト",
+  Bs: "オリックス",
+  M: "ロッテ",
+  F: "日本ハム",
+  E: "楽天",
+  L: "西武",
+  Hs: "ソフトバンク",
+}
+
+const TEAM_SHORT_TO_CODE = {
+  阪神: "H",
+  阪神タイガース: "H",
+  巨人: "G",
+  読売ジャイアンツ: "G",
+  DeNA: "DB",
+  横浜DeNAベイスターズ: "DB",
+  広島: "C",
+  広島東洋カープ: "C",
+  中日: "D",
+  中日ドラゴンズ: "D",
+  ヤクルト: "S",
+  東京ヤクルトスワローズ: "S",
+  オリックス: "Bs",
+  "オリックス・バファローズ": "Bs",
+  ロッテ: "M",
+  千葉ロッテマリーンズ: "M",
+  日本ハム: "F",
+  北海道日本ハムファイターズ: "F",
+  楽天: "E",
+  東北楽天ゴールデンイーグルス: "E",
+  西武: "L",
+  埼玉西武ライオンズ: "L",
+  ソフトバンク: "Hs",
+  福岡ソフトバンクホークス: "Hs",
+}
+
+const CL_TEAM_SHORT_SET = new Set(["巨人", "阪神", "中日", "広島", "DeNA", "ヤクルト"])
+const PL_TEAM_SHORT_SET = new Set(["オリックス", "ロッテ", "日本ハム", "楽天", "西武", "ソフトバンク"])
+
+function teamCodeFromShort(short) {
+  const t = String(short ?? "").trim()
+  if (TEAM_SHORT_TO_CODE[t]) return TEAM_SHORT_TO_CODE[t]
+  for (const [name, code] of Object.entries(TEAM_SHORT_TO_CODE)) {
+    if (t.includes(name) || name.includes(t)) return code
+  }
+  return t
+}
+
+function teamRankingShortFromGameTeamName(teamName) {
+  const t = String(teamName ?? "").trim()
+  if (!t) return ""
+  if (CL_TEAM_SHORT_SET.has(t) || PL_TEAM_SHORT_SET.has(t)) return t
+  const code = teamCodeFromShort(t)
+  return TEAM_CODE_TO_SHORT[code] ?? t
+}
+
+function leagueFromTeamShort(short) {
+  const t = String(short ?? "").trim()
+  if (!t) return "CL"
+  return CL_TEAM_SHORT_SET.has(t) ? "CL" : "PL"
+}
 
 const childEnv = {
   ...process.env,
@@ -154,6 +224,33 @@ function topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow 
   return `npx tsx scripts/phase36_build_top_probables.ts --year ${year} --as-of ${asOfDate}`
 }
 
+function tuesdayWeekKeyFromYmd(ymd) {
+  const s = String(ymd || "").trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ""
+  const date = new Date(`${s}T03:00:00Z`)
+  if (Number.isNaN(date.getTime())) return ""
+  const day = date.getUTCDay()
+  const diff = day >= 2 ? day - 2 : day + 5
+  date.setUTCDate(date.getUTCDate() - diff)
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
+function weekKeysForWindow({ from, to } = {}) {
+  const keys = new Set()
+  if (from) keys.add(tuesdayWeekKeyFromYmd(from))
+  if (to) keys.add(tuesdayWeekKeyFromYmd(to))
+  return [...keys].filter(Boolean).sort()
+}
+
+function stableDigest(value) {
+  return crypto.createHash("sha1").update(JSON.stringify(value)).digest("hex")
+}
+
 function formatMs(ms) {
   const s = Math.max(0, Math.floor(ms / 1000))
   const hh = Math.floor(s / 3600)
@@ -196,6 +293,7 @@ function parseArgs(argv) {
     skipScoreRawGate: false,
     strictFullDerivedValidate: false,
     strictPhase13Validate: false,
+    strictPhase17Validate: false,
     skipVsHandValidate: false,
     strictVsHandValidate: false,
     skipFastPublish: false,
@@ -254,6 +352,7 @@ function parseArgs(argv) {
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
     else if (a === "--strict-full-derived-validate") out.strictFullDerivedValidate = true
     else if (a === "--strict-phase13-validate") out.strictPhase13Validate = true
+    else if (a === "--strict-phase17-validate") out.strictPhase17Validate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
     else if (a === "--strict-vs-hand-validate") out.strictVsHandValidate = true
     else if (a === "--skip-fast-publish") out.skipFastPublish = true
@@ -572,19 +671,26 @@ function collectNpbPitcherIdsForGames(gameIds) {
   return [...npbIds].sort()
 }
 
-const TEAM_NAME_TO_LEAGUE = {
-  "中日ドラゴンズ": "CL",
-  "広島東洋カープ": "CL",
-  "東京ヤクルトスワローズ": "CL",
-  "読売ジャイアンツ": "CL",
-  "阪神タイガース": "CL",
-  "横浜DeNAベイスターズ": "CL",
-  "オリックス・バファローズ": "PL",
-  "千葉ロッテマリーンズ": "PL",
-  "北海道日本ハムファイターズ": "PL",
-  "東北楽天ゴールデンイーグルス": "PL",
-  "埼玉西武ライオンズ": "PL",
-  "福岡ソフトバンクホークス": "PL",
+function collectNpbPitcherSourceThresholdMsById(gameIds) {
+  const yahooToNpb = readYahooPitcherToNpbMap()
+  const thresholds = new Map()
+  for (const gameId of gameIds) {
+    const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+    const doc = readJsonOrNull(canonicalPath)
+    const thresholdMs = canonicalMtimeMsForGameId(gameId)
+    if (thresholdMs <= 0) continue
+    const recordYahoo = (yahooId) => {
+      const npbId = yahooToNpb.get(String(yahooId ?? "").trim())
+      if (!npbId) return
+      thresholds.set(npbId, Math.max(thresholds.get(npbId) || 0, thresholdMs))
+    }
+    for (const line of doc?.domain?.pitchingLines ?? []) recordYahoo(line?.yahooPlayerId)
+    for (const pa of doc?.domain?.plateAppearances ?? []) {
+      recordYahoo(pa?.yahooPitcherId)
+      for (const pitch of pa?.pitchEvents ?? []) recordYahoo(pitch?.yahooPitcherId)
+    }
+  }
+  return thresholds
 }
 
 function collectAffectedLeaguesForGames(gameIds) {
@@ -593,7 +699,9 @@ function collectAffectedLeaguesForGames(gameIds) {
     const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
     const doc = readJsonOrNull(canonicalPath)
     for (const team of doc?.game?.teams ?? []) {
-      const league = TEAM_NAME_TO_LEAGUE[String(team?.teamName ?? "").trim()]
+      const short = teamRankingShortFromGameTeamName(String(team?.teamName ?? "").trim())
+      if (!short) continue
+      const league = leagueFromTeamShort(short)
       if (league) leagues.add(league)
     }
   }
@@ -616,6 +724,25 @@ function targetGameIdsForArgs({ year, from, to, gameIds }) {
     for (const gameId of gameIdsForDateWithFallback(targetYear, dateJst)) ids.add(gameId)
   }
   return [...ids].sort()
+}
+
+function collectYahooBatterSourceThresholdMsById(gameIds) {
+  const thresholds = new Map()
+  for (const gameId of gameIds) {
+    const canonicalPath = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
+    const doc = readJsonOrNull(canonicalPath)
+    const thresholdMs = canonicalMtimeMsForGameId(gameId)
+    if (thresholdMs <= 0) continue
+    const record = (yahooId) => {
+      const id = String(yahooId ?? "").trim()
+      if (!id) return
+      thresholds.set(id, Math.max(thresholds.get(id) || 0, thresholdMs))
+    }
+    for (const line of doc?.domain?.battingLines ?? []) record(line?.yahooPlayerId)
+    for (const row of doc?.game?.statsPlayerLinkedRows ?? []) record(row?.yahooPlayerId)
+    for (const pa of doc?.domain?.plateAppearances ?? []) record(pa?.yahooBatterId)
+  }
+  return thresholds
 }
 
 function phase10PitchRowsCountForGame(gameId) {
@@ -724,6 +851,16 @@ function derivedYahooArgsArg(ids, { from, to } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
+function phase17WindowValidateArg(ids, { year, from, to, fail = true } = {}) {
+  const args = []
+  if (year) args.push("--year", year)
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  if (Array.isArray(ids) && ids.length > 0) args.push("--only-yahoo-ids", ids.join(","))
+  if (fail) args.push("--fail")
+  return args.length > 0 ? ` ${args.join(" ")}` : ""
+}
+
 function dateRangeNpmArgsArg({ from, to } = {}) {
   const args = []
   if (from) args.push("--from", from)
@@ -779,6 +916,129 @@ function topLeadersArgsArg({ leagues = [], categories = [] } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
+function topWeeklyLeadersArgsArg({ from, to, leagues = [], categories = [] } = {}) {
+  const args = []
+  if (from) args.push("--from", from)
+  if (to) args.push("--to", to)
+  if (Array.isArray(leagues) && leagues.length > 0) args.push("--league", [...new Set(leagues)].join(","))
+  if (Array.isArray(categories) && categories.length > 0) args.push("--category", [...new Set(categories)].join(","))
+  return args.length > 0 ? ` -- ${args.join(" ")}` : ""
+}
+
+function uniqueStrings(values) {
+  return [...new Set((values || []).map((v) => String(v || "").trim()).filter(Boolean))].sort()
+}
+
+function buildDeltaManifest(args = currentArgs) {
+  if (!args?.year || !args?.from || !args?.to) return null
+  const gameIds = targetGameIdsForArgs(args)
+  const affectedYahooIds = collectYahooBatterIdsForGames(gameIds)
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(gameIds)
+  const affectedLeagues = collectAffectedLeaguesForGames(gameIds)
+  const weekKeys = weekKeysForWindow({ from: args.from, to: args.to })
+  const affectedDisplayPlayerIds = uniqueStrings([...affectedYahooIds, ...affectedNpbPitcherIds])
+  const targetCanonicalLatestMs = gameIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const fingerprints = {
+    gameWindow: stableDigest({
+      year: args.year,
+      from: args.from,
+      to: args.to,
+      gameIds,
+      targetCanonicalLatestMs,
+    }),
+    battingInputs: stableDigest({
+      ids: affectedYahooIds,
+      thresholds: Object.fromEntries(collectYahooBatterSourceThresholdMsById(gameIds)),
+    }),
+    pitchingInputs: stableDigest({
+      ids: affectedNpbPitcherIds,
+      thresholds: Object.fromEntries(collectNpbPitcherSourceThresholdMsById(gameIds)),
+    }),
+    leagueInputs: stableDigest({
+      leagues: affectedLeagues,
+      weekKeys,
+    }),
+  }
+  const phaseDecisions = {
+    hasGames: gameIds.length > 0,
+    hasBattingDelta: affectedYahooIds.length > 0,
+    hasPitchingDelta: affectedNpbPitcherIds.length > 0,
+    hasLeagueDelta: affectedLeagues.length > 0,
+    hasWeeklyDelta: weekKeys.length > 0,
+    runRecordRepairs: affectedYahooIds.length > 0 || affectedNpbPitcherIds.length > 0,
+    runTopProbablesAncillary: !args.noPublish && gameIds.length > 0,
+    runFutureScheduleAncillary: !args.noPublish && gameIds.length > 0,
+  }
+  return {
+    schemaVersion: "pipeline-v2-delta-manifest-1",
+    builtAtJst: formatJstTimestamp(),
+    runId: currentRunId || buildRunId(args),
+    year: String(args.year),
+    from: String(args.from),
+    to: String(args.to),
+    gameIds,
+    affectedYahooIds,
+    affectedNpbPitcherIds,
+    affectedDisplayPlayerIds,
+    affectedLeagues,
+    weekKeys,
+    targetCanonicalLatestMs,
+    fingerprints,
+    phaseDecisions,
+  }
+}
+
+function deltaManifestRunPath(runId = currentRunId) {
+  const safeRunId = String(runId || "").trim()
+  return path.join(summaryDir(), `pipeline_v2_delta_manifest_${safeRunId || "latest"}.json`)
+}
+
+function writeDeltaManifestArtifacts(manifest = currentDeltaManifest) {
+  if (!manifest) return
+  tryWriteJsonMeta(deltaManifestRunPath(manifest.runId || currentRunId), manifest, "delta_manifest_run")
+  tryWriteJsonMeta(path.join(summaryDir(), "pipeline_v2_delta_manifest_latest.json"), manifest, "delta_manifest_latest")
+}
+
+function shouldRunDeltaPhase(phaseKey, manifest = currentDeltaManifest) {
+  if (!manifest?.phaseDecisions) return true
+  switch (String(phaseKey || "").trim()) {
+    case "record_repairs":
+      return manifest.phaseDecisions.runRecordRepairs
+    case "batting_derived":
+    case "batting_rankings":
+    case "batting_period":
+      return manifest.phaseDecisions.hasBattingDelta
+    case "pitching_derived":
+    case "pitching_rankings":
+      return manifest.phaseDecisions.hasPitchingDelta
+    case "standings":
+    case "top_leaders":
+      return manifest.phaseDecisions.hasLeagueDelta
+    case "weekly_rankings":
+    case "weekly_top_leaders":
+    case "weekly_current_week":
+      return manifest.phaseDecisions.hasWeeklyDelta
+    case "future_schedule":
+      return manifest.phaseDecisions.runFutureScheduleAncillary
+    case "top_probables":
+      return manifest.phaseDecisions.runTopProbablesAncillary
+    default:
+      return true
+  }
+}
+
+function logDeltaSkip(label, phaseKey, manifest = currentDeltaManifest) {
+  const message = `${label}: delta manifest に対象差分がないためスキップします (${phaseKey})`
+  console.log(`\n[daily:npb-pipeline:v2] ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${phaseKey} no-delta`)
+  pushRunSummaryEvent("notes", {
+    kind: "delta_skip",
+    phaseKey,
+    label,
+    manifestRunId: manifest?.runId || "",
+  })
+}
+
 function canonicalMtimeMsForGameId(gameId) {
   const p = path.join(root, "_data", "scraped_games", "canonical", `${gameId}.json`)
   try {
@@ -815,15 +1075,20 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
   const canonicalTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) > 0)
   const ignoredTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) <= 0)
   const currentCanonicalCount = canonicalTargetGameIds.length
+  const affectedYahooIds = collectYahooBatterIdsForGames(canonicalTargetGameIds)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(canonicalTargetGameIds)
   if (!fs.existsSync(periodDir)) {
     return {
       ok: false,
       reason: "period_dir_missing",
       currentCanonicalCount,
       periodSourceCount: 0,
+      affectedYahooCount: affectedYahooIds.length,
       generatedAt: "",
       staleTargetGameIds: [],
       missingTargetGameIds: [],
+      missingYahooIds: affectedYahooIds,
+      staleYahooIds: [],
     }
   }
 
@@ -834,11 +1099,14 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
       reason: "period_meta_missing",
       currentCanonicalCount,
       periodSourceCount: 0,
+      affectedYahooCount: affectedYahooIds.length,
       generatedAt: "",
       sourceRef: "",
       staleTargetGameIds: [],
       missingTargetGameIds: canonicalTargetGameIds,
       ignoredTargetGameIds,
+      missingYahooIds: affectedYahooIds,
+      staleYahooIds: [],
     }
   }
 
@@ -851,28 +1119,52 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
     generatedAtMs > 0
       ? canonicalTargetGameIds.filter((id) => canonicalMtimeMsForGameId(id) > generatedAtMs + 1000)
       : canonicalTargetGameIds
+  const fileFreshness = derivedCategoryFreshnessReport({
+    year,
+    category: "player_season_batting_period",
+    yahooIds: affectedYahooIds,
+    canonicalThresholdMs: generatedAtMs,
+    sourceThresholdMsById: yahooSourceThresholdMsById,
+  })
+  const missingYahooIds = fileFreshness.missingYahooIds || []
+  const staleYahooIds = fileFreshness.staleYahooIds || []
 
   const reasons = []
   if (missingTargetGameIds.length > 0) reasons.push("target_games_missing_from_period_source")
   if (staleTargetGameIds.length > 0) reasons.push("target_canonical_newer_than_period")
+  if (missingYahooIds.length > 0) reasons.push("target_period_player_files_missing")
+  if (staleYahooIds.length > 0) reasons.push("target_period_player_files_stale")
 
   return {
     ok: reasons.length === 0,
     reason: reasons.join("+"),
     currentCanonicalCount,
     periodSourceCount: sourceIds.length,
+    affectedYahooCount: affectedYahooIds.length,
     generatedAt,
     sourceRef: snapshot.sourceRef,
     ignoredTargetGameIds,
     staleTargetGameIds,
     missingTargetGameIds,
+    missingYahooIds,
+    staleYahooIds,
   }
 }
 
-function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitchingPeriod = false }) {
+function periodRepairGameIds(report) {
+  return [...new Set([...(report?.missingTargetGameIds || []), ...(report?.staleTargetGameIds || [])])].sort()
+}
+
+function ensureBattingPeriodFresh({
+  year,
+  from,
+  to,
+  gameIds,
+  dryRun,
+  rebuildPitchingPeriod = false,
+  strictValidate = false,
+}) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
-  const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
-  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const before = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (before.ok) {
     console.log(
@@ -890,11 +1182,17 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   if (before.missingTargetGameIds.length > 0) {
     console.warn(`  missingTargetGameIds=${before.missingTargetGameIds.join(",")}`)
   }
+  if ((before.missingYahooIds || []).length > 0) {
+    console.warn(`  missingYahooIds=${before.missingYahooIds.slice(0, 20).join(",")}`)
+  }
   if (before.ignoredTargetGameIds.length > 0) {
     console.warn(`  ignoredTargetGameIds(no canonical)=${before.ignoredTargetGameIds.join(",")}`)
   }
   if (before.staleTargetGameIds.length > 0) {
     console.warn(`  staleTargetGameIds=${before.staleTargetGameIds.join(",")}`)
+  }
+  if ((before.staleYahooIds || []).length > 0) {
+    console.warn(`  staleYahooIds=${before.staleYahooIds.slice(0, 20).join(",")}`)
   }
   appendPipelineBulkLog(
     root,
@@ -908,17 +1206,39 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     canonicalCount: before.currentCanonicalCount,
     staleTargetGameIds: before.staleTargetGameIds,
     missingTargetGameIds: before.missingTargetGameIds,
+    staleYahooIds: (before.staleYahooIds || []).slice(0, 20),
+    missingYahooIds: (before.missingYahooIds || []).slice(0, 20),
   })
 
+  const repairGameIds = periodRepairGameIds(before)
+  const repairYahooIds = collectYahooBatterIdsForGames(repairGameIds)
+  const repairNpbPitcherIds = collectNpbPitcherIdsForGames(repairGameIds)
+
   run(
-    "派生: phase17 period（鮮度NGのため再生成）",
-    `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`,
+    repairYahooIds.length > 0
+      ? `派生: phase17 period（鮮度NGのため再生成・差分 ${repairYahooIds.length}人）`
+      : "派生: phase17 period（鮮度NGのため再生成）",
+    `npm run phase17:build:period${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
     { dryRun },
   )
+  if (repairYahooIds.length > 0) {
+    runWarnOnlyValidation(
+      `検証: phase17 period window（差分 ${repairYahooIds.length}人）`,
+      `npm run validate:phase17-period-window --${phase17WindowValidateArg(repairYahooIds, { year, from, to })}`,
+      {
+        dryRun,
+        strict: strictValidate,
+        strictFlagName: "--strict-phase17-validate",
+        note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+      },
+    )
+  }
   if (rebuildPitchingPeriod) {
     run(
-      "派生: phase7 pitcher period（phase17再生成に合わせて再生成）",
-      `npm run phase7:build:pitcher-period${onlyNpbIdsArg(affectedNpbPitcherIds)}`,
+      repairNpbPitcherIds.length > 0
+        ? `派生: phase7 pitcher period（phase17再生成に合わせて再生成・差分 ${repairNpbPitcherIds.length}人）`
+        : "派生: phase7 pitcher period（phase17再生成に合わせて再生成）",
+      `npm run phase7:build:pitcher-period${onlyNpbIdsArg(repairNpbPitcherIds)}`,
       { dryRun },
     )
   }
@@ -927,9 +1247,23 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
 
   const after = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (!after.ok) {
-    throw new Error(
-      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} targetCanonical=${after.currentCanonicalCount}`,
-    )
+    const message =
+      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} targetCanonical=${after.currentCanonicalCount}`
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+    pushRunSummaryEvent("warnings", {
+      kind: "phase17_period_still_stale_after_rebuild",
+      message,
+      strict: strictValidate,
+      staleTargetGameIds: after.staleTargetGameIds,
+      missingTargetGameIds: after.missingTargetGameIds,
+      staleYahooIds: (after.staleYahooIds || []).slice(0, 20),
+      missingYahooIds: (after.missingYahooIds || []).slice(0, 20),
+    })
+    if (strictValidate) {
+      throw new Error(`${message} --strict-phase17-validate 指定のため停止します。`)
+    }
+    console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+    return
   }
   console.log(
     `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, targetCanonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
@@ -964,7 +1298,7 @@ function derivedFileMtimeMsForNpbIds(year, category, npbIds) {
   return mtimes
 }
 
-function derivedCategoryFreshnessReport({ year, category, yahooIds, canonicalThresholdMs }) {
+function derivedCategoryFreshnessReport({ year, category, yahooIds, canonicalThresholdMs, sourceThresholdMsById = null }) {
   const uniqueYahooIds = [...new Set((yahooIds || []).map(String).filter(Boolean))].sort()
   if (uniqueYahooIds.length === 0) {
     return {
@@ -989,7 +1323,8 @@ function derivedCategoryFreshnessReport({ year, category, yahooIds, canonicalThr
       continue
     }
     latestDerivedMs = Math.max(latestDerivedMs, mtimeMs)
-    if (canonicalThresholdMs > 0 && mtimeMs + 1000 < canonicalThresholdMs) {
+    const thresholdMs = sourceThresholdMsById instanceof Map ? sourceThresholdMsById.get(String(yahooId)) || 0 : canonicalThresholdMs
+    if (thresholdMs > 0 && mtimeMs + 1000 < thresholdMs) {
       staleYahooIds.push(String(yahooId))
     }
   }
@@ -1005,7 +1340,7 @@ function derivedCategoryFreshnessReport({ year, category, yahooIds, canonicalThr
   }
 }
 
-function derivedNpbCategoryFreshnessReport({ year, category, npbIds, canonicalThresholdMs }) {
+function derivedNpbCategoryFreshnessReport({ year, category, npbIds, canonicalThresholdMs, sourceThresholdMsById = null }) {
   const uniqueNpbIds = [...new Set((npbIds || []).map(String).filter(Boolean))].sort()
   if (uniqueNpbIds.length === 0) {
     return {
@@ -1033,7 +1368,8 @@ function derivedNpbCategoryFreshnessReport({ year, category, npbIds, canonicalTh
       continue
     }
     latestDerivedMs = Math.max(latestDerivedMs, mtimeMs)
-    if (canonicalThresholdMs > 0 && mtimeMs + 1000 < canonicalThresholdMs) {
+    const thresholdMs = sourceThresholdMsById instanceof Map ? sourceThresholdMsById.get(String(npbId)) || 0 : canonicalThresholdMs
+    if (thresholdMs > 0 && mtimeMs + 1000 < thresholdMs) {
       staleNpbIds.push(String(npbId))
     }
   }
@@ -1054,10 +1390,19 @@ function derivedNpbCategoryFreshnessReport({ year, category, npbIds, canonicalTh
 
 function buildCheckpointInputSnapshot(args = currentArgs) {
   if (!args?.year || !args?.from || !args?.to) return null
+  const manifest =
+    currentDeltaManifest &&
+    String(currentDeltaManifest.year || "") === String(args.year || "") &&
+    String(currentDeltaManifest.from || "") === String(args.from || "") &&
+    String(currentDeltaManifest.to || "") === String(args.to || "")
+      ? currentDeltaManifest
+      : buildDeltaManifest(args)
   const gameIds = targetGameIdsForArgs(args)
-  const yahooIds = collectYahooBatterIdsForGames(gameIds)
-  const npbPitcherIds = collectNpbPitcherIdsForGames(gameIds)
-  const targetCanonicalLatestMs = gameIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const yahooIds = manifest?.affectedYahooIds || collectYahooBatterIdsForGames(gameIds)
+  const npbPitcherIds = manifest?.affectedNpbPitcherIds || collectNpbPitcherIdsForGames(gameIds)
+  const targetCanonicalLatestMs = Number(manifest?.targetCanonicalLatestMs || 0)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(gameIds)
+  const npbPitcherSourceThresholdMsById = collectNpbPitcherSourceThresholdMsById(gameIds)
   const phase17 = battingPeriodFreshnessReport({ year: args.year, gameIds })
   const categories = ["player_season_batting", "player_season_batting_count", "player_season_batting_context", "player_season_batting_splits"]
   const derived = Object.fromEntries(
@@ -1068,6 +1413,7 @@ function buildCheckpointInputSnapshot(args = currentArgs) {
         category,
         yahooIds,
         canonicalThresholdMs: targetCanonicalLatestMs,
+        sourceThresholdMsById: yahooSourceThresholdMsById,
       }),
     ]),
   )
@@ -1076,6 +1422,7 @@ function buildCheckpointInputSnapshot(args = currentArgs) {
     category: "player_season_pitching_poc",
     npbIds: npbPitcherIds,
     canonicalThresholdMs: targetCanonicalLatestMs,
+    sourceThresholdMsById: npbPitcherSourceThresholdMsById,
   })
 
   return {
@@ -1083,18 +1430,24 @@ function buildCheckpointInputSnapshot(args = currentArgs) {
     from: String(args.from),
     to: String(args.to),
     gameIds,
+    leagues: manifest?.affectedLeagues || collectAffectedLeaguesForGames(gameIds),
+    weekKeys: manifest?.weekKeys || weekKeysForWindow({ from: args.from, to: args.to }),
     yahooIdsCount: yahooIds.length,
     npbPitcherIdsCount: npbPitcherIds.length,
     targetCanonicalLatestMs,
+    deltaFingerprint: manifest?.fingerprints?.gameWindow || "",
     phase17: {
       ok: Boolean(phase17.ok),
       reason: phase17.reason || "",
       generatedAt: phase17.generatedAt || "",
       generatedAtMs: parseIsoMs(phase17.generatedAt),
       periodSourceCount: Number(phase17.periodSourceCount || 0),
+      affectedYahooCount: Number(phase17.affectedYahooCount || 0),
       currentCanonicalCount: Number(phase17.currentCanonicalCount || 0),
       missingTargetGameIds: phase17.missingTargetGameIds || [],
       staleTargetGameIds: phase17.staleTargetGameIds || [],
+      missingYahooIds: phase17.missingYahooIds || [],
+      staleYahooIds: phase17.staleYahooIds || [],
     },
     derived,
   }
@@ -1139,6 +1492,8 @@ function checkpointInputFreshnessStatus(savedSnapshot, currentSnapshot) {
 
   if ((currentSnapshot.phase17?.missingTargetGameIds || []).length > 0) reasons.push("phase17_missing_target_games")
   if ((currentSnapshot.phase17?.staleTargetGameIds || []).length > 0) reasons.push("phase17_stale_target_games")
+  if ((currentSnapshot.phase17?.missingYahooIds || []).length > 0) reasons.push("phase17_missing_player_files")
+  if ((currentSnapshot.phase17?.staleYahooIds || []).length > 0) reasons.push("phase17_stale_player_files")
 
   return {
     stale: reasons.length > 0,
@@ -1192,6 +1547,7 @@ function restoreCheckpointRunOptions(args, checkpointArgs) {
     "skipScoreRawGate",
     "strictFullDerivedValidate",
     "strictPhase13Validate",
+    "strictPhase17Validate",
     "skipVsHandValidate",
     "strictVsHandValidate",
     "skipFastPublish",
@@ -1211,11 +1567,10 @@ function restoreCheckpointRunOptions(args, checkpointArgs) {
 function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
-  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(targetIds)
   const phase11Command = `npm run phase11:build:batting${derivedYahooArgsArg(affectedYahooIds, { from, to })}`
   const derivedAffectedArg = derivedYahooArgsArg(affectedYahooIds, { from, to })
-  const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const categoryPlans = [
     {
       category: "player_season_batting",
@@ -1235,6 +1590,7 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
       category: plan.category,
       yahooIds: affectedYahooIds,
       canonicalThresholdMs,
+      sourceThresholdMsById: yahooSourceThresholdMsById,
     })
     if (report.ok) continue
 
@@ -1259,60 +1615,154 @@ function ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun }) {
       missingYahooIds: report.missingYahooIds.slice(0, 20),
       staleYahooIds: report.staleYahooIds.slice(0, 20),
     })
-    run(plan.rebuildLabel, plan.command, { dryRun })
+    const repairYahooIds = yahooRepairIdsFromFreshnessReport(report)
+    if (repairYahooIds.length === 0) continue
+    const targetedCommand =
+      plan.category === "player_season_batting"
+        ? `npm run phase11:build:batting${derivedYahooArgsArg(repairYahooIds, { from, to })}`
+        : `npm run phase16:build:batting-count${derivedYahooArgsArg(repairYahooIds, { from, to })}`
+    run(plan.rebuildLabel, targetedCommand, { dryRun })
   }
+}
 
+function uniqueRepairIds(...groups) {
+  return [...new Set(groups.flat().map(String).map((s) => s.trim()).filter(Boolean))].sort()
+}
+
+function yahooRepairIdsFromFreshnessReport(report) {
+  return uniqueRepairIds(report?.missingYahooIds || [], report?.staleYahooIds || [])
+}
+
+function npbRepairIdsFromFreshnessReport(report) {
+  return uniqueRepairIds(report?.missingNpbIds || [], report?.staleNpbIds || [])
+}
+
+function runPhase17PeriodAndValidate({
+  year,
+  from,
+  to,
+  affectedYahooIds,
+  dryRun,
+  strictValidate = false,
+  label = "派生: phase17 period",
+}) {
+  run(label, `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`, { dryRun })
+  if (affectedYahooIds.length > 0) {
+    runWarnOnlyValidation(
+      `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
+      `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
+      {
+        dryRun,
+        strict: strictValidate,
+        strictFlagName: "--strict-phase17-validate",
+        note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+      },
+    )
+  }
+}
+
+function runProfileTotalsFollowRankingValidation({
+  year,
+  affectedYahooIds = [],
+  affectedNpbPitcherIds = [],
+  dryRun,
+  strict = false,
+  label = "検証: 個人ページ通算値 ↔ ランキング",
+}) {
+  const yahooIds = uniqueStrings(affectedYahooIds)
+  const npbIds = uniqueStrings(affectedNpbPitcherIds)
+  if (yahooIds.length === 0 && npbIds.length === 0) {
+    console.log(`\n[daily:npb-pipeline:v2] ${label}: 対象選手なしのためスキップします。\n`)
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${label} no affected players`)
+    return
+  }
+  const parts = [`npx tsx scripts/validate_profile_totals_follow_rankings.ts --year ${year}`]
+  if (yahooIds.length > 0) parts.push(`--yahoo-ids ${yahooIds.join(",")}`)
+  if (npbIds.length > 0) parts.push(`--npb-ids ${npbIds.join(",")}`)
+  runWarnOnlyValidation(label, parts.join(" "), {
+    dryRun,
+    strict,
+    note: "個人ページ通算値の差分は警告として扱い、ランキング/公開は継続します。",
+  })
+}
+
+function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun, strict = false }) {
+  const targetIds = targetGameIdsForArgs({ from, to, gameIds })
+  const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
+  const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const npbPitcherSourceThresholdMsById = collectNpbPitcherSourceThresholdMsById(targetIds)
   const pitchingReport = derivedNpbCategoryFreshnessReport({
     year,
     category: "player_season_pitching_poc",
     npbIds: affectedNpbPitcherIds,
     canonicalThresholdMs,
+    sourceThresholdMsById: npbPitcherSourceThresholdMsById,
   })
-  if (!pitchingReport.ok) {
-    console.warn("\n[daily:npb-pipeline:v2] player_season_pitching_poc 鮮度 NG → 再生成します:")
-    console.warn(
-      `  affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
-    )
-    if (pitchingReport.missingNpbIds.length > 0) {
-      console.warn(`  missingNpbIds=${pitchingReport.missingNpbIds.slice(0, 20).join(",")}`)
-    }
-    if (pitchingReport.staleNpbIds.length > 0) {
-      console.warn(`  staleNpbIds=${pitchingReport.staleNpbIds.slice(0, 20).join(",")}`)
-    }
-    appendPipelineBulkLog(
-      root,
-      "daily:npb-pipeline:v2",
-      `player_season_pitching_poc stale affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
-    )
-    pushRunSummaryEvent("repairs", {
-      kind: "player_season_pitching_poc_rebuild",
-      affectedCount: pitchingReport.affectedCount,
-      missingNpbIds: pitchingReport.missingNpbIds.slice(0, 20),
-      staleNpbIds: pitchingReport.staleNpbIds.slice(0, 20),
-    })
-    run("派生: phase:pitcher-poc1（鮮度NGのため再生成）", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
-    run(
-      "派生: phase6 pitcher-catcher splits（投手PoC再生成に合わせて再生成）",
-      `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`,
-      { dryRun },
-    )
-    run(
-      "派生: phase7 pitcher period（投手PoC再生成に合わせて再生成）",
-      `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`,
-      { dryRun },
-    )
+  if (pitchingReport.ok) return
+
+  console.warn("\n[daily:npb-pipeline:v2] player_season_pitching_poc 鮮度 NG → 1回目公開後に再生成します:")
+  console.warn(
+    `  affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
+  )
+  if (pitchingReport.missingNpbIds.length > 0) {
+    console.warn(`  missingNpbIds=${pitchingReport.missingNpbIds.slice(0, 20).join(",")}`)
   }
+  if (pitchingReport.staleNpbIds.length > 0) {
+    console.warn(`  staleNpbIds=${pitchingReport.staleNpbIds.slice(0, 20).join(",")}`)
+  }
+  appendPipelineBulkLog(
+    root,
+    "daily:npb-pipeline:v2",
+    `player_season_pitching_poc stale affected=${pitchingReport.affectedCount} missing=${pitchingReport.missingNpbIds.length} stale=${pitchingReport.staleNpbIds.length}`,
+  )
+  pushRunSummaryEvent("repairs", {
+    kind: "player_season_pitching_poc_rebuild_after_first_publish",
+    affectedCount: pitchingReport.affectedCount,
+    missingNpbIds: pitchingReport.missingNpbIds.slice(0, 20),
+    staleNpbIds: pitchingReport.staleNpbIds.slice(0, 20),
+  })
+  const repairNpbPitcherIds = npbRepairIdsFromFreshnessReport(pitchingReport)
+  if (repairNpbPitcherIds.length === 0) return
+  const repairNpbPitcherArg = onlyNpbIdsArg(repairNpbPitcherIds)
+  runBestEffortStep("派生: phase:pitcher-poc1（1回目公開後・鮮度NGのため再生成）", `npm run phase:pitcher-poc1${repairNpbPitcherArg}`, {
+    dryRun,
+    strict,
+    warningKind: "post_fast_pitching_poc_failed",
+    warningMessage: "1回目公開後の投手PoC再生成に失敗しましたが、公開は継続します。",
+  })
+  runBestEffortStep(
+    "派生: phase6 pitcher-catcher splits（1回目公開後・投手PoC再生成に合わせて再生成）",
+    `npm run phase6:build:pitcher-catcher-splits${repairNpbPitcherArg}`,
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_pitcher_catcher_splits_failed",
+      warningMessage: "1回目公開後の投手捕手補助派生に失敗しましたが、公開は継続します。",
+    },
+  )
+  runBestEffortStep(
+    "派生: phase7 pitcher period（1回目公開後・投手PoC再生成に合わせて再生成）",
+    `npm run phase7:build:pitcher-period${repairNpbPitcherArg}`,
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_pitcher_period_failed",
+      warningMessage: "1回目公開後の投手期間別派生に失敗しましたが、公開は継続します。",
+    },
+  )
 }
 
-function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
+function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun, strict = false }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(targetIds)
   const report = derivedCategoryFreshnessReport({
     year,
     category: "player_season_batting_splits",
     yahooIds: affectedYahooIds,
     canonicalThresholdMs,
+    sourceThresholdMsById: yahooSourceThresholdMsById,
   })
   if (report.ok) {
     appendPipelineBulkLog(
@@ -1344,10 +1794,17 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
     missingYahooIds: report.missingYahooIds.slice(0, 20),
     staleYahooIds: report.staleYahooIds.slice(0, 20),
   })
-  run(
+  const repairYahooIds = yahooRepairIdsFromFreshnessReport(report)
+  if (repairYahooIds.length === 0) return
+  runBestEffortStep(
     "派生: phase15 batting splits（1回目公開後・2回目公開前の鮮度NG再生成）",
-    `npm run phase15:build:batting-splits${derivedYahooArgsArg(affectedYahooIds, { from, to })}`,
-    { dryRun },
+    `npm run phase15:build:batting-splits${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_batting_splits_failed",
+      warningMessage: "1回目公開後の batting splits 再生成に失敗しましたが、公開は継続します。",
+    },
   )
 }
 
@@ -1449,6 +1906,7 @@ function runFinishedRawFreshnessGate(args) {
 let stepNo = 0
 let lastStep = ""
 let currentArgs = null
+let currentDeltaManifest = null
 let lastStepId = ""
 let resumeState = {
   mode: "",
@@ -1531,6 +1989,10 @@ function acquirePipelineRunLock(args) {
 
 function initRunSummary(args) {
   currentRunId = buildRunId(args)
+  currentDeltaManifest = buildDeltaManifest({
+    ...args,
+    runId: currentRunId,
+  })
   runSummaryPath = path.join(summaryDir(), `pipeline_v2_run_summary_${currentRunId}.json`)
   runSummaryLatestPath = path.join(summaryDir(), "pipeline_v2_run_summary_latest.json")
   runSummary = {
@@ -1556,6 +2018,7 @@ function initRunSummary(args) {
       skipScoreRawGate: Boolean(args.skipScoreRawGate),
       strictFullDerivedValidate: Boolean(args.strictFullDerivedValidate),
       strictPhase13Validate: Boolean(args.strictPhase13Validate),
+      strictPhase17Validate: Boolean(args.strictPhase17Validate),
       skipVsHandValidate: Boolean(args.skipVsHandValidate),
       strictVsHandValidate: Boolean(args.strictVsHandValidate),
       skipFastPublish: Boolean(args.skipFastPublish),
@@ -1567,6 +2030,7 @@ function initRunSummary(args) {
       reason: String(args.triggerReason || "").trim(),
       detail: String(args.triggerDetail || "").trim(),
     },
+    deltaManifest: currentDeltaManifest,
     progressState: args.noPublish ? "running_no_publish" : "running_before_publish",
     progressMessage: args.noPublish
       ? "公開なしで実行中。R2/production の反映完了判定には使わない。"
@@ -1602,6 +2066,7 @@ function initRunSummary(args) {
     publishes: [],
     notes: [],
   }
+  writeDeltaManifestArtifacts(currentDeltaManifest)
   writeRunSummary()
 }
 
@@ -1613,6 +2078,115 @@ function writeRunSummary() {
   }
   if (runSummaryPath) tryWriteJsonMeta(runSummaryPath, payload, "run_summary")
   if (runSummaryLatestPath) tryWriteJsonMeta(runSummaryLatestPath, payload, "run_summary_latest")
+}
+
+function derivedCategoryMetaPath(category, year) {
+  return path.join(root, "_data", "derived", category, year, "_pipeline_v2_meta.json")
+}
+
+function writeDerivedCategoryMeta(category, year, payload) {
+  const targetPath = derivedCategoryMetaPath(category, year)
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true })
+  tryWriteJsonMeta(
+    targetPath,
+    {
+      schemaVersion: "pipeline-v2-derived-meta-1",
+      category,
+      year: String(year || ""),
+      updatedAtJst: formatJstTimestamp(),
+      runId: currentRunId,
+      ...payload,
+    },
+    `derived_meta_${category}`,
+  )
+}
+
+function writeSnapshotMeta(kind, payload) {
+  const targetPath = path.join(summaryDir(), `${kind}_pipeline_v2_meta.json`)
+  tryWriteJsonMeta(
+    targetPath,
+    {
+      schemaVersion: "pipeline-v2-snapshot-meta-1",
+      kind,
+      updatedAtJst: formatJstTimestamp(),
+      runId: currentRunId,
+      ...payload,
+    },
+    `${kind}_meta`,
+  )
+}
+
+function recordDerivedMetaForSuccessfulStep(stepId) {
+  if (!currentDeltaManifest || !currentArgs?.year) return
+  const shared = {
+    source: {
+      gameIds: currentDeltaManifest.gameIds,
+      leagues: currentDeltaManifest.affectedLeagues,
+      weekKeys: currentDeltaManifest.weekKeys,
+    },
+    fingerprints: currentDeltaManifest.fingerprints,
+  }
+  switch (String(stepId || "").trim()) {
+    case "npm:phase11:build:batting":
+      writeDerivedCategoryMeta("player_season_batting", currentArgs.year, {
+        ids: currentDeltaManifest.affectedYahooIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.battingInputs,
+        ...shared,
+      })
+      return
+    case "npm:phase13:build:context":
+      writeDerivedCategoryMeta("player_season_batting_context", currentArgs.year, {
+        ids: currentDeltaManifest.affectedYahooIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.battingInputs,
+        ...shared,
+      })
+      return
+    case "npm:phase15:build:batting-splits":
+      writeDerivedCategoryMeta("player_season_batting_splits", currentArgs.year, {
+        ids: currentDeltaManifest.affectedYahooIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.battingInputs,
+        ...shared,
+      })
+      return
+    case "npm:phase16:build:batting-count":
+      writeDerivedCategoryMeta("player_season_batting_count", currentArgs.year, {
+        ids: currentDeltaManifest.affectedYahooIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.battingInputs,
+        ...shared,
+      })
+      return
+    case "npm:phase17:build:period":
+      writeDerivedCategoryMeta("player_season_batting_period", currentArgs.year, {
+        ids: currentDeltaManifest.affectedYahooIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.battingInputs,
+        ...shared,
+      })
+      return
+    case "npm:phase:pitcher-poc1":
+      writeDerivedCategoryMeta("player_season_pitching_poc", currentArgs.year, {
+        ids: currentDeltaManifest.affectedNpbPitcherIds,
+        inputFingerprint: currentDeltaManifest.fingerprints.pitchingInputs,
+        ...shared,
+      })
+      return
+    case "npm:top-leaders:build:2026":
+      writeSnapshotMeta("top-leaders", {
+        leagues: currentDeltaManifest.affectedLeagues,
+        inputFingerprint: currentDeltaManifest.fingerprints.leagueInputs,
+        ...shared,
+      })
+      return
+    case "npm:top-weekly-leaders:build:2026":
+      writeSnapshotMeta("top-weekly-leaders", {
+        leagues: currentDeltaManifest.affectedLeagues,
+        weekKeys: currentDeltaManifest.weekKeys,
+        inputFingerprint: currentDeltaManifest.fingerprints.leagueInputs,
+        ...shared,
+      })
+      return
+    default:
+      return
+  }
 }
 
 function pushRunSummaryEvent(key, event, { limit = 120 } = {}) {
@@ -1992,6 +2566,7 @@ function writePipelineCheckpoint(status, label, command = "", extra = {}) {
           skipScoreRawGate: Boolean(currentArgs.skipScoreRawGate),
           strictFullDerivedValidate: Boolean(currentArgs.strictFullDerivedValidate),
           strictPhase13Validate: Boolean(currentArgs.strictPhase13Validate),
+          strictPhase17Validate: Boolean(currentArgs.strictPhase17Validate),
           skipVsHandValidate: Boolean(currentArgs.skipVsHandValidate),
           strictVsHandValidate: Boolean(currentArgs.strictVsHandValidate),
           skipFastPublish: Boolean(currentArgs.skipFastPublish),
@@ -2001,6 +2576,7 @@ function writePipelineCheckpoint(status, label, command = "", extra = {}) {
         }
       : null,
     inputSnapshot,
+    deltaManifest: currentDeltaManifest,
     progressState: runSummary?.progressState ?? null,
     progressMessage: runSummary?.progressMessage ?? null,
     publishProgress: runSummary?.publishProgress ?? null,
@@ -2367,6 +2943,7 @@ function run(label, command, opts = {}) {
   )
   recordPipelineStepSuccess({ label, command, stepId, elapsed, attempts: execResult.attempts })
   pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, attempts: execResult.attempts })
+  recordDerivedMetaForSuccessfulStep(stepId)
   writePipelineCheckpoint("completed", label, command, { stepId, elapsed, attempts: execResult.attempts })
 }
 
@@ -2403,6 +2980,7 @@ function runTry(label, command, opts = {}) {
     )
     recordPipelineStepSuccess({ label, command, stepId, elapsed, tryMode: true, attempts: execResult.attempts })
     pushRunSummaryEvent("completedSteps", { label, stepId, elapsed, command, tryMode: true, attempts: execResult.attempts })
+    recordDerivedMetaForSuccessfulStep(stepId)
     writePipelineCheckpoint("completed-try", label, command, { stepId, elapsed, attempts: execResult.attempts })
     return true
   } catch (e) {
@@ -2453,7 +3031,7 @@ function runTry(label, command, opts = {}) {
   }
 }
 
-function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = "" } = {}) {
+function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = "", strictFlagName = "--strict-full-derived-validate" } = {}) {
   if (runTry(label, command, { dryRun })) return
   const message = `${label} がNGでした。${note || "公開は継続し、差分は後続調査対象としてログに残します。"}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
@@ -2462,12 +3040,68 @@ function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = 
     label,
     command,
     strict,
+    strictFlagName,
     message,
   })
   if (strict) {
-    throw new Error(`${message} --strict-full-derived-validate 指定のため停止します。`)
+    throw new Error(`${message} ${strictFlagName} 指定のため停止します。`)
   }
   console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+}
+
+function runBestEffortStep(label, command, {
+  dryRun,
+  strict = false,
+  strictFlagName = "--strict-full-derived-validate",
+  timeoutKind = "default",
+  warningKind = "best_effort_step_failed",
+  warningMessage = "",
+  warningMeta = {},
+} = {}) {
+  const ok = runTry(label, command, { dryRun, timeoutKind })
+  if (ok) return true
+  const message =
+    String(warningMessage || "").trim() ||
+    `${label} に失敗しましたが、公開は継続し、差分は後続調査対象としてログに残します。`
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: warningKind,
+    label,
+    command,
+    strict,
+    strictFlagName,
+    message,
+    ...warningMeta,
+  })
+  if (strict) {
+    throw new Error(`${message} ${strictFlagName} 指定のため停止します。`)
+  }
+  return false
+}
+
+function runPostPublishBestEffort(label, command, {
+  dryRun,
+  timeoutKind = "short",
+  warningKind = "post_publish_best_effort_failed",
+  warningMessage = "",
+  warningMeta = {},
+} = {}) {
+  const ok = runTry(label, command, { dryRun, timeoutKind })
+  if (ok) return true
+  const message =
+    String(warningMessage || "").trim() ||
+    `${label} に失敗しましたが、公開は完了済みとして継続します。必要なら単体で再実行してください。`
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: warningKind,
+    label,
+    command,
+    message,
+    ...warningMeta,
+  })
+  return false
 }
 
 function vsHandFailureReportPath(year) {
@@ -2504,6 +3138,55 @@ function writeVsHandFailureReport({ year, validationCommand, dryRun }) {
     validationCommand,
   })
   return reportPath
+}
+
+function readVsHandRetryYahooIds(reportPath, fallbackYahooIds = []) {
+  const fallbackIds = [...new Set((fallbackYahooIds || []).map(String).filter(Boolean))].sort()
+  const report = readJsonOrNull(reportPath)
+  if (!report || typeof report !== "object") return fallbackIds
+  const mismatchIds = Array.isArray(report.mismatchPlayerIds)
+    ? report.mismatchPlayerIds.map(String).filter(Boolean)
+    : []
+  if (mismatchIds.length === 0) return fallbackIds
+  if (fallbackIds.length === 0) return [...new Set(mismatchIds)].sort()
+  const fallbackSet = new Set(fallbackIds)
+  const filtered = mismatchIds.filter((id) => fallbackSet.has(String(id)))
+  return [...new Set(filtered)].sort()
+}
+
+function readVsHandFailureReportSummary(reportPath, fallbackYahooIds = []) {
+  const fallbackIds = [...new Set((fallbackYahooIds || []).map(String).filter(Boolean))].sort()
+  const report = readJsonOrNull(reportPath)
+  if (!report || typeof report !== "object") {
+    return {
+      retryYahooIds: fallbackIds,
+      mismatchPlayerIds: [],
+      missingSplitsPlayerIds: [],
+      missingSplits: -1,
+      mismatches: -1,
+      negativeReconPlayers: -1,
+      canRetryPhase15: true,
+    }
+  }
+  const mismatchPlayerIds = Array.isArray(report.mismatchPlayerIds)
+    ? [...new Set(report.mismatchPlayerIds.map(String).filter(Boolean))].sort()
+    : []
+  const missingSplitsPlayerIds = Array.isArray(report.missingSplitsPlayerIds)
+    ? [...new Set(report.missingSplitsPlayerIds.map(String).filter(Boolean))].sort()
+    : []
+  const retryYahooIds = readVsHandRetryYahooIds(reportPath, fallbackYahooIds)
+  const missingSplits = Number(report.missingSplits ?? missingSplitsPlayerIds.length)
+  const mismatches = Number(report.mismatches ?? mismatchPlayerIds.length)
+  const negativeReconPlayers = Number(report.negativeReconPlayers ?? -1)
+  return {
+    retryYahooIds,
+    mismatchPlayerIds,
+    missingSplitsPlayerIds,
+    missingSplits,
+    mismatches,
+    negativeReconPlayers,
+    canRetryPhase15: missingSplitsPlayerIds.length > 0,
+  }
 }
 
 function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
@@ -3106,10 +3789,10 @@ function runPhase4Stage({ year, from, to, gameIds, noScoreRaw, skipScoreRawGate,
   }
 }
 
-function runPhase19WithRetry({ dryRun, affectedNpbPitcherIds = [] }) {
+function runPhase19WithRetry({ dryRun, affectedNpbPitcherIds = [], officialCgBestEffort = false }) {
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   runTry("名簿: NPB 英字名更新（phase19 前）", "npm run roster:fetch-npb-en", { dryRun })
-  ensureOfficialCg2026({ dryRun })
+  ensureOfficialCg2026({ dryRun, bestEffort: officialCgBestEffort })
   try {
     run("ランキング JSON: phase19 pitching rankings", `npm run phase19:build:pitching-rankings${affectedNpbPitcherArg}`, { dryRun })
   } catch (e) {
@@ -3140,15 +3823,15 @@ function hasUsableOfficialCg2026Json() {
   }
 }
 
-function ensureOfficialCg2026({ dryRun }) {
+function ensureOfficialCg2026({ dryRun, bestEffort = false }) {
   if (dryRun) {
-    run("NPB公式: 2026完投・完封を更新（phase19 前）", "npm run npb:official-cg:fetch:2026", {
+    run(`NPB公式: 2026完投・完封を更新（phase19 前${bestEffort ? "・best-effort" : ""}）`, "npm run npb:official-cg:fetch:2026", {
       dryRun,
     })
     return
   }
 
-  const label = "NPB公式: 2026完投・完封を更新（phase19 前）"
+  const label = `NPB公式: 2026完投・完封を更新（phase19 前${bestEffort ? "・best-effort" : ""}）`
   const primaryCommand = "npm run npb:official-cg:fetch:2026"
   try {
     run(label, primaryCommand, { dryRun: false })
@@ -3190,7 +3873,88 @@ function ensureOfficialCg2026({ dryRun }) {
       )
       return
     }
+    if (bestEffort) {
+      const message =
+        `${label} は失敗し、有効な既存JSONも見つかりませんでしたが、best-effort として続行します。` +
+        "phase19 は既存入力で再計算します。"
+      console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+      appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warn: official_cg_fetch failed; continue best-effort command=${primaryCommand}`)
+      pushRunSummaryEvent("warnings", {
+        kind: "official_cg_fetch_failed_continue",
+        message,
+        command: primaryCommand,
+      })
+      return
+    }
     throw primaryError instanceof Error ? primaryError : new Error(primaryMessage)
+  }
+}
+
+function runRecordRepairStage({ dryRun }) {
+  if (!shouldRunDeltaPhase("record_repairs")) {
+    logDeltaSkip("記録訂正・PA補修", "record_repairs")
+    return
+  }
+  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
+  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
+}
+
+function runTopLeaderStages({ year, from, to, dryRun, affectedLeagues = [], includeWeekly = true }) {
+  if (!shouldRunDeltaPhase("top_leaders")) {
+    logDeltaSkip("トップ表示: 通算リーダー", "top_leaders")
+  } else {
+    const categories = []
+    if (shouldRunDeltaPhase("batting_rankings")) categories.push("batting")
+    if (shouldRunDeltaPhase("pitching_rankings")) categories.push("pitching")
+    if (categories.length === 0) {
+      logDeltaSkip("トップ表示: 通算リーダー", "top_leaders")
+    } else {
+      run(
+        "トップ表示: 通算リーダー",
+        `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories })}`,
+        { dryRun },
+      )
+    }
+  }
+
+  if (!includeWeekly) return
+  if (!shouldRunDeltaPhase("weekly_top_leaders")) {
+    logDeltaSkip("トップ表示: 今週リーダー", "weekly_top_leaders")
+    return
+  }
+  const categories = []
+  if (shouldRunDeltaPhase("batting_rankings")) categories.push("batting")
+  if (shouldRunDeltaPhase("pitching_rankings")) categories.push("pitching")
+  if (categories.length === 0) {
+    logDeltaSkip("トップ表示: 今週リーダー", "weekly_top_leaders")
+    return
+  }
+  run(
+    "トップ表示: 今週リーダー",
+    `npm run top-weekly-leaders:build:2026${topWeeklyLeadersArgsArg({ from, to, leagues: affectedLeagues, categories })}`,
+    { dryRun },
+  )
+}
+
+function runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun, advanceAfterCompletedWindow = false }) {
+  if (shouldRunDeltaPhase("future_schedule")) {
+    runScheduleAheadBestEffort({ year, dryRun })
+  } else {
+    logDeltaSkip("Phase0 未来日程", "future_schedule")
+  }
+  if (shouldRunDeltaPhase("top_probables")) {
+    runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow })
+    runBestEffortStep(
+      "トップ表示: 予想投手",
+      topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow }),
+      {
+        dryRun,
+        warningKind: "top_probables_build_failed",
+        warningMessage: "予想投手トップ表示の生成に失敗しましたが、full 派生・公開は継続します。",
+      },
+    )
+  } else {
+    logDeltaSkip("トップ表示: 予想投手", "top_probables")
   }
 }
 
@@ -3271,7 +4035,28 @@ function runVsHandValidationWithRetry({
     kind: "vs_hand_validation_retry",
     affectedYahooIdsCount: affectedYahooIds.length,
   })
-  run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", phase15BuildCommand, { dryRun })
+  const reportPath = writeVsHandFailureReport({ year, validationCommand, dryRun })
+  const failureSummary = readVsHandFailureReportSummary(reportPath, affectedYahooIds)
+  if (failureSummary.canRetryPhase15) {
+    const retryBuildCommand =
+      failureSummary.retryYahooIds.length > 0
+        ? `npm run phase15:build:batting-splits${derivedYahooArgsArg(failureSummary.retryYahooIds)}`
+        : phase15BuildCommand
+    run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", retryBuildCommand, { dryRun })
+  } else {
+    const skipMessage =
+      `phase11 vs vs_hand 検証NGだが missingSplits=0 のため Phase15 再生成はスキップします。` +
+      ` mismatches=${failureSummary.mismatches} negativeReconPlayers=${failureSummary.negativeReconPlayers}`
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${skipMessage}`)
+    pushRunSummaryEvent("warnings", {
+      kind: "vs_hand_retry_skipped_no_missing_splits",
+      message: skipMessage,
+      reportPath,
+      mismatches: failureSummary.mismatches,
+      negativeReconPlayers: failureSummary.negativeReconPlayers,
+    })
+    console.warn(`\n[daily:npb-pipeline:v2] WARN: ${skipMessage}\n`)
+  }
   const retryOk = runTry(
     affectedYahooIds.length > 0
       ? `検証: phase11 vs vs_hand P0（差分 ${affectedYahooIds.length}人・再実行）`
@@ -3281,7 +4066,6 @@ function runVsHandValidationWithRetry({
   )
   if (retryOk) return
 
-  const reportPath = writeVsHandFailureReport({ year, validationCommand, dryRun })
   const message =
     `phase11 vs vs_hand P0 検証は再生成後もNGでした。ランキング/順位表/トップ表示の公開は継続し、個人ページ用 splits の差分は後続調査対象としてログに残します。report=${reportPath}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
@@ -3306,6 +4090,10 @@ function repairStaleProductionProxyIfR2IsCurrent({
   samplePlayerYahooId = "",
   samplePlayerNpbId = "",
   sampleDerivedCategories = [],
+  leagues = [],
+  weekKeys = [],
+  skipWeeklyCurrentWeek = false,
+  skipTopProbables = false,
 }) {
   const r2Current = runTry(
     `${publishStage}: R2直のみ再確認`,
@@ -3316,6 +4104,10 @@ function repairStaleProductionProxyIfR2IsCurrent({
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories,
+      leagues,
+      weekKeys,
+      skipWeeklyCurrentWeek,
+      skipTopProbables,
     }),
     { dryRun },
   )
@@ -3425,11 +4217,36 @@ function repairStaleProductionProxyIfR2IsCurrent({
   return true
 }
 
-function verifyCommandArgs({ year, scope = "full", noProduction = false, samplePlayerYahooId = "", samplePlayerNpbId = "", sampleDerivedCategories = [] }) {
+function leaguesCliArg(leagues = []) {
+  const ids = uniqueStrings(leagues)
+  return ids.length > 0 ? ` --league ${ids.join(",")}` : ""
+}
+
+function weekKeysCliArg(weekKeys = []) {
+  const ids = uniqueStrings(weekKeys)
+  return ids.length > 0 ? ` --week-key ${ids.join(",")}` : ""
+}
+
+function verifyCommandArgs({
+  year,
+  scope = "full",
+  noProduction = false,
+  samplePlayerYahooId = "",
+  samplePlayerNpbId = "",
+  sampleDerivedCategories = [],
+  leagues = [],
+  weekKeys = [],
+  skipWeeklyCurrentWeek = false,
+  skipTopProbables = false,
+}) {
   const parts = [`node scripts/verify_display_publish_after_upload.mjs --year ${year} --scope ${scope}`]
   if (noProduction) parts.push("--no-production")
   if (samplePlayerYahooId) parts.push(`--sample-player-yahoo-id ${samplePlayerYahooId}`)
   if (samplePlayerNpbId) parts.push(`--sample-player-npb-id ${samplePlayerNpbId}`)
+  if (Array.isArray(leagues) && leagues.length > 0) parts.push(`--league ${uniqueStrings(leagues).join(",")}`)
+  if (Array.isArray(weekKeys) && weekKeys.length > 0) parts.push(`--week-key ${uniqueStrings(weekKeys).join(",")}`)
+  if (skipWeeklyCurrentWeek) parts.push("--skip-weekly-current-week")
+  if (skipTopProbables) parts.push("--skip-top-probables")
   if (Array.isArray(sampleDerivedCategories) && sampleDerivedCategories.length > 0) {
     parts.push(`--sample-derived-categories ${sampleDerivedCategories.join(",")}`)
   }
@@ -3448,8 +4265,8 @@ function affectedDisplayPlayerIdsForArgs(args) {
   ]
 }
 
-function runFastDisplayDependencyPublish({ year, from, to, dryRun, label, playerIds = [] }) {
-  run(label, `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`, {
+function runFastDisplayDependencyPublish({ year, from, to, dryRun, label, playerIds = [], leagues = [] }) {
+  run(label, `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${leaguesCliArg(leagues)}${dateRangeNodeArgsArg({ from, to })}`, {
     dryRun: dryRun ? true : false,
   })
 }
@@ -3459,15 +4276,16 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
     "player_season_batting",
     "player_season_batting_period",
     "player_season_batting_count",
-    "player_season_pitching_poc",
   ]
+  const verifyLeagues = currentDeltaManifest?.affectedLeagues || []
+  const verifyWeekKeys = currentDeltaManifest?.weekKeys || []
   if (dryRun) {
     console.log("\n[daily:npb-pipeline:v2] --dry-run: fast publish / verify は実行せず、工程判定だけ確認します。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "dry-run: simulate fast publish / verify")
   }
   run(
     "R2公開(1回目): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${leaguesCliArg(verifyLeagues)}${dateRangeNodeArgsArg({ from, to })}`,
     { dryRun },
   )
 
@@ -3479,6 +4297,10 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
+      skipTopProbables: true,
     }),
     { dryRun },
   )
@@ -3494,6 +4316,10 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
+      skipTopProbables: true,
     })
   ) return
 
@@ -3511,7 +4337,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
   })
   run(
     "R2公開(1回目・再試行): rankings + standings + top leaders + player season totals",
-    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${dateRangeNodeArgsArg({ from, to })}`,
+    `node scripts/display_publish_fast_2026.mjs --year ${year}${playerIdsCliArg(playerIds)}${leaguesCliArg(verifyLeagues)}${dateRangeNodeArgsArg({ from, to })}`,
     { dryRun: false },
   )
   const retryVerified = runTry(
@@ -3522,6 +4348,10 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
+      skipTopProbables: true,
     }),
     { dryRun },
   )
@@ -3536,6 +4366,10 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fastDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
+      skipTopProbables: true,
     })
   ) return
   throw new Error("fast publish verification failed after retry")
@@ -3543,6 +4377,7 @@ function runFastDisplayPublishAndVerify({ year, from, to, dryRun, autoDeployProd
 
 function runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry = false, includeFastDependencies = false, playerIds = [] }) {
   const suffix = retry ? "・再試行" : ""
+  const verifyLeagues = currentDeltaManifest?.affectedLeagues || []
   if (includeFastDependencies) {
     runFastDisplayDependencyPublish({
       year,
@@ -3551,6 +4386,7 @@ function runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry
       dryRun: false,
       label: `R2公開(2回目${suffix}): fast display dependencies`,
       playerIds,
+      leagues: verifyLeagues,
     })
   }
   run(
@@ -3576,6 +4412,8 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
     "player_season_batting_period",
     "player_season_pitching_poc",
   ]
+  const verifyLeagues = currentDeltaManifest?.affectedLeagues || []
+  const verifyWeekKeys = currentDeltaManifest?.weekKeys || []
   if (dryRun) {
     console.log("\n[daily:npb-pipeline:v2] --dry-run: full publish / verify はスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full publish in dry-run")
@@ -3591,6 +4429,9 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
     }),
     { dryRun },
   )
@@ -3606,6 +4447,9 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
     })
   ) return
 
@@ -3621,7 +4465,7 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
     kind: "full_publish_retry",
     year,
   })
-  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry: true, includeFastDependencies: true, playerIds })
+  runFullDisplayPublishCommands({ year, from, to, fullOnly, dryRun, retry: true, includeFastDependencies: false, playerIds })
   const retryVerified = runTry(
     "公開確認(2回目・再試行後): 主要表示 + 週次 + 選手成績",
     verifyCommandArgs({
@@ -3630,6 +4474,9 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
     }),
     { dryRun },
   )
@@ -3644,6 +4491,9 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
       samplePlayerYahooId,
       samplePlayerNpbId,
       sampleDerivedCategories: fullDerivedCategories,
+      leagues: verifyLeagues,
+      weekKeys: verifyWeekKeys,
+      skipWeeklyCurrentWeek: verifyWeekKeys.length === 0,
     })
   ) return
   throw new Error("full publish verification failed after retry")
@@ -3652,17 +4502,33 @@ function runFullDisplayPublishAndVerify({ year, from, to, fullOnly, dryRun, auto
 function runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun }) {
   const ids = Array.isArray(gameIds) ? gameIds.map(String).filter(Boolean) : []
   const gameIdsArg = ids.length > 0 ? ` --game-ids ${ids.join(",")}` : ""
-  run(
+  const command = `npx tsx scripts/resolve_unknown_players_after_publish.ts --year ${year} --from ${from} --to ${to}${gameIdsArg}`
+  const ok = runTry(
     "未知選手手続き: 2回目公開後の検出・分類",
-    `npx tsx scripts/resolve_unknown_players_after_publish.ts --year ${year} --from ${from} --to ${to}${gameIdsArg}`,
-    { dryRun },
+    command,
+    { dryRun, timeoutKind: "short" },
   )
+  if (ok) return
+  const message =
+    "未知選手手続きのレポート保存に失敗。公開は完了済みとして継続し、必要なら resolve_unknown_players_after_publish.ts を単体で再実行する。"
+  console.warn(`\n[daily:npb-pipeline:v2] ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: "unknown_player_resolution_failed",
+    command,
+    year,
+    from,
+    to,
+    message,
+  })
 }
 
 function runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun }) {
+  const label = "NPB公式記録訂正: 2回目公開後の公式サイト観察"
+  const command = `npm run npb-official-corrections:observe -- --year ${year}`
   const ok = runTry(
-    "NPB公式記録訂正: 2回目公開後の公式サイト観察",
-    `npm run npb-official-corrections:observe -- --year ${year}`,
+    label,
+    command,
     { dryRun, timeoutKind: "network" },
   )
   if (ok) return
@@ -3672,6 +4538,8 @@ function runNpbOfficialCorrectionObservationAfterSecondPublish({ year, dryRun })
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
   pushRunSummaryEvent("warnings", {
     kind: "npb_official_correction_observation_failed",
+    label,
+    command,
     year,
     message,
   })
@@ -3787,6 +4655,8 @@ function runFastStage({
   gameIds,
   noPublish,
   build,
+  strictFullDerivedValidate,
+  strictPhase17Validate,
   skipVsHandValidate,
   strictVsHandValidate,
   dryRun,
@@ -3806,29 +4676,79 @@ function runFastStage({
       `\n[daily:npb-pipeline:v2] 差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
     )
   }
-  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
-  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
+  runRecordRepairStage({ dryRun })
   run("派生: enrich:text-play-headlines", `npx tsx scripts/enrich_text_play_headlines_from_raw_text.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to })}`, { dryRun })
-  run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
-  run(
-    useAffectedPhase11 && affectedYahooIds.length > 0
-      ? `派生: phase11 batting（差分 ${affectedYahooIds.length}人）`
-      : "派生: phase11 batting",
-    `npm run phase11:build:batting${useAffectedPhase11 ? derivedAffectedArg : ""}`,
-    { dryRun },
-  )
+  if (shouldRunDeltaPhase("batting_derived")) {
+    run(
+      useAffectedPhase11 && affectedYahooIds.length > 0
+        ? `派生: phase11 batting（差分 ${affectedYahooIds.length}人）`
+        : "派生: phase11 batting",
+      `npm run phase11:build:batting${useAffectedPhase11 ? derivedAffectedArg : ""}`,
+      { dryRun },
+    )
+  } else {
+    logDeltaSkip("派生: phase11 batting", "batting_derived")
+  }
   run("検証: 出場成績 打数列 vs 末尾スロット", "npm run validate:appearance-slots-vs-line-ab:fail", { dryRun })
   run("検証: appearance_slots の CS と代走のみ SB", "npm run verify:cs-runner-events-appearance-slots", { dryRun })
-  run("派生: phase17 period", `npm run phase17:build:period${derivedAffectedArg}`, { dryRun })
-  ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
-  run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
-  run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
-  runPhase19WithRetry({ dryRun, affectedNpbPitcherIds })
-  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
-  run("ランキング JSON: phase29 team standings", phase29Command({ from, to, gameIds: targetGameIds, includeToday: true }), { dryRun })
-  run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
-  run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
-  run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  if (shouldRunDeltaPhase("batting_period")) {
+    runPhase17PeriodAndValidate({
+      year,
+      from,
+      to,
+      affectedYahooIds,
+      dryRun,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
+      label: "派生: phase17 period",
+    })
+    ensureBattingPeriodFresh({
+      year,
+      from,
+      to,
+      gameIds,
+      dryRun,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
+    })
+  } else {
+    logDeltaSkip("派生: phase17 period", "batting_period")
+  }
+  if (shouldRunDeltaPhase("batting_rankings")) {
+    run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
+  } else {
+    logDeltaSkip("ランキング JSON: phase12 batting rankings", "batting_rankings")
+  }
+  if (shouldRunDeltaPhase("pitching_rankings")) {
+    runPhase19WithRetry({ dryRun, affectedNpbPitcherIds, officialCgBestEffort: true })
+  } else {
+    logDeltaSkip("ランキング JSON: phase19 pitching rankings", "pitching_rankings")
+  }
+  runProfileTotalsFollowRankingValidation({
+    year,
+    affectedYahooIds,
+    dryRun,
+    strict: strictFullDerivedValidate,
+    label: "検証: fast 個人ページ通算値 ↔ ランキング",
+  })
+  if (shouldRunDeltaPhase("weekly_rankings")) {
+    run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
+  } else {
+    logDeltaSkip("ランキング JSON: phase28 weekly rankings", "weekly_rankings")
+  }
+  if (shouldRunDeltaPhase("standings")) {
+    run("ランキング JSON: phase29 team standings", phase29Command({ from, to, gameIds: targetGameIds, includeToday: true }), { dryRun })
+  } else {
+    logDeltaSkip("ランキング JSON: phase29 team standings", "standings")
+  }
+  if (shouldRunDeltaPhase("standings")) {
+    runWarnOnlyValidation("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "公開は継続し、standings 差分は後続調査対象としてログに残します。",
+    })
+  } else {
+    logDeltaSkip("検証: phase29 team standings", "standings")
+  }
+  runTopLeaderStages({ year, from, to, dryRun, affectedLeagues, includeWeekly: true })
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
   if (skipPhase15) {
     console.log("\n[daily:npb-pipeline:v2] fast stage: phase15 batting splits をスキップします。\n")
@@ -3870,7 +4790,13 @@ function runFastStage({
     })
   }
   if (build) {
-    run("本番ビルド（1回目後）", "npm run build:clean", { dryRun })
+    runPostPublishBestEffort("本番ビルド（1回目後）", "npm run build:clean", {
+      dryRun,
+      timeoutKind: "build",
+      warningKind: "post_fast_build_failed",
+      warningMessage: "1回目公開後のローカル本番ビルドに失敗しましたが、1回目公開自体は完了済みとして継続します。",
+      warningMeta: { stage: "post_fast_publish" },
+    })
   }
 }
 
@@ -3881,6 +4807,8 @@ function runFinalPrecomputedPublishStage({
   gameIds,
   noPublish,
   build,
+  strictFullDerivedValidate,
+  strictPhase17Validate,
   skipVsHandValidate,
   strictVsHandValidate,
   dryRun,
@@ -3893,30 +4821,81 @@ function runFinalPrecomputedPublishStage({
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedLeagues = collectAffectedLeaguesForGames(targetGameIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
+  const postFastCanonicalThresholdMs =
+    Number(currentDeltaManifest?.targetCanonicalLatestMs || 0) ||
+    targetGameIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const postFastYahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(targetGameIds)
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップリーダーを1回目公開向けに最終再計算します。\n")
-  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
-  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
+  runRecordRepairStage({ dryRun })
   run("派生: enrich:text-play-headlines", `npx tsx scripts/enrich_text_play_headlines_from_raw_text.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to })}`, { dryRun })
   ensureFastPublishInputsFresh({ year, from, to, gameIds, dryRun })
-  ensureBattingPeriodFresh({
+  if (shouldRunDeltaPhase("batting_period")) {
+    ensureBattingPeriodFresh({
+      year,
+      from,
+      to,
+      gameIds,
+      dryRun,
+      rebuildPitchingPeriod: true,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
+    })
+    if (affectedYahooIds.length > 0) {
+      runWarnOnlyValidation(
+        `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
+        `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
+        {
+          dryRun,
+          strict: strictPhase17Validate || strictFullDerivedValidate,
+          strictFlagName: "--strict-phase17-validate",
+          note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+        },
+      )
+    }
+  } else {
+    logDeltaSkip("派生: phase17 period", "batting_period")
+  }
+  if (shouldRunDeltaPhase("batting_rankings")) {
+    run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
+  } else {
+    logDeltaSkip("ランキング JSON: phase12 batting rankings", "batting_rankings")
+  }
+  if (shouldRunDeltaPhase("pitching_rankings")) {
+    runPhase19WithRetry({ dryRun, affectedNpbPitcherIds, officialCgBestEffort: true })
+  } else {
+    logDeltaSkip("ランキング JSON: phase19 pitching rankings", "pitching_rankings")
+  }
+  runProfileTotalsFollowRankingValidation({
     year,
-    from,
-    to,
-    gameIds,
+    affectedYahooIds,
+    affectedNpbPitcherIds,
     dryRun,
-    rebuildPitchingPeriod: true,
+    strict: strictFullDerivedValidate,
+    label: "検証: finalize-precomputed 個人ページ通算値 ↔ ランキング",
   })
-  run("ランキング JSON: phase12 batting rankings", `npm run phase12:build:rankings${onlyYahooIdsArg(affectedYahooIds)}`, { dryRun })
-  runPhase19WithRetry({ dryRun, affectedNpbPitcherIds })
-  run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
-  run(
-    "ランキング JSON: phase29 team standings",
-    phase29Command({ from, to, gameIds: targetGameIds, includeToday: true, requireTargetGameCacheNonEmpty: true }),
-    { dryRun },
-  )
-  run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
-  run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
-  run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  if (shouldRunDeltaPhase("weekly_rankings")) {
+    run("ランキング JSON: phase28 weekly rankings", `npm run phase28:build:weekly-rankings${dateRangeNpmArgsArg({ from, to })}${onlyYahooIdsArg(affectedYahooIds)}${onlyNpbIdsArg(affectedNpbPitcherIds)}`, { dryRun })
+  } else {
+    logDeltaSkip("ランキング JSON: phase28 weekly rankings", "weekly_rankings")
+  }
+  if (shouldRunDeltaPhase("standings")) {
+    run(
+      "ランキング JSON: phase29 team standings",
+      phase29Command({ from, to, gameIds: targetGameIds, includeToday: true, requireTargetGameCacheNonEmpty: true }),
+      { dryRun },
+    )
+  } else {
+    logDeltaSkip("ランキング JSON: phase29 team standings", "standings")
+  }
+  if (shouldRunDeltaPhase("standings")) {
+    runWarnOnlyValidation("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "公開は継続し、standings 差分は後続調査対象としてログに残します。",
+    })
+  } else {
+    logDeltaSkip("検証: phase29 team standings", "standings")
+  }
+  runTopLeaderStages({ year, from, to, dryRun, affectedLeagues, includeWeekly: true })
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
 
   if (!noPublish) {
@@ -3931,21 +4910,47 @@ function runFinalPrecomputedPublishStage({
       playerIds: affectedDisplayPlayerIds,
     })
     if (affectedYahooIds.length > 0) {
-      run(
-        `派生: phase11 batting（1回目公開後・差分整備 ${affectedYahooIds.length}人）`,
-        `npm run phase11:build:batting${derivedAffectedArg}`,
-        { dryRun },
-      )
+      const postFastPhase11Report = derivedCategoryFreshnessReport({
+        year,
+        category: "player_season_batting",
+        yahooIds: affectedYahooIds,
+        canonicalThresholdMs: postFastCanonicalThresholdMs,
+        sourceThresholdMsById: postFastYahooSourceThresholdMsById,
+      })
+      const postFastRepairYahooIds = yahooRepairIdsFromFreshnessReport(postFastPhase11Report)
+      if (postFastRepairYahooIds.length > 0) {
+        runPostPublishBestEffort(
+          `派生: phase11 batting（1回目公開後・差分整備 ${postFastRepairYahooIds.length}人）`,
+          `npm run phase11:build:batting${derivedYahooArgsArg(postFastRepairYahooIds, { from, to })}`,
+          {
+            dryRun,
+            warningKind: "post_fast_phase11_failed",
+            warningMessage:
+              "1回目公開後の phase11 差分整備に失敗しましたが、1回目公開自体は完了済みとして継続します。",
+            warningMeta: { stage: "post_fast_phase11_repair", affectedYahooIds: postFastRepairYahooIds },
+          },
+        )
+      } else {
+        console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 追加差分なしのためスキップします。\n")
+        appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 already fresh")
+      }
     } else if (!from && !to && (!Array.isArray(gameIds) || gameIds.length === 0)) {
-      run("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", { dryRun })
+      runPostPublishBestEffort("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", {
+        dryRun,
+        warningKind: "post_fast_phase11_full_failed",
+        warningMessage:
+          "1回目公開後の phase11 全件整備に失敗しましたが、1回目公開自体は完了済みとして継続します。",
+        warningMeta: { stage: "post_fast_phase11_full" },
+      })
     } else {
       console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 差分対象なしのためスキップします。\n")
       appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 no affected batters")
     }
-    ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun })
+    ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun, strict: strictFullDerivedValidate })
+    ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun, strict: strictFullDerivedValidate })
     if (skipVsHandValidate) {
       console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
-    } else {
+    } else if (shouldRunDeltaPhase("batting_derived")) {
       runVsHandValidationWithRetry({
         year,
         dryRun,
@@ -3953,14 +4958,10 @@ function runFinalPrecomputedPublishStage({
         affectedYahooIds,
         strictVsHandValidate,
       })
+    } else {
+      logDeltaSkip("検証: phase11 vs vs_hand P0", "batting_derived")
     }
-    runScheduleAheadBestEffort({ year, dryRun })
-    runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow: true })
-    run(
-      "トップ表示: 予想投手",
-      topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow: true }),
-      { dryRun },
-    )
+    runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun, advanceAfterCompletedWindow: true })
     runFullDisplayPublishAndVerify({
       year,
       from,
@@ -3976,7 +4977,13 @@ function runFinalPrecomputedPublishStage({
     runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {
-    run("本番ビルド（finalize-precomputed 後）", "npm run build:clean", { dryRun })
+    runPostPublishBestEffort("本番ビルド（finalize-precomputed 後）", "npm run build:clean", {
+      dryRun,
+      timeoutKind: "build",
+      warningKind: "post_finalize_build_failed",
+      warningMessage: "finalize-precomputed 後のローカル本番ビルドに失敗しましたが、公開は完了済みとして継続します。",
+      warningMeta: { stage: "post_finalize_publish" },
+    })
   }
 }
 
@@ -3999,20 +5006,35 @@ function runScheduleAheadBestEffort({ year, dryRun }) {
 function runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow = false }) {
   const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
   const tomorrowDate = addDaysYmdJst(asOfDate, 1)
-  run(
+  runBestEffortStep(
     "Sporting News ローテーション取得（予想投手用）",
     `npx tsx scripts/phase35_fetch_sportingnews_rotation.ts --year ${year}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "sportingnews_rotation_failed",
+      warningMessage: "Sporting News ローテーション取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
-  run(
+  runBestEffortStep(
     "Yahoo! 当日予告先発取得（予想投手用）",
     `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${asOfDate}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "yahoo_probables_today_failed",
+      warningMessage: "Yahoo! 当日予告先発取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
-  run(
+  runBestEffortStep(
     "Yahoo! 翌日予告先発取得（予想投手用）",
     `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${tomorrowDate}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "yahoo_probables_tomorrow_failed",
+      warningMessage: "Yahoo! 翌日予告先発取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
 }
 
@@ -4049,36 +5071,76 @@ function runFullStage({
       `\n[daily:npb-pipeline:v2] full差分対象打者: ${affectedYahooIds.length}人（${from}〜${to}）\n`,
     )
   }
-  run("NPB公式記録訂正: 公式告知の反映", "npm run npb-official-corrections:apply", { dryRun })
-  run("公式記録訂正: PA/出場成績ズレ修復（保険）", "npm run official-corrections:repair-from-pa", { dryRun })
-  if (allowFutureScheduleRefresh) {
-    runScheduleAheadBestEffort({ year, dryRun })
-  } else {
+  runRecordRepairStage({ dryRun })
+  if (!allowFutureScheduleRefresh) {
     console.log("\n[daily:npb-pipeline:v2] 1回目公開前扱いのため、未来日程・予想投手入力の更新をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: future schedule refresh before first publish")
   }
-  run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
-  run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
-  run("派生: phase6 pitcher-catcher splits", `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`, { dryRun })
-  run("派生: phase13 context", phase13BuildCommand, { dryRun })
-  runPhase13ValidationWithRetry({
-    dryRun,
-    phase13BuildCommand,
-    affectedYahooIds: validatePhase13AffectedOnly ? affectedYahooIds : [],
-    strictPhase13Validate,
-  })
-  run("派生: phase14 pitch", `npm run phase14:build:pitch${affectedArg}`, { dryRun })
+  if (shouldRunDeltaPhase("pitching_derived")) {
+    run("派生: phase:pitcher-poc1", `npm run phase:pitcher-poc1${affectedNpbPitcherArg}`, { dryRun })
+    run("派生: phase7 pitcher period", `npm run phase7:build:pitcher-period${affectedNpbPitcherArg}`, { dryRun })
+    run("派生: phase6 pitcher-catcher splits", `npm run phase6:build:pitcher-catcher-splits${affectedNpbPitcherArg}`, { dryRun })
+  } else {
+    logDeltaSkip("派生: phase:pitcher-poc1 / phase7 / phase6", "pitching_derived")
+  }
+  if (shouldRunDeltaPhase("batting_derived")) {
+    run("派生: phase13 context", phase13BuildCommand, { dryRun })
+  } else {
+    logDeltaSkip("派生: phase13 context", "batting_derived")
+  }
+  if (shouldRunDeltaPhase("batting_derived")) {
+    runPhase13ValidationWithRetry({
+      dryRun,
+      phase13BuildCommand,
+      affectedYahooIds: validatePhase13AffectedOnly ? affectedYahooIds : [],
+      strictPhase13Validate,
+    })
+  } else {
+    logDeltaSkip("検証: phase13 対チーム vs Phase11", "batting_derived")
+  }
+  if (shouldRunDeltaPhase("batting_derived")) {
+    run("派生: phase14 pitch", `npm run phase14:build:pitch${affectedArg}`, { dryRun })
+  } else {
+    logDeltaSkip("派生: phase14 pitch", "batting_derived")
+  }
   if (skipPhase15) {
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため phase15 batting splits をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full phase15 batting splits (already built in fast stage)")
   } else {
-    run("派生: phase15 batting splits", phase15BuildCommand, { dryRun })
+    if (shouldRunDeltaPhase("batting_derived")) {
+      run("派生: phase15 batting splits", phase15BuildCommand, { dryRun })
+    } else {
+      logDeltaSkip("派生: phase15 batting splits", "batting_derived")
+    }
   }
-  run("派生: phase16 batting count", `npm run phase16:build:batting-count${derivedAffectedArg}`, { dryRun })
-  run("派生: pitcher season pitch types", `npm run phase25:build:pitcher-season-pitch-types${affectedNpbPitcherArg}`, { dryRun })
-  run("派生: phase22 catcher appearances", `npm run phase22:build:catcher-appearances${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase23 catcher-pitcher splits", `npm run phase23:build:catcher-pitcher-splits${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase24 catcher defense basic", `npm run phase24:build:catcher-defense-basic${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  if (shouldRunDeltaPhase("batting_derived")) {
+    run("派生: phase16 batting count", `npm run phase16:build:batting-count${derivedAffectedArg}`, { dryRun })
+  } else {
+    logDeltaSkip("派生: phase16 batting count", "batting_derived")
+  }
+  if (shouldRunDeltaPhase("pitching_derived")) {
+    run("派生: pitcher season pitch types", `npm run phase25:build:pitcher-season-pitch-types${affectedNpbPitcherArg}`, { dryRun })
+  } else {
+    logDeltaSkip("派生: pitcher season pitch types", "pitching_derived")
+  }
+  runBestEffortStep("派生: phase22 catcher appearances", `npm run phase22:build:catcher-appearances${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase22_catcher_appearances_failed",
+    warningMessage: "phase22 catcher appearances に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase23 catcher-pitcher splits", `npm run phase23:build:catcher-pitcher-splits${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase23_catcher_pitcher_splits_failed",
+    warningMessage: "phase23 catcher-pitcher splits に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase24 catcher defense basic", `npm run phase24:build:catcher-defense-basic${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase24_catcher_defense_basic_failed",
+    warningMessage: "phase24 catcher defense basic に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase24 実守備捕手帰属",
     "npm run validate:catcher-defense-active:2026",
@@ -4088,10 +5150,30 @@ function runFullStage({
       note: "捕手タブ派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  run("派生: phase25 catcher starting summary", `npm run phase25:build:catcher-starting-summary${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase26 catcher pa round pitch types", `npm run phase26:build:catcher-pa-round-pitch-types${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, { dryRun })
-  run("派生: phase30 player matchup", `npm run phase30:build:player-matchup${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  runBestEffortStep("派生: phase25 catcher starting summary", `npm run phase25:build:catcher-starting-summary${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase25_catcher_starting_summary_failed",
+    warningMessage: "phase25 catcher starting summary に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase26 catcher pa round pitch types", `npm run phase26:build:catcher-pa-round-pitch-types${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase26_catcher_pa_round_pitch_types_failed",
+    warningMessage: "phase26 catcher pa round pitch types に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase20_pitcher_zones_failed",
+    warningMessage: "phase20 pitcher zones に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase30 player matchup", `npm run phase30:build:player-matchup${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase30_player_matchup_failed",
+    warningMessage: "phase30 player matchup に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase31 対戦成績 vs Phase11",
     "npm run validate:phase31-matchup-vs-phase11:fail",
@@ -4102,10 +5184,14 @@ function runFullStage({
     },
   )
   if (allowFutureScheduleRefresh) {
-    runTopProbablesInputRefresh({ year, from, to, dryRun })
-    run("トップ表示: 予想投手", topProbablesBuildCommand({ year, from, to }), { dryRun })
+    runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun })
   }
-  run("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, { dryRun })
+  runBestEffortStep("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase33_batter_vs_team_count_pitch_types_failed",
+    warningMessage: "phase33 batter vs team count pitch types に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase34 球団別配球 vs Phase14",
     "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail",
@@ -4115,22 +5201,38 @@ function runFullStage({
       note: "球団別配球派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  run("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", { dryRun })
+  runBestEffortStep("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "build_yahoo_npb_full_index_failed",
+    warningMessage: "Yahoo/NPB full index の更新に失敗しましたが、full derived公開は継続します。",
+  })
+  runProfileTotalsFollowRankingValidation({
+    year,
+    affectedYahooIds,
+    affectedNpbPitcherIds,
+    dryRun,
+    strict: strictFullDerivedValidate,
+    label: "検証: full 個人ページ通算値 ↔ ランキング",
+  })
   if (skipRepeatedTopBuilds) {
     console.log("\n[daily:npb-pipeline:v2] full stage: fast stage 済みのため top leaders 再生成をスキップします。\n")
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: full repeated top leaders builds")
   } else {
-    run("トップ表示: 通算リーダー", `npm run top-leaders:build:2026${topLeadersArgsArg({ leagues: affectedLeagues, categories: ["batting", "pitching"] })}`, { dryRun })
-    run("トップ表示: 今週リーダー", `npm run top-weekly-leaders:build:2026${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+    runTopLeaderStages({ year, from, to, dryRun, affectedLeagues, includeWeekly: true })
   }
   run("検証: canonical batting completeness", `npm run validate:canonical-batting-completeness${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  runVsHandValidationWithRetry({
-    year,
-    dryRun,
-    phase15BuildCommand,
-    affectedYahooIds,
-    strictVsHandValidate,
-  })
+  if (shouldRunDeltaPhase("batting_derived")) {
+    runVsHandValidationWithRetry({
+      year,
+      dryRun,
+      phase15BuildCommand,
+      affectedYahooIds,
+      strictVsHandValidate,
+    })
+  } else {
+    logDeltaSkip("検証: phase11 vs vs_hand P0", "batting_derived")
+  }
 
   if (!noPublish) {
     runFullDisplayPublishAndVerify({
@@ -4148,7 +5250,13 @@ function runFullStage({
     runUnknownPlayerResolutionAfterSecondPublish({ year, from, to, gameIds, dryRun })
   }
   if (build) {
-    run("本番ビルド（2回目後）", "npm run build:clean", { dryRun })
+    runPostPublishBestEffort("本番ビルド（2回目後）", "npm run build:clean", {
+      dryRun,
+      timeoutKind: "build",
+      warningKind: "post_full_build_failed",
+      warningMessage: "2回目公開後のローカル本番ビルドに失敗しましたが、2回目公開自体は完了済みとして継続します。",
+      warningMeta: { stage: "post_full_publish" },
+    })
   }
 }
 

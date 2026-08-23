@@ -243,18 +243,18 @@ function main(): void {
     process.exit(1)
   }
   const isIncrementalRange = Boolean(from || to)
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(
+  const scopeDocs = loadCanonicalGamesMergedForDerivedPipeline(
     projectRoot,
     isIncrementalRange ? { year, from: from ?? undefined, to: to ?? undefined } : { year }
   )
-  if (docs.length === 0) {
+  if (scopeDocs.length === 0) {
     console.error("[phase17] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
   }
 
   let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
   if (!targetYahooIds && (from || to)) {
-    targetYahooIds = collectAffectedBatterIds(docs, from, to)
+    targetYahooIds = collectAffectedBatterIds(scopeDocs, from, to)
     if (targetYahooIds.length === 0) {
       console.log(
         `[phase17] no affected batters for range ${from ?? "(start)"}..${to ?? "(end)"} in year=${year}; nothing to write`,
@@ -265,11 +265,25 @@ function main(): void {
   const targetYahooIdSet = targetYahooIds ? new Set(targetYahooIds) : null
 
   const generatedAt = new Date().toISOString()
-  const canonicalGames = docs.map((d) => d.gameId).sort()
-  const byBatterMonth = new Map<string, Map<string, BattingSeasonAggYahoo>>()
-  const byBatterWeek = new Map<string, Map<string, BattingSeasonAggYahoo>>()
   const touchedMonthKeys = new Set<string>()
   const touchedWeekKeys = new Set<string>()
+  for (const doc of scopeDocs) {
+    if (!gameHasTargetBatter(doc, targetYahooIdSet)) continue
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    if (!ymd) continue
+    const mk = monthKeyFromYmd(ymd)
+    const wk = tuesdayWeekKeyFromYmd(ymd)
+    if (!wk) continue
+    touchedMonthKeys.add(mk)
+    touchedWeekKeys.add(wk)
+  }
+
+  const docs = isIncrementalRange
+    ? loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+    : scopeDocs
+  const canonicalGames = scopeDocs.map((d) => d.gameId).sort()
+  const byBatterMonth = new Map<string, Map<string, BattingSeasonAggYahoo>>()
+  const byBatterWeek = new Map<string, Map<string, BattingSeasonAggYahoo>>()
 
   function ensureMonthMap(bid: string): Map<string, BattingSeasonAggYahoo> {
     let m = byBatterMonth.get(bid)
@@ -295,8 +309,7 @@ function main(): void {
     const mk = monthKeyFromYmd(ymd)
     const wk = tuesdayWeekKeyFromYmd(ymd)
     if (!wk) continue
-    touchedMonthKeys.add(mk)
-    touchedWeekKeys.add(wk)
+    if (isIncrementalRange && !touchedMonthKeys.has(mk) && !touchedWeekKeys.has(wk)) continue
 
     const batterIds = new Set<string>()
     for (const line of doc.domain?.battingLines ?? []) {

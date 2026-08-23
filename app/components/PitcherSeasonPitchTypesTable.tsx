@@ -117,8 +117,6 @@ export default function PitcherSeasonPitchTypesTable({
         <col style={{ width: `${splitMetricColWidth}px` }} />
         <col style={{ width: `${splitMetricColWidth}px` }} />
         <col style={{ width: `${splitMetricColWidth}px` }} />
-        <col style={{ width: `${splitMetricColWidth}px` }} />
-        <col style={{ width: `${splitMetricColWidth}px` }} />
       </colgroup>
       <thead>
         <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
@@ -186,7 +184,7 @@ export default function PitcherSeasonPitchTypesTable({
               style={{ backgroundColor: "#1a1a1a" }}
               title={row.pitch_type}
             >
-              <span className="block min-w-0 truncate">{row.pitch_type}</span>
+              <span className="block min-w-0 overflow-hidden text-clip">{row.pitch_type}</span>
             </td>
             <td className={numericCellClass} style={numericCellStyle}>
               {fmtSpeed(row.avg_speed_kmh)}

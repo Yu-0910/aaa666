@@ -40,6 +40,7 @@
     "validate:batting-phase11-vs-phase12": "tsx scripts/validate_phase11_vs_phase12_batting.ts --year 2026",
     "validate:ranking-qualifying-2026": "tsx scripts/validate_ranking_qualifying_2026.ts --year 2026",
     "validate:ranking-qualifying-2026:fail": "tsx scripts/validate_ranking_qualifying_2026.ts --year 2026 --fail",
+    "validate:phase17-period-window": "tsx scripts/validate_phase17_period_window.ts --year 2026",
     "list:roster-catcher-urls": "tsx scripts/list_roster_catcher_player_urls.ts",
     "validate:roster-catcher-pages": "tsx scripts/validate_roster_catcher_player_pages.ts",
     "validate:roster-catcher-pages:fail": "tsx scripts/validate_roster_catcher_player_pages.ts --fail",
@@ -291,6 +292,7 @@
     "verify:cs-runner-events-appearance-slots": "tsx scripts/verify_cs_runner_events_appearance_slots.ts",
     "verify:merge-phase10-2021038735-inning5-omote": "tsx scripts/verify_merge_phase10_2021038735_inning5_omote.ts",
     "bulk:update:selfheal": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/invoke_bulk_update_selfheal.ps1",
+    "daily:npb-pipeline:v2:push-helper": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/invoke_daily_pipeline_v2_and_push.ps1",
     "repair:canonical-from-schedule": "node scripts/repair_missing_canonical_from_schedule.mjs",
     "unknown-players:after-publish": "tsx scripts/resolve_unknown_players_after_publish.ts --year 2026"
   },

@@ -206,7 +206,7 @@ export function LeadersPanel({
           <div className="grid grid-cols-2 gap-1">
             {data.top3Metrics.slice(0, 2).map((metric) =>
               data.leaders[metric] ? (
-                <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded overflow-hidden p-1 relative min-w-0">
+                <div key={metric} className="top-page-table-shell bg-[#1f1f1f] border border-[#555] rounded overflow-hidden p-1 relative min-w-0">
                   <div className="relative mb-1 flex min-h-[22px] items-center">
                     <Link
                       href={getRankingUrl(metric)}
@@ -242,7 +242,7 @@ export function LeadersPanel({
             )}
           </div>
           {data.leaders[data.top3Metrics[2]!] && (
-            <div className="top-page-table-shell bg-black border border-[#555] rounded overflow-hidden p-1 relative w-full">
+            <div className="top-page-table-shell bg-[#1f1f1f] border border-[#555] rounded overflow-hidden p-1 relative w-full">
               <div className="relative mb-1 flex min-h-[22px] items-center">
                 <Link
                   href={getRankingUrl(data.top3Metrics[2]!)}
@@ -279,7 +279,7 @@ export function LeadersPanel({
       ) : (
         <div className={topGrid}>
           {data.top3Metrics.map((metric) => (
-            <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded overflow-hidden p-1 relative">
+            <div key={metric} className="top-page-table-shell bg-[#1f1f1f] border border-[#555] rounded overflow-hidden p-1 relative">
               {useModernMetricTitle ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
@@ -338,7 +338,7 @@ export function LeadersPanel({
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
-            <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded overflow-hidden p-0.5 relative">
+            <div key={metric} className="top-page-table-shell bg-[#1f1f1f] border border-[#555] rounded overflow-hidden p-0.5 relative">
               {useModernMetricTitle ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link

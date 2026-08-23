@@ -815,4 +815,13 @@ export const CURRENT_ROSTER_PLAYER_SLUGS: Record<string, string> = {
   "21925155": "misaki-sasahara",
   "41245152": "hiroki-tsuneya",
   "11215152": "kaishu-takahashi",
+  "31835155": "yuuma-fukumoto",
+  "61665136": "hitomi-honda",
+  "61965153": "tatsuto-kobayashi",
+  "71075152": "ryosuke-jinguu",
+  "61665150": "reiji-higashiyama",
+  "13015150": "marte-yunior",
+  "53355153": "hiroto-mori",
+  "41945138": "kotarou-seimiya",
+  "41445136": "kousuke-baba",
 }

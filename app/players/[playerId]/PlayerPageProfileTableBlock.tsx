@@ -23,11 +23,15 @@ export function PlayerPageProfileTableBlock({
   showFinancialFields = true,
 }: Props) {
   return (
-    <table
-      className={`w-full border-collapse${tableClassName ? ` ${tableClassName}` : ""}`}
-      style={{ border: "1px solid #333333" }}
+    <div
+      className="player-page-profile-table-shell rounded overflow-hidden"
+      style={{ border: "1px solid #333333", borderRadius: "0.25rem" }}
     >
-      <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
+      <table
+        className={`w-full border-collapse${tableClassName ? ` ${tableClassName}` : ""}`}
+        style={{ border: "0" }}
+      >
+        <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
         <tr>
           <td
             className="px-2 py-1.5"
@@ -122,7 +126,8 @@ export function PlayerPageProfileTableBlock({
             </tr>
           </>
         ) : null}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   )
 }
