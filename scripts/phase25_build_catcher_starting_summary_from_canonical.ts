@@ -262,6 +262,17 @@ function main() {
 
   const outDir = path.join(root, "_data", "derived", "player_catcher_starting_summary", year)
   ensureDir(outDir)
+  const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
+  for (const f of fs.readdirSync(outDir).filter((x) => x.startsWith("npb_") && x.endsWith(".json"))) {
+    const npbId = f.replace(/^npb_/, "").replace(/\.json$/, "")
+    if (targetNpbIdSet && !targetNpbIdSet.has(npbId)) continue
+    if (byCatcher.has(npbId)) continue
+    try {
+      fs.unlinkSync(path.join(outDir, f))
+    } catch {
+      // ignore
+    }
+  }
 
   let wrote = 0
   for (const [npbCatcherId, a] of byCatcher) {
