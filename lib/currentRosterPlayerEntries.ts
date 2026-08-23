@@ -829,4 +829,13 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "21925155", nameJa: "笹原 操希", romanFull: "Sasahara Misaki", position: "外野手", teamCode: "G", slug: "misaki-sasahara" },
   { npbPlayerId: "41245152", nameJa: "常谷 拓輝", romanFull: "Tsuneya Hiroki", position: "内野手", teamCode: "F", slug: "hiroki-tsuneya" },
   { npbPlayerId: "11215152", nameJa: "髙橋 快秀", romanFull: "Takahashi Kaishu", position: "投手", teamCode: "M", slug: "kaishu-takahashi" },
+  { npbPlayerId: "31835155", nameJa: "福元 悠真", romanFull: "Fukumoto Yuuma", position: "外野手", teamCode: "D", slug: "yuuma-fukumoto" },
+  { npbPlayerId: "61665136", nameJa: "本田 仁海", romanFull: "Honda Hitomi", position: "投手", teamCode: "Bs", slug: "hitomi-honda" },
+  { npbPlayerId: "61965153", nameJa: "小林 樹斗", romanFull: "Kobayashi Tatsuto", position: "投手", teamCode: "Hs", slug: "tatsuto-kobayashi" },
+  { npbPlayerId: "71075152", nameJa: "神宮 僚介", romanFull: "Jinguu Ryosuke", position: "投手", teamCode: "H", slug: "ryosuke-jinguu" },
+  { npbPlayerId: "61665150", nameJa: "東山 玲士", romanFull: "Higashiyama Reiji", position: "投手", teamCode: "Bs", slug: "reiji-higashiyama" },
+  { npbPlayerId: "13015150", nameJa: "Ｙ．マルテ", romanFull: "Yunior Marte", position: "投手", teamCode: "E", slug: "marte-yunior" },
+  { npbPlayerId: "53355153", nameJa: "森 博人", romanFull: "Mori Hiroto", position: "投手", teamCode: "D", slug: "hiroto-mori" },
+  { npbPlayerId: "41945138", nameJa: "清宮 虎多朗", romanFull: "Seimiya Kotarou", position: "投手", teamCode: "F", slug: "kotarou-seimiya" },
+  { npbPlayerId: "41445136", nameJa: "馬場 皐輔", romanFull: "Baba Kousuke", position: "投手", teamCode: "DB", slug: "kousuke-baba" },
 ]
