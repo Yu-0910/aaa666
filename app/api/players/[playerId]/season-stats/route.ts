@@ -14,7 +14,7 @@ import {
   yearFromRequest,
 } from "@/lib/api/derivedPlayerApiShared"
 import { isFielderRegistrationPosition } from "@/lib/rosterPitcher"
-import type { BattingTotalRowSource } from "@/lib/seasonStatsPilot"
+import type { BattingTotalRowSource } from "@/lib/seasonStatsPilotTypes"
 import type { BattingVsHandTotalReconciliation } from "@/lib/seasonStatsPilotShared"
 import {
   createPlaceholderTotalSeasonRow,
@@ -34,7 +34,7 @@ import type {
   PitchTypeHandSplitStats,
   PitchTypeStats,
   SpeedBandStatsMap,
-} from "@/lib/pitchDetailsPilot"
+} from "@/lib/pitchDetailsPilotShared"
 import { resolveYahooPilotIdForStatsAsync } from "@/lib/yahooNpbBatterIdMap"
 
 export const dynamic = "force-dynamic"

@@ -1,3 +1,4 @@
+import "server-only"
 /**
  * Phase 4: 投球詳細パイロット
  * Phase14 派生が無い場合のフォールバック: pitch_details.csv（batter_id 一致）
@@ -42,6 +43,15 @@ import {
   kmhToStraightBandKey,
   resolveStraightSpeedBandKey,
 } from '@/lib/straightSpeedBands'
+import type {
+  PitchDetailRow,
+  PitchTypeHandSplitStats,
+  PitchTypeStats,
+  PlateAppearancePitches,
+  SpeedBandStatsMap,
+  SpeedBandStatsRow,
+  ZoneStats,
+} from '@/lib/pitchDetailsPilotShared'
 
 export {
   STRAIGHT_SPEED_BANDS,
@@ -49,38 +59,10 @@ export {
   type StraightSpeedBandKey,
 } from '@/lib/straightSpeedBands'
 
-export type PitchDetailRow = {
-  game_id: string
-  inning: number
-  top_bottom: string
-  bat_order: number
-  pitcher_id: string
-  batter_id: string
-  pitch_no: number
-  pitch_type: string
-  speed_kmh: string
-  result: string
-  zone_top_px: string
-  zone_left_px: string
-  zone_row: string
-  zone_col: string
-  zone_id: string
-}
+export type { PitchDetailRow }
 
 /** 打席単位にまとめた投球詳細 */
-export type PlateAppearancePitches = {
-  inning: number
-  top_bottom: string
-  bat_order: number
-  game_id: string
-  pitches: PitchDetailRow[]
-  /**
-   * 打席の決着結果（Phase11 の `plateAppearanceResolvedResultText` 等）。
-   * 未設定時は一球 `result` 列から §6a・§6b で要約する。
-   * 球種・ゾーン・球速帯への「付与」は最終球の pitch_type / zone / speed のまま。
-   */
-  settlement_result?: string
-}
+export type { PlateAppearancePitches }
 
 /** 打席の AB/H/BB 等に使う決着テキスト（最終球の生 resultJa だけに依存しない） */
 export function settlementResultForPa(pa: PlateAppearancePitches): string {
@@ -171,33 +153,7 @@ export function loadPitchDetails(yahooId: string): PlateAppearancePitches[] {
 }
 
 /** 球種別成績（G-3）+ フル指標 */
-export type PitchTypeStats = {
-  pitch_type: string
-  pitches: number
-  pct: number
-  avg_speed: number | null
-  balls: number
-  strikes: number
-  strike_pct: string
-  swing_miss: number
-  taken: number
-  foul: number
-  whiff_pct: string
-  ab: number
-  h: number
-  hr: number
-  so: number
-  bb: number
-  hbp: number
-  tb: number
-  avg: string
-  ops: string
-}
-
-export type PitchTypeHandSplitStats = {
-  vsRight: PitchTypeStats[]
-  vsLeft: PitchTypeStats[]
-}
+export type { PitchTypeHandSplitStats, PitchTypeStats }
 
 /** 投球詳細から球種別成績を集計 */
 export type AggregateByPitchTypeOptions = {
@@ -333,20 +289,7 @@ export function aggregateByPitchTypePitcherHand(
 }
 
 /** ゾーン別成績（25マス） */
-export type ZoneStats = {
-  zoneId: number
-  pitches: number
-  ab: number
-  h: number
-  hr: number
-  tb: number
-  bb: number
-  hbp: number
-  sf: number
-  avg: string
-  /** Isolated power: (TB − H) / AB */
-  isop: string
-}
+export type { ZoneStats }
 
 /** 決着球でゾーンに何か記録されるか（AB/BB/HBP/SF）— Phase11 と同じ isAtBat */
 function isZoneSettlement(r: string): boolean {
@@ -432,19 +375,7 @@ export function aggregateByZone(
 }
 
 /** Phase 14 派生 JSON（canonical 由来の球種・ゾーン・球速帯） */
-export type SpeedBandStatsRow = {
-  /** Isolated Power: (TB − H) / AB */
-  isop: string
-  avg: string
-  hr: number
-  /** 二塁打（打席確定かつ最終球がストレートの帯に属する場合） */
-  h2: number
-  /** 全ストレート投球に占める当該球速帯の投球数の割合 */
-  pitch_share_pct: string
-  whiff_pct: string
-}
-
-export type SpeedBandStatsMap = Partial<Record<string, SpeedBandStatsRow>>
+export type { SpeedBandStatsMap, SpeedBandStatsRow }
 
 /** Phase14 JSON ルートに付く speedBandStats 内フィールドの日本語意味（ドキュメント用） */
 export type Phase14SpeedBandStatsFieldJa = {

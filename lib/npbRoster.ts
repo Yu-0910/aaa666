@@ -1,3 +1,4 @@
+import "server-only"
 /**
  * NPB 2026年選手名簿ローダー
  * _data/npb_roster_2026.csv を読み込み、打席・投球の利き手を提供

@@ -1,3 +1,4 @@
+import "server-only"
 /**
  * Phase 4: パイロット今季成績
  * 個人ページ向けシーズン成績のマージ（正は Phase11/13/15/16/17 派生 JSON）。旧 pilot CSV は廃止。
@@ -57,6 +58,7 @@ import { dedupePlateAppearancesByInningHalfOrder } from '@/lib/yahooGame/dedupeP
 export { dedupePlateAppearancesByInningHalfOrder }
 import { getProjectRoot } from '@/lib/projectRoot'
 import type { BattingVsHandTotalReconciliation, PilotBlocksData, SeasonStatsRow } from '@/lib/seasonStatsPilotShared'
+import type { BattingTotalRowSource } from '@/lib/seasonStatsPilotTypes'
 import {
   computeBattingVsHandTotalReconciliation,
   DERIVED_SEASON_YEAR_DEFAULT,
@@ -1623,7 +1625,6 @@ export function loadVsHandRowsFromCanonicalWithDebug(
  * `buildEnrichedBattingSeasonRow`（`lib/yahooGame/canonicalBattingSeasonAgg.ts`）の結果を、
  * 個人 API の通算として使う。実行時に canonical を再走査しないため、Phase 11 が書いた JSON の total 行をそのまま採用する。
  */
-export type BattingTotalRowSource = 'phase11' | 'rankings' | 'csv' | 'batting_lines_fallback' | null
 
 /** Phase11 通算の risp_ab が 0 のとき、Phase15 base_sit「得点圏」行から補完（appearance_slots 既存 JSON 向け） */
 function backfillTotalRispFromBaseSitSplit(

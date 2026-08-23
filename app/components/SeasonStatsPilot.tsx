@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import dynamic from "next/dynamic"
-import type { BattingTotalRowSource } from "@/lib/seasonStatsPilot"
+import type { BattingTotalRowSource } from "@/lib/seasonStatsPilotTypes"
 import {
   DERIVED_SEASON_YEAR_DEFAULT,
   formatSeasonRispAvgDisplay,
@@ -17,7 +17,7 @@ import type {
   PitchTypeHandSplitStats,
   PitchTypeStats,
   SpeedBandStatsMap,
-} from "@/lib/pitchDetailsPilot"
+} from "@/lib/pitchDetailsPilotShared"
 import { STRAIGHT_SPEED_BANDS, STRAIGHT_SPEED_BAND_KEYS } from "@/lib/straightSpeedBands"
 import type { ViewportLayout } from "@/lib/viewportLayout"
 import { createFielderPlaceholderTotalRow } from "@/lib/fielderSeasonPlaceholderRow"
