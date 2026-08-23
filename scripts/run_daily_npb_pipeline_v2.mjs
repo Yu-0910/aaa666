@@ -20,6 +20,7 @@
  *   node scripts/run_daily_npb_pipeline_v2.mjs --resume-after "検証: phase13"
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-full-derived-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase13-validate
+ *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-phase17-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --strict-vs-hand-validate
  *   node scripts/run_daily_npb_pipeline_v2.mjs --phase4-sleep 0.8
  */
@@ -292,6 +293,7 @@ function parseArgs(argv) {
     skipScoreRawGate: false,
     strictFullDerivedValidate: false,
     strictPhase13Validate: false,
+    strictPhase17Validate: false,
     skipVsHandValidate: false,
     strictVsHandValidate: false,
     skipFastPublish: false,
@@ -350,6 +352,7 @@ function parseArgs(argv) {
     else if (a === "--skip-score-raw-gate") out.skipScoreRawGate = true
     else if (a === "--strict-full-derived-validate") out.strictFullDerivedValidate = true
     else if (a === "--strict-phase13-validate") out.strictPhase13Validate = true
+    else if (a === "--strict-phase17-validate") out.strictPhase17Validate = true
     else if (a === "--skip-vs-hand-validate") out.skipVsHandValidate = true
     else if (a === "--strict-vs-hand-validate") out.strictVsHandValidate = true
     else if (a === "--skip-fast-publish") out.skipFastPublish = true
@@ -1072,15 +1075,20 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
   const canonicalTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) > 0)
   const ignoredTargetGameIds = targetIds.filter((id) => canonicalMtimeMsForGameId(id) <= 0)
   const currentCanonicalCount = canonicalTargetGameIds.length
+  const affectedYahooIds = collectYahooBatterIdsForGames(canonicalTargetGameIds)
+  const yahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(canonicalTargetGameIds)
   if (!fs.existsSync(periodDir)) {
     return {
       ok: false,
       reason: "period_dir_missing",
       currentCanonicalCount,
       periodSourceCount: 0,
+      affectedYahooCount: affectedYahooIds.length,
       generatedAt: "",
       staleTargetGameIds: [],
       missingTargetGameIds: [],
+      missingYahooIds: affectedYahooIds,
+      staleYahooIds: [],
     }
   }
 
@@ -1091,11 +1099,14 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
       reason: "period_meta_missing",
       currentCanonicalCount,
       periodSourceCount: 0,
+      affectedYahooCount: affectedYahooIds.length,
       generatedAt: "",
       sourceRef: "",
       staleTargetGameIds: [],
       missingTargetGameIds: canonicalTargetGameIds,
       ignoredTargetGameIds,
+      missingYahooIds: affectedYahooIds,
+      staleYahooIds: [],
     }
   }
 
@@ -1108,21 +1119,35 @@ function battingPeriodFreshnessReport({ year, gameIds = [] }) {
     generatedAtMs > 0
       ? canonicalTargetGameIds.filter((id) => canonicalMtimeMsForGameId(id) > generatedAtMs + 1000)
       : canonicalTargetGameIds
+  const fileFreshness = derivedCategoryFreshnessReport({
+    year,
+    category: "player_season_batting_period",
+    yahooIds: affectedYahooIds,
+    canonicalThresholdMs: generatedAtMs,
+    sourceThresholdMsById: yahooSourceThresholdMsById,
+  })
+  const missingYahooIds = fileFreshness.missingYahooIds || []
+  const staleYahooIds = fileFreshness.staleYahooIds || []
 
   const reasons = []
   if (missingTargetGameIds.length > 0) reasons.push("target_games_missing_from_period_source")
   if (staleTargetGameIds.length > 0) reasons.push("target_canonical_newer_than_period")
+  if (missingYahooIds.length > 0) reasons.push("target_period_player_files_missing")
+  if (staleYahooIds.length > 0) reasons.push("target_period_player_files_stale")
 
   return {
     ok: reasons.length === 0,
     reason: reasons.join("+"),
     currentCanonicalCount,
     periodSourceCount: sourceIds.length,
+    affectedYahooCount: affectedYahooIds.length,
     generatedAt,
     sourceRef: snapshot.sourceRef,
     ignoredTargetGameIds,
     staleTargetGameIds,
     missingTargetGameIds,
+    missingYahooIds,
+    staleYahooIds,
   }
 }
 
@@ -1130,7 +1155,15 @@ function periodRepairGameIds(report) {
   return [...new Set([...(report?.missingTargetGameIds || []), ...(report?.staleTargetGameIds || [])])].sort()
 }
 
-function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitchingPeriod = false }) {
+function ensureBattingPeriodFresh({
+  year,
+  from,
+  to,
+  gameIds,
+  dryRun,
+  rebuildPitchingPeriod = false,
+  strictValidate = false,
+}) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const before = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (before.ok) {
@@ -1149,11 +1182,17 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
   if (before.missingTargetGameIds.length > 0) {
     console.warn(`  missingTargetGameIds=${before.missingTargetGameIds.join(",")}`)
   }
+  if ((before.missingYahooIds || []).length > 0) {
+    console.warn(`  missingYahooIds=${before.missingYahooIds.slice(0, 20).join(",")}`)
+  }
   if (before.ignoredTargetGameIds.length > 0) {
     console.warn(`  ignoredTargetGameIds(no canonical)=${before.ignoredTargetGameIds.join(",")}`)
   }
   if (before.staleTargetGameIds.length > 0) {
     console.warn(`  staleTargetGameIds=${before.staleTargetGameIds.join(",")}`)
+  }
+  if ((before.staleYahooIds || []).length > 0) {
+    console.warn(`  staleYahooIds=${before.staleYahooIds.slice(0, 20).join(",")}`)
   }
   appendPipelineBulkLog(
     root,
@@ -1167,6 +1206,8 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     canonicalCount: before.currentCanonicalCount,
     staleTargetGameIds: before.staleTargetGameIds,
     missingTargetGameIds: before.missingTargetGameIds,
+    staleYahooIds: (before.staleYahooIds || []).slice(0, 20),
+    missingYahooIds: (before.missingYahooIds || []).slice(0, 20),
   })
 
   const repairGameIds = periodRepairGameIds(before)
@@ -1181,10 +1222,15 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
     { dryRun },
   )
   if (repairYahooIds.length > 0) {
-    run(
+    runWarnOnlyValidation(
       `検証: phase17 period window（差分 ${repairYahooIds.length}人）`,
       `npm run validate:phase17-period-window --${phase17WindowValidateArg(repairYahooIds, { year, from, to })}`,
-      { dryRun },
+      {
+        dryRun,
+        strict: strictValidate,
+        strictFlagName: "--strict-phase17-validate",
+        note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+      },
     )
   }
   if (rebuildPitchingPeriod) {
@@ -1201,9 +1247,23 @@ function ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun, rebuildPitc
 
   const after = battingPeriodFreshnessReport({ year, gameIds: targetIds })
   if (!after.ok) {
-    throw new Error(
-      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} targetCanonical=${after.currentCanonicalCount}`,
-    )
+    const message =
+      `phase17 period remains stale after rebuild: reason=${after.reason || "-"} source=${after.periodSourceCount} targetCanonical=${after.currentCanonicalCount}`
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
+    pushRunSummaryEvent("warnings", {
+      kind: "phase17_period_still_stale_after_rebuild",
+      message,
+      strict: strictValidate,
+      staleTargetGameIds: after.staleTargetGameIds,
+      missingTargetGameIds: after.missingTargetGameIds,
+      staleYahooIds: (after.staleYahooIds || []).slice(0, 20),
+      missingYahooIds: (after.missingYahooIds || []).slice(0, 20),
+    })
+    if (strictValidate) {
+      throw new Error(`${message} --strict-phase17-validate 指定のため停止します。`)
+    }
+    console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+    return
   }
   console.log(
     `\n[daily:npb-pipeline:v2] phase17 period 鮮度 OK（再生成後）: source=${after.periodSourceCount}, targetCanonical=${after.currentCanonicalCount}, generatedAt=${after.generatedAt}\n`,
@@ -1382,9 +1442,12 @@ function buildCheckpointInputSnapshot(args = currentArgs) {
       generatedAt: phase17.generatedAt || "",
       generatedAtMs: parseIsoMs(phase17.generatedAt),
       periodSourceCount: Number(phase17.periodSourceCount || 0),
+      affectedYahooCount: Number(phase17.affectedYahooCount || 0),
       currentCanonicalCount: Number(phase17.currentCanonicalCount || 0),
       missingTargetGameIds: phase17.missingTargetGameIds || [],
       staleTargetGameIds: phase17.staleTargetGameIds || [],
+      missingYahooIds: phase17.missingYahooIds || [],
+      staleYahooIds: phase17.staleYahooIds || [],
     },
     derived,
   }
@@ -1429,6 +1492,8 @@ function checkpointInputFreshnessStatus(savedSnapshot, currentSnapshot) {
 
   if ((currentSnapshot.phase17?.missingTargetGameIds || []).length > 0) reasons.push("phase17_missing_target_games")
   if ((currentSnapshot.phase17?.staleTargetGameIds || []).length > 0) reasons.push("phase17_stale_target_games")
+  if ((currentSnapshot.phase17?.missingYahooIds || []).length > 0) reasons.push("phase17_missing_player_files")
+  if ((currentSnapshot.phase17?.staleYahooIds || []).length > 0) reasons.push("phase17_stale_player_files")
 
   return {
     stale: reasons.length > 0,
@@ -1482,6 +1547,7 @@ function restoreCheckpointRunOptions(args, checkpointArgs) {
     "skipScoreRawGate",
     "strictFullDerivedValidate",
     "strictPhase13Validate",
+    "strictPhase17Validate",
     "skipVsHandValidate",
     "strictVsHandValidate",
     "skipFastPublish",
@@ -1571,13 +1637,26 @@ function npbRepairIdsFromFreshnessReport(report) {
   return uniqueRepairIds(report?.missingNpbIds || [], report?.staleNpbIds || [])
 }
 
-function runPhase17PeriodAndValidate({ year, from, to, affectedYahooIds, dryRun, label = "派生: phase17 period" }) {
+function runPhase17PeriodAndValidate({
+  year,
+  from,
+  to,
+  affectedYahooIds,
+  dryRun,
+  strictValidate = false,
+  label = "派生: phase17 period",
+}) {
   run(label, `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`, { dryRun })
   if (affectedYahooIds.length > 0) {
-    run(
+    runWarnOnlyValidation(
       `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
       `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
-      { dryRun },
+      {
+        dryRun,
+        strict: strictValidate,
+        strictFlagName: "--strict-phase17-validate",
+        note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+      },
     )
   }
 }
@@ -1587,6 +1666,7 @@ function runProfileTotalsFollowRankingValidation({
   affectedYahooIds = [],
   affectedNpbPitcherIds = [],
   dryRun,
+  strict = false,
   label = "検証: 個人ページ通算値 ↔ ランキング",
 }) {
   const yahooIds = uniqueStrings(affectedYahooIds)
@@ -1599,10 +1679,14 @@ function runProfileTotalsFollowRankingValidation({
   const parts = [`npx tsx scripts/validate_profile_totals_follow_rankings.ts --year ${year}`]
   if (yahooIds.length > 0) parts.push(`--yahoo-ids ${yahooIds.join(",")}`)
   if (npbIds.length > 0) parts.push(`--npb-ids ${npbIds.join(",")}`)
-  run(label, parts.join(" "), { dryRun })
+  runWarnOnlyValidation(label, parts.join(" "), {
+    dryRun,
+    strict,
+    note: "個人ページ通算値の差分は警告として扱い、ランキング/公開は継続します。",
+  })
 }
 
-function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun }) {
+function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun, strict = false }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedNpbPitcherIds = collectNpbPitcherIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
@@ -1640,20 +1724,35 @@ function ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun }) {
   const repairNpbPitcherIds = npbRepairIdsFromFreshnessReport(pitchingReport)
   if (repairNpbPitcherIds.length === 0) return
   const repairNpbPitcherArg = onlyNpbIdsArg(repairNpbPitcherIds)
-  run("派生: phase:pitcher-poc1（1回目公開後・鮮度NGのため再生成）", `npm run phase:pitcher-poc1${repairNpbPitcherArg}`, { dryRun })
-  run(
+  runBestEffortStep("派生: phase:pitcher-poc1（1回目公開後・鮮度NGのため再生成）", `npm run phase:pitcher-poc1${repairNpbPitcherArg}`, {
+    dryRun,
+    strict,
+    warningKind: "post_fast_pitching_poc_failed",
+    warningMessage: "1回目公開後の投手PoC再生成に失敗しましたが、公開は継続します。",
+  })
+  runBestEffortStep(
     "派生: phase6 pitcher-catcher splits（1回目公開後・投手PoC再生成に合わせて再生成）",
     `npm run phase6:build:pitcher-catcher-splits${repairNpbPitcherArg}`,
-    { dryRun },
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_pitcher_catcher_splits_failed",
+      warningMessage: "1回目公開後の投手捕手補助派生に失敗しましたが、公開は継続します。",
+    },
   )
-  run(
+  runBestEffortStep(
     "派生: phase7 pitcher period（1回目公開後・投手PoC再生成に合わせて再生成）",
     `npm run phase7:build:pitcher-period${repairNpbPitcherArg}`,
-    { dryRun },
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_pitcher_period_failed",
+      warningMessage: "1回目公開後の投手期間別派生に失敗しましたが、公開は継続します。",
+    },
   )
 }
 
-function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
+function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun, strict = false }) {
   const targetIds = targetGameIdsForArgs({ from, to, gameIds })
   const affectedYahooIds = collectYahooBatterIdsForGames(targetIds)
   const canonicalThresholdMs = targetIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
@@ -1697,10 +1796,15 @@ function ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun }) {
   })
   const repairYahooIds = yahooRepairIdsFromFreshnessReport(report)
   if (repairYahooIds.length === 0) return
-  run(
+  runBestEffortStep(
     "派生: phase15 batting splits（1回目公開後・2回目公開前の鮮度NG再生成）",
     `npm run phase15:build:batting-splits${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
-    { dryRun },
+    {
+      dryRun,
+      strict,
+      warningKind: "post_fast_batting_splits_failed",
+      warningMessage: "1回目公開後の batting splits 再生成に失敗しましたが、公開は継続します。",
+    },
   )
 }
 
@@ -1914,6 +2018,7 @@ function initRunSummary(args) {
       skipScoreRawGate: Boolean(args.skipScoreRawGate),
       strictFullDerivedValidate: Boolean(args.strictFullDerivedValidate),
       strictPhase13Validate: Boolean(args.strictPhase13Validate),
+      strictPhase17Validate: Boolean(args.strictPhase17Validate),
       skipVsHandValidate: Boolean(args.skipVsHandValidate),
       strictVsHandValidate: Boolean(args.strictVsHandValidate),
       skipFastPublish: Boolean(args.skipFastPublish),
@@ -2461,6 +2566,7 @@ function writePipelineCheckpoint(status, label, command = "", extra = {}) {
           skipScoreRawGate: Boolean(currentArgs.skipScoreRawGate),
           strictFullDerivedValidate: Boolean(currentArgs.strictFullDerivedValidate),
           strictPhase13Validate: Boolean(currentArgs.strictPhase13Validate),
+          strictPhase17Validate: Boolean(currentArgs.strictPhase17Validate),
           skipVsHandValidate: Boolean(currentArgs.skipVsHandValidate),
           strictVsHandValidate: Boolean(currentArgs.strictVsHandValidate),
           skipFastPublish: Boolean(currentArgs.skipFastPublish),
@@ -2925,7 +3031,7 @@ function runTry(label, command, opts = {}) {
   }
 }
 
-function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = "" } = {}) {
+function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = "", strictFlagName = "--strict-full-derived-validate" } = {}) {
   if (runTry(label, command, { dryRun })) return
   const message = `${label} がNGでした。${note || "公開は継続し、差分は後続調査対象としてログに残します。"}`
   appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `WARN: ${message}`)
@@ -2934,12 +3040,44 @@ function runWarnOnlyValidation(label, command, { dryRun, strict = false, note = 
     label,
     command,
     strict,
+    strictFlagName,
     message,
   })
   if (strict) {
-    throw new Error(`${message} --strict-full-derived-validate 指定のため停止します。`)
+    throw new Error(`${message} ${strictFlagName} 指定のため停止します。`)
   }
   console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+}
+
+function runBestEffortStep(label, command, {
+  dryRun,
+  strict = false,
+  strictFlagName = "--strict-full-derived-validate",
+  timeoutKind = "default",
+  warningKind = "best_effort_step_failed",
+  warningMessage = "",
+  warningMeta = {},
+} = {}) {
+  const ok = runTry(label, command, { dryRun, timeoutKind })
+  if (ok) return true
+  const message =
+    String(warningMessage || "").trim() ||
+    `${label} に失敗しましたが、公開は継続し、差分は後続調査対象としてログに残します。`
+  console.warn(`\n[daily:npb-pipeline:v2] WARN: ${message}\n`)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `warning: ${message}`)
+  pushRunSummaryEvent("warnings", {
+    kind: warningKind,
+    label,
+    command,
+    strict,
+    strictFlagName,
+    message,
+    ...warningMeta,
+  })
+  if (strict) {
+    throw new Error(`${message} ${strictFlagName} 指定のため停止します。`)
+  }
+  return false
 }
 
 function runPostPublishBestEffort(label, command, {
@@ -3806,10 +3944,14 @@ function runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun, a
   }
   if (shouldRunDeltaPhase("top_probables")) {
     runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow })
-    run(
+    runBestEffortStep(
       "トップ表示: 予想投手",
       topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow }),
-      { dryRun },
+      {
+        dryRun,
+        warningKind: "top_probables_build_failed",
+        warningMessage: "予想投手トップ表示の生成に失敗しましたが、full 派生・公開は継続します。",
+      },
     )
   } else {
     logDeltaSkip("トップ表示: 予想投手", "top_probables")
@@ -4513,6 +4655,8 @@ function runFastStage({
   gameIds,
   noPublish,
   build,
+  strictFullDerivedValidate,
+  strictPhase17Validate,
   skipVsHandValidate,
   strictVsHandValidate,
   dryRun,
@@ -4554,9 +4698,17 @@ function runFastStage({
       to,
       affectedYahooIds,
       dryRun,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
       label: "派生: phase17 period",
     })
-    ensureBattingPeriodFresh({ year, from, to, gameIds, dryRun })
+    ensureBattingPeriodFresh({
+      year,
+      from,
+      to,
+      gameIds,
+      dryRun,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
+    })
   } else {
     logDeltaSkip("派生: phase17 period", "batting_period")
   }
@@ -4574,6 +4726,7 @@ function runFastStage({
     year,
     affectedYahooIds,
     dryRun,
+    strict: strictFullDerivedValidate,
     label: "検証: fast 個人ページ通算値 ↔ ランキング",
   })
   if (shouldRunDeltaPhase("weekly_rankings")) {
@@ -4587,7 +4740,11 @@ function runFastStage({
     logDeltaSkip("ランキング JSON: phase29 team standings", "standings")
   }
   if (shouldRunDeltaPhase("standings")) {
-    run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
+    runWarnOnlyValidation("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "公開は継続し、standings 差分は後続調査対象としてログに残します。",
+    })
   } else {
     logDeltaSkip("検証: phase29 team standings", "standings")
   }
@@ -4650,6 +4807,8 @@ function runFinalPrecomputedPublishStage({
   gameIds,
   noPublish,
   build,
+  strictFullDerivedValidate,
+  strictPhase17Validate,
   skipVsHandValidate,
   strictVsHandValidate,
   dryRun,
@@ -4662,6 +4821,10 @@ function runFinalPrecomputedPublishStage({
   const affectedNpbPitcherArg = onlyNpbIdsArg(affectedNpbPitcherIds)
   const affectedLeagues = collectAffectedLeaguesForGames(targetGameIds)
   const affectedDisplayPlayerIds = affectedDisplayPlayerIdsForArgs({ from, to, gameIds })
+  const postFastCanonicalThresholdMs =
+    Number(currentDeltaManifest?.targetCanonicalLatestMs || 0) ||
+    targetGameIds.reduce((max, gameId) => Math.max(max, canonicalMtimeMsForGameId(gameId)), 0)
+  const postFastYahooSourceThresholdMsById = collectYahooBatterSourceThresholdMsById(targetGameIds)
   console.log("\n[daily:npb-pipeline:v2] 先行済み派生を使い、ランキング/順位表/トップリーダーを1回目公開向けに最終再計算します。\n")
   runRecordRepairStage({ dryRun })
   run("派生: enrich:text-play-headlines", `npx tsx scripts/enrich_text_play_headlines_from_raw_text.ts${gameIdsOrDateRangeTsxArgsArg({ year, from, to })}`, { dryRun })
@@ -4674,12 +4837,18 @@ function runFinalPrecomputedPublishStage({
       gameIds,
       dryRun,
       rebuildPitchingPeriod: true,
+      strictValidate: strictPhase17Validate || strictFullDerivedValidate,
     })
     if (affectedYahooIds.length > 0) {
-      run(
+      runWarnOnlyValidation(
         `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
         `npm run validate:phase17-period-window --${phase17WindowValidateArg(affectedYahooIds, { year, from, to })}`,
-        { dryRun },
+        {
+          dryRun,
+          strict: strictPhase17Validate || strictFullDerivedValidate,
+          strictFlagName: "--strict-phase17-validate",
+          note: "公開は継続し、period 差分は後続調査対象としてログに残します。",
+        },
       )
     }
   } else {
@@ -4700,6 +4869,7 @@ function runFinalPrecomputedPublishStage({
     affectedYahooIds,
     affectedNpbPitcherIds,
     dryRun,
+    strict: strictFullDerivedValidate,
     label: "検証: finalize-precomputed 個人ページ通算値 ↔ ランキング",
   })
   if (shouldRunDeltaPhase("weekly_rankings")) {
@@ -4717,7 +4887,11 @@ function runFinalPrecomputedPublishStage({
     logDeltaSkip("ランキング JSON: phase29 team standings", "standings")
   }
   if (shouldRunDeltaPhase("standings")) {
-    run("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", { dryRun })
+    runWarnOnlyValidation("検証: phase29 team standings", "npm run validate:team-standings:2026:fail", {
+      dryRun,
+      strict: strictFullDerivedValidate,
+      note: "公開は継続し、standings 差分は後続調査対象としてログに残します。",
+    })
   } else {
     logDeltaSkip("検証: phase29 team standings", "standings")
   }
@@ -4740,28 +4914,40 @@ function runFinalPrecomputedPublishStage({
         year,
         category: "player_season_batting",
         yahooIds: affectedYahooIds,
-        canonicalThresholdMs: targetCanonicalLatestMs,
-        sourceThresholdMsById: yahooSourceThresholdMsById,
+        canonicalThresholdMs: postFastCanonicalThresholdMs,
+        sourceThresholdMsById: postFastYahooSourceThresholdMsById,
       })
       const postFastRepairYahooIds = yahooRepairIdsFromFreshnessReport(postFastPhase11Report)
       if (postFastRepairYahooIds.length > 0) {
-        run(
+        runPostPublishBestEffort(
           `派生: phase11 batting（1回目公開後・差分整備 ${postFastRepairYahooIds.length}人）`,
           `npm run phase11:build:batting${derivedYahooArgsArg(postFastRepairYahooIds, { from, to })}`,
-          { dryRun },
+          {
+            dryRun,
+            warningKind: "post_fast_phase11_failed",
+            warningMessage:
+              "1回目公開後の phase11 差分整備に失敗しましたが、1回目公開自体は完了済みとして継続します。",
+            warningMeta: { stage: "post_fast_phase11_repair", affectedYahooIds: postFastRepairYahooIds },
+          },
         )
       } else {
         console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 追加差分なしのためスキップします。\n")
         appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 already fresh")
       }
     } else if (!from && !to && (!Array.isArray(gameIds) || gameIds.length === 0)) {
-      run("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", { dryRun })
+      runPostPublishBestEffort("派生: phase11 batting（1回目公開後・全件整備）", "npm run phase11:build:batting", {
+        dryRun,
+        warningKind: "post_fast_phase11_full_failed",
+        warningMessage:
+          "1回目公開後の phase11 全件整備に失敗しましたが、1回目公開自体は完了済みとして継続します。",
+        warningMeta: { stage: "post_fast_phase11_full" },
+      })
     } else {
       console.log("\n[daily:npb-pipeline:v2] 1回目公開後 phase11 整備: 差分対象なしのためスキップします。\n")
       appendPipelineBulkLog(root, "daily:npb-pipeline:v2", "skip: post-fast phase11 no affected batters")
     }
-    ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun })
-    ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun })
+    ensurePitchingDerivedFresh({ year, from, to, gameIds, dryRun, strict: strictFullDerivedValidate })
+    ensureBattingSplitsFresh({ year, from, to, gameIds, dryRun, strict: strictFullDerivedValidate })
     if (skipVsHandValidate) {
       console.log("\n[daily:npb-pipeline:v2] --skip-vs-hand-validate: phase11 vs vs_hand P0 検証をスキップします。\n")
     } else if (shouldRunDeltaPhase("batting_derived")) {
@@ -4820,20 +5006,35 @@ function runScheduleAheadBestEffort({ year, dryRun }) {
 function runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow = false }) {
   const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
   const tomorrowDate = addDaysYmdJst(asOfDate, 1)
-  run(
+  runBestEffortStep(
     "Sporting News ローテーション取得（予想投手用）",
     `npx tsx scripts/phase35_fetch_sportingnews_rotation.ts --year ${year}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "sportingnews_rotation_failed",
+      warningMessage: "Sporting News ローテーション取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
-  run(
+  runBestEffortStep(
     "Yahoo! 当日予告先発取得（予想投手用）",
     `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${asOfDate}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "yahoo_probables_today_failed",
+      warningMessage: "Yahoo! 当日予告先発取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
-  run(
+  runBestEffortStep(
     "Yahoo! 翌日予告先発取得（予想投手用）",
     `npx tsx scripts/fetch_yahoo_schedule_probables.ts --year ${year} --date ${tomorrowDate}`,
-    { dryRun, timeoutKind: "network" },
+    {
+      dryRun,
+      timeoutKind: "network",
+      warningKind: "yahoo_probables_tomorrow_failed",
+      warningMessage: "Yahoo! 翌日予告先発取得に失敗しましたが、予想投手更新は best-effort で継続します。",
+    },
   )
 }
 
@@ -4922,9 +5123,24 @@ function runFullStage({
   } else {
     logDeltaSkip("派生: pitcher season pitch types", "pitching_derived")
   }
-  run("派生: phase22 catcher appearances", `npm run phase22:build:catcher-appearances${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase23 catcher-pitcher splits", `npm run phase23:build:catcher-pitcher-splits${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase24 catcher defense basic", `npm run phase24:build:catcher-defense-basic${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  runBestEffortStep("派生: phase22 catcher appearances", `npm run phase22:build:catcher-appearances${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase22_catcher_appearances_failed",
+    warningMessage: "phase22 catcher appearances に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase23 catcher-pitcher splits", `npm run phase23:build:catcher-pitcher-splits${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase23_catcher_pitcher_splits_failed",
+    warningMessage: "phase23 catcher-pitcher splits に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase24 catcher defense basic", `npm run phase24:build:catcher-defense-basic${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase24_catcher_defense_basic_failed",
+    warningMessage: "phase24 catcher defense basic に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase24 実守備捕手帰属",
     "npm run validate:catcher-defense-active:2026",
@@ -4934,10 +5150,30 @@ function runFullStage({
       note: "捕手タブ派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  run("派生: phase25 catcher starting summary", `npm run phase25:build:catcher-starting-summary${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase26 catcher pa round pitch types", `npm run phase26:build:catcher-pa-round-pitch-types${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
-  run("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, { dryRun })
-  run("派生: phase30 player matchup", `npm run phase30:build:player-matchup${dateRangeNpmArgsArg({ from, to })}`, { dryRun })
+  runBestEffortStep("派生: phase25 catcher starting summary", `npm run phase25:build:catcher-starting-summary${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase25_catcher_starting_summary_failed",
+    warningMessage: "phase25 catcher starting summary に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase26 catcher pa round pitch types", `npm run phase26:build:catcher-pa-round-pitch-types${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase26_catcher_pa_round_pitch_types_failed",
+    warningMessage: "phase26 catcher pa round pitch types に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase20 pitcher zones", `npm run phase20:build:pitcher-zones -- --from ${from} --to ${to}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase20_pitcher_zones_failed",
+    warningMessage: "phase20 pitcher zones に失敗しましたが、full derived公開は継続します。",
+  })
+  runBestEffortStep("派生: phase30 player matchup", `npm run phase30:build:player-matchup${dateRangeNpmArgsArg({ from, to })}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase30_player_matchup_failed",
+    warningMessage: "phase30 player matchup に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase31 対戦成績 vs Phase11",
     "npm run validate:phase31-matchup-vs-phase11:fail",
@@ -4950,7 +5186,12 @@ function runFullStage({
   if (allowFutureScheduleRefresh) {
     runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun })
   }
-  run("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, { dryRun })
+  runBestEffortStep("派生: phase33 batter vs team count pitch types", `npm run phase33:build:batter-vs-team-count-pitch-types${affectedArg}`, {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "phase33_batter_vs_team_count_pitch_types_failed",
+    warningMessage: "phase33 batter vs team count pitch types に失敗しましたが、full derived公開は継続します。",
+  })
   runWarnOnlyValidation(
     "検証: phase34 球団別配球 vs Phase14",
     "npm run validate:phase34-batter-vs-team-pitch-vs-phase14:fail",
@@ -4960,12 +5201,18 @@ function runFullStage({
       note: "球団別配球派生の警告として扱い、full derived公開は継続します。",
     },
   )
-  run("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", { dryRun })
+  runBestEffortStep("派生: build yahoo npb full index", "npm run build:yahoo-npb-full-index", {
+    dryRun,
+    strict: strictFullDerivedValidate,
+    warningKind: "build_yahoo_npb_full_index_failed",
+    warningMessage: "Yahoo/NPB full index の更新に失敗しましたが、full derived公開は継続します。",
+  })
   runProfileTotalsFollowRankingValidation({
     year,
     affectedYahooIds,
     affectedNpbPitcherIds,
     dryRun,
+    strict: strictFullDerivedValidate,
     label: "検証: full 個人ページ通算値 ↔ ランキング",
   })
   if (skipRepeatedTopBuilds) {
