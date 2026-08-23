@@ -232,9 +232,13 @@
     overflow: hidden !important;
   }
 
-  .player-page-table-shell table,
-  .top-page-table-shell {
+  .player-page-table-shell table {
     border-radius: 0.625rem !important;
+  }
+
+  .top-page-table-shell {
+    border-radius: 0.25rem !important;
+    overflow: hidden !important;
   }
 
   /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
