@@ -6,8 +6,10 @@ import {
   historicalSlugOverrideByRoman,
 } from "@/lib/historicalPlayerSlugOverrides"
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
-import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
-import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
+import {
+  MANUAL_YAHOO_TO_NPB,
+  resolveNpbPlayerIdFromPublicIdManual,
+} from "@/lib/yahooNpbBatterIdMap.manual"
 
 export type PlayerPageSection =
   | "basic"
@@ -140,7 +142,7 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
 
 export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   const publicId = String(link.playerId ?? "").trim()
-  const resolvedPublicId = resolveNpbPlayerIdFromPublicId(publicId)
+  const resolvedPublicId = resolveNpbPlayerIdFromPublicIdManual(publicId)
   const npbIdCandidates = [
     String(link.npbPlayerId ?? "").trim(),
     resolvedPublicId,

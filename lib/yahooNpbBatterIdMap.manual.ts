@@ -99,3 +99,13 @@ export const MANUAL_YAHOO_TO_NPB: Record<string, string> = {
   "2119070": "41245152", // 常谷 拓輝（日本ハム・内）
   "2112140": "11215152", // 髙橋 快秀（ロッテ・投）
 }
+
+/**
+ * クライアント側でも安全に使える簡易 publicId→NPB 解決。
+ * `lib/yahooNpbBatterIdMap.ts` は fs を読むため client import 不可。
+ */
+export function resolveNpbPlayerIdFromPublicIdManual(raw: string): string {
+  const id = String(raw || "").trim()
+  if (!/^\d+$/.test(id)) return id
+  return MANUAL_YAHOO_TO_NPB[id] ?? id
+}
