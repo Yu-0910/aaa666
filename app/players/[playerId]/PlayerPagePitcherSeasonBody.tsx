@@ -1085,17 +1085,17 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             border: "1px solid #555",
                             width: "100%",
                             tableLayout: "fixed",
-                            minWidth: "513px",
+                            minWidth: "462px",
                           }}
                         >
                           <colgroup>
-                            <col style={{ width: "56px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "39px" }} />
-                            <col style={{ width: "34px" }} />
+                            <col style={{ width: "50px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "35px" }} />
+                            <col style={{ width: "31px" }} />
                           </colgroup>
                           <thead>
                             <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
