@@ -10,6 +10,10 @@ function stripLeadingZeroDecimal(s: string): string {
 }
 
 export function formatStandingsCell(key: StandingsMetricKey, row: TeamStandingRow): string {
+  if (key === "wl") {
+    return `${row.w}-${row.l}`
+  }
+
   const value = row[key]
 
   if (key === "gb") {

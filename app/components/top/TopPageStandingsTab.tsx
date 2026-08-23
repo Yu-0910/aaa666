@@ -16,7 +16,10 @@ import {
   teamDisplayNameFromStandingRow,
   teamRomanNameFromCode,
 } from "@/lib/standings/teamCodes"
-import { standingsMetricColumnsForSource } from "@/lib/standings/metricColumns"
+import {
+  standingsMetricColumnsForSource,
+  WEEKLY_STANDINGS_METRIC_COLUMNS,
+} from "@/lib/standings/metricColumns"
 import type { StandingsMetricKey } from "@/lib/standings/metricColumns"
 import {
   computeStandingsMetricLeagueRanks,
@@ -60,6 +63,7 @@ const METRIC_COL_WIDTH = Math.round(METRIC_COL_MIN * 0.8)
 const METRIC_COL_WIDTH_AFTER_G = Math.round(METRIC_COL_WIDTH * 1.1)
 
 function standingsMetricColWidth(key: StandingsMetricKey, scale = 1): number {
+  if (key === "wl") return Math.round(METRIC_COL_WIDTH_AFTER_G * 1.2 * scale)
   const base = key === "g" ? METRIC_COL_WIDTH : METRIC_COL_WIDTH_AFTER_G
   return Math.round(base * scale)
 }
@@ -123,6 +127,7 @@ export function TeamStandingsTable({
   metricFontScale = 1,
   metricColScale = 1,
   showMetricLeagueRanks = true,
+  weeklyCompactColumns = false,
 }: {
   rows: TeamStandingRow[]
   league: StandingsLeague
@@ -141,6 +146,7 @@ export function TeamStandingsTable({
   /** 指標列の横幅スケール（セ・リーグUIテスト） */
   metricColScale?: number
   showMetricLeagueRanks?: boolean
+  weeklyCompactColumns?: boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const teamPageLinksEnabled = teamPageNavEnabledForYear(year)
@@ -149,9 +155,13 @@ export function TeamStandingsTable({
   const leftBlockWidth = RANK_WIDTH + TEAM_BAR_WIDTH + teamNameWidth
   const metricColumns = useMemo(
     () => {
-      const columns = standingsMetricColumnsForSource(source as any).filter(
+      const columns = (weeklyCompactColumns
+        ? WEEKLY_STANDINGS_METRIC_COLUMNS
+        : standingsMetricColumnsForSource(source as any)
+      ).filter(
         (col) => col.key !== "g",
       )
+      if (weeklyCompactColumns) return columns
       const pctIndex = columns.findIndex((col) => col.key === "pct")
       const gbIndex = columns.findIndex((col) => col.key === "gb")
       if (pctIndex >= 0 && gbIndex >= 0 && pctIndex < gbIndex) {
@@ -163,7 +173,7 @@ export function TeamStandingsTable({
       }
       return columns
     },
-    [rows, source],
+    [source, weeklyCompactColumns],
   )
 
   const metricsBlockWidth = metricColumns.reduce(
@@ -418,6 +428,7 @@ export function StandingsLeagueSection({
   titleSuffix = "順位表",
   subtitle,
   showTeamPageNote = true,
+  weeklyCompactColumns = false,
 }: {
   league: StandingsLeague
   data: TeamStandingsJson
@@ -426,6 +437,7 @@ export function StandingsLeagueSection({
   titleSuffix?: string
   subtitle?: string
   showTeamPageNote?: boolean
+  weeklyCompactColumns?: boolean
 }) {
   const meta = LEAGUE_META[league]
   const isPl = league === "PL"
@@ -475,6 +487,7 @@ export function StandingsLeagueSection({
         metricFontScale={isPl ? 0.89 : 0.85}
         metricColScale={1.15}
         showMetricLeagueRanks
+        weeklyCompactColumns={weeklyCompactColumns}
       />
       {showTeamPageNote ? (
         <p className="text-[10px] text-gray-400">
@@ -605,6 +618,7 @@ export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandin
       titleSuffix={isWeekly ? "今週の順位表" : undefined}
       subtitle={isWeekly ? `Weekly Standings (${weeklyLabel})` : undefined}
       showTeamPageNote={!isWeekly}
+      weeklyCompactColumns={isWeekly}
     />
   )
 }

@@ -9,7 +9,7 @@ import type { StandingsSource, TeamStandingRow } from "@/lib/standings/types"
 export type StandingsMetricKey = Exclude<
   keyof TeamStandingRow,
   "rank" | "team" | "teamName"
->
+> | "wl"
 
 export type StandingsMetricColumn = {
   order: number
@@ -55,6 +55,24 @@ export const STANDINGS_METRIC_COLUMNS: readonly StandingsMetricColumn[] = [
   { order: 35, label: "HQS率", key: "hqs_rate" },
   { order: 36, label: "失策", key: "e" },
 ] as const
+
+/** 今週の順位表: 勝敗を1列化し、分・差・勝率・残りは非表示 */
+export const WEEKLY_STANDINGS_METRIC_COLUMNS: readonly StandingsMetricColumn[] =
+  STANDINGS_METRIC_COLUMNS.flatMap((column) => {
+    if (column.key === "w") {
+      return [{ ...column, label: "勝敗", key: "wl" as const }]
+    }
+    if (
+      column.key === "l" ||
+      column.key === "t" ||
+      column.key === "gb" ||
+      column.key === "pct" ||
+      column.key === "remaining"
+    ) {
+      return []
+    }
+    return [column]
+  })
 
 /** NPB 公式年度別成績ページ由来の順位表列（提示指標のみ・固定順） */
 export type NpbYearlyStandingsMetricKey =
