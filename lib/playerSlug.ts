@@ -7,6 +7,7 @@ import {
 } from "@/lib/historicalPlayerSlugOverrides"
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import { MANUAL_YAHOO_TO_NPB } from "@/lib/yahooNpbBatterIdMap.manual"
+import { resolveNpbPlayerIdFromPublicId } from "@/lib/yahooNpbBatterIdMap"
 
 export type PlayerPageSection =
   | "basic"
@@ -139,11 +140,13 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
 
 export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   const publicId = String(link.playerId ?? "").trim()
+  const resolvedPublicId = resolveNpbPlayerIdFromPublicId(publicId)
   const npbIdCandidates = [
     String(link.npbPlayerId ?? "").trim(),
+    resolvedPublicId,
     MANUAL_YAHOO_TO_NPB[publicId]?.trim() ?? "",
     publicId,
-  ].filter(Boolean)
+  ].filter((value, index, arr) => Boolean(value) && arr.indexOf(value) === index)
 
   // Historical IDs are authoritative. Resolve them before any current-roster
   // fallback because short roman names such as "S.Abe" are not unique.
@@ -156,14 +159,10 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
     if (rosterSlug) return rosterSlug
   }
 
-  const historicalSlug =
-    historicalSlugOverrideByName(link.name)?.slug ?? historicalSlugOverrideByRoman(link.romanName)?.slug
-  if (historicalSlug) return historicalSlug
-
-  // Ranking rows from prior seasons must not be resolved against the 2026
-  // roster by name or abbreviated roman name.
   const season = String(link.season ?? "").trim()
-  if (season && season !== "2026") return null
+  const historicalNameSlug = historicalSlugOverrideByName(link.name)?.slug
+  const historicalRomanSlug = historicalSlugOverrideByRoman(link.romanName)?.slug
+  if (season && season !== "2026") return historicalNameSlug ?? historicalRomanSlug ?? null
 
   const strippedLinkName = stripLeadingRosterInitialJa(link.name ?? "")
   const currentRosterNameSlug =
@@ -174,7 +173,7 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   if (currentRosterNameSlug) return currentRosterNameSlug
   const currentRosterRomanSlug = currentRosterSlugByRoman.get(slugifyPlayerRomanName(link.romanName || ""))
   if (currentRosterRomanSlug) return currentRosterRomanSlug
-  return null
+  return historicalNameSlug ?? historicalRomanSlug ?? null
 }
 
 export function playerPageHref(
