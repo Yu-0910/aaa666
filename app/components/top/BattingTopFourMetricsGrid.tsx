@@ -98,7 +98,7 @@ function MetricPanel({
   const borderClass = bordered ? "border border-[#555]" : ""
 
   return (
-    <div className={`top-page-table-shell bg-black ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
+    <div className={`top-page-table-shell bg-[#1f1f1f] ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
       <div className={`relative mb-1 flex ${typography.metricHeaderMinH} items-center`}>
         <Link
           href={getRankingUrl(metric)}
