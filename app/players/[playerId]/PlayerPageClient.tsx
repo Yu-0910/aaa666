@@ -1932,7 +1932,9 @@ export function PlayerPageClient({
           }
           style={
             careerSubTabTightLayout
-              ? careerProfileScaleShellStyle()
+              ? showPitcherSeasonSuganoUi
+                ? undefined
+                : careerProfileScaleShellStyle()
               : showSeasonSubTabPinLayout
                 ? undefined
                 : normalFlowProfileScaleStyle
