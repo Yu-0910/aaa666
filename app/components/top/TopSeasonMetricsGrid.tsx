@@ -89,11 +89,11 @@ function MetricPanel({
 
   const statsListBgClass = isWeeklyTab ? "bg-transparent" : "bg-black"
   const statsListClass = `relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
-  const panelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
+  const panelClass = "top-page-table-shell rounded p-1 min-w-0 h-full flex flex-col overflow-hidden"
   const panelBgClass = isWeeklyTab ? "bg-[#1b1b1b]" : "bg-[#1f1f1f]"
 
   return (
-    <div className={`${panelBgClass} border border-[#555] rounded-lg relative min-w-0 ${panelClass}`}>
+    <div className={`${panelBgClass} border border-[#555] relative min-w-0 ${panelClass}`}>
       <div className={`relative mb-1 flex ${typography.metricHeaderMinH} items-center`}>
         <Link
           href={getRankingUrl(metricKey)}
