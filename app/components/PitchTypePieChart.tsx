@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -382,24 +382,6 @@ export default function PitchTypePieChart({
 
   const animationKey = isAnimationActive ? dataSignature : "static"
 
-  useEffect(() => {
-    const chartBox = chartBoxRef.current
-    chartBox?.classList.remove("pitch-donut-arc-running")
-    if (!chartBox || !isAnimationActive) return
-
-    let secondFrame = 0
-    const firstFrame = window.requestAnimationFrame(() => {
-      secondFrame = window.requestAnimationFrame(() => {
-        chartBox.classList.add("pitch-donut-arc-running")
-      })
-    })
-    return () => {
-      window.cancelAnimationFrame(firstFrame)
-      window.cancelAnimationFrame(secondFrame)
-      chartBox.classList.remove("pitch-donut-arc-running")
-    }
-  }, [dataSignature, isAnimationActive])
-
   if (!data.length) return null
 
   return (
@@ -417,7 +399,7 @@ export default function PitchTypePieChart({
       ) : null}
       <div
         ref={chartBoxRef}
-        className={`relative flex w-full justify-center${isAnimationActive ? " pitch-donut-arc-reveal" : ""}`}
+        className="relative flex w-full justify-center"
         style={{ height: chartHeight, aspectRatio: compact ? "1 / 1" : undefined }}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -436,7 +418,7 @@ export default function PitchTypePieChart({
               dataKey="value"
               label={renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={false}
+              isAnimationActive={isAnimationActive}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}
