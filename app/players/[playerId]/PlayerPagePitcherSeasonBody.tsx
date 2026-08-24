@@ -848,8 +848,8 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           <div
                             className={
                               leftRows.length > 0 && rightRows.length > 0
-                                ? "grid w-full grid-cols-2 justify-items-center gap-x-2 sm:gap-x-8"
-                                : "flex w-full justify-center"
+                                ? "animate-in fade-in-0 zoom-in-95 duration-200 grid w-full grid-cols-2 justify-items-center gap-x-2 sm:gap-x-8"
+                                : "animate-in fade-in-0 zoom-in-95 duration-200 flex w-full justify-center"
                             }
                           >
                             {leftRows.length > 0 ? (
