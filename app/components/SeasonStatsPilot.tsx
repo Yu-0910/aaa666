@@ -813,10 +813,10 @@ export default function SeasonStatsPilot({
               </h2>
               {pitchTypeColorOrder.length > 0 ? (
                 <>
-                  <div className="season-pitch-type-chart-list grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="season-pitch-type-chart-list flex flex-row flex-wrap items-start justify-center gap-2 w-full">
                     {pitchTypeHandCards.map((item) =>
                       item.rows.length > 0 ? (
-                        <div key={`chart-${item.key}`} className="season-pitch-chart-panel min-w-0">
+                        <div key={`chart-${item.key}`} className="season-pitch-chart-panel w-[11rem] max-w-full shrink-0">
                           <div className="flex w-full justify-center">
                             <PitchTypePieChart
                               title={item.title}
@@ -828,6 +828,7 @@ export default function SeasonStatsPilot({
                               centerStats={centerStatsForPitcherHand(item.key)}
                               pitchTypeColorOrder={pitchTypeColorOrder}
                               compact
+                              sizeScale={0.85}
                               isAnimationActive={animatePitchCharts}
                             />
                           </div>
