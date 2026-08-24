@@ -866,7 +866,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                             {leftRows.length > 0 ? (
                               <div
                                 key={`pitch-vs-l-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
-                                className={`w-[11rem] max-w-full shrink-0${animatePitchCharts ? " pitch-type-side-panel-emerge" : ""}`}
+                                className="w-full min-w-0"
                               >
                                 <PitchTypePieChart
                                   title="対左"
@@ -875,14 +875,14 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   pitchTypeColorOrder={colorOrder}
                                   compact
                                   sizeScale={0.85}
-                                  isAnimationActive={false}
+                                  isAnimationActive={animatePitchCharts}
                                 />
                               </div>
                             ) : null}
                             {rightRows.length > 0 ? (
                               <div
                                 key={`pitch-vs-r-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
-                                className={`w-[11rem] max-w-full shrink-0${animatePitchCharts ? " pitch-type-side-panel-emerge" : ""}`}
+                                className="w-full min-w-0"
                               >
                                 <PitchTypePieChart
                                   title="対右"
@@ -891,7 +891,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   pitchTypeColorOrder={colorOrder}
                                   compact
                                   sizeScale={0.85}
-                                  isAnimationActive={false}
+                                  isAnimationActive={animatePitchCharts}
                                 />
                               </div>
                             ) : null}
