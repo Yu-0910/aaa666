@@ -827,7 +827,7 @@
     #000 0deg var(--pitch-donut-reveal-angle),
     transparent var(--pitch-donut-reveal-angle) 360deg
   );
-  animation: pitch-donut-arc-reveal 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pitch-donut-arc-reveal 1000ms linear both;
 }
 
 @keyframes pitch-type-side-panel-emerge {

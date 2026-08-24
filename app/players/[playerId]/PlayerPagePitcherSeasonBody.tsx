@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
@@ -164,6 +164,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     isItoDaiyaPage = false,
     pitcherPcTableCssPilot = false,
   } = props
+
+  useEffect(() => {
+    void import("@/app/components/PitchTypePieChart")
+  }, [])
 
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
