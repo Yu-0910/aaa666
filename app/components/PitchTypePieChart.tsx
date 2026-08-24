@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -381,6 +381,24 @@ export default function PitchTypePieChart({
   const insideTextScale = labelScale * chartFitScale
 
   const animationKey = isAnimationActive ? dataSignature : "static"
+
+  useEffect(() => {
+    const chartBox = chartBoxRef.current
+    chartBox?.classList.remove("pitch-donut-arc-running")
+    if (!chartBox || !isAnimationActive) return
+
+    let secondFrame = 0
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        chartBox.classList.add("pitch-donut-arc-running")
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.cancelAnimationFrame(secondFrame)
+      chartBox.classList.remove("pitch-donut-arc-running")
+    }
+  }, [dataSignature, isAnimationActive])
 
   if (!data.length) return null
 

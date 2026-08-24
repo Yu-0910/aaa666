@@ -827,7 +827,11 @@
     #000 0deg var(--pitch-donut-reveal-angle),
     transparent var(--pitch-donut-reveal-angle) 360deg
   );
-  animation: pitch-donut-arc-reveal 1000ms linear both;
+  animation: pitch-donut-arc-reveal 900ms cubic-bezier(0.22, 1, 0.36, 1) both paused;
+}
+
+.pitch-donut-arc-reveal.pitch-donut-arc-running .recharts-surface {
+  animation-play-state: running;
 }
 
 @keyframes pitch-type-side-panel-emerge {
