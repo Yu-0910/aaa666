@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
@@ -165,7 +165,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     pitcherPcTableCssPilot = false,
   } = props
 
-  const [vsHandChartRevealGeneration, setVsHandChartRevealGeneration] = useState(0)
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
   const pitcherBasicCards = useMemo(
@@ -237,20 +236,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
         : EMPTY_STADIUM_VS_ROWS,
     [pitcherSeasonPocPayload],
   )
-  const pitchChartRowsSignature = useMemo(() => {
-    const rows = pitcherSeasonPitchTypesPayload?.rows ?? []
-    return rows
-      .map((row) => `${String(row.pitch_type)}:${String(row.pct)}:${String(row.pitches)}`)
-      .join("|")
-  }, [pitcherSeasonPitchTypesPayload?.rows])
-
-  useEffect(() => {
-    if (pitcherSeasonSubTab !== "pitch" || !pitchChartRowsSignature || !animatePitchCharts) {
-      return
-    }
-    setVsHandChartRevealGeneration((prev) => prev + 1)
-  }, [animatePitchCharts, pitchChartRowsSignature, pitcherSeasonSubTab])
-
   return (
     <div className={seasonNumericFontClass}>
                 <DerivedPipelineEmptyNotice
@@ -865,7 +850,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                           >
                             {leftRows.length > 0 ? (
                               <div
-                                key={`pitch-vs-l-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
                                 className="w-full min-w-0"
                               >
                                 <PitchTypePieChart
@@ -874,14 +858,12 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
                                   pitchTypeColorOrder={colorOrder}
                                   compact
-                                  sizeScale={0.85}
                                   isAnimationActive={animatePitchCharts}
                                 />
                               </div>
                             ) : null}
                             {rightRows.length > 0 ? (
                               <div
-                                key={`pitch-vs-r-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
                                 className="w-full min-w-0"
                               >
                                 <PitchTypePieChart
@@ -890,7 +872,6 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
                                   pitchTypeColorOrder={colorOrder}
                                   compact
-                                  sizeScale={0.85}
                                   isAnimationActive={animatePitchCharts}
                                 />
                               </div>
