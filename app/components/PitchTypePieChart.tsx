@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -349,8 +349,6 @@ export default function PitchTypePieChart({
 }: Props) {
   const chartBoxRef = useRef<HTMLDivElement>(null)
   const [boxWidth, setBoxWidth] = useState(0)
-  const [animationEpoch, setAnimationEpoch] = useState(0)
-  const [shouldAnimate, setShouldAnimate] = useState(false)
 
   useLayoutEffect(() => {
     if (!compact) return
@@ -367,7 +365,6 @@ export default function PitchTypePieChart({
   const data = chartRows.map((r) => ({ name: r.pitch_type, value: r.pct }))
   const colorOrder =
     pitchTypeColorOrder ?? rows.map((r) => r.pitch_type)
-  const chartReady = !compact || boxWidth > 0
   const dataSignature = chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
   const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
   const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
@@ -383,29 +380,7 @@ export default function PitchTypePieChart({
     compact && designHeight > 0 && chartSide > 0 ? chartSide / designHeight : 1
   const insideTextScale = labelScale * chartFitScale
 
-  useEffect(() => {
-    if (!chartReady || !isAnimationActive || !dataSignature) {
-      setShouldAnimate(false)
-      return
-    }
-    setShouldAnimate(true)
-    setAnimationEpoch((prev) => prev + 1)
-  }, [chartReady, dataSignature, isAnimationActive])
-
-  useEffect(() => {
-    if (!shouldAnimate) return
-    const timeoutId = window.setTimeout(() => {
-      setShouldAnimate(false)
-    }, PIE_ANIMATION_DURATION_MS + 40)
-    return () => window.clearTimeout(timeoutId)
-  }, [shouldAnimate])
-
-  const chartAnimationActive = shouldAnimate && chartReady
-  const animationKey = chartAnimationActive
-    ? `anim:${animationEpoch}:${dataSignature}`
-    : `static:${dataSignature}`
-  const suppressInitialStaticPaint =
-    Boolean(isAnimationActive) && !shouldAnimate && animationEpoch === 0
+  const animationKey = isAnimationActive ? dataSignature : "static"
 
   if (!data.length) return null
 
@@ -427,7 +402,6 @@ export default function PitchTypePieChart({
         className="relative flex w-full justify-center"
         style={{ height: chartHeight, aspectRatio: compact ? "1 / 1" : undefined }}
       >
-      {!suppressInitialStaticPaint ? (
         <ResponsiveContainer width="100%" height={chartHeight}>
           <PieChart>
             <Pie
@@ -444,7 +418,7 @@ export default function PitchTypePieChart({
               dataKey="value"
               label={renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={chartAnimationActive}
+              isAnimationActive={isAnimationActive}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}
@@ -482,7 +456,6 @@ export default function PitchTypePieChart({
             ) : null}
           </PieChart>
         </ResponsiveContainer>
-      ) : null}
       <DonutCenterPanel
         centerStats={centerStats}
         innerRadius={innerRadius}
