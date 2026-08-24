@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -349,6 +349,8 @@ export default function PitchTypePieChart({
 }: Props) {
   const chartBoxRef = useRef<HTMLDivElement>(null)
   const [boxWidth, setBoxWidth] = useState(0)
+  const [animationEpoch, setAnimationEpoch] = useState(0)
+  const [shouldAnimate, setShouldAnimate] = useState(false)
 
   useLayoutEffect(() => {
     if (!compact) return
@@ -366,10 +368,7 @@ export default function PitchTypePieChart({
   const colorOrder =
     pitchTypeColorOrder ?? rows.map((r) => r.pitch_type)
   const chartReady = !compact || boxWidth > 0
-  const chartAnimationActive = isAnimationActive && chartReady
-  const animationKey = chartAnimationActive
-    ? chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
-    : "static"
+  const dataSignature = chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
   const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
   const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
   const chartSide =
@@ -383,6 +382,28 @@ export default function PitchTypePieChart({
   const chartFitScale =
     compact && designHeight > 0 && chartSide > 0 ? chartSide / designHeight : 1
   const insideTextScale = labelScale * chartFitScale
+
+  useEffect(() => {
+    if (!chartReady || !isAnimationActive || !dataSignature) {
+      setShouldAnimate(false)
+      return
+    }
+    setShouldAnimate(true)
+    setAnimationEpoch((prev) => prev + 1)
+  }, [chartReady, dataSignature, isAnimationActive])
+
+  useEffect(() => {
+    if (!shouldAnimate) return
+    const timeoutId = window.setTimeout(() => {
+      setShouldAnimate(false)
+    }, PIE_ANIMATION_DURATION_MS + 40)
+    return () => window.clearTimeout(timeoutId)
+  }, [shouldAnimate])
+
+  const chartAnimationActive = shouldAnimate && chartReady
+  const animationKey = chartAnimationActive
+    ? `anim:${animationEpoch}:${dataSignature}`
+    : `static:${dataSignature}`
 
   if (!data.length) return null
 
