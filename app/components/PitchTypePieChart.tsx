@@ -366,6 +366,8 @@ export default function PitchTypePieChart({
   const colorOrder =
     pitchTypeColorOrder ?? rows.map((r) => r.pitch_type)
   const dataSignature = chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
+  const chartReady = !compact || boxWidth > 0
+  const chartAnimationActive = isAnimationActive && chartReady
   const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
   const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
   const chartSide =
@@ -380,7 +382,7 @@ export default function PitchTypePieChart({
     compact && designHeight > 0 && chartSide > 0 ? chartSide / designHeight : 1
   const insideTextScale = labelScale * chartFitScale
 
-  const animationKey = isAnimationActive ? dataSignature : "static"
+  const animationKey = chartAnimationActive ? dataSignature : "static"
 
   if (!data.length) return null
 
@@ -418,7 +420,7 @@ export default function PitchTypePieChart({
               dataKey="value"
               label={renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={isAnimationActive}
+              isAnimationActive={chartAnimationActive}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}
