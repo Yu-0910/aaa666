@@ -165,7 +165,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     pitcherPcTableCssPilot = false,
   } = props
 
-  const [vsHandChartsOpen, setVsHandChartsOpen] = useState(false)
+  const [vsHandChartRevealGeneration, setVsHandChartRevealGeneration] = useState(0)
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
   const pitcherBasicCards = useMemo(
@@ -245,26 +245,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
   }, [pitcherSeasonPitchTypesPayload?.rows])
 
   useEffect(() => {
-    if (pitcherSeasonSubTab !== "pitch" || !pitchChartRowsSignature) {
-      setVsHandChartsOpen(false)
+    if (pitcherSeasonSubTab !== "pitch" || !pitchChartRowsSignature || !animatePitchCharts) {
       return
     }
-    if (!animatePitchCharts) {
-      setVsHandChartsOpen(true)
-      return
-    }
-    setVsHandChartsOpen(false)
-    let rafId1 = 0
-    let rafId2 = 0
-    rafId1 = window.requestAnimationFrame(() => {
-      rafId2 = window.requestAnimationFrame(() => {
-        setVsHandChartsOpen(true)
-      })
-    })
-    return () => {
-      window.cancelAnimationFrame(rafId1)
-      window.cancelAnimationFrame(rafId2)
-    }
+    setVsHandChartRevealGeneration((prev) => prev + 1)
   }, [animatePitchCharts, pitchChartRowsSignature, pitcherSeasonSubTab])
 
   return (
@@ -872,42 +856,46 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               : "mb-4 w-full"
                           }
                         >
-                          {vsHandChartsOpen ? (
-                            <div
-                              className={
-                                leftRows.length > 0 && rightRows.length > 0
-                                  ? "grid w-full grid-cols-2 justify-items-center gap-x-2 sm:gap-x-8"
-                                  : "flex w-full justify-center"
-                              }
-                            >
-                              {leftRows.length > 0 ? (
-                                <div className="w-[11rem] max-w-full shrink-0">
-                                  <PitchTypePieChart
-                                    title="対左"
-                                    rows={leftRows}
-                                    centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
-                                    pitchTypeColorOrder={colorOrder}
-                                    compact
-                                    sizeScale={0.85}
-                                    isAnimationActive={vsHandChartsOpen}
-                                  />
-                                </div>
-                              ) : null}
-                              {rightRows.length > 0 ? (
-                                <div className="w-[11rem] max-w-full shrink-0">
-                                  <PitchTypePieChart
-                                    title="対右"
-                                    rows={rightRows}
-                                    centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
-                                    pitchTypeColorOrder={colorOrder}
-                                    compact
-                                    sizeScale={0.85}
-                                    isAnimationActive={vsHandChartsOpen}
-                                  />
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : null}
+                          <div
+                            className={
+                              leftRows.length > 0 && rightRows.length > 0
+                                ? "grid w-full grid-cols-2 justify-items-center gap-x-2 sm:gap-x-8"
+                                : "flex w-full justify-center"
+                            }
+                          >
+                            {leftRows.length > 0 ? (
+                              <div
+                                key={`pitch-vs-l-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
+                                className={`w-[11rem] max-w-full shrink-0${animatePitchCharts ? " pitch-type-side-panel-emerge" : ""}`}
+                              >
+                                <PitchTypePieChart
+                                  title="対左"
+                                  rows={leftRows}
+                                  centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
+                                  pitchTypeColorOrder={colorOrder}
+                                  compact
+                                  sizeScale={0.85}
+                                  isAnimationActive={false}
+                                />
+                              </div>
+                            ) : null}
+                            {rightRows.length > 0 ? (
+                              <div
+                                key={`pitch-vs-r-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
+                                className={`w-[11rem] max-w-full shrink-0${animatePitchCharts ? " pitch-type-side-panel-emerge" : ""}`}
+                              >
+                                <PitchTypePieChart
+                                  title="対右"
+                                  rows={rightRows}
+                                  centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
+                                  pitchTypeColorOrder={colorOrder}
+                                  compact
+                                  sizeScale={0.85}
+                                  isAnimationActive={false}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
                           <PitchTypeChartLegend
                             pitchTypes={colorOrder}
                             pitchTypeColorOrder={colorOrder}
