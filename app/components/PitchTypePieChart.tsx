@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -349,6 +349,7 @@ export default function PitchTypePieChart({
 }: Props) {
   const chartBoxRef = useRef<HTMLDivElement>(null)
   const [boxWidth, setBoxWidth] = useState(0)
+  const [animationProgress, setAnimationProgress] = useState(0)
 
   useLayoutEffect(() => {
     if (!compact) return
@@ -380,7 +381,28 @@ export default function PitchTypePieChart({
     compact && designHeight > 0 && chartSide > 0 ? chartSide / designHeight : 1
   const insideTextScale = labelScale * chartFitScale
 
+  useEffect(() => {
+    if (!isAnimationActive || !dataSignature) {
+      setAnimationProgress(1)
+      return
+    }
+
+    let frameId = 0
+    const startedAt = performance.now()
+    setAnimationProgress(0)
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / PIE_ANIMATION_DURATION_MS)
+      setAnimationProgress(progress)
+      if (progress < 1) frameId = requestAnimationFrame(tick)
+    }
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
+  }, [dataSignature, isAnimationActive])
+
   const animationKey = isAnimationActive ? dataSignature : "static"
+  const chartData = isAnimationActive
+    ? data.map((item) => ({ ...item, value: item.value * animationProgress }))
+    : data
 
   if (!data.length) return null
 
@@ -406,7 +428,7 @@ export default function PitchTypePieChart({
           <PieChart>
             <Pie
               key={animationKey}
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               startAngle={PIE_START_ANGLE}
@@ -418,7 +440,7 @@ export default function PitchTypePieChart({
               dataKey="value"
               label={renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={isAnimationActive}
+              isAnimationActive={false}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}
