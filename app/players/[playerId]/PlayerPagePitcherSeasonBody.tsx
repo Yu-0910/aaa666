@@ -863,6 +863,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   pitchTypeColorOrder={colorOrder}
                                   compact
                                   isAnimationActive={animatePitchCharts}
+                                  manualArcAnimation
                                 />
                               </div>
                             ) : null}
@@ -877,6 +878,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                                   pitchTypeColorOrder={colorOrder}
                                   compact
                                   isAnimationActive={animatePitchCharts}
+                                  manualArcAnimation
                                 />
                               </div>
                             ) : null}

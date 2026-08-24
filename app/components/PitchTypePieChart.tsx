@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 type Row = {
@@ -34,6 +34,8 @@ type Props = {
   labelScale?: number
   /** Recharts の描画アニメーション */
   isAnimationActive?: boolean
+  /** Recharts の内部補間が開始しない画面向けに、円弧角度を直接補間する */
+  manualArcAnimation?: boolean
 }
 
 const FONT_FAMILY = '"Inter", sans-serif'
@@ -82,6 +84,25 @@ const PIE_START_ANGLE = 90
 const PIE_END_ANGLE = PIE_START_ANGLE - 360
 const PIE_ANIMATION_DURATION_MS = 900
 const PIE_ANIMATION_EASING = "ease-out"
+
+function cubicBezierCoordinate(t: number, first: number, second: number): number {
+  const inverse = 1 - t
+  return 3 * inverse * inverse * t * first + 3 * inverse * t * t * second + t * t * t
+}
+
+function easeOutProgress(progress: number): number {
+  let parameter = progress
+  for (let index = 0; index < 8; index += 1) {
+    const x = cubicBezierCoordinate(parameter, 0.42, 0.58) - progress
+    const derivative =
+      3 * (1 - parameter) * (1 - parameter) * 0.42 +
+      6 * (1 - parameter) * parameter * (0.58 - 0.42) +
+      3 * parameter * parameter * (1 - 0.58)
+    if (Math.abs(x) < 0.0001 || derivative < 0.0001) break
+    parameter = Math.max(0, Math.min(1, parameter - x / derivative))
+  }
+  return cubicBezierCoordinate(parameter, 0, 1)
+}
 /**
  * 対左・対右見出し（CHART_SCALE とは独立）。
  * compact 時 1.0 ≒ 11px。0.1 刻みだと丸めで数 px しか変わらないことがある。
@@ -346,9 +367,11 @@ export default function PitchTypePieChart({
   sizeScale = 1,
   labelScale = 1,
   isAnimationActive = true,
+  manualArcAnimation = false,
 }: Props) {
   const chartBoxRef = useRef<HTMLDivElement>(null)
   const [boxWidth, setBoxWidth] = useState(0)
+  const [manualProgress, setManualProgress] = useState(0)
 
   useLayoutEffect(() => {
     if (!compact) return
@@ -368,6 +391,7 @@ export default function PitchTypePieChart({
   const dataSignature = chartRows.map((r) => `${r.pitch_type}:${r.pct}`).join("|")
   const chartReady = !compact || boxWidth > 0
   const chartAnimationActive = isAnimationActive && chartReady
+  const manualAnimationActive = manualArcAnimation && chartAnimationActive
   const designHeight = Math.round(chartPx(compact, 200, 260) * sizeScale)
   const designOuter = Math.round(chartPx(compact, 72, 96) * sizeScale)
   const chartSide =
@@ -383,6 +407,29 @@ export default function PitchTypePieChart({
   const insideTextScale = labelScale * chartFitScale
 
   const animationKey = chartAnimationActive ? dataSignature : "static"
+  const animatedEndAngle = manualAnimationActive
+    ? PIE_START_ANGLE + (PIE_END_ANGLE - PIE_START_ANGLE) * easeOutProgress(manualProgress)
+    : PIE_END_ANGLE
+
+  useEffect(() => {
+    if (!manualAnimationActive || !dataSignature) return
+
+    let frameId = 0
+    let lastTimestamp = 0
+    let progress = 0
+    setManualProgress(0)
+    const tick = (timestamp: number) => {
+      if (lastTimestamp > 0) {
+        const elapsed = Math.min(timestamp - lastTimestamp, 32)
+        progress = Math.min(1, progress + elapsed / PIE_ANIMATION_DURATION_MS)
+        setManualProgress(progress)
+      }
+      lastTimestamp = timestamp
+      if (progress < 1) frameId = window.requestAnimationFrame(tick)
+    }
+    frameId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(frameId)
+  }, [dataSignature, manualAnimationActive])
 
   if (!data.length) return null
 
@@ -412,15 +459,15 @@ export default function PitchTypePieChart({
               cx="50%"
               cy="50%"
               startAngle={PIE_START_ANGLE}
-              endAngle={PIE_END_ANGLE}
+              endAngle={animatedEndAngle}
               clockwise
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               paddingAngle={2}
               dataKey="value"
-              label={renderDonutPctLabel(compact, insideTextScale)}
+              label={manualAnimationActive && manualProgress < 1 ? false : renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={chartAnimationActive}
+              isAnimationActive={manualAnimationActive ? false : chartAnimationActive}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}
