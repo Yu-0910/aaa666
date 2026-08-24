@@ -259,9 +259,6 @@ export function PlayerPageClient({
   const [statsTab, setStatsTab] = useState<"season" | "career">("season")
   /** 投手「今季の成績」4タブ（PoC シェル）。将来のAPI連携で値を差し替え可能 */
   const [pitcherSeasonSubTab, setPitcherSeasonSubTab] = useState<PitcherSeasonSubTab>("basic")
-  /** 球種情報タブを一度離れたら再訪時はグラフアニメーションを抑止（Strict Mode の effect cleanup では立てない） */
-  const pitchTabChartsSeenRef = useRef(false)
-  const prevPitcherSeasonSubTabRef = useRef<PitcherSeasonSubTab>(pitcherSeasonSubTab)
   const [pitchTypeVsHandPanels, setPitchTypeVsHandPanels] =
     useState<PitchTypeVsHandPanelsOpenState>(EMPTY_PITCH_TYPE_VS_HAND_PANELS)
   /** 投手通算タブ（大野パイロット等）: 通算成績 / キャリアハイ */
@@ -390,20 +387,7 @@ export function PlayerPageClient({
     router.replace(`/players/${npb}${qs}`)
   }, [canonicalPlayerNpbId, playerIdNormalized, clientSearch, router])
 
-  useEffect(() => {
-    pitchTabChartsSeenRef.current = false
-    prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
-    // playerIdNormalized のみ: サブタブ切替では「既に球種タブを見た」フラグを維持する
-  }, [playerIdNormalized])
-  useEffect(() => {
-    const prev = prevPitcherSeasonSubTabRef.current
-    if (prev === "pitch" && pitcherSeasonSubTab !== "pitch") {
-      pitchTabChartsSeenRef.current = true
-    }
-    prevPitcherSeasonSubTabRef.current = pitcherSeasonSubTab
-  }, [pitcherSeasonSubTab])
-  const animatePitchCharts =
-    pitcherSeasonSubTab === "pitch" && !pitchTabChartsSeenRef.current
+  const animatePitchCharts = pitcherSeasonSubTab === "pitch"
 
   useLayoutEffect(() => {
     setRosterMainReady(false)
