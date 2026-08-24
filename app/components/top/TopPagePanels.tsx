@@ -135,6 +135,7 @@ export function LeadersPanel({
   const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory, isWeeklyTab)
   const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory, isWeeklyTab)
   const rowTypography = topLeaderRowTypography(year, statsCategory, isWeeklyTab)
+  const statsListBgClass = isWeeklyTab ? "bg-transparent" : "bg-black"
   const isTopBattingModern = usesTopBattingModernLayout(year, isWeeklyTab) && statsCategory === "batting"
   const isTopPitchingModern = usesTopPitchingModernLayout(year, isWeeklyTab) && statsCategory === "pitching"
   const panelBgClass = isWeeklyTab ? "bg-[#1b1b1b]" : "bg-[#1f1f1f]"
@@ -221,7 +222,7 @@ export function LeadersPanel({
                     </Link>
                     <Link
                       href={getStatsListUrl(metric)}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                      className={`relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
                     </Link>
@@ -257,7 +258,7 @@ export function LeadersPanel({
                 </Link>
                 <Link
                   href={getStatsListUrl(data.top3Metrics[2]!)}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                  className={`relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
                 </Link>
@@ -295,7 +296,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -310,7 +311,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`${statsListBgClass} py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -354,7 +355,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -373,7 +374,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`${statsListBgClass} py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
