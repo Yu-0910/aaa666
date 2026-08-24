@@ -70,6 +70,7 @@ function MetricPanel({
   metric,
   leaders,
   year,
+  isWeeklyTab,
   getRankingUrl,
   getStatsListUrl,
   onStatsListNavigate,
@@ -81,6 +82,7 @@ function MetricPanel({
   metric: string
   leaders: Record<string, unknown[] | undefined>
   year: number
+  isWeeklyTab: boolean
   getRankingUrl: (metric: string) => string
   getStatsListUrl: (metric: string) => string
   onStatsListNavigate?: (url: string) => void
@@ -96,9 +98,10 @@ function MetricPanel({
 
   const statsListClass = `relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
   const borderClass = bordered ? "border border-[#555]" : ""
+  const panelBgClass = isWeeklyTab ? "bg-[#1b1b1b]" : "bg-[#1f1f1f]"
 
   return (
-    <div className={`top-page-table-shell bg-[#1f1f1f] ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
+    <div className={`top-page-table-shell ${panelBgClass} ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
       <div className={`relative mb-1 flex ${typography.metricHeaderMinH} items-center`}>
         <Link
           href={getRankingUrl(metric)}
@@ -169,6 +172,7 @@ export function BattingTopFourMetricsGrid({
                   metric={metric}
                   leaders={displayLeaders}
                   year={year}
+                  isWeeklyTab={isWeeklyTab}
                   getRankingUrl={getRankingUrl}
                   getStatsListUrl={getStatsListUrl}
                   onStatsListNavigate={onStatsListNavigate}
@@ -194,6 +198,7 @@ export function BattingTopFourMetricsGrid({
               metric={metric}
               leaders={leaders}
               year={year}
+              isWeeklyTab={isWeeklyTab}
               getRankingUrl={getRankingUrl}
               getStatsListUrl={getStatsListUrl}
               onStatsListNavigate={onStatsListNavigate}
