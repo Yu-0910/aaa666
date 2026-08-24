@@ -165,7 +165,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     pitcherPcTableCssPilot = false,
   } = props
 
-  const [showVsHandCharts, setShowVsHandCharts] = useState(false)
+  const [vsHandChartRevealGeneration, setVsHandChartRevealGeneration] = useState(0)
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
   const pitcherBasicCards = useMemo(
@@ -245,19 +245,10 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
   }, [pitcherSeasonPitchTypesPayload?.rows])
 
   useEffect(() => {
-    if (pitcherSeasonSubTab !== "pitch" || !pitchChartRowsSignature) {
-      setShowVsHandCharts(false)
+    if (pitcherSeasonSubTab !== "pitch" || !pitchChartRowsSignature || !animatePitchCharts) {
       return
     }
-    if (!animatePitchCharts) {
-      setShowVsHandCharts(true)
-      return
-    }
-    setShowVsHandCharts(false)
-    const timeoutId = window.setTimeout(() => {
-      setShowVsHandCharts(true)
-    }, 40)
-    return () => window.clearTimeout(timeoutId)
+    setVsHandChartRevealGeneration((prev) => prev + 1)
   }, [animatePitchCharts, pitchChartRowsSignature, pitcherSeasonSubTab])
 
   return (
@@ -865,29 +856,32 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                               : "mb-4 w-full"
                           }
                         >
-                          <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
-                            {showVsHandCharts && rightRows.length > 0 ? (
+                          <div
+                            key={`pitch-vs-hand-${vsHandChartRevealGeneration}-${pitchChartRowsSignature}`}
+                            className={
+                              animatePitchCharts ? "pitch-type-side-panel-emerge flex flex-row flex-wrap items-start justify-center gap-2 w-full" : "flex flex-row flex-wrap items-start justify-center gap-2 w-full"
+                            }
+                          >
+                            {rightRows.length > 0 ? (
                               <PitchTypePieChart
-                                key={`pitch-vs-r-${pitchChartRowsSignature}`}
                                 title="対右"
                                 rows={rightRows}
                                 centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
                                 pitchTypeColorOrder={colorOrder}
                                 compact
                                 sizeScale={0.85}
-                                isAnimationActive
+                                isAnimationActive={false}
                               />
                             ) : null}
-                            {showVsHandCharts && leftRows.length > 0 ? (
+                            {leftRows.length > 0 ? (
                               <PitchTypePieChart
-                                key={`pitch-vs-l-${pitchChartRowsSignature}`}
                                 title="対左"
                                 rows={leftRows}
                                 centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
                                 pitchTypeColorOrder={colorOrder}
                                 compact
                                 sizeScale={0.85}
-                                isAnimationActive
+                                isAnimationActive={false}
                               />
                             ) : null}
                           </div>
