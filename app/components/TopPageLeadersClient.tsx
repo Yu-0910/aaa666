@@ -287,7 +287,7 @@ export default function TopPageLeadersClient({
                         }
                         router.push(url)
                       }}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                      className={`relative z-20 ml-auto shrink-0 !bg-transparent py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                     >
                       成績一覧
                     </button>
@@ -331,7 +331,7 @@ export default function TopPageLeadersClient({
                     }
                     router.push(url)
                   }}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                  className={`relative z-20 ml-auto shrink-0 !bg-transparent py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                 >
                   成績一覧
                 </button>
@@ -377,7 +377,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`relative z-20 ml-auto shrink-0 !bg-transparent py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -400,7 +400,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`!bg-transparent py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -452,7 +452,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`relative z-20 ml-auto shrink-0 !bg-transparent py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -479,7 +479,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`!bg-transparent py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>

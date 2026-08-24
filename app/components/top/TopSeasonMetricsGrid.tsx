@@ -87,7 +87,7 @@ function MetricPanel({
   if (!rows?.length) return null
   const displayRows = topN != null ? rows.slice(0, topN) : rows
 
-  const statsListBgClass = isWeeklyTab ? "!bg-[#1b1b1b]" : "bg-black"
+  const statsListBgClass = "!bg-transparent"
   const statsListClass = `relative z-20 ml-auto shrink-0 ${statsListBgClass} py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
   const panelClass = "top-page-table-shell rounded p-1 min-w-0 h-full flex flex-col overflow-hidden"
   const panelBgClass = isWeeklyTab ? "bg-[#1b1b1b]" : "bg-[#1f1f1f]"
