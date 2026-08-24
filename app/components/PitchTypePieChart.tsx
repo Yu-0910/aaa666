@@ -399,7 +399,7 @@ export default function PitchTypePieChart({
       ) : null}
       <div
         ref={chartBoxRef}
-        className={`relative flex w-full justify-center${isAnimationActive ? " pitch-donut-entry" : ""}`}
+        className="relative flex w-full justify-center"
         style={{ height: chartHeight, aspectRatio: compact ? "1 / 1" : undefined }}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -418,7 +418,7 @@ export default function PitchTypePieChart({
               dataKey="value"
               label={renderDonutPctLabel(compact, insideTextScale)}
               labelLine={false}
-              isAnimationActive={false}
+              isAnimationActive={isAnimationActive}
               animationBegin={0}
               animationDuration={PIE_ANIMATION_DURATION_MS}
               animationEasing={PIE_ANIMATION_EASING}

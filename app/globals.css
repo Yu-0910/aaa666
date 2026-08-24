@@ -800,22 +800,6 @@
 }
 
 /* 投手個人ページ: 巡目別の下からカウント別球種一覧が続いて現れる */
-@keyframes pitch-donut-entry {
-  from {
-    opacity: 0.15;
-    transform: scale(0.2);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.pitch-donut-entry {
-  transform-origin: center;
-  animation: pitch-donut-entry 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 @keyframes pitch-type-side-panel-emerge {
   from {
     opacity: 0;
@@ -849,13 +833,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pitch-type-side-panel-emerge,
-  .pitch-donut-entry,
   .pitch-type-side-panel-reveal-grid {
     transition: none !important;
   }
 
   .pitch-type-side-panel-emerge,
-  .pitch-donut-entry,
   .pitch-type-side-row-emerge {
     animation: none !important;
   }
