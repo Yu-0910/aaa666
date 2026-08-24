@@ -218,8 +218,8 @@ export function TeamStandingsTable({
   return (
     <div
       ref={scrollContainerRef}
-      className="top-page-table-shell rounded border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full"
-      style={{ WebkitOverflowScrolling: "touch" }}
+      className="top-page-table-shell w-full min-w-0 rounded border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain max-w-full"
+      style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pinch-zoom" }}
     >
       <table
         className="border-collapse border-spacing-0 max-w-none"
@@ -448,7 +448,7 @@ export function StandingsLeagueSection({
   }
 
   return (
-    <section className="space-y-2">
+    <section className="min-w-0 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="shrink-0" style={{ width: "4px", height: "32px", backgroundColor: meta.color }} />

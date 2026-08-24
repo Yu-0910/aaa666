@@ -220,8 +220,8 @@ export function TopPageClient({
       {activeMainTab === 0 && <TopPageInstallButton layout={layout} />}
       {mainTabButtons}
 
-      <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
-        <div>{tabContentInner}</div>
+      <div className={isMobile ? "container mx-auto min-w-0 px-2 py-2" : "max-w-6xl mx-auto min-w-0 px-4 py-4"}>
+        <div className="min-w-0">{tabContentInner}</div>
       </div>
       {activeMainTab === 0 && (
         <RankingBottomNav activeView={topSeasonView} onViewChange={setTopSeasonView} />
