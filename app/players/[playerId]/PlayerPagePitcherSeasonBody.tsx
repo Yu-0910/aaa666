@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
 import DerivedPipelineEmptyNotice from "@/app/components/DerivedPipelineEmptyNotice"
@@ -165,6 +165,8 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
     pitcherPcTableCssPilot = false,
   } = props
 
+  const [vsHandChartEpoch, setVsHandChartEpoch] = useState(0)
+  const [vsHandChartAnimationEnabled, setVsHandChartAnimationEnabled] = useState(false)
   const pitcherSeasonFirstH2Class = `${tb} mb-4 pl-4`
   const seasonNumericFontClass = PITCHER_SEASON_CAREER_HIGH_NUMERICS_CLASS
   const pitcherBasicCards = useMemo(
@@ -236,6 +238,25 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
         : EMPTY_STADIUM_VS_ROWS,
     [pitcherSeasonPocPayload],
   )
+  const pitchChartRowsSignature = useMemo(() => {
+    const rows = pitcherSeasonPitchTypesPayload?.rows ?? []
+    return rows
+      .map((row) => `${String(row.pitch_type)}:${String(row.pct)}:${String(row.pitches)}`)
+      .join("|")
+  }, [pitcherSeasonPitchTypesPayload?.rows])
+
+  useEffect(() => {
+    if (pitcherSeasonSubTab !== "pitch" || !animatePitchCharts || !pitchChartRowsSignature) {
+      setVsHandChartAnimationEnabled(false)
+      return
+    }
+    setVsHandChartAnimationEnabled(false)
+    const rafId = window.requestAnimationFrame(() => {
+      setVsHandChartEpoch((prev) => prev + 1)
+      setVsHandChartAnimationEnabled(true)
+    })
+    return () => window.cancelAnimationFrame(rafId)
+  }, [animatePitchCharts, pitchChartRowsSignature, pitcherSeasonSubTab])
 
   return (
     <div className={seasonNumericFontClass}>
@@ -844,30 +865,28 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
                             {rightRows.length > 0 ? (
-                              <div className="w-[11rem] max-w-full shrink-0">
-                                <PitchTypePieChart
-                                  title="対右"
-                                  rows={rightRows}
-                                  centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
-                                  pitchTypeColorOrder={colorOrder}
-                                  compact
-                                  sizeScale={0.85}
-                                  isAnimationActive={animatePitchCharts}
-                                />
-                              </div>
+                              <PitchTypePieChart
+                                key={`pitch-vs-r-${vsHandChartEpoch}`}
+                                title="対右"
+                                rows={rightRows}
+                                centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
+                                pitchTypeColorOrder={colorOrder}
+                                compact
+                                sizeScale={0.85}
+                                isAnimationActive={vsHandChartAnimationEnabled}
+                              />
                             ) : null}
                             {leftRows.length > 0 ? (
-                              <div className="w-[11rem] max-w-full shrink-0">
-                                <PitchTypePieChart
-                                  title="対左"
-                                  rows={leftRows}
-                                  centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
-                                  pitchTypeColorOrder={colorOrder}
-                                  compact
-                                  sizeScale={0.85}
-                                  isAnimationActive={animatePitchCharts}
-                                />
-                              </div>
+                              <PitchTypePieChart
+                                key={`pitch-vs-l-${vsHandChartEpoch}`}
+                                title="対左"
+                                rows={leftRows}
+                                centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
+                                pitchTypeColorOrder={colorOrder}
+                                compact
+                                sizeScale={0.85}
+                                isAnimationActive={vsHandChartAnimationEnabled}
+                              />
                             ) : null}
                           </div>
                           <PitchTypeChartLegend
