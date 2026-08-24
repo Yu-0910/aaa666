@@ -727,6 +727,8 @@
     width: 100%;
     min-width: 18rem;
     max-width: 100%;
+    overflow: hidden;
+    border-radius: 0.25rem;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-areas:
       "era w kbb"
