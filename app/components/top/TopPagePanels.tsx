@@ -135,7 +135,7 @@ export function LeadersPanel({
   const useModernMetricTitle = usesTopPageModernMetricTitle(year, statsCategory, isWeeklyTab)
   const panelModernLeaderRow = usesTopPageModernLeaderRow(year, statsCategory, isWeeklyTab)
   const rowTypography = topLeaderRowTypography(year, statsCategory, isWeeklyTab)
-  const statsListBgClass = isWeeklyTab ? "!bg-transparent" : "bg-black"
+  const statsListBgClass = isWeeklyTab ? "!bg-[#1b1b1b]" : "bg-black"
   const isTopBattingModern = usesTopBattingModernLayout(year, isWeeklyTab) && statsCategory === "batting"
   const isTopPitchingModern = usesTopPitchingModernLayout(year, isWeeklyTab) && statsCategory === "pitching"
   const panelBgClass = isWeeklyTab ? "bg-[#1b1b1b]" : "bg-[#1f1f1f]"
