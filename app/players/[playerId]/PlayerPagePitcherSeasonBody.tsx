@@ -844,26 +844,30 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                         >
                           <div className="flex flex-row flex-wrap items-start justify-center gap-2 w-full">
                             {rightRows.length > 0 ? (
-                              <PitchTypePieChart
-                                title="対右"
-                                rows={rightRows}
-                                centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
-                                pitchTypeColorOrder={colorOrder}
-                                compact
-                                sizeScale={0.85}
-                                isAnimationActive={animatePitchCharts}
-                              />
+                              <div className="w-[11rem] max-w-full shrink-0">
+                                <PitchTypePieChart
+                                  title="対右"
+                                  rows={rightRows}
+                                  centerStats={vsHand ? donutCenterStats(vsHand.vsR) : undefined}
+                                  pitchTypeColorOrder={colorOrder}
+                                  compact
+                                  sizeScale={0.85}
+                                  isAnimationActive={animatePitchCharts}
+                                />
+                              </div>
                             ) : null}
                             {leftRows.length > 0 ? (
-                              <PitchTypePieChart
-                                title="対左"
-                                rows={leftRows}
-                                centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
-                                pitchTypeColorOrder={colorOrder}
-                                compact
-                                sizeScale={0.85}
-                                isAnimationActive={animatePitchCharts}
-                              />
+                              <div className="w-[11rem] max-w-full shrink-0">
+                                <PitchTypePieChart
+                                  title="対左"
+                                  rows={leftRows}
+                                  centerStats={vsHand ? donutCenterStats(vsHand.vsL) : undefined}
+                                  pitchTypeColorOrder={colorOrder}
+                                  compact
+                                  sizeScale={0.85}
+                                  isAnimationActive={animatePitchCharts}
+                                />
+                              </div>
                             ) : null}
                           </div>
                           <PitchTypeChartLegend
