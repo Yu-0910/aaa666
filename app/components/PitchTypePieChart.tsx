@@ -404,6 +404,8 @@ export default function PitchTypePieChart({
   const animationKey = chartAnimationActive
     ? `anim:${animationEpoch}:${dataSignature}`
     : `static:${dataSignature}`
+  const suppressInitialStaticPaint =
+    Boolean(isAnimationActive) && !shouldAnimate && animationEpoch === 0
 
   if (!data.length) return null
 
@@ -425,60 +427,62 @@ export default function PitchTypePieChart({
         className="relative flex w-full justify-center"
         style={{ height: chartHeight, aspectRatio: compact ? "1 / 1" : undefined }}
       >
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <PieChart>
-          <Pie
-            key={animationKey}
-            data={data}
-            cx="50%"
-            cy="50%"
-            startAngle={PIE_START_ANGLE}
-            endAngle={PIE_END_ANGLE}
-            clockwise
-            innerRadius={innerRadius}
-            outerRadius={outerRadius}
-            paddingAngle={2}
-            dataKey="value"
-            label={renderDonutPctLabel(compact, insideTextScale)}
-            labelLine={false}
-            isAnimationActive={chartAnimationActive}
-            animationBegin={0}
-            animationDuration={PIE_ANIMATION_DURATION_MS}
-            animationEasing={PIE_ANIMATION_EASING}
-          >
-            {chartRows.map((row) => {
-              const ci = colorIndexForPitchType(row.pitch_type, colorOrder)
-              return (
-              <Cell
-                key={row.pitch_type}
-                fill={COLORS[ci % COLORS.length]}
-                stroke="#1a1a1a"
-                strokeWidth={1}
-              />
-            )})}
-          </Pie>
-          <Tooltip
-            formatter={(value: number) => [`${Math.floor(value)}%`, "割合"]}
-            contentStyle={{
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #555",
-              borderRadius: "4px",
-              color: "#e5e5e5",
-              fontFamily: FONT_FAMILY,
-            }}
-            labelStyle={{ color: "#FFFF44", fontFamily: FONT_FAMILY }}
-          />
-          {!compact ? (
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ paddingTop: "8px", fontFamily: FONT_FAMILY }}
-              formatter={(value) => (
-                <span className="text-sm text-gray-300 latin">{value}</span>
-              )}
+      {!suppressInitialStaticPaint ? (
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <PieChart>
+            <Pie
+              key={animationKey}
+              data={data}
+              cx="50%"
+              cy="50%"
+              startAngle={PIE_START_ANGLE}
+              endAngle={PIE_END_ANGLE}
+              clockwise
+              innerRadius={innerRadius}
+              outerRadius={outerRadius}
+              paddingAngle={2}
+              dataKey="value"
+              label={renderDonutPctLabel(compact, insideTextScale)}
+              labelLine={false}
+              isAnimationActive={chartAnimationActive}
+              animationBegin={0}
+              animationDuration={PIE_ANIMATION_DURATION_MS}
+              animationEasing={PIE_ANIMATION_EASING}
+            >
+              {chartRows.map((row) => {
+                const ci = colorIndexForPitchType(row.pitch_type, colorOrder)
+                return (
+                <Cell
+                  key={row.pitch_type}
+                  fill={COLORS[ci % COLORS.length]}
+                  stroke="#1a1a1a"
+                  strokeWidth={1}
+                />
+              )})}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) => [`${Math.floor(value)}%`, "割合"]}
+              contentStyle={{
+                backgroundColor: "#1a1a1a",
+                border: "1px solid #555",
+                borderRadius: "4px",
+                color: "#e5e5e5",
+                fontFamily: FONT_FAMILY,
+              }}
+              labelStyle={{ color: "#FFFF44", fontFamily: FONT_FAMILY }}
             />
-          ) : null}
-        </PieChart>
-      </ResponsiveContainer>
+            {!compact ? (
+              <Legend
+                verticalAlign="bottom"
+                wrapperStyle={{ paddingTop: "8px", fontFamily: FONT_FAMILY }}
+                formatter={(value) => (
+                  <span className="text-sm text-gray-300 latin">{value}</span>
+                )}
+              />
+            ) : null}
+          </PieChart>
+        </ResponsiveContainer>
+      ) : null}
       <DonutCenterPanel
         centerStats={centerStats}
         innerRadius={innerRadius}
