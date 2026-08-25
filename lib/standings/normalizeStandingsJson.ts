@@ -1,8 +1,10 @@
 import type { TeamStandingRow, TeamStandingsJson } from "@/lib/standings/types"
 
 function parseGbValue(value: string): number | null {
+  if (value == null) return null
   const s = String(value ?? "").trim()
-  if (!s || s === "—" || s === "--") return 0
+  if (!s) return null
+  if (s === "—" || s === "--") return 0
   const n = Number(s)
   return Number.isFinite(n) ? n : null
 }
