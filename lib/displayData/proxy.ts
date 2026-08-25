@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
-import { isTeamStandingsJson } from '@/lib/standings/types'
+import {
+  isTeamStandingsJson,
+  TEAM_STANDINGS_JSON_SCHEMA,
+  type TeamStandingsJson,
+} from '@/lib/standings/types'
+import { normalizeStandingsJsonForDisplay } from '@/lib/standings/normalizeStandingsJson'
 
 export type DisplayDataKind = 'rankings' | 'top-leaders' | 'standings' | 'top-probables'
 
@@ -15,6 +20,35 @@ function jsonResponseWithCache(data: unknown): NextResponse {
   headers.set('Vercel-CDN-Cache-Control', CACHE)
   headers.set('Content-Type', 'application/json')
   return NextResponse.json(data, { headers })
+}
+
+function coerceStandingsPayload(raw: unknown): TeamStandingsJson | null {
+  if (!raw || typeof raw !== 'object') return null
+  if (isTeamStandingsJson(raw)) return raw
+
+  const candidate = raw as Record<string, unknown>
+  const league = candidate.league
+  const source = candidate.source
+  const rows = candidate.rows
+  const year = candidate.year
+
+  if ((league !== 'CL' && league !== 'PL') || typeof source !== 'string' || !Array.isArray(rows)) {
+    return null
+  }
+
+  return {
+    schemaVersion: TEAM_STANDINGS_JSON_SCHEMA,
+    year: String(year ?? ''),
+    league,
+    source: source as TeamStandingsJson['source'],
+    generatedAt: typeof candidate.generatedAt === 'string' ? candidate.generatedAt : '',
+    rows: rows as TeamStandingsJson['rows'],
+  }
+}
+
+function normalizeStandingsPayload(raw: unknown): unknown {
+  const standings = coerceStandingsPayload(raw)
+  return standings ? normalizeStandingsJsonForDisplay(standings) : raw
 }
 
 async function tryReadLocalJson(
@@ -102,19 +136,23 @@ export async function handleDisplayDataGet(
 
   if (preferLocal || (kind === 'standings' && !baseUrl)) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
-    if (data != null) return jsonResponseWithCache(data)
+    if (data != null) {
+      return jsonResponseWithCache(kind === 'standings' ? normalizeStandingsPayload(data) : data)
+    }
     if (kind === 'standings') {
       const staticData = await tryFetchStaticStandingsJson(request, relativePath)
-      if (staticData != null) return jsonResponseWithCache(staticData)
+      if (staticData != null) return jsonResponseWithCache(normalizeStandingsPayload(staticData))
     }
   }
 
   if (!baseUrl) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
-    if (data != null) return jsonResponseWithCache(data)
+    if (data != null) {
+      return jsonResponseWithCache(kind === 'standings' ? normalizeStandingsPayload(data) : data)
+    }
     if (kind === 'standings') {
       const staticData = await tryFetchStaticStandingsJson(request, relativePath)
-      if (staticData != null) return jsonResponseWithCache(staticData)
+      if (staticData != null) return jsonResponseWithCache(normalizeStandingsPayload(staticData))
     }
     return NextResponse.json(
       {
@@ -131,7 +169,9 @@ export async function handleDisplayDataGet(
     const isInScope = scopes.some((s) => pathLower.includes(s))
     if (!isInScope) {
       const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
-      if (data != null) return jsonResponseWithCache(data)
+      if (data != null) {
+        return jsonResponseWithCache(kind === 'standings' ? normalizeStandingsPayload(data) : data)
+      }
       return NextResponse.json(
         { error: `Path not in externalization scope (${scope})` },
         { status: 404 }
@@ -184,11 +224,13 @@ export async function handleDisplayDataGet(
       pathSegments
     )
     if (localFallback != null) {
-      return jsonResponseWithCache(localFallback)
+      return jsonResponseWithCache(
+        kind === 'standings' ? normalizeStandingsPayload(localFallback) : localFallback
+      )
     }
     if (kind === 'standings') {
       const staticData = await tryFetchStaticStandingsJson(request, relativePath)
-      if (staticData != null) return jsonResponseWithCache(staticData)
+      if (staticData != null) return jsonResponseWithCache(normalizeStandingsPayload(staticData))
     }
     return NextResponse.json(
       { error: `Failed to fetch display data: ${fetchResponse.statusText}` },
@@ -203,10 +245,19 @@ export async function handleDisplayDataGet(
       pathSegments
     )
     if (localFallback != null) {
-      return jsonResponseWithCache(localFallback)
+      return jsonResponseWithCache(normalizeStandingsPayload(localFallback))
     }
     const staticData = await tryFetchStaticStandingsJson(request, relativePath)
-    if (staticData != null) return jsonResponseWithCache(staticData)
+    if (staticData != null) return jsonResponseWithCache(normalizeStandingsPayload(staticData))
+  }
+
+  if (kind === 'standings') {
+    try {
+      const normalized = normalizeStandingsPayload(await fetchResponse.clone().json())
+      return jsonResponseWithCache(normalized)
+    } catch {
+      // Fall through to raw response passthrough when JSON parsing fails.
+    }
   }
 
   const headers = new Headers()
