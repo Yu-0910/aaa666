@@ -131,6 +131,8 @@ function standingsMetricHeaderNowrap(key: StandingsMetricKey): boolean {
   return key !== "era_starter" && key !== "era_relief"
 }
 
+const HIDE_HISTORICAL_YEARLY_KEYS = new Set<StandingsMetricKey>(["ab", "rbi", "ip"])
+
 export function TeamStandingsTable({
   rows,
   league,
@@ -178,19 +180,23 @@ export function TeamStandingsTable({
       ).filter(
         (col) => col.key !== "g",
       )
-      if (weeklyCompactColumns) return columns
-      const pctIndex = columns.findIndex((col) => col.key === "pct")
-      const gbIndex = columns.findIndex((col) => col.key === "gb")
+      const displayColumns =
+        source === "npb_official_yearly" && year < 2026
+          ? columns.filter((col) => !HIDE_HISTORICAL_YEARLY_KEYS.has(col.key))
+          : columns
+      if (weeklyCompactColumns) return displayColumns
+      const pctIndex = displayColumns.findIndex((col) => col.key === "pct")
+      const gbIndex = displayColumns.findIndex((col) => col.key === "gb")
       if (pctIndex >= 0 && gbIndex >= 0 && pctIndex < gbIndex) {
-        const reordered = [...columns]
+        const reordered = [...displayColumns]
         const pctColumn = reordered[pctIndex]!
         reordered[pctIndex] = reordered[gbIndex]!
         reordered[gbIndex] = pctColumn
         return reordered
       }
-      return columns
+      return displayColumns
     },
-    [source, weeklyCompactColumns],
+    [source, weeklyCompactColumns, year],
   )
 
   const metricsBlockWidth = metricColumns.reduce(
