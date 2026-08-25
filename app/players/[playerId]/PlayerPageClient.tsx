@@ -2055,7 +2055,7 @@ export function PlayerPageClient({
           {showCareerOnlyShell &&
             showCareerPitchingRankingTable &&
             !pitcherCareerPitchingTightLayout &&
-            renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
+            renderPitcherCareerSubTabBar(true)}
           {showSeasonCareerTabs &&
             statsTab === "season" &&
             !showPitcherSeasonSuganoUi &&
@@ -2074,7 +2074,10 @@ export function PlayerPageClient({
 
         {pitcherCareerPitchingTightLayout && (
           <div style={careerSubTabScaleShellStyle()}>
-            {renderPitcherCareerSubTabBar(true, pitcherCareerSubTabBarShellClass)}
+            {renderPitcherCareerSubTabBar(
+              true,
+              showCareerOnlyShell ? pitcherCareerInlineSubTabBarShellClass : pitcherCareerSubTabBarShellClass,
+            )}
           </div>
         )}
         {careerSubTabTightLayout && !showPitcherSeasonSuganoUi && (
@@ -2116,6 +2119,7 @@ export function PlayerPageClient({
             showSalaryColumn={isRosterPlayer}
             careerTableScaleMultiplier={CAREER_TABLE_SCALE_MULTIPLIER}
             careerSubTabToContentGap={seasonSubTabToContentGap}
+            useRosterLikeCareerHighCardUi={!isRosterPlayer}
             careerHighBattingGridClassName={
               useRosterFielderPcTableCss ? "fielder-basic-career-high-grid mb-12" : undefined
             }
