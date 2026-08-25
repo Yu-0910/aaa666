@@ -88,6 +88,8 @@ export type PlayerPageCareerSectionProps = {
   careerSubTabToContentGap?: React.CSSProperties["marginTop"]
   /** 打撃キャリアハイカードの追加クラス */
   careerHighBattingGridClassName?: string
+  /** 2026名簿外ページではキャリアハイカードも名簿ページ寄りのUIに揃える */
+  useRosterLikeCareerHighCardUi?: boolean
   careerBattingTableClassName?: string
   careerBattingTableShellClassName?: string
 }
@@ -126,12 +128,22 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
     careerTableScaleMultiplier = CAREER_TABLE_SCALE_MULTIPLIER,
     careerSubTabToContentGap,
     careerHighBattingGridClassName,
+    useRosterLikeCareerHighCardUi = false,
     careerBattingTableClassName,
     careerBattingTableShellClassName,
   } = props
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
 
+  const salaryHeadingSuffix = showSalaryColumn ? "／年俸" : ""
+  const battingCareerHighGridClassName = useRosterLikeCareerHighCardUi
+    ? ["fielder-basic-career-high-grid", "mb-12", careerHighBattingGridClassName]
+        .filter(Boolean)
+        .join(" ")
+    : careerHighTabGridClassName(careerHighBattingGridClassName)
+  const pitchingCareerHighGridClassName = useRosterLikeCareerHighCardUi
+    ? "pitcher-basic-career-high-grid mb-12"
+    : CAREER_HIGH_TAB_GRID_CLASS
   const content = (
     <>
         {!pitcherCareerPitchingTablePilot && !showCareerBattingSection && (
@@ -147,7 +159,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
         <CareerHighStatGrid
           cards={careerHighBattingCards}
           isMobile={isMobile}
-          className={careerHighTabGridClassName(careerHighBattingGridClassName)}
+          className={battingCareerHighGridClassName}
         />
           </>
         )}
@@ -200,7 +212,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                   }
                   style={careerBattingSectionH2Style}
                 >
-                  通算の投手成績／年俸
+                  {`通算の投手成績${salaryHeadingSuffix}`}
                 </h2>
                 <CareerBattingTableRankingStyle
                   rows={mergedPitchingRowsForDisplay}
@@ -225,7 +237,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                 <CareerHighStatGrid
                   cards={careerHighPitching.cards}
                   isMobile={isMobile}
-                  className={CAREER_HIGH_TAB_GRID_CLASS}
+                  className={pitchingCareerHighGridClassName}
                 />
               </>
             )}
@@ -243,7 +255,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           }
           style={careerBattingSectionH2Style}
         >
-          通算の打撃成績／年俸
+          {`通算の打撃成績${salaryHeadingSuffix}`}
         </h2>
 
         {useRankingStyleCareerBattingTable ? (
@@ -357,7 +369,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                 <CareerHighStatGrid
                   cards={careerHighBattingCards}
                   isMobile={isMobile}
-                  className={careerHighTabGridClassName(careerHighBattingGridClassName)}
+                  className={battingCareerHighGridClassName}
                 />
               </>
             )}
@@ -373,7 +385,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
             fontWeight: 900,
           }}
         >
-          通算の投手成績／年俸
+          {`通算の投手成績${salaryHeadingSuffix}`}
         </h2>
 
         <CareerTableScaleWrap
