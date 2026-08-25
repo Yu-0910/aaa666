@@ -41,6 +41,8 @@ type StandingsMetricJumpRequest = {
   nonce: number
 }
 
+const STANDINGS_CLIENT_BUILD = "2026-08-25-2"
+
 const LEAGUE_META: Record<
   StandingsLeague,
   { title: string; subtitle: string; color: string }
@@ -610,7 +612,8 @@ export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandin
   }
 
   return (
-    <StandingsLeagueSection
+    <div data-standings-client-build={STANDINGS_CLIENT_BUILD}>
+      <StandingsLeagueSection
       league={league}
       data={data!}
       layout={layout}
@@ -619,6 +622,7 @@ export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandin
       subtitle={isWeekly ? `Weekly Standings (${weeklyLabel})` : undefined}
       showTeamPageNote={!isWeekly}
       weeklyCompactColumns={isWeekly}
-    />
+      />
+    </div>
   )
 }
