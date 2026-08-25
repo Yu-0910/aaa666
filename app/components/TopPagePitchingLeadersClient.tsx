@@ -72,7 +72,7 @@ export default function TopPagePitchingLeadersClient({
       .catch((err: Error) => {
         if (cancelled) return
         console.error("[TopPagePitchingLeadersClient] Error:", err)
-        setError(err.message || "データの取得に失敗しました")
+        setError("データの取得に失敗しました")
         setLoading(false)
       })
     return () => {
@@ -89,7 +89,7 @@ export default function TopPagePitchingLeadersClient({
   }
 
   if (error || !data) {
-    return <div className="text-red-400 text-center py-4 text-sm">{error || "データがありません"}</div>
+    return <div className="text-red-400 text-center py-4 text-sm">データの取得に失敗しました</div>
   }
 
   const pitchingTitle = weekKey
