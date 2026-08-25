@@ -1,6 +1,10 @@
 import { isTeamStandingsJson, type StandingsLeague, type TeamStandingsJson } from "./types"
 import { displaySitePathToPublicUrl } from "@/lib/displayData/sitePath"
-import { siteTeamStandingsPath, siteWeeklyTeamStandingsPath } from "@/lib/standings/paths"
+import {
+  siteTeamStandingsPath,
+  siteWeeklyTeamStandingsPath,
+  staticTeamStandingsPath,
+} from "@/lib/standings/paths"
 
 function parseUsableStandingsJson(raw: unknown): TeamStandingsJson | null {
   if (!isTeamStandingsJson(raw)) return null
@@ -16,6 +20,19 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
   if (res.ok) {
     const json = parseUsableStandingsJson(await res.json())
     if (json) return json
+  }
+
+  const staticMatch = sitePath.match(/^\/data\/standings\/(\d{4})\/(CL|PL)\.json$/)
+  if (staticMatch) {
+    const [, year, league] = staticMatch as [string, string, StandingsLeague]
+    const staticRes = await fetch(staticTeamStandingsPath(year, league), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+    if (staticRes.ok) {
+      const staticJson = parseUsableStandingsJson(await staticRes.json())
+      if (staticJson) return staticJson
+    }
   }
 
   const r2Url = displaySitePathToPublicUrl(sitePath)
