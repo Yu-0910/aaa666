@@ -104,27 +104,30 @@ export function TopPageWeeklyTabContent({
   }
 
   const { weekKey, weekLabel } = payload.weekMeta
+  const league: "CL" | "PL" = activeView.startsWith("cl") ? "CL" : "PL"
+  const isPitching = activeView.endsWith("pitching")
 
-  const renderLeague = (league: "CL" | "PL") => (
-    <div className="space-y-4">
-      <TopPageLeadersClient
-        year={year}
-        league={league}
-        layout={layout}
-        weekKey={weekKey}
-        weekLabel={weekLabel}
-        initialData={payload.batting[league]}
-      />
-      <TopPagePitchingLeadersClient
-        year={year}
-        league={league}
-        layout={layout}
-        weekKey={weekKey}
-        weekLabel={weekLabel}
-        initialData={payload.pitching[league]}
-      />
+  return (
+    <div className="space-y-6">
+      {isPitching ? (
+        <TopPagePitchingLeadersClient
+          year={year}
+          league={league}
+          layout={layout}
+          weekKey={weekKey}
+          weekLabel={weekLabel}
+          initialData={payload.pitching[league]}
+        />
+      ) : (
+        <TopPageLeadersClient
+          year={year}
+          league={league}
+          layout={layout}
+          weekKey={weekKey}
+          weekLabel={weekLabel}
+          initialData={payload.batting[league]}
+        />
+      )}
     </div>
   )
-
-  return <div className="space-y-6">{renderLeague(activeView.startsWith("cl") ? "CL" : "PL")}</div>
 }
