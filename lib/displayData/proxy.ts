@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { allowBatting2025Fallback } from '@/lib/ranking/allowBatting2025Fallback'
 import { getExternalDisplayDataUrl } from '@/lib/displayData/externalUrl'
 import { getRankingsBaseUrl } from '@/lib/displayData/rankingsBaseUrl'
+import { isTeamStandingsJson } from '@/lib/standings/types'
 
 export type DisplayDataKind = 'rankings' | 'top-leaders' | 'standings' | 'top-probables'
 
@@ -51,6 +52,19 @@ async function readLocalWithOptional2025Fallback(
 
 function r2ObjectKey(kind: DisplayDataKind, relativePath: string): string {
   return `data/${kind}/${relativePath.replace(/^\/+/, '')}`
+}
+
+async function hasUsableStandingsPayload(response: Response): Promise<boolean> {
+  if (!response.ok) return false
+  const contentType = response.headers.get('Content-Type') || ''
+  if (!contentType.toLowerCase().includes('application/json')) return false
+
+  try {
+    const json = await response.clone().json()
+    return isTeamStandingsJson(json) && json.rows.length > 0
+  } catch {
+    return false
+  }
 }
 
 export async function handleDisplayDataGet(
@@ -148,6 +162,17 @@ export async function handleDisplayDataGet(
       { error: `Failed to fetch display data: ${fetchResponse.statusText}` },
       { status: fetchResponse.status }
     )
+  }
+
+  if (kind === 'standings' && !(await hasUsableStandingsPayload(fetchResponse))) {
+    const localFallback = await readLocalWithOptional2025Fallback(
+      kind,
+      relativePath,
+      pathSegments
+    )
+    if (localFallback != null) {
+      return jsonResponseWithCache(localFallback)
+    }
   }
 
   const headers = new Headers()
