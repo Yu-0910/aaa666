@@ -81,7 +81,7 @@ export type PlayerPageCareerSectionProps = {
   careerHighBattingYear: number | null
   tb: string
   sectionStripeColor: string
-  /** 2026名簿外は通算表の年俸列と見出しの「／年俸」を非表示 */
+  /** 通算表の年俸列だけを制御し、見出しの「／年俸」は表示しない */
   showSalaryColumn?: boolean
   /** 通算成績表の表・文字・数値スケール */
   careerTableScaleMultiplier?: number
@@ -135,7 +135,6 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
 
-  const salaryHeadingSuffix = showSalaryColumn ? "／年俸" : ""
   const battingCareerHighGridClassName = useRosterLikeCareerHighCardUi
     ? ["fielder-basic-career-high-grid", "mb-12", careerHighBattingGridClassName]
         .filter(Boolean)
@@ -213,7 +212,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                   }
                   style={careerBattingSectionH2Style}
                 >
-                  {`通算の投手成績${salaryHeadingSuffix}`}
+                  通算の投手成績
                 </h2>
                 <CareerBattingTableRankingStyle
                   rows={mergedPitchingRowsForDisplay}
@@ -256,7 +255,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           }
           style={careerBattingSectionH2Style}
         >
-          {`通算の打撃成績${salaryHeadingSuffix}`}
+          通算の打撃成績
         </h2>
 
         {useRankingStyleCareerBattingTable ? (
@@ -386,7 +385,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
             fontWeight: 900,
           }}
         >
-          {`通算の投手成績${salaryHeadingSuffix}`}
+          通算の投手成績
         </h2>
 
         <CareerTableScaleWrap
