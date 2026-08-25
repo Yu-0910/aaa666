@@ -135,6 +135,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
 
   if (showSeasonCareerTabs && statsTab !== "career") return null
 
+  const salaryHeadingSuffix = showSalaryColumn ? "／年俸" : ""
   const battingCareerHighGridClassName = useRosterLikeCareerHighCardUi
     ? ["fielder-basic-career-high-grid", "mb-12", careerHighBattingGridClassName]
         .filter(Boolean)
@@ -211,7 +212,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
                   }
                   style={careerBattingSectionH2Style}
                 >
-                  通算の投手成績
+                  {`通算の投手成績${salaryHeadingSuffix}`}
                 </h2>
                 <CareerBattingTableRankingStyle
                   rows={mergedPitchingRowsForDisplay}
@@ -254,7 +255,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
           }
           style={careerBattingSectionH2Style}
         >
-          通算の打撃成績
+          {`通算の打撃成績${salaryHeadingSuffix}`}
         </h2>
 
         {useRankingStyleCareerBattingTable ? (
@@ -384,7 +385,7 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
             fontWeight: 900,
           }}
         >
-          通算の投手成績
+          {`通算の投手成績${salaryHeadingSuffix}`}
         </h2>
 
         <CareerTableScaleWrap
