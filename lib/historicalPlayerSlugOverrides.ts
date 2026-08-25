@@ -1,4 +1,5 @@
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
+import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
 import historicalPlayerSlugOverrides from "@/lib/historicalPlayerSlugOverrides.generated.json"
 
 export type HistoricalPlayerSlugOverride = {
@@ -20,10 +21,12 @@ type HistoricalPlayerSlugOverrideTuple = [
   legacySlugs: string[],
 ]
 
-export const HISTORICAL_PLAYER_SLUG_OVERRIDES = (
-  historicalPlayerSlugOverrides as HistoricalPlayerSlugOverrideTuple[]
-).map(
-  ([npbPlayerId, nameJa, romanFull, position, slug, legacySlugs]): HistoricalPlayerSlugOverride => ({
+const rosterSlugOwnerBySlug = new Map(
+  CURRENT_ROSTER_PLAYER_ENTRIES.map((entry) => [entry.slug, entry.npbPlayerId] as const),
+)
+
+const historicalOverridesBase = (historicalPlayerSlugOverrides as HistoricalPlayerSlugOverrideTuple[]).map(
+  ([npbPlayerId, nameJa, romanFull, position, slug, legacySlugs]) => ({
     npbPlayerId,
     nameJa,
     romanFull,
@@ -32,6 +35,24 @@ export const HISTORICAL_PLAYER_SLUG_OVERRIDES = (
     slug,
     legacySlugs,
   }),
+)
+
+const historicalSlugCounts = new Map<string, number>()
+for (const override of historicalOverridesBase) {
+  historicalSlugCounts.set(override.slug, (historicalSlugCounts.get(override.slug) ?? 0) + 1)
+}
+
+export const HISTORICAL_PLAYER_SLUG_OVERRIDES = historicalOverridesBase.map(
+  (override): HistoricalPlayerSlugOverride => {
+    const collidesWithHistorical = (historicalSlugCounts.get(override.slug) ?? 0) > 1
+    const collidesWithRoster = rosterSlugOwnerBySlug.has(override.slug)
+    const slug =
+      collidesWithHistorical || collidesWithRoster ? `${override.slug}-${override.npbPlayerId}` : override.slug
+    return {
+      ...override,
+      slug,
+    }
+  },
 )
 
 function romanSlug(value: string): string {
@@ -55,7 +76,7 @@ const byNameKey = new Map<string, HistoricalPlayerSlugOverride>()
 const bySlug = new Map<string, HistoricalPlayerSlugOverride>()
 const byRomanKey = new Map<string, HistoricalPlayerSlugOverride>()
 
-for (const override of HISTORICAL_PLAYER_SLUG_OVERRIDES) {
+for (const [index, override] of HISTORICAL_PLAYER_SLUG_OVERRIDES.entries()) {
   byNpbPlayerId.set(override.npbPlayerId, override)
   byNameKey.set(rosterNameMatchKey(override.nameJa), override)
   byNameKey.set(compactPlayerName(override.nameJa), override)
@@ -64,7 +85,9 @@ for (const override of HISTORICAL_PLAYER_SLUG_OVERRIDES) {
     bySlug.set(legacySlug, override)
   }
   const fullRomanSlug = romanSlug(override.romanFull)
-  if (fullRomanSlug) bySlug.set(fullRomanSlug, override)
+  if (fullRomanSlug && !bySlug.has(fullRomanSlug)) bySlug.set(fullRomanSlug, override)
+  const originalSlug = historicalOverridesBase[index]?.slug ?? ""
+  if (originalSlug && !bySlug.has(originalSlug)) bySlug.set(originalSlug, override)
   const romanKey = compactPlayerName(override.romanFull).toLowerCase()
   if (romanKey) byRomanKey.set(romanKey, override)
 }
