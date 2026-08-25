@@ -1,5 +1,5 @@
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
-import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
+import { HISTORICAL_PLAYER_DISAMBIGUATED_SLUGS } from "@/lib/historicalPlayerSlugDisambiguation.generated"
 import historicalPlayerSlugOverrides from "@/lib/historicalPlayerSlugOverrides.generated.json"
 
 export type HistoricalPlayerSlugOverride = {
@@ -21,10 +21,6 @@ type HistoricalPlayerSlugOverrideTuple = [
   legacySlugs: string[],
 ]
 
-const rosterSlugOwnerBySlug = new Map(
-  CURRENT_ROSTER_PLAYER_ENTRIES.map((entry) => [entry.slug, entry.npbPlayerId] as const),
-)
-
 const historicalOverridesBase = (historicalPlayerSlugOverrides as HistoricalPlayerSlugOverrideTuple[]).map(
   ([npbPlayerId, nameJa, romanFull, position, slug, legacySlugs]) => ({
     npbPlayerId,
@@ -37,17 +33,9 @@ const historicalOverridesBase = (historicalPlayerSlugOverrides as HistoricalPlay
   }),
 )
 
-const historicalSlugCounts = new Map<string, number>()
-for (const override of historicalOverridesBase) {
-  historicalSlugCounts.set(override.slug, (historicalSlugCounts.get(override.slug) ?? 0) + 1)
-}
-
 export const HISTORICAL_PLAYER_SLUG_OVERRIDES = historicalOverridesBase.map(
   (override): HistoricalPlayerSlugOverride => {
-    const collidesWithHistorical = (historicalSlugCounts.get(override.slug) ?? 0) > 1
-    const collidesWithRoster = rosterSlugOwnerBySlug.has(override.slug)
-    const slug =
-      collidesWithHistorical || collidesWithRoster ? `${override.slug}-${override.npbPlayerId}` : override.slug
+    const slug = HISTORICAL_PLAYER_DISAMBIGUATED_SLUGS[override.npbPlayerId] ?? override.slug
     return {
       ...override,
       slug,
