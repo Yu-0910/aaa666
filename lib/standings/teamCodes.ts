@@ -205,7 +205,7 @@ export function normalizeNpbYearlyTeam(npbLabel: string): NpbYearlyTeamRef | nul
 }
 
 /** 歴代公式名から順位表表示用の短い球団名 */
-function teamHistoricalDisplayName(npbLabel: string, code: string): string {
+export function teamHistoricalDisplayName(npbLabel: string, code: string): string {
   if (npbLabel.includes("松竹")) return "松竹"
   if (npbLabel.includes("大洋")) return "大洋"
   if (npbLabel.includes("横浜")) return "横浜"
@@ -407,16 +407,16 @@ export function teamDisplayNameFromCode(code: string): string {
   return TEAM_CODE_TO_DISPLAY[c] ?? c
 }
 
-/** 順位表行の表示名。略称 `teamName` を優先し、無いときだけ原文へ戻す。 */
+/** 順位表行の表示名。歴史データは `npbLabel` から当時の略称を優先する。 */
 export function teamDisplayNameFromStandingRow(row: {
   team: string
   teamName?: string | null
   npbLabel?: string | null
 }): string {
+  const historical = String(row.npbLabel ?? "").trim()
+  if (historical) return teamHistoricalDisplayName(historical, row.team)
   const fallback = String(row.teamName ?? "").trim()
   if (fallback) return fallback
-  const historical = String(row.npbLabel ?? "").trim()
-  if (historical) return historical
   return teamDisplayNameFromCode(row.team)
 }
 
