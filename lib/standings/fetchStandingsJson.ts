@@ -54,11 +54,30 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
   throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
 }
 
+async function fetchYearlyStandingsJson(year: number, league: StandingsLeague): Promise<TeamStandingsJson> {
+  const sitePath = siteTeamStandingsPath(String(year), league)
+
+  try {
+    return await fetchStandingsJsonFromSitePath(sitePath)
+  } catch {
+    const staticPath = staticTeamStandingsPath(String(year), league)
+    const staticRes = await fetch(staticPath, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+    if (staticRes.ok) {
+      const staticJson = parseUsableStandingsJson(await staticRes.json())
+      if (staticJson) return staticJson
+    }
+    throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
+  }
+}
+
 export async function fetchStandingsJson(
   year: number,
   league: StandingsLeague
 ): Promise<TeamStandingsJson> {
-  return fetchStandingsJsonFromSitePath(siteTeamStandingsPath(String(year), league))
+  return fetchYearlyStandingsJson(year, league)
 }
 
 export async function fetchWeeklyStandingsJson(
