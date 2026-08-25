@@ -509,18 +509,17 @@ export function pitcherPocSituationRows(pp: PitcherSeasonPocPayload): SitRowUi[]
     const s = m.get(key)
     const label = SIT_LABELS[key] ?? key
     if (!s || s.bf <= 0) {
-      return { label, cells: Array.from({ length: 7 }, () => "ー") }
+      return { label, cells: Array.from({ length: 6 }, () => "ー") }
     }
     return {
       label,
       cells: [
+        s.avg ?? "—",
         String(s.ab),
         String(s.h),
         pctStr(s.so - s.bb, s.bf),
         pctStr(s.so, s.bf),
         pctStr(s.bb, s.bf),
-        s.avg ?? "—",
-        String(s.hr),
       ],
     }
   })
