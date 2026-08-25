@@ -65,7 +65,7 @@ export function TopPageSeasonTabContent({
       })
       .catch((err: Error) => {
         if (cancelled) return
-        setError(err.message || "データの取得に失敗しました")
+        setError("データの取得に失敗しました")
         setLoading(false)
       })
 
@@ -85,7 +85,7 @@ export function TopPageSeasonTabContent({
   if (error || !payload) {
     return (
       <div className="text-white text-center py-8 text-sm">
-        {error || "データの取得に失敗しました"}
+        データの取得に失敗しました
       </div>
     )
   }

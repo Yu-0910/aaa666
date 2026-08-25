@@ -593,11 +593,11 @@ export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandin
   if ((!isWeekly && (error || !cl || !pl)) || (isWeekly && (weeklyError || weeklyLoading === false && !data))) {
     return (
       <div className="text-white text-center py-8 text-sm space-y-2">
-        <p>{(isWeekly ? weeklyError : error) || "順位表データの取得に失敗しました"}</p>
+        <p>{isWeekly ? "今週の順位表を表示できませんでした。" : "順位表を表示できませんでした。"}</p>
         <p className="text-gray-400 text-xs">
           {isWeekly
-            ? `今週の順位表データが未生成の場合は、${year}年度の週次集計を確認してください。`
-            : `${year} 年度のデータが未生成の場合は、ビルド後に R2 へ反映してください。`}
+            ? "時間をおいてから、もう一度お試しください。"
+            : "しばらくしてから、もう一度お試しください。"}
         </p>
       </div>
     )

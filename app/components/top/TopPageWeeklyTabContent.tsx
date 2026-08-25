@@ -95,9 +95,9 @@ export function TopPageWeeklyTabContent({
   if (error || !payload) {
     return (
       <div className="text-white text-center py-8 space-y-2 text-sm">
-        <p>{error || "今週の成績データがありません"}</p>
+        <p>今週の成績データを表示できませんでした。</p>
         <p className="text-gray-400 text-xs">
-          管理者: npm run phase28:build:weekly-rankings → npm run top-weekly-leaders:build:2026
+          しばらくしてから、もう一度お試しください。
         </p>
       </div>
     )

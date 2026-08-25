@@ -938,8 +938,7 @@ export default function SeasonStatsPilot({
                 </h2>
                 {pitchTypeStats.length > 0 && !hasAnySpeedBand && (
                   <p className={`text-sm text-gray-400 ${loose ? "mb-4" : "mb-2"}`}>
-                    ストレート球の球速データが無いか、Phase14 派生が未生成です。{" "}
-                    <code className="text-xs">npm run phase14:build:pitch</code> 後に再読み込みしてください。
+                    ストレート球の球速データを表示できませんでした。しばらくしてから、もう一度お試しください。
                   </p>
                 )}
                 <div className={`player-page-table-shell rounded overflow-x-auto overflow-y-hidden ${mbScroll}`}>

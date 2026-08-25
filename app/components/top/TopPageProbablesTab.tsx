@@ -1088,9 +1088,9 @@ export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) 
   if (error || !data) {
     return (
       <div className="text-white text-center py-8 text-sm space-y-2">
-        <p>{error || "予想投手データの取得に失敗しました"}</p>
+        <p>予想先発を表示できませんでした。</p>
         <p className="text-gray-400 text-xs">
-          `npm run probables:rebuild:2026` 実行後、R2 へ反映してください。
+          しばらくしてから、もう一度お試しください。
         </p>
       </div>
     )
@@ -1101,7 +1101,7 @@ export function TopPageProbablesTab({ year, layout }: TopPageProbablesTabProps) 
       <div className="text-white text-center py-8 text-sm space-y-2">
         <p>直近の三連戦カードがありません。</p>
         <p className="text-gray-400 text-xs">
-          日程取得（phase0:fetch:schedule-ahead）と SN 取得（phase35）を確認してください。
+          対象の試合情報が公開されるまでお待ちください。
         </p>
       </div>
     )
