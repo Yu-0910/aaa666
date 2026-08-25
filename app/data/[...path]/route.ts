@@ -20,7 +20,7 @@ function parseKind(pathSegments: string[]): { kind: DisplayDataKind; rest: strin
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
   try {
@@ -33,7 +33,7 @@ export async function GET(
         { status: 404 }
       )
     }
-    return handleDisplayDataGet(parsed.kind, parsed.rest)
+    return handleDisplayDataGet(parsed.kind, parsed.rest, request)
   } catch (error) {
     console.error('[DisplayDataProxy]', error)
     return NextResponse.json(

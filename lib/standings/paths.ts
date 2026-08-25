@@ -41,6 +41,11 @@ export function siteTeamStandingsPath(year: string, league: StandingsLeague): st
   return `/data/standings/${year}/${league}.json`
 }
 
+/** 本番フォールバック用の静的公開パス（app/data ルートを通さない） */
+export function staticTeamStandingsPath(year: string, league: StandingsLeague): string {
+  return `/standings-json/${year}/${league}.json`
+}
+
 export function siteWeeklyTeamStandingsPath(
   year: string,
   weekKey: string,

@@ -31,6 +31,25 @@ async function tryReadLocalJson(
   }
 }
 
+async function tryFetchStaticStandingsJson(
+  request: Request,
+  relativePath: string
+): Promise<unknown | null> {
+  const staticUrl = new URL(`/standings-json/${relativePath.replace(/^\/+/, '')}`, request.url)
+  try {
+    const response = await fetch(staticUrl, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+      next: { revalidate: 0 },
+    })
+    if (!response.ok) return null
+    return await response.json()
+  } catch {
+    return null
+  }
+}
+
 async function readLocalWithOptional2025Fallback(
   kind: DisplayDataKind,
   relativePath: string,
@@ -69,7 +88,8 @@ async function hasUsableStandingsPayload(response: Response): Promise<boolean> {
 
 export async function handleDisplayDataGet(
   kind: DisplayDataKind,
-  pathSegments: string[]
+  pathSegments: string[],
+  request: Request
 ): Promise<NextResponse> {
   if (pathSegments.length === 0) {
     return NextResponse.json({ error: 'Path is required' }, { status: 400 })
@@ -83,11 +103,19 @@ export async function handleDisplayDataGet(
   if (preferLocal || (kind === 'standings' && !baseUrl)) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)
+    if (kind === 'standings') {
+      const staticData = await tryFetchStaticStandingsJson(request, relativePath)
+      if (staticData != null) return jsonResponseWithCache(staticData)
+    }
   }
 
   if (!baseUrl) {
     const data = await readLocalWithOptional2025Fallback(kind, relativePath, pathSegments)
     if (data != null) return jsonResponseWithCache(data)
+    if (kind === 'standings') {
+      const staticData = await tryFetchStaticStandingsJson(request, relativePath)
+      if (staticData != null) return jsonResponseWithCache(staticData)
+    }
     return NextResponse.json(
       {
         error: `Display JSON not found under public/data/${kind}/ or set RANKINGS_BASE_URL.`,
@@ -158,6 +186,10 @@ export async function handleDisplayDataGet(
     if (localFallback != null) {
       return jsonResponseWithCache(localFallback)
     }
+    if (kind === 'standings') {
+      const staticData = await tryFetchStaticStandingsJson(request, relativePath)
+      if (staticData != null) return jsonResponseWithCache(staticData)
+    }
     return NextResponse.json(
       { error: `Failed to fetch display data: ${fetchResponse.statusText}` },
       { status: fetchResponse.status }
@@ -173,6 +205,8 @@ export async function handleDisplayDataGet(
     if (localFallback != null) {
       return jsonResponseWithCache(localFallback)
     }
+    const staticData = await tryFetchStaticStandingsJson(request, relativePath)
+    if (staticData != null) return jsonResponseWithCache(staticData)
   }
 
   const headers = new Headers()
