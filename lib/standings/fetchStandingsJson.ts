@@ -5,6 +5,7 @@ import {
   siteWeeklyTeamStandingsPath,
   staticTeamStandingsPath,
 } from "@/lib/standings/paths"
+import { normalizeStandingsJsonForDisplay } from "@/lib/standings/normalizeStandingsJson"
 
 function parseUsableStandingsJson(raw: unknown): TeamStandingsJson | null {
   if (!isTeamStandingsJson(raw)) return null
@@ -19,7 +20,7 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
 
   if (res.ok) {
     const json = parseUsableStandingsJson(await res.json())
-    if (json) return json
+    if (json) return normalizeStandingsJsonForDisplay(json)
   }
 
   const staticMatch = sitePath.match(/^\/data\/standings\/(\d{4})\/(CL|PL)\.json$/)
@@ -44,7 +45,7 @@ async function fetchStandingsJsonFromSitePath(sitePath: string): Promise<TeamSta
       })
       if (r2Res.ok) {
         const r2Json = parseUsableStandingsJson(await r2Res.json())
-        if (r2Json) return r2Json
+        if (r2Json) return normalizeStandingsJsonForDisplay(r2Json)
       }
     } catch {
       // Prefer the same-origin /data proxy because it can fall back to local public/data.
@@ -67,7 +68,7 @@ async function fetchYearlyStandingsJson(year: number, league: StandingsLeague): 
     })
     if (staticRes.ok) {
       const staticJson = parseUsableStandingsJson(await staticRes.json())
-      if (staticJson) return staticJson
+      if (staticJson) return normalizeStandingsJsonForDisplay(staticJson)
     }
     throw new Error(`順位表データの取得に失敗しました: ${sitePath}`)
   }
