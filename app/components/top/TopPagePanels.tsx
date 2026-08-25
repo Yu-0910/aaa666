@@ -29,6 +29,8 @@ import {
   PITCHING_TOP_2026_SEASON_AREA_CLASS,
   PITCHING_TOP_2026_SEASON_GRID_CLASS,
   PITCHING_TOP_2026_SEASON_ROWS,
+  PITCHING_TOP_2026_WEEKLY_GRID_CLASS,
+  PITCHING_TOP_2026_WEEKLY_ROWS,
   topPagePitchingMetricTitle,
 } from "@/lib/topPageTopSeasonGrid2026"
 import {
@@ -168,9 +170,9 @@ export function LeadersPanel({
           statsCategory="pitching"
           isWeeklyTab={Boolean(weekKey)}
           leaders={data.leaders}
-          metricRows={PITCHING_TOP_2026_SEASON_ROWS}
+          metricRows={isWeeklyTab ? PITCHING_TOP_2026_WEEKLY_ROWS : PITCHING_TOP_2026_SEASON_ROWS}
           areaClassByMetric={PITCHING_TOP_2026_SEASON_AREA_CLASS}
-          gridClassName={PITCHING_TOP_2026_SEASON_GRID_CLASS}
+          gridClassName={isWeeklyTab ? PITCHING_TOP_2026_WEEKLY_GRID_CLASS : PITCHING_TOP_2026_SEASON_GRID_CLASS}
           displayMetricTitle={topPagePitchingMetricTitle}
           getRankingUrl={getRankingUrl}
           getStatsListUrl={getStatsListUrl}

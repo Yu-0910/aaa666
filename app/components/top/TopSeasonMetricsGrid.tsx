@@ -3,7 +3,7 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS, battingTop2025SeasonTopN, topLeaderRowTypography } from "@/lib/topPageBatting2025Grid"
-import { pitchingTop2026SeasonTopN } from "@/lib/topPagePitching2026Grid"
+import { pitchingTop2026TopN } from "@/lib/topPagePitching2026Grid"
 
 type LeaderRowRenderProps = {
   leader: Record<string, unknown>
@@ -133,7 +133,7 @@ export function TopSeasonMetricsGrid({
   const typography = topLeaderRowTypography(year, statsCategory, isWeeklyTab)
   const topNForMetric =
     statsCategory === "pitching"
-      ? (metric: string) => pitchingTop2026SeasonTopN(metric)
+      ? (metric: string) => pitchingTop2026TopN(metric, isWeeklyTab)
       : (metric: string) => battingTop2025SeasonTopN(metric, String(year))
   const flatMetrics = metricRows.flat()
   const hasAny = flatMetrics.some((m) => (leaders[m]?.length ?? 0) > 0)

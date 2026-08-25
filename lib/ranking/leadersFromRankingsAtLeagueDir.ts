@@ -32,6 +32,7 @@ import { usesTopPageModernLayout } from "@/lib/topPageModernLayout"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
   PITCHING_TOP_2026_MINI_METRICS,
+  PITCHING_TOP_2026_WEEKLY_ROW4_METRICS,
   pitchingTop2026SeasonTopN,
 } from "@/lib/topPagePitching2026Grid"
 import {
@@ -308,9 +309,12 @@ function battingTopN(metricLabel: string, year: string, weekKey?: string): numbe
   return 1
 }
 
-function pitchingTopN(metricLabel: string, _year: string): number {
+function pitchingTopN(metricLabel: string, _year: string, weekKey?: string): number {
   const seasonTopN = pitchingTop2026SeasonTopN(metricLabel)
   if (seasonTopN != null) return seasonTopN
+  if (weekKey && (PITCHING_TOP_2026_WEEKLY_ROW4_METRICS as readonly string[]).includes(metricLabel)) {
+    return 3
+  }
   if ((PITCHING_TOP_2026_GRID_METRICS as readonly string[]).includes(metricLabel)) return 3
   return 1
 }
@@ -394,7 +398,8 @@ export function buildPitchingLeadersConfigAtLeagueDir(
   if (!hasPitchingRankingsAtLeagueDir(leagueDir)) return null
   const upperLeague = league.toUpperCase()
   const leaders: Record<string, LeaderRow[]> = {}
-  const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
+  const weeklyExtraMetrics = options.weekKey ? [...PITCHING_TOP_2026_WEEKLY_ROW4_METRICS] : []
+  const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...weeklyExtraMetrics, ...PITCHING_TOP_2026_MINI_METRICS]
 
   for (const metricLabel of allMetrics) {
     const primaryRows = readMetricJson(leagueDir, metricLabel, "pitching")
@@ -403,7 +408,7 @@ export function buildPitchingLeadersConfigAtLeagueDir(
       ? readMetricJson(leagueDir, metricLabel, "pitching", true)
       : primaryRows
     if (!rows?.length) continue
-    const topN = pitchingTopN(metricLabel, year)
+    const topN = pitchingTopN(metricLabel, year, options.weekKey)
     const top = extractPitchingTop(
       rows,
       metricLabel,
