@@ -12,6 +12,7 @@ import { fetchWeeklyStandingsWithFallback } from "@/lib/standings/weeklyStanding
 import { fetchCurrentWeekMeta } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import type { TopStandingsView } from "@/app/components/common/RankingBottomNav"
 import { formatStandingsCell } from "@/lib/standings/formatStandingsCell"
+import { normalizeStandingsJsonForDisplay } from "@/lib/standings/normalizeStandingsJson"
 import {
   teamDisplayNameFromStandingRow,
   teamRomanNameFromCode,
@@ -54,7 +55,7 @@ async function fetchStaticStandingsFallback(
   if (!res.ok) {
     throw new Error(`Failed to fetch static standings: ${year}/${league}`)
   }
-  return (await res.json()) as TeamStandingsJson
+  return normalizeStandingsJsonForDisplay((await res.json()) as TeamStandingsJson)
 }
 
 const LEAGUE_META: Record<
