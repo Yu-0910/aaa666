@@ -13,6 +13,13 @@ function formatGbValue(value: number): string {
   return value.toFixed(1)
 }
 
+function computeGamesBehindFromRecords(
+  upperRow: TeamStandingRow,
+  lowerRow: TeamStandingRow,
+): number {
+  return ((upperRow.w - lowerRow.w) + (lowerRow.l - upperRow.l)) / 2
+}
+
 function normalizeAdjacentGamesBehind(rows: TeamStandingRow[]): TeamStandingRow[] {
   let previousCumulative = 0
 
@@ -23,10 +30,15 @@ function normalizeAdjacentGamesBehind(rows: TeamStandingRow[]): TeamStandingRow[
     }
 
     const cumulative = parseGbValue(row.gb)
-    if (cumulative == null) return row
+    if (cumulative != null) {
+      const adjacent = Math.max(0, cumulative - previousCumulative)
+      previousCumulative = cumulative
+      return { ...row, gb: formatGbValue(adjacent) }
+    }
 
-    const adjacent = Math.max(0, cumulative - previousCumulative)
-    previousCumulative = cumulative
+    const upperRow = rows[index - 1]!
+    const adjacent = Math.max(0, computeGamesBehindFromRecords(upperRow, row))
+    previousCumulative += adjacent
     return { ...row, gb: formatGbValue(adjacent) }
   })
 }
