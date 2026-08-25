@@ -512,7 +512,7 @@ export function StandingsLeagueSection({
         showMetricLeagueRanks
         weeklyCompactColumns={weeklyCompactColumns}
       />
-      {showTeamPageNote ? (
+      {showTeamPageNote && year >= 2026 ? (
         <p className="text-[10px] text-gray-400">
           チーム名をタッチするとチームページへ移動できます。
         </p>

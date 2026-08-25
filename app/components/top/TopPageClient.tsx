@@ -58,6 +58,12 @@ export function TopPageClient({
     setSelectedYear(initialYear)
   }, [initialYear])
 
+  useEffect(() => {
+    if (selectedYear >= 2026) return
+    if (!standingsView.endsWith("weekly")) return
+    setStandingsView("cl-season")
+  }, [selectedYear, standingsView])
+
   const routeHrefForYear = (tabId: TopPageTabId, year: number): string => {
     if (tabId === 0) return year === 2026 ? "/" : `/${year}`
     if (tabId === 4) return year === 2026 ? "/standings" : `/standings/${year}`
@@ -230,7 +236,7 @@ export function TopPageClient({
         <RankingBottomNav mode="weekly" activeView={topWeeklyView} onViewChange={setTopWeeklyView} />
       )}
       {activeMainTab === 4 && (
-        <RankingBottomNav mode="standings" activeView={standingsView} onViewChange={setStandingsView} />
+        <RankingBottomNav mode="standings" year={selectedYear} activeView={standingsView} onViewChange={setStandingsView} />
       )}
       <SiteFooter className="mt-12" />
     </div>
