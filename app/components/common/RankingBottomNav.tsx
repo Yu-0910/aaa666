@@ -21,6 +21,7 @@ type TopWeeklyBottomNavProps = {
 type TopStandingsBottomNavProps = {
   mode: "standings"
   activeView: TopStandingsView
+  year?: number
   onViewChange: (view: TopStandingsView) => void
 }
 
@@ -30,6 +31,7 @@ export default function RankingBottomNav(props: RankingBottomNavProps) {
   const { activeView, onViewChange } = props
   const isWeeklyMode = props.mode === "weekly"
   const isStandingsMode = props.mode === "standings"
+  const showHistoricalStandingsWeeklyNav = !isStandingsMode || (props.year ?? 2026) >= 2026
   const handleViewChange = (view: string) => {
     // The item list is selected from the same discriminated mode as the callback.
     ;(onViewChange as (nextView: string) => void)(view)
@@ -40,8 +42,12 @@ export default function RankingBottomNav(props: RankingBottomNavProps) {
       ? ([
           { view: "cl-season", label: "セ今季", icon: Table2 },
           { view: "pl-season", label: "パ今季", icon: Table2 },
-          { view: "cl-weekly", label: "セ今週", icon: Table2 },
-          { view: "pl-weekly", label: "パ今週", icon: Table2 },
+          ...(showHistoricalStandingsWeeklyNav
+            ? [
+                { view: "cl-weekly", label: "セ今週", icon: Table2 },
+                { view: "pl-weekly", label: "パ今週", icon: Table2 },
+              ]
+            : []),
         ] as const)
       : isWeeklyMode
       ? ([
