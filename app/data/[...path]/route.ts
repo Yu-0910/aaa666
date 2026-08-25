@@ -33,7 +33,7 @@ export async function GET(
         { status: 404 }
       )
     }
-    return handleDisplayDataGet(parsed.kind, parsed.rest)
+    return handleDisplayDataGet(parsed.kind, parsed.rest, _request)
   } catch (error) {
     console.error('[DisplayDataProxy]', error)
     return NextResponse.json(
