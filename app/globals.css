@@ -727,7 +727,7 @@
     height: 100%;
   }
 
-  /* 2026 シーズン TOP 投球: 防御率｜勝利｜K-BB％ / K％｜HLD｜セーブ / WHIP｜QS率｜P/IP */
+  /* 2026 シーズン TOP 投球: 防御率｜勝利｜K-BB％ / K％｜HLD｜セーブ / WHIP｜QS率｜P/IP / 投球回｜BB%｜四球 */
   .pitching-top-2026-season-grid {
     display: grid;
     width: 100%;
@@ -737,7 +737,8 @@
     grid-template-areas:
       "era w kbb"
       "kpct hld sv"
-      "whip qsr pip";
+      "whip qsr pip"
+      "ip bbpct bb";
     gap: 0.25rem;
   }
 
@@ -797,7 +798,10 @@
   .pitching-top-2026-season-grid > .pitching-top-2026-season-sv,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-whip,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-qsr,
-  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip {
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-ip,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-bbpct,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-bb {
     min-width: 0;
     min-height: 0;
   }
@@ -810,7 +814,10 @@
   .pitching-top-2026-season-grid > .pitching-top-2026-season-sv > *,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-whip > *,
   .pitching-top-2026-season-grid > .pitching-top-2026-season-qsr > *,
-  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip > * {
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-pip > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-ip > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-bbpct > *,
+  .pitching-top-2026-season-grid > .pitching-top-2026-season-bb > * {
     height: 100%;
   }
 
