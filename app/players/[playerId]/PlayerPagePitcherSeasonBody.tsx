@@ -129,7 +129,7 @@ function pitcherCurrentSeasonBasicCards(
       value: b && b.bf > 0 ? formatRankingStatDisplay("BB％", (b.bb / b.bf) * 100) : na,
       year: "",
     },
-    { title: "ストレート平均球速", value: fastballAvgSpeed, year: "" },
+    { title: "ストレート平均", value: fastballAvgSpeed, year: "" },
   ]
 }
 
