@@ -7,11 +7,12 @@ export const PITCHING_TOP_2026_SEASON_TOP5_METRICS = ["防御率", "勝利", "K-
 export const PITCHING_TOP_2026_SEASON_ROW2_METRICS = ["K％", "HLD", "Ｓ"] as const
 /** 2026 TOP 投球 3段目: 各1〜3位 */
 export const PITCHING_TOP_2026_SEASON_ROW3_METRICS = ["WHIP", "QS率", "P/IP"] as const
-/** 2026 今週 TOP 投球 4段目: 各1〜3位 */
-export const PITCHING_TOP_2026_WEEKLY_ROW4_METRICS = ["回数", "BB％", "四球"] as const
+/** 2026 TOP 投球 4段目: 各1〜3位 */
+export const PITCHING_TOP_2026_EXTRA_ROW4_METRICS = ["回数", "BB％", "四球"] as const
 export const PITCHING_TOP_2026_SEASON_TOP3_METRICS = [
   ...PITCHING_TOP_2026_SEASON_ROW2_METRICS,
   ...PITCHING_TOP_2026_SEASON_ROW3_METRICS,
+  ...PITCHING_TOP_2026_EXTRA_ROW4_METRICS,
 ] as const
 
 // NOTE: ランキング JSON のファイル名は「セーブ」ではなく「Ｓ」（pitching_metric_map.json で同義）。
@@ -76,7 +77,7 @@ export function pitchingMiniMetricsForTopTab(isWeeklyTab: boolean): readonly str
 export function pitchingTop2026TopN(metricLabel: string, isWeeklyTab = false): number | null {
   const seasonTopN = pitchingTop2026SeasonTopN(metricLabel)
   if (seasonTopN != null) return seasonTopN
-  if (isWeeklyTab && (PITCHING_TOP_2026_WEEKLY_ROW4_METRICS as readonly string[]).includes(metricLabel)) {
+  if (isWeeklyTab && (PITCHING_TOP_2026_EXTRA_ROW4_METRICS as readonly string[]).includes(metricLabel)) {
     return PITCHING_TOP_2026_SEASON_TOP3_N
   }
   return null
