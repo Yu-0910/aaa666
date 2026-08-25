@@ -43,6 +43,20 @@ type StandingsMetricJumpRequest = {
 
 const STANDINGS_CLIENT_BUILD = "2026-08-25-2"
 
+async function fetchStaticStandingsFallback(
+  year: number,
+  league: StandingsLeague
+): Promise<TeamStandingsJson> {
+  const res = await fetch(`/standings-json/${year}/${league}.json`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to fetch static standings: ${year}/${league}`)
+  }
+  return (await res.json()) as TeamStandingsJson
+}
+
 const LEAGUE_META: Record<
   StandingsLeague,
   { title: string; subtitle: string; color: string }
@@ -525,10 +539,22 @@ export function TopPageStandingsTab({ year, layout, activeView }: TopPageStandin
         setPl(plData)
         setLoading(false)
       })
-      .catch((err: Error) => {
-        if (cancelled) return
-        setError(err.message || "順位表データの取得に失敗しました")
-        setLoading(false)
+      .catch(async (err: Error) => {
+        try {
+          const [clData, plData] = await Promise.all([
+            fetchStaticStandingsFallback(year, "CL"),
+            fetchStaticStandingsFallback(year, "PL"),
+          ])
+          if (cancelled) return
+          setCl(clData)
+          setPl(plData)
+          setLoading(false)
+          return
+        } catch {
+          if (cancelled) return
+          setError(err.message || "順位表データの取得に失敗しました")
+          setLoading(false)
+        }
       })
 
     return () => {
