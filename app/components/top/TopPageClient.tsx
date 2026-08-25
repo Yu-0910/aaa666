@@ -78,10 +78,20 @@ export function TopPageClient({
   const yearOptions = Array.from({ length: 77 }, (_, i) => 2026 - i)
   const rankingHref = `/ranking/${selectedYear}/PL`
   const pitchingRankingHref = `/ranking/pitching/2026/PL`
+  const visibleMainTabs =
+    selectedYear >= 2026
+      ? mainTabs
+      : mainTabs.filter((tab) => tab.tabId === 0 || tab.tabId === 4)
 
   const mainTabButtons = (
-    <div className={isMobile ? "grid grid-cols-5 gap-1 px-2 py-1 bg-[#111111]" : "max-w-6xl mx-auto grid grid-cols-5 gap-2 px-4 py-2 bg-[#111111]"}>
-      {mainTabs.map((tab) => (
+    <div
+      className={
+        isMobile
+          ? `grid ${selectedYear >= 2026 ? "grid-cols-5" : "grid-cols-2"} gap-1 px-2 py-1 bg-[#111111]`
+          : `max-w-6xl mx-auto grid ${selectedYear >= 2026 ? "grid-cols-5" : "grid-cols-2"} gap-2 px-4 py-2 bg-[#111111]`
+      }
+    >
+      {visibleMainTabs.map((tab) => (
         <Link
           key={tab.tabId}
           href={routeHrefForYear(tab.tabId, selectedYear)}
