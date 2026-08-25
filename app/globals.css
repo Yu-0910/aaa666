@@ -241,6 +241,11 @@
     overflow: hidden !important;
   }
 
+  .top-page-standings-scroll-shell {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
   /* 巡目別球種一覧（捕手成績タブ等）: 左ラベルは表数値の拡大対象外・12px の 8 割 */
   .player-page-fonts .pa-round-pitch-row-label {
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
