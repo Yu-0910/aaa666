@@ -68,6 +68,7 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 import {
   extractAppearanceStatSlotsFromCells,
   countNonEmptyAppearanceSlots,
@@ -350,7 +351,15 @@ function main(): void {
 
   let targetYahooIds = onlyYahooIds ? [...onlyYahooIds] : null
   if (!targetYahooIds && (from || to)) {
-    const rangeDocs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year, from: from ?? undefined, to: to ?? undefined })
+    const rangeDocs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, {
+      year,
+      from: from ?? undefined,
+      to: to ?? undefined,
+    }).filter((doc) => {
+      const ymd = extractCanonicalGameYmd(doc)
+      const title = doc.game?.meta?.documentTitle
+      return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+    })
     targetYahooIds = collectAffectedBatterIds(rangeDocs, from, to)
     if (targetYahooIds.length === 0) {
       console.log(
@@ -359,7 +368,11 @@ function main(): void {
       return
     }
   }
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }).filter((doc) => {
+    const ymd = extractCanonicalGameYmd(doc)
+    const title = doc.game?.meta?.documentTitle
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+  })
   if (docs.length === 0) {
     console.error("[phase15] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)
