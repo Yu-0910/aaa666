@@ -124,18 +124,30 @@ function extractYahooScheduleRows(html: string, dateJst: string): Array<{
 
 async function fetchScheduleHtml(dateJst: string): Promise<string> {
   const url = `https://baseball.yahoo.co.jp/npb/schedule/?date=${encodeURIComponent(dateJst)}`
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-      "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-    },
-    cache: "no-store",
-  })
-  if (!res.ok) {
-    throw new Error(`Yahoo schedule fetch failed: HTTP ${res.status} ${res.statusText}`)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 12000)
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      throw new Error(`Yahoo schedule fetch failed: HTTP ${res.status} ${res.statusText}`)
+    }
+    return await res.text()
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Yahoo schedule fetch timed out for ${dateJst}`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
   }
-  return await res.text()
 }
 
 function rowScore(row: YahooScheduleProbablesSnapshot["rows"][number]): number {
@@ -147,14 +159,36 @@ export async function loadYahooScheduleProbablesSnapshot(
   projectRoot = getProjectRoot(),
   forceRefresh = false,
 ): Promise<YahooScheduleProbablesSnapshot | null> {
+  const cached = readSnapshotIfExists(projectRoot, dateJst)
   if (!forceRefresh) {
-    const cached = readSnapshotIfExists(projectRoot, dateJst)
     if (cached) return cached
   }
 
-  const html = await fetchScheduleHtml(dateJst)
+  let html = ""
+  try {
+    html = await fetchScheduleHtml(dateJst)
+  } catch (error) {
+    if (cached) {
+      console.warn(
+        `[yahoo-schedule-probables] fetch failed for ${dateJst}; using cached snapshot: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+      return cached
+    }
+    throw error
+  }
+
   const parsedRows = extractYahooScheduleRows(html, dateJst)
-  if (parsedRows.length === 0) return null
+  if (parsedRows.length === 0) {
+    if (cached) {
+      console.warn(
+        `[yahoo-schedule-probables] parsed 0 rows for ${dateJst}; using cached snapshot`,
+      )
+      return cached
+    }
+    return null
+  }
 
   const rowsByGameId = new Map<string, YahooScheduleProbablesSnapshot["rows"][number]>()
   for (const row of parsedRows) {
