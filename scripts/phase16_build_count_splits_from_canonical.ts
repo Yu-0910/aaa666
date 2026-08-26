@@ -36,6 +36,7 @@ import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battin
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { buildScoreBasesContextByPaId } from "../lib/yahooGame/basesFromSportsnaviScoreSnapshot"
 import { loadSportsnaviScoreSnapshots } from "../lib/yahooGame/sportsnaviScoreSnapshotIO"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -204,7 +205,11 @@ function main(): void {
     console.error("[phase16] invalid --from/--to. expected YYYY-MM-DD")
     process.exit(1)
   }
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }).filter((doc) => {
+    const ymd = extractCanonicalGameYmd(doc)
+    const title = doc.game?.meta?.documentTitle
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+  })
   if (docs.length === 0) {
     console.error("[phase16] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)

@@ -42,6 +42,7 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
 import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -211,7 +212,11 @@ function main(): void {
     process.exit(1)
   }
   invalidateYahooNpbBatterMapsCache()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }).filter((doc) => {
+    const ymd = extractCanonicalGameYmd(doc)
+    const title = doc.game?.meta?.documentTitle
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+  })
   if (docs.length === 0) {
     console.error("[phase13] no canonical games found under _data/scraped_games/canonical/")
     process.exit(1)

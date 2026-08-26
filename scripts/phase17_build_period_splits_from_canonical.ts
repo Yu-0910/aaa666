@@ -33,6 +33,7 @@ import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loa
 import { extractCanonicalGameYmd } from "../lib/yahooGame/loadCanonicalGames"
 import { battingSlashRatesFromCounts, slashRate3FromCounts } from "../lib/battingRateFormat"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -236,6 +237,14 @@ function readExistingPhase17MetaGames(outDir: string): string[] {
   }
 }
 
+function filterRegularSeasonDocs(year: string, docs: CanonicalGameDocument[]): CanonicalGameDocument[] {
+  return docs.filter((doc) => {
+    const ymd = extractCanonicalGameYmd(doc)
+    const title = doc.game?.meta?.documentTitle
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, title))
+  })
+}
+
 function main(): void {
   const { year, from, to, onlyYahooIds } = parseArgs()
   if ((from && !isYmd(from)) || (to && !isYmd(to))) {
@@ -243,9 +252,12 @@ function main(): void {
     process.exit(1)
   }
   const isIncrementalRange = Boolean(from || to)
-  const scopeDocs = loadCanonicalGamesMergedForDerivedPipeline(
-    projectRoot,
-    isIncrementalRange ? { year, from: from ?? undefined, to: to ?? undefined } : { year }
+  const scopeDocs = filterRegularSeasonDocs(
+    year,
+    loadCanonicalGamesMergedForDerivedPipeline(
+      projectRoot,
+      isIncrementalRange ? { year, from: from ?? undefined, to: to ?? undefined } : { year }
+    ),
   )
   if (scopeDocs.length === 0) {
     console.error("[phase17] no canonical games found under _data/scraped_games/canonical/")
@@ -279,7 +291,7 @@ function main(): void {
   }
 
   const docs = isIncrementalRange
-    ? loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+    ? filterRegularSeasonDocs(year, loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }))
     : scopeDocs
   const canonicalGames = scopeDocs.map((d) => d.gameId).sort()
   const byBatterMonth = new Map<string, Map<string, BattingSeasonAggYahoo>>()
