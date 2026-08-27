@@ -76,6 +76,8 @@ for (const [index, override] of HISTORICAL_PLAYER_SLUG_OVERRIDES.entries()) {
   if (fullRomanSlug && !bySlug.has(fullRomanSlug)) bySlug.set(fullRomanSlug, override)
   const originalSlug = historicalOverridesBase[index]?.slug ?? ""
   if (originalSlug && !bySlug.has(originalSlug)) bySlug.set(originalSlug, override)
+  const legacyIdSlug = originalSlug ? `${originalSlug}-${override.npbPlayerId}` : ""
+  if (legacyIdSlug && !bySlug.has(legacyIdSlug)) bySlug.set(legacyIdSlug, override)
   const romanKey = compactPlayerName(override.romanFull).toLowerCase()
   if (romanKey) byRomanKey.set(romanKey, override)
 }
