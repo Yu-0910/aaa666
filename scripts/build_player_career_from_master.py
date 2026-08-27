@@ -141,7 +141,7 @@ def candidate_name_keys(name: str, team: str, *, include_team: bool) -> List[str
 def batting_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[str, Any]:
     # master_csv_calculated の列名ゆれ（英語/日本語/別名）をできるだけ吸収する。
     # 存在しない指標は None のままにする（年度・世代で列が異なるため）。
-    return {
+    career = {
         "year": year,
         "league": league,
         "team": (row.get("team") or "").strip(),
@@ -182,6 +182,63 @@ def batting_row_to_career(row: Dict[str, str], year: int, league: str) -> Dict[s
         "noi": safe_float(row.get("NOI")),
         "gpa": safe_float(row.get("GPA")),
     }
+    return sanitize_batting_career_row(career)
+
+
+def sanitize_batting_career_row(career: Dict[str, Any]) -> Dict[str, Any]:
+    games = career.get("games")
+    pa = career.get("pa")
+    ab = career.get("ab")
+    if games != 0 or pa != 0 or ab != 0:
+        return career
+
+    stat_keys = [
+        "runs",
+        "hits",
+        "doubles",
+        "triples",
+        "hr",
+        "tb",
+        "rbi",
+        "sb",
+        "cs",
+        "sh",
+        "sf",
+        "bb",
+        "ibb",
+        "so",
+        "hbp",
+        "gidp",
+    ]
+    derived_keys = [
+        "avg",
+        "obp",
+        "slg",
+        "ops",
+        "isop",
+        "isod",
+        "bb_pct",
+        "k_pct",
+        "bb_k",
+        "rc",
+        "xr",
+        "babip",
+        "seca",
+        "ta",
+        "noi",
+        "gpa",
+    ]
+    has_impossible_counts = any((career.get(key) or 0) != 0 for key in stat_keys)
+    has_impossible_derived = any(career.get(key) not in (None, 0, 0.0) for key in derived_keys)
+    if not has_impossible_counts and not has_impossible_derived:
+        return career
+
+    sanitized = dict(career)
+    for key in stat_keys:
+        sanitized[key] = 0
+    for key in derived_keys:
+        sanitized[key] = None if key in {"bb_pct", "k_pct", "bb_k", "rc", "babip", "seca", "ta"} else 0.0
+    return sanitized
 
 
 def _pitching_int(row: Dict[str, str], *keys: str) -> Optional[int]:
