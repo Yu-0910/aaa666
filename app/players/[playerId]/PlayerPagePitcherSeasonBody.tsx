@@ -975,14 +975,7 @@ export function PlayerPagePitcherSeasonBody(props: PlayerPagePitcherSeasonBodyPr
                     </div>
 
                     {/* 状況別の投球成績（菊池ページ「状況別の打撃成績」と同じ条件列・ランナー別） */}
-                    <div
-                      style={{
-                        transform: "scale(1.1)",
-                        transformOrigin: "top left",
-                        width: "90.909%",
-                        marginBottom: "4.5rem",
-                      }}
-                    >
+                    <div className="w-full md:w-4/5" style={{ marginBottom: "4.5rem" }}>
                       <h2
                         className={`${tb} mb-4 pl-4 mt-8`}
                         style={{
