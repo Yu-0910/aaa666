@@ -22,7 +22,6 @@ import {
 import { parseGameDateYmdFromCanonical } from "./yahooGame/gameDateFromCanonical"
 import { loadCanonicalGameDocument } from "./yahooGame/loadCanonicalGame"
 import { isRegularSeasonCanonicalGame } from "./npbRegularSeason"
-import { overlayPitchingBasicFromRankings } from "@/lib/ranking/playerSeasonTotalsFromRankings"
 
 /** 援護率（nf3 近似）: (援護点合計×9)÷先発投球回 */
 function nf3EnGoRateDisplay(
@@ -210,8 +209,7 @@ function enrichPitcherSeasonPocPayload(
   npbPlayerId: string
 ): PitcherSeasonPocPayload {
   const withCoreCounts = mergeSeasonCoreCountsFromCanonical(payload, projectRoot)
-  const withRankings = overlayPitchingBasicFromRankings(withCoreCounts, year)
-  return mergeNf3MetricsFromAggregate(withRankings, projectRoot, year, npbPlayerId)
+  return mergeNf3MetricsFromAggregate(withCoreCounts, projectRoot, year, npbPlayerId)
 }
 
 async function enrichPitcherSeasonPocPayloadAsync(
@@ -221,14 +219,13 @@ async function enrichPitcherSeasonPocPayloadAsync(
   npbPlayerId: string
 ): Promise<PitcherSeasonPocPayload> {
   const withCoreCounts = mergeSeasonCoreCountsFromCanonical(payload, projectRoot)
-  const withRankings = overlayPitchingBasicFromRankings(withCoreCounts, year)
   const safeYear = safeYearSegment(year)
   const aggregate = await fetchDerivedJsonServer<Nf3AggregatePayload>(
     "pitcher_nf3_metrics",
     safeYear,
     "aggregate_by_npb.json"
   )
-  return mergeNf3MetricsRow(withRankings, aggregate?.byNpbPlayerId?.[npbPlayerId])
+  return mergeNf3MetricsRow(withCoreCounts, aggregate?.byNpbPlayerId?.[npbPlayerId])
 }
 
 export function pitcherSeasonPocFilePath(
