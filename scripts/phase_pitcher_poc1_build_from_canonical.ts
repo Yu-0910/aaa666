@@ -180,6 +180,35 @@ function filterRegularSeasonDocs(
   })
 }
 
+function filterRegularSeasonGameIds(
+  year: string,
+  gameIds: Iterable<string>,
+  docsByGameId: Map<string, CanonicalGameDocument>,
+): string[] {
+  const filtered: string[] = []
+  for (const rawGameId of gameIds) {
+    const gameId = String(rawGameId ?? "").trim()
+    if (!gameId) continue
+    const doc = docsByGameId.get(gameId)
+    if (!doc) continue
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    if (!ymd) continue
+    if (!isRegularSeasonCanonicalGame(year, ymd, doc.game?.meta?.documentTitle)) continue
+    filtered.push(gameId)
+  }
+  return [...new Set(filtered)].sort()
+}
+
+function stalePitcherPocFileShouldBeRemoved(
+  year: string,
+  payload: PitcherSeasonPocPayload | null,
+  docsByGameId: Map<string, CanonicalGameDocument>,
+): boolean {
+  if (!payload || payload.seasonYear !== year) return false
+  const gameIds = Array.isArray(payload.source?.canonicalGames) ? payload.source.canonicalGames : []
+  return filterRegularSeasonGameIds(year, gameIds, docsByGameId).length === 0
+}
+
 function ipToOuts(ip: string | undefined): number {
   if (!ip) return 0
   const t = ip.trim()
@@ -368,16 +397,15 @@ function main(): void {
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
   const rosterForBatHand = getNpbRoster2026()
-  const docs = filterRegularSeasonDocs(
-    year,
-    loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }),
-  )
+  const allDocs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = filterRegularSeasonDocs(year, allDocs)
   if (docs.length === 0) {
     console.error("[phase_pitcher_poc1] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
   }
   const targetNpbIds = onlyNpbIds ? [...onlyNpbIds] : null
   const targetNpbIdSet = targetNpbIds ? new Set(targetNpbIds) : null
+  const docsByGameId = new Map(allDocs.map((doc) => [String(doc.gameId ?? "").trim(), doc] as const))
 
   /** gameId -> scoreboard 補完済み canonical（Phase13 / Phase6 と同一） */
   const enrichedDocByGameId = new Map<string, CanonicalGameDocument>()
@@ -1240,6 +1268,17 @@ function main(): void {
   mkdirSync(outDir, { recursive: true })
   // Phase 6 などが後付けで splits/byCatcher 等を付与するため、ここでは全削除しない。
   // 個別投手のファイルは「同一 npbId の既存 JSON から引き継げるものは引き継いだ上で上書き」する。
+  const existingNpbIds = readdirSync(outDir)
+    .map((name) => name.match(/^npb_(\d+)\.json$/)?.[1] ?? null)
+    .filter((npb): npb is string => npb != null)
+  const cleanupTargets = targetNpbIds ?? existingNpbIds
+  for (const npb of cleanupTargets) {
+    if (byNpb.has(npb)) continue
+    const existing = loadExistingPitcherPocPayload(outDir, npb)
+    if (!stalePitcherPocFileShouldBeRemoved(year, existing, docsByGameId)) continue
+    unlinkSync(join(outDir, `npb_${npb}.json`))
+    console.log(`[phase_pitcher_poc1] removed stale file for npb ${npb}`)
+  }
 
   const eraFrom = (er: number, outs: number) => {
     if (outs <= 0) return null
@@ -1260,7 +1299,8 @@ function main(): void {
     const rankingStats = pitchingSeasonRowStatsFromAgg(coreAgg)
     const m = row.merged
     const ipStr = outsToIpDisplay(coreAgg.ipOuts)
-    const primaryGameId = [...row.gameIds].sort()[0]
+    const regularSeasonGameIds = filterRegularSeasonGameIds(year, row.gameIds, docsByGameId)
+    const primaryGameId = regularSeasonGameIds[0]
     const primaryDoc = docs.find((d) => d.gameId === primaryGameId) ?? docs[0]!
     const opp = opponentTeamName(primaryDoc, row.team)
 
@@ -1406,7 +1446,7 @@ function main(): void {
       team: row.team,
       generatedAt: new Date().toISOString(),
       source: {
-        canonicalGames: [...row.gameIds].sort(),
+        canonicalGames: regularSeasonGameIds,
         note: "1 試合または少数試合の合算。公式記録の代替ではない。",
         catcherNote: existing?.source?.catcherNote,
       },

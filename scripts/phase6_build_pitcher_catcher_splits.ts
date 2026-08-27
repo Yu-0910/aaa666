@@ -17,6 +17,7 @@ import { fileURLToPath } from "url"
 import type { PlateAppearance } from "../lib/yahooGame/types"
 import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { parseGameDateYmdFromCanonical } from "../lib/yahooGame/gameDateFromCanonical"
 import { injectTeamsFromTextPbpIfMissing } from "../lib/yahooGame/inferTeamsFromTextPbp"
 import { isIntentionalWalkResultText } from "../lib/baseballWalkResult"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
@@ -28,6 +29,7 @@ import {
 import { fieldingTeamNameFromInningHalf, teamsRoughlyMatch } from "../lib/yahooGame/startingCatcherFromCanonical"
 import type { PitcherSeasonPocPayload } from "../lib/pitcherSeasonPocTypes"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -120,7 +122,10 @@ function loadYahooPitcherIdToNpbMap(
 
 function main(): void {
   const { year, onlyNpbIds } = parseArgs()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }).filter((doc) => {
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, doc.game?.meta?.documentTitle))
+  })
   if (docs.length === 0) {
     console.error("[phase6] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)
