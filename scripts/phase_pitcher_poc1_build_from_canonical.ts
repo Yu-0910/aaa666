@@ -42,6 +42,7 @@ import type { CanonicalGameDocument, PlateAppearance, PitchingLine } from "../li
 import { yahooPitcherIdForVsHandFromPa } from "../lib/yahooGame/yahooPitcherIdForVsHandFromPa"
 import { isStrikeoutResultJa } from "../lib/yahooGame/paOutcomeResultJa"
 import { loadCanonicalGamesMergedForDerivedPipeline } from "../lib/yahooGame/loadCanonicalGamesMergedForDerivedPipeline"
+import { parseGameDateYmdFromCanonical } from "../lib/yahooGame/gameDateFromCanonical"
 import {
   aggregatePitchingSeasonByYahooPlayer,
   foldYahooPitchingAggIntoNpb,
@@ -68,6 +69,7 @@ import { loadScheduleStadiumByGameId } from "../lib/loadScheduleStadiumByGameId"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
 import { loadDayNightByGameId } from "../lib/loadDayNightByGameId"
 import { getNpbRoster2026 } from "../lib/npbRoster"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 import {
   effectiveVsHandBucketForPitcherSplit,
   resolveBatHandJaForBatter,
@@ -166,6 +168,16 @@ function parseArgs(): { year: string; onlyNpbIds: string[] | null } {
     }
   }
   return { year, onlyNpbIds }
+}
+
+function filterRegularSeasonDocs(
+  year: string,
+  docs: CanonicalGameDocument[],
+): CanonicalGameDocument[] {
+  return docs.filter((doc) => {
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, doc.game?.meta?.documentTitle))
+  })
 }
 
 function ipToOuts(ip: string | undefined): number {
@@ -356,7 +368,10 @@ function main(): void {
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
   const rosterForBatHand = getNpbRoster2026()
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = filterRegularSeasonDocs(
+    year,
+    loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }),
+  )
   if (docs.length === 0) {
     console.error("[phase_pitcher_poc1] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)

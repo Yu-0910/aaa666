@@ -36,6 +36,7 @@ import {
 import { parseRosterCsv } from "../lib/yahooGame/rosterCsv"
 import { addPitcherPaCount, fmtAvg, lastPitchResult } from "../lib/yahooGame/pitcherPaResultCommon"
 import { writeJsonFileWithRetrySync } from "../lib/fs/writeFileWithRetry"
+import { isRegularSeasonCanonicalGame } from "../lib/npbRegularSeason"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = join(__dirname, "..")
@@ -294,6 +295,16 @@ function lineAggToRow(
   }
 }
 
+function filterRegularSeasonDocs(
+  year: string,
+  docs: CanonicalGameDocument[],
+): CanonicalGameDocument[] {
+  return docs.filter((doc) => {
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    return Boolean(ymd && isRegularSeasonCanonicalGame(year, ymd, doc.game?.meta?.documentTitle))
+  })
+}
+
 function main(): void {
   const { year, from, to, onlyNpbIds } = parseArgs()
   if ((from && !isYmd(from)) || (to && !isYmd(to))) {
@@ -306,7 +317,10 @@ function main(): void {
     process.exit(1)
   }
   const roster = parseRosterCsv(readFileSync(rosterPath, "utf8"))
-  const docs = loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year })
+  const docs = filterRegularSeasonDocs(
+    year,
+    loadCanonicalGamesMergedForDerivedPipeline(projectRoot, { year }),
+  )
   if (docs.length === 0) {
     console.error("[phase7] no canonical games under _data/scraped_games/canonical/")
     process.exit(1)

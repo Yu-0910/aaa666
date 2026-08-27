@@ -7,7 +7,7 @@
   ],
   "playerName": "ウォルターズ",
   "team": "東京ヤクルトスワローズ",
-  "generatedAt": "2026-08-14T17:45:02.211Z",
+  "generatedAt": "2026-08-27T04:54:45.681Z",
   "source": {
     "canonicalGames": [
       "2021038726",
@@ -18,36 +18,39 @@
       "2021039242",
       "2021039248",
       "2021039261",
-      "2021039272"
+      "2021039272",
+      "2021039303",
+      "2021039315",
+      "2021039331"
     ],
     "note": "1 試合または少数試合の合算。公式記録の代替ではない。",
     "catcherNote": "捕手は各打席時点の実守備捕手（textPlayByPlay の守備交代・(捕) 表記を追跡）。1試合内で複数捕手に打席が分かれる場合は BF 最大の捕手に pitchingLines（回数・自責点・勝敗・QS）を帰属。打者・安打等は打席単位で集計。"
   },
   "basic": {
-    "ip": "28.1",
-    "ipOuts": 85,
-    "era": 5.4,
-    "bf": 130,
-    "h": 30,
-    "hr": 3,
-    "so": 26,
-    "bb": 12,
+    "ip": "31.1",
+    "ipOuts": 94,
+    "era": 5.46,
+    "bf": 144,
+    "h": 32,
+    "hr": 4,
+    "so": 30,
+    "bb": 14,
     "hbp": 4,
     "bk": 0,
-    "r": 17,
-    "er": 17,
-    "pitches": 503,
+    "r": 19,
+    "er": 19,
+    "pitches": 562,
     "decision": "win",
-    "whip": 1.482,
-    "avgAgainstApprox": ".263",
+    "whip": 1.468,
+    "avgAgainstApprox": ".254",
     "battedBallOuts": {
       "ground": 28,
-      "air": 26
+      "air": 31
     },
-    "gamesAppeared": 9,
+    "gamesAppeared": 12,
     "gamesStarted": 5,
-    "gamesInRelief": 4,
-    "holds": 0,
+    "gamesInRelief": 7,
+    "holds": 2,
     "completeGames": 0,
     "shutouts": 0,
     "intentionalWalks": 0,
@@ -58,51 +61,51 @@
     "hqsRate": 0.2,
     "sqsRate": 0,
     "winCount": 1,
-    "lossCount": 3,
+    "lossCount": 4,
     "saveCount": 0
   },
   "opponentTeamName": "",
   "splits": {
     "vsHand": {
       "vsR": {
-        "bf": 54,
-        "ab": 44,
-        "h": 11,
+        "bf": 60,
+        "ab": 49,
+        "h": 12,
         "h2": 1,
         "h3": 0,
-        "hr": 2,
-        "tb": 18,
-        "so": 14,
-        "bb": 6,
+        "hr": 3,
+        "tb": 22,
+        "so": 16,
+        "bb": 7,
         "hbp": 2,
-        "outs": 36,
+        "outs": 38,
         "er": 6,
-        "avg": ".250",
-        "ipOuts": 36,
-        "ip": "12",
-        "era": 4.5,
-        "whip": 1.417,
-        "isop": ".159"
+        "avg": ".245",
+        "ipOuts": 38,
+        "ip": "12.2",
+        "era": 4.26,
+        "whip": 1.5,
+        "isop": ".204"
       },
       "vsL": {
-        "bf": 76,
-        "ab": 67,
-        "h": 19,
-        "h2": 5,
+        "bf": 84,
+        "ab": 74,
+        "h": 20,
+        "h2": 6,
         "h3": 0,
         "hr": 1,
-        "tb": 27,
-        "so": 12,
-        "bb": 6,
+        "tb": 29,
+        "so": 14,
+        "bb": 7,
         "hbp": 2,
-        "outs": 51,
-        "er": 1,
-        "avg": ".284",
-        "ipOuts": 51,
-        "ip": "17",
-        "era": 0.53,
-        "whip": 1.471,
-        "isop": ".119"
+        "outs": 57,
+        "er": 5,
+        "avg": ".270",
+        "ipOuts": 57,
+        "ip": "19",
+        "era": 2.37,
+        "whip": 1.421,
+        "isop": ".122"
       },
       "vsB": {
         "bf": 0,
@@ -149,46 +152,46 @@
       {
         "key": "none",
         "label": "無し",
-        "bf": 75,
-        "ab": 65,
-        "h": 13,
+        "bf": 85,
+        "ab": 74,
+        "h": 14,
         "h2": 1,
         "h3": 0,
-        "hr": 3,
-        "tb": 23,
-        "so": 19,
-        "bb": 7,
+        "hr": 4,
+        "tb": 27,
+        "so": 23,
+        "bb": 8,
         "hbp": 3,
-        "outs": 52,
-        "er": 7,
-        "avg": ".200",
-        "ipOuts": 52,
-        "ip": "17.1",
-        "era": 3.63,
-        "whip": 1.154,
-        "isop": ".154"
+        "outs": 59,
+        "er": 11,
+        "avg": ".189",
+        "ipOuts": 59,
+        "ip": "19.2",
+        "era": 5.03,
+        "whip": 1.119,
+        "isop": ".176"
       },
       {
         "key": "r1",
         "label": "1塁",
-        "bf": 23,
-        "ab": 20,
-        "h": 8,
-        "h2": 2,
+        "bf": 25,
+        "ab": 22,
+        "h": 9,
+        "h2": 3,
         "h3": 0,
         "hr": 0,
-        "tb": 10,
+        "tb": 12,
         "so": 3,
         "bb": 3,
         "hbp": 0,
-        "outs": 15,
+        "outs": 16,
         "er": 0,
-        "avg": ".400",
-        "ipOuts": 15,
-        "ip": "5",
+        "avg": ".409",
+        "ipOuts": 16,
+        "ip": "5.1",
         "era": 0,
-        "whip": 2.2,
-        "isop": ".100"
+        "whip": 2.25,
+        "isop": ".136"
       },
       {
         "key": "r2",
@@ -259,7 +262,7 @@
       {
         "key": "r23",
         "label": "2・3塁",
-        "bf": 5,
+        "bf": 6,
         "ab": 5,
         "h": 2,
         "h2": 0,
@@ -267,7 +270,7 @@
         "hr": 0,
         "tb": 2,
         "so": 1,
-        "bb": 0,
+        "bb": 1,
         "hbp": 0,
         "outs": 3,
         "er": 0,
@@ -275,14 +278,14 @@
         "ipOuts": 3,
         "ip": "1",
         "era": 0,
-        "whip": 2,
+        "whip": 3,
         "isop": ".000"
       },
       {
         "key": "loaded",
         "label": "満塁",
-        "bf": 8,
-        "ab": 5,
+        "bf": 9,
+        "ab": 6,
         "h": 2,
         "h2": 1,
         "h3": 0,
@@ -293,64 +296,64 @@
         "hbp": 0,
         "outs": 5,
         "er": 0,
-        "avg": ".400",
+        "avg": ".333",
         "ipOuts": 5,
         "ip": "1.2",
         "era": 0,
         "whip": 2.4,
-        "isop": ".200"
+        "isop": ".167"
       },
       {
         "key": "risp",
         "label": "得点圏",
-        "bf": 32,
-        "ab": 26,
+        "bf": 34,
+        "ab": 27,
         "h": 9,
         "h2": 3,
         "h3": 0,
         "hr": 0,
         "tb": 12,
         "so": 4,
-        "bb": 2,
+        "bb": 3,
         "hbp": 1,
         "outs": 20,
         "er": 0,
-        "avg": ".346",
+        "avg": ".333",
         "ipOuts": 20,
         "ip": "6.2",
         "era": 0,
-        "whip": 1.65,
-        "isop": ".115"
+        "whip": 1.8,
+        "isop": ".111"
       },
       {
         "key": "no_risp",
         "label": "非得点圏",
-        "bf": 98,
-        "ab": 85,
-        "h": 21,
-        "h2": 3,
+        "bf": 110,
+        "ab": 96,
+        "h": 23,
+        "h2": 4,
         "h3": 0,
-        "hr": 3,
-        "tb": 33,
-        "so": 22,
-        "bb": 10,
+        "hr": 4,
+        "tb": 39,
+        "so": 26,
+        "bb": 11,
         "hbp": 3,
-        "outs": 67,
-        "er": 7,
-        "avg": ".247",
-        "ipOuts": 67,
-        "ip": "22.1",
-        "era": 2.82,
-        "whip": 1.388,
-        "isop": ".141"
+        "outs": 75,
+        "er": 11,
+        "avg": ".240",
+        "ipOuts": 75,
+        "ip": "25",
+        "era": 3.96,
+        "whip": 1.36,
+        "isop": ".167"
       }
     ],
     "byCount": [
       {
         "key": "0-0",
         "label": "0-0",
-        "bf": 15,
-        "ab": 15,
+        "bf": 17,
+        "ab": 17,
         "h": 9,
         "h2": 1,
         "h3": 0,
@@ -359,20 +362,20 @@
         "so": 0,
         "bb": 0,
         "hbp": 0,
-        "outs": 7,
+        "outs": 9,
         "er": 7,
-        "avg": ".600",
-        "ipOuts": 7,
-        "ip": "2.1",
-        "era": 27,
-        "whip": 3.857,
-        "isop": ".667"
+        "avg": ".529",
+        "ipOuts": 9,
+        "ip": "3",
+        "era": 21,
+        "whip": 3,
+        "isop": ".588"
       },
       {
         "key": "1-0",
         "label": "1-0",
-        "bf": 9,
-        "ab": 5,
+        "bf": 11,
+        "ab": 7,
         "h": 3,
         "h2": 0,
         "h3": 0,
@@ -381,13 +384,13 @@
         "so": 0,
         "bb": 0,
         "hbp": 3,
-        "outs": 3,
+        "outs": 5,
         "er": 0,
-        "avg": ".600",
-        "ipOuts": 3,
-        "ip": "1",
+        "avg": ".429",
+        "ipOuts": 5,
+        "ip": "1.2",
         "era": 0,
-        "whip": 3,
+        "whip": 1.8,
         "isop": ".000"
       },
       {
@@ -415,7 +418,7 @@
       {
         "key": "3-0",
         "label": "3-0",
-        "bf": 4,
+        "bf": 5,
         "ab": 0,
         "h": 0,
         "h2": 0,
@@ -423,7 +426,7 @@
         "hr": 0,
         "tb": 0,
         "so": 0,
-        "bb": 4,
+        "bb": 5,
         "hbp": 0,
         "outs": 0,
         "er": 0,
@@ -437,24 +440,24 @@
       {
         "key": "0-1",
         "label": "0-1",
-        "bf": 10,
-        "ab": 8,
-        "h": 2,
-        "h2": 1,
+        "bf": 11,
+        "ab": 9,
+        "h": 3,
+        "h2": 2,
         "h3": 0,
         "hr": 0,
-        "tb": 3,
+        "tb": 5,
         "so": 0,
         "bb": 0,
         "hbp": 0,
         "outs": 7,
         "er": 0,
-        "avg": ".250",
+        "avg": ".333",
         "ipOuts": 7,
         "ip": "2.1",
         "era": 0,
-        "whip": 0.857,
-        "isop": ".125"
+        "whip": 1.286,
+        "isop": ".222"
       },
       {
         "key": "1-1",
@@ -547,92 +550,92 @@
       {
         "key": "1-2",
         "label": "1-2",
-        "bf": 22,
-        "ab": 22,
+        "bf": 25,
+        "ab": 25,
         "h": 2,
         "h2": 1,
         "h3": 0,
         "hr": 0,
         "tb": 3,
-        "so": 11,
+        "so": 13,
         "bb": 0,
         "hbp": 0,
-        "outs": 21,
+        "outs": 23,
         "er": 0,
-        "avg": ".091",
-        "ipOuts": 21,
-        "ip": "7",
+        "avg": ".080",
+        "ipOuts": 23,
+        "ip": "7.2",
         "era": 0,
-        "whip": 0.286,
-        "isop": ".045"
+        "whip": 0.261,
+        "isop": ".040"
       },
       {
         "key": "2-2",
         "label": "2-2",
-        "bf": 16,
-        "ab": 16,
-        "h": 2,
+        "bf": 18,
+        "ab": 18,
+        "h": 3,
         "h2": 0,
         "h3": 0,
-        "hr": 0,
-        "tb": 2,
-        "so": 3,
+        "hr": 1,
+        "tb": 6,
+        "so": 4,
         "bb": 0,
         "hbp": 0,
-        "outs": 14,
+        "outs": 15,
         "er": 0,
-        "avg": ".125",
-        "ipOuts": 14,
-        "ip": "4.2",
+        "avg": ".167",
+        "ipOuts": 15,
+        "ip": "5",
         "era": 0,
-        "whip": 0.429,
-        "isop": ".000"
+        "whip": 0.6,
+        "isop": ".167"
       },
       {
         "key": "3-2",
         "label": "3-2",
-        "bf": 19,
-        "ab": 15,
+        "bf": 22,
+        "ab": 17,
         "h": 5,
         "h2": 2,
         "h3": 0,
         "hr": 0,
         "tb": 7,
-        "so": 7,
-        "bb": 4,
+        "so": 8,
+        "bb": 5,
         "hbp": 0,
-        "outs": 11,
-        "er": 0,
-        "avg": ".333",
-        "ipOuts": 11,
-        "ip": "3.2",
-        "era": 0,
-        "whip": 2.455,
-        "isop": ".133"
+        "outs": 12,
+        "er": 4,
+        "avg": ".294",
+        "ipOuts": 12,
+        "ip": "4",
+        "era": 9,
+        "whip": 2.5,
+        "isop": ".118"
       }
     ],
     "byPaRound": [
       {
         "key": "1",
         "label": "1巡目",
-        "bf": 61,
-        "ab": 55,
-        "h": 12,
-        "h2": 0,
+        "bf": 75,
+        "ab": 67,
+        "h": 14,
+        "h2": 1,
         "h3": 0,
-        "hr": 1,
-        "tb": 15,
-        "so": 13,
-        "bb": 4,
+        "hr": 2,
+        "tb": 21,
+        "so": 17,
+        "bb": 6,
         "hbp": 2,
-        "outs": 45,
-        "er": 1,
-        "avg": ".218",
-        "ipOuts": 45,
-        "ip": "15",
-        "era": 0.6,
-        "whip": 1.067,
-        "isop": ".055"
+        "outs": 54,
+        "er": 3,
+        "avg": ".209",
+        "ipOuts": 54,
+        "ip": "18",
+        "era": 1.5,
+        "whip": 1.111,
+        "isop": ".104"
       },
       {
         "key": "2",
@@ -683,42 +686,42 @@
       {
         "key": "1",
         "label": "1巡目",
-        "pitches_total": 240,
+        "pitches_total": 299,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 101,
-            "pct": 42.1
-          },
-          {
-            "pitch_type": "カットボール",
-            "pitches": 46,
-            "pct": 19.2
+            "pitches": 121,
+            "pct": 40.5
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 40,
-            "pct": 16.7
+            "pitches": 57,
+            "pct": 19.1
+          },
+          {
+            "pitch_type": "カットボール",
+            "pitches": 55,
+            "pct": 18.4
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 36,
-            "pct": 15
+            "pitches": 39,
+            "pct": 13
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 15,
-            "pct": 6.3
+            "pitches": 25,
+            "pct": 8.4
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 0.4
+            "pct": 0.3
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 0.4
+            "pct": 0.3
           }
         ]
       },
@@ -806,42 +809,42 @@
       {
         "key": "1",
         "label": "1巡目",
-        "pitches_total": 131,
+        "pitches_total": 160,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 58,
-            "pct": 44.3
+            "pitches": 74,
+            "pct": 46.3
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 33,
-            "pct": 25.2
+            "pitches": 36,
+            "pct": 22.5
+          },
+          {
+            "pitch_type": "カーブ",
+            "pitches": 21,
+            "pct": 13.1
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 18,
-            "pct": 13.7
-          },
-          {
-            "pitch_type": "カーブ",
-            "pitches": 12,
-            "pct": 9.2
+            "pct": 11.3
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 8,
-            "pct": 6.1
+            "pitches": 9,
+            "pct": 5.6
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 0.8
+            "pct": 0.6
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 0.8
+            "pct": 0.6
           }
         ]
       },
@@ -929,32 +932,32 @@
       {
         "key": "1",
         "label": "1巡目",
-        "pitches_total": 109,
+        "pitches_total": 139,
         "rows": [
           {
-            "pitch_type": "ストレート",
-            "pitches": 43,
-            "pct": 39.4
+            "pitch_type": "スイーパー",
+            "pitches": 48,
+            "pct": 34.5
           },
           {
-            "pitch_type": "スイーパー",
-            "pitches": 32,
-            "pct": 29.4
+            "pitch_type": "ストレート",
+            "pitches": 47,
+            "pct": 33.8
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 18,
-            "pct": 16.5
+            "pitches": 21,
+            "pct": 15.1
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 13,
-            "pct": 11.9
+            "pitches": 19,
+            "pct": 13.7
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 3,
-            "pct": 2.8
+            "pitches": 4,
+            "pct": 2.9
           }
         ]
       },
@@ -1027,187 +1030,187 @@
       {
         "key": "0-0",
         "label": "0-0",
-        "pitches_total": 130,
+        "pitches_total": 144,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 53,
-            "pct": 40.8
+            "pitches": 55,
+            "pct": 38.2
+          },
+          {
+            "pitch_type": "カットボール",
+            "pitches": 28,
+            "pct": 19.4
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 27,
-            "pct": 20.8
-          },
-          {
-            "pitch_type": "カットボール",
-            "pitches": 24,
-            "pct": 18.5
+            "pct": 18.8
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 15,
-            "pct": 11.5
+            "pitches": 19,
+            "pct": 13.2
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 11,
-            "pct": 8.5
+            "pitches": 15,
+            "pct": 10.4
           }
         ]
       },
       {
         "key": "1-0",
         "label": "1-0",
-        "pitches_total": 49,
+        "pitches_total": 55,
         "rows": [
           {
             "pitch_type": "ツーシーム",
             "pitches": 16,
-            "pct": 32.7
+            "pct": 29.1
           },
           {
             "pitch_type": "ストレート",
-            "pitches": 13,
-            "pct": 26.5
+            "pitches": 14,
+            "pct": 25.5
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 10,
-            "pct": 20.4
+            "pitches": 13,
+            "pct": 23.6
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 9,
-            "pct": 18.4
+            "pitches": 11,
+            "pct": 20
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 2
+            "pct": 1.8
           }
         ]
       },
       {
         "key": "2-0",
         "label": "2-0",
-        "pitches_total": 19,
+        "pitches_total": 20,
         "rows": [
           {
             "pitch_type": "ツーシーム",
             "pitches": 8,
-            "pct": 42.1
+            "pct": 40
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 6,
+            "pct": 30
           },
           {
             "pitch_type": "カットボール",
             "pitches": 5,
-            "pct": 26.3
-          },
-          {
-            "pitch_type": "ストレート",
-            "pitches": 5,
-            "pct": 26.3
+            "pct": 25
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 1,
-            "pct": 5.3
+            "pct": 5
           }
         ]
       },
       {
         "key": "3-0",
         "label": "3-0",
-        "pitches_total": 6,
+        "pitches_total": 7,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 4,
-            "pct": 66.7
+            "pitches": 5,
+            "pct": 71.4
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 1,
-            "pct": 16.7
+            "pct": 14.3
           },
           {
             "pitch_type": "カットボール",
             "pitches": 1,
-            "pct": 16.7
+            "pct": 14.3
           }
         ]
       },
       {
         "key": "0-1",
         "label": "0-1",
-        "pitches_total": 66,
+        "pitches_total": 72,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 19,
-            "pct": 28.8
+            "pitches": 22,
+            "pct": 30.6
+          },
+          {
+            "pitch_type": "スイーパー",
+            "pitches": 17,
+            "pct": 23.6
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 14,
-            "pct": 21.2
-          },
-          {
-            "pitch_type": "スイーパー",
-            "pitches": 14,
-            "pct": 21.2
+            "pct": 19.4
           },
           {
             "pitch_type": "カーブ",
             "pitches": 13,
-            "pct": 19.7
+            "pct": 18.1
           },
           {
             "pitch_type": "カットボール",
             "pitches": 5,
-            "pct": 7.6
+            "pct": 6.9
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 1.5
+            "pct": 1.4
           }
         ]
       },
       {
         "key": "1-1",
         "label": "1-1",
-        "pitches_total": 50,
+        "pitches_total": 57,
         "rows": [
+          {
+            "pitch_type": "ストレート",
+            "pitches": 15,
+            "pct": 26.3
+          },
           {
             "pitch_type": "ツーシーム",
             "pitches": 13,
-            "pct": 26
-          },
-          {
-            "pitch_type": "ストレート",
-            "pitches": 13,
-            "pct": 26
+            "pct": 22.8
           },
           {
             "pitch_type": "カットボール",
             "pitches": 12,
-            "pct": 24
+            "pct": 21.1
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 9,
-            "pct": 18
+            "pitches": 12,
+            "pct": 21.1
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 2,
-            "pct": 4
+            "pitches": 4,
+            "pct": 7
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 2
+            "pct": 1.8
           }
         ]
       },
@@ -1268,133 +1271,133 @@
       {
         "key": "0-2",
         "label": "0-2",
-        "pitches_total": 32,
+        "pitches_total": 33,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 10,
-            "pct": 31.3
+            "pitches": 11,
+            "pct": 33.3
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 9,
-            "pct": 28.1
+            "pct": 27.3
           },
           {
             "pitch_type": "カーブ",
             "pitches": 5,
-            "pct": 15.6
+            "pct": 15.2
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 4,
-            "pct": 12.5
+            "pct": 12.1
           },
           {
             "pitch_type": "カットボール",
             "pitches": 4,
-            "pct": 12.5
+            "pct": 12.1
           }
         ]
       },
       {
         "key": "1-2",
         "label": "1-2",
-        "pitches_total": 53,
+        "pitches_total": 63,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 18,
-            "pct": 34
+            "pitches": 19,
+            "pct": 30.2
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 15,
-            "pct": 28.3
+            "pitches": 19,
+            "pct": 30.2
+          },
+          {
+            "pitch_type": "カーブ",
+            "pitches": 11,
+            "pct": 17.5
           },
           {
             "pitch_type": "カットボール",
             "pitches": 8,
-            "pct": 15.1
-          },
-          {
-            "pitch_type": "カーブ",
-            "pitches": 8,
-            "pct": 15.1
+            "pct": 12.7
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 4,
-            "pct": 7.5
+            "pitches": 6,
+            "pct": 9.5
           }
         ]
       },
       {
         "key": "2-2",
         "label": "2-2",
-        "pitches_total": 32,
+        "pitches_total": 42,
         "rows": [
           {
-            "pitch_type": "カットボール",
-            "pitches": 10,
-            "pct": 31.3
+            "pitch_type": "ストレート",
+            "pitches": 15,
+            "pct": 35.7
           },
           {
-            "pitch_type": "ストレート",
-            "pitches": 9,
-            "pct": 28.1
+            "pitch_type": "カットボール",
+            "pitches": 11,
+            "pct": 26.2
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 8,
-            "pct": 25
+            "pitches": 9,
+            "pct": 21.4
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 3,
-            "pct": 9.4
+            "pitches": 4,
+            "pct": 9.5
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 1,
-            "pct": 3.1
+            "pitches": 2,
+            "pct": 4.8
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 3.1
+            "pct": 2.4
           }
         ]
       },
       {
         "key": "3-2",
         "label": "3-2",
-        "pitches_total": 28,
+        "pitches_total": 31,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 14,
-            "pct": 50
+            "pitches": 16,
+            "pct": 51.6
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 6,
-            "pct": 21.4
+            "pitches": 7,
+            "pct": 22.6
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 4,
-            "pct": 14.3
+            "pct": 12.9
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 3,
-            "pct": 10.7
+            "pct": 9.7
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 3.6
+            "pct": 3.2
           }
         ]
       }
@@ -1403,64 +1406,64 @@
       {
         "key": "0-0",
         "label": "0-0",
-        "pitches_total": 76,
+        "pitches_total": 84,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 35,
-            "pct": 46.1
+            "pitches": 37,
+            "pct": 44
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 15,
-            "pct": 19.7
+            "pct": 17.9
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 13,
-            "pct": 17.1
+            "pitches": 14,
+            "pct": 16.7
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 8,
-            "pct": 10.5
+            "pitches": 12,
+            "pct": 14.3
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 5,
-            "pct": 6.6
+            "pitches": 6,
+            "pct": 7.1
           }
         ]
       },
       {
         "key": "1-0",
         "label": "1-0",
-        "pitches_total": 27,
+        "pitches_total": 30,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 9,
+            "pitches": 10,
             "pct": 33.3
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 9,
-            "pct": 33.3
+            "pct": 30
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 5,
-            "pct": 18.5
+            "pitches": 7,
+            "pct": 23.3
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 3,
-            "pct": 11.1
+            "pct": 10
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 3.7
+            "pct": 3.3
           }
         ]
       },
@@ -1501,69 +1504,74 @@
       {
         "key": "0-1",
         "label": "0-1",
-        "pitches_total": 41,
+        "pitches_total": 44,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 11,
-            "pct": 26.8
+            "pitches": 14,
+            "pct": 31.8
           },
           {
             "pitch_type": "カーブ",
             "pitches": 10,
-            "pct": 24.4
+            "pct": 22.7
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 10,
-            "pct": 24.4
+            "pct": 22.7
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 6,
-            "pct": 14.6
+            "pct": 13.6
           },
           {
             "pitch_type": "カットボール",
             "pitches": 3,
-            "pct": 7.3
+            "pct": 6.8
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 2.4
+            "pct": 2.3
           }
         ]
       },
       {
         "key": "1-1",
         "label": "1-1",
-        "pitches_total": 30,
+        "pitches_total": 33,
         "rows": [
           {
             "pitch_type": "カットボール",
             "pitches": 11,
-            "pct": 36.7
+            "pct": 33.3
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 8,
-            "pct": 26.7
+            "pct": 24.2
           },
           {
             "pitch_type": "ストレート",
-            "pitches": 7,
-            "pct": 23.3
+            "pitches": 8,
+            "pct": 24.2
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 3,
-            "pct": 10
+            "pct": 9.1
+          },
+          {
+            "pitch_type": "カーブ",
+            "pitches": 2,
+            "pct": 6.1
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 3.3
+            "pct": 3
           }
         ]
       },
@@ -1651,91 +1659,91 @@
       {
         "key": "1-2",
         "label": "1-2",
-        "pitches_total": 29,
+        "pitches_total": 32,
         "rows": [
           {
             "pitch_type": "ストレート",
+            "pitches": 10,
+            "pct": 31.3
+          },
+          {
+            "pitch_type": "カーブ",
             "pitches": 9,
-            "pct": 31
+            "pct": 28.1
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 8,
-            "pct": 27.6
-          },
-          {
-            "pitch_type": "カーブ",
-            "pitches": 7,
-            "pct": 24.1
+            "pct": 25
           },
           {
             "pitch_type": "カットボール",
             "pitches": 5,
-            "pct": 17.2
+            "pct": 15.6
           }
         ]
       },
       {
         "key": "2-2",
         "label": "2-2",
-        "pitches_total": 19,
+        "pitches_total": 26,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 7,
-            "pct": 36.8
+            "pitches": 13,
+            "pct": 50
           },
           {
             "pitch_type": "カットボール",
             "pitches": 6,
-            "pct": 31.6
+            "pct": 23.1
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 4,
-            "pct": 21.1
+            "pct": 15.4
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 1,
-            "pct": 5.3
+            "pitches": 2,
+            "pct": 7.7
           },
           {
             "pitch_type": "スプリット",
             "pitches": 1,
-            "pct": 5.3
+            "pct": 3.8
           }
         ]
       },
       {
         "key": "3-2",
         "label": "3-2",
-        "pitches_total": 15,
+        "pitches_total": 17,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 8,
-            "pct": 53.3
+            "pitches": 10,
+            "pct": 58.8
           },
           {
             "pitch_type": "カットボール",
             "pitches": 4,
-            "pct": 26.7
+            "pct": 23.5
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 1,
-            "pct": 6.7
+            "pct": 5.9
           },
           {
             "pitch_type": "チェンジアップ",
             "pitches": 1,
-            "pct": 6.7
+            "pct": 5.9
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 1,
-            "pct": 6.7
+            "pct": 5.9
           }
         ]
       }
@@ -1744,167 +1752,172 @@
       {
         "key": "0-0",
         "label": "0-0",
-        "pitches_total": 54,
+        "pitches_total": 60,
         "rows": [
           {
             "pitch_type": "ストレート",
             "pitches": 18,
-            "pct": 33.3
+            "pct": 30
+          },
+          {
+            "pitch_type": "カットボール",
+            "pitches": 14,
+            "pct": 23.3
+          },
+          {
+            "pitch_type": "スイーパー",
+            "pitches": 13,
+            "pct": 21.7
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 12,
-            "pct": 22.2
-          },
-          {
-            "pitch_type": "カットボール",
-            "pitches": 11,
-            "pct": 20.4
-          },
-          {
-            "pitch_type": "スイーパー",
-            "pitches": 10,
-            "pct": 18.5
+            "pct": 20
           },
           {
             "pitch_type": "カーブ",
             "pitches": 3,
-            "pct": 5.6
+            "pct": 5
           }
         ]
       },
       {
         "key": "1-0",
         "label": "1-0",
-        "pitches_total": 22,
+        "pitches_total": 25,
         "rows": [
+          {
+            "pitch_type": "スイーパー",
+            "pitches": 8,
+            "pct": 32
+          },
           {
             "pitch_type": "ツーシーム",
             "pitches": 7,
-            "pct": 31.8
-          },
-          {
-            "pitch_type": "スイーパー",
-            "pitches": 6,
-            "pct": 27.3
+            "pct": 28
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 5,
-            "pct": 22.7
+            "pitches": 6,
+            "pct": 24
           },
           {
             "pitch_type": "ストレート",
             "pitches": 4,
-            "pct": 18.2
+            "pct": 16
           }
         ]
       },
       {
         "key": "2-0",
         "label": "2-0",
-        "pitches_total": 9,
+        "pitches_total": 10,
         "rows": [
           {
             "pitch_type": "ストレート",
-            "pitches": 4,
-            "pct": 44.4
+            "pitches": 5,
+            "pct": 50
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 2,
-            "pct": 22.2
+            "pct": 20
           },
           {
             "pitch_type": "カットボール",
             "pitches": 2,
-            "pct": 22.2
+            "pct": 20
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 1,
-            "pct": 11.1
+            "pct": 10
           }
         ]
       },
       {
         "key": "3-0",
         "label": "3-0",
-        "pitches_total": 2,
+        "pitches_total": 3,
         "rows": [
           {
             "pitch_type": "ツーシーム",
             "pitches": 1,
-            "pct": 50
+            "pct": 33.3
           },
           {
             "pitch_type": "カットボール",
             "pitches": 1,
-            "pct": 50
+            "pct": 33.3
+          },
+          {
+            "pitch_type": "ストレート",
+            "pitches": 1,
+            "pct": 33.3
           }
         ]
       },
       {
         "key": "0-1",
         "label": "0-1",
-        "pitches_total": 25,
+        "pitches_total": 28,
         "rows": [
+          {
+            "pitch_type": "スイーパー",
+            "pitches": 11,
+            "pct": 39.3
+          },
           {
             "pitch_type": "ストレート",
             "pitches": 8,
-            "pct": 32
-          },
-          {
-            "pitch_type": "スイーパー",
-            "pitches": 8,
-            "pct": 32
+            "pct": 28.6
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 4,
-            "pct": 16
+            "pct": 14.3
           },
           {
             "pitch_type": "カーブ",
             "pitches": 3,
-            "pct": 12
+            "pct": 10.7
           },
           {
             "pitch_type": "カットボール",
             "pitches": 2,
-            "pct": 8
+            "pct": 7.1
           }
         ]
       },
       {
         "key": "1-1",
         "label": "1-1",
-        "pitches_total": 20,
+        "pitches_total": 24,
         "rows": [
           {
-            "pitch_type": "ストレート",
-            "pitches": 6,
-            "pct": 30
+            "pitch_type": "スイーパー",
+            "pitches": 9,
+            "pct": 37.5
           },
           {
-            "pitch_type": "スイーパー",
-            "pitches": 6,
-            "pct": 30
+            "pitch_type": "ストレート",
+            "pitches": 7,
+            "pct": 29.2
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 5,
-            "pct": 25
+            "pct": 20.8
           },
           {
             "pitch_type": "カーブ",
             "pitches": 2,
-            "pct": 10
+            "pct": 8.3
           },
           {
             "pitch_type": "カットボール",
             "pitches": 1,
-            "pct": 5
+            "pct": 4.2
           }
         ]
       },
@@ -1965,113 +1978,113 @@
       {
         "key": "0-2",
         "label": "0-2",
-        "pitches_total": 14,
+        "pitches_total": 15,
         "rows": [
           {
             "pitch_type": "スイーパー",
             "pitches": 8,
-            "pct": 57.1
+            "pct": 53.3
           },
           {
             "pitch_type": "ストレート",
-            "pitches": 4,
-            "pct": 28.6
+            "pitches": 5,
+            "pct": 33.3
           },
           {
             "pitch_type": "カットボール",
             "pitches": 1,
-            "pct": 7.1
+            "pct": 6.7
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 1,
-            "pct": 7.1
+            "pct": 6.7
           }
         ]
       },
       {
         "key": "1-2",
         "label": "1-2",
-        "pitches_total": 24,
+        "pitches_total": 31,
         "rows": [
+          {
+            "pitch_type": "スイーパー",
+            "pitches": 11,
+            "pct": 35.5
+          },
           {
             "pitch_type": "ストレート",
             "pitches": 9,
-            "pct": 37.5
-          },
-          {
-            "pitch_type": "スイーパー",
-            "pitches": 7,
-            "pct": 29.2
+            "pct": 29
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 4,
-            "pct": 16.7
+            "pitches": 6,
+            "pct": 19.4
           },
           {
             "pitch_type": "カットボール",
             "pitches": 3,
-            "pct": 12.5
+            "pct": 9.7
           },
           {
             "pitch_type": "カーブ",
-            "pitches": 1,
-            "pct": 4.2
+            "pitches": 2,
+            "pct": 6.5
           }
         ]
       },
       {
         "key": "2-2",
         "label": "2-2",
-        "pitches_total": 13,
+        "pitches_total": 16,
         "rows": [
           {
             "pitch_type": "カットボール",
-            "pitches": 4,
-            "pct": 30.8
+            "pitches": 5,
+            "pct": 31.3
           },
           {
             "pitch_type": "スイーパー",
-            "pitches": 4,
-            "pct": 30.8
+            "pitches": 5,
+            "pct": 31.3
           },
           {
             "pitch_type": "ツーシーム",
-            "pitches": 3,
-            "pct": 23.1
+            "pitches": 4,
+            "pct": 25
           },
           {
             "pitch_type": "ストレート",
             "pitches": 2,
-            "pct": 15.4
+            "pct": 12.5
           }
         ]
       },
       {
         "key": "3-2",
         "label": "3-2",
-        "pitches_total": 13,
+        "pitches_total": 14,
         "rows": [
           {
             "pitch_type": "ストレート",
             "pitches": 6,
-            "pct": 46.2
+            "pct": 42.9
           },
           {
             "pitch_type": "ツーシーム",
             "pitches": 3,
-            "pct": 23.1
+            "pct": 21.4
           },
           {
             "pitch_type": "カットボール",
-            "pitches": 2,
-            "pct": 15.4
+            "pitches": 3,
+            "pct": 21.4
           },
           {
             "pitch_type": "スイーパー",
             "pitches": 2,
-            "pct": 15.4
+            "pct": 14.3
           }
         ]
       }
@@ -2132,11 +2145,11 @@
         "bb": 5,
         "hbp": 0,
         "outs": 14,
-        "er": 1,
+        "er": 8,
         "avg": ".435",
         "ipOuts": 14,
         "ip": "4.2",
-        "era": 1.93,
+        "era": 15.43,
         "whip": 3.214,
         "isop": ".304"
       },
@@ -2195,18 +2208,18 @@
         "bb": 2,
         "hbp": 0,
         "outs": 5,
-        "er": 0,
+        "er": 3,
         "avg": ".333",
         "ipOuts": 5,
         "ip": "1.2",
-        "era": 0,
+        "era": 16.2,
         "whip": 2.4,
         "isop": ".000"
       },
       {
         "inning": 7,
-        "bf": 12,
-        "ab": 12,
+        "bf": 16,
+        "ab": 16,
         "h": 2,
         "h2": 0,
         "h3": 0,
@@ -2215,38 +2228,60 @@
         "so": 3,
         "bb": 0,
         "hbp": 0,
-        "outs": 9,
+        "outs": 12,
         "er": 0,
-        "avg": ".167",
-        "ipOuts": 9,
-        "ip": "3",
+        "avg": ".125",
+        "ipOuts": 12,
+        "ip": "4",
         "era": 0,
-        "whip": 0.667,
+        "whip": 0.5,
         "isop": ".000"
       },
       {
         "inning": 9,
-        "bf": 4,
-        "ab": 3,
-        "h": 0,
-        "h2": 0,
+        "bf": 14,
+        "ab": 11,
+        "h": 2,
+        "h2": 1,
         "h3": 0,
-        "hr": 0,
-        "tb": 0,
-        "so": 0,
-        "bb": 1,
+        "hr": 1,
+        "tb": 6,
+        "so": 4,
+        "bb": 3,
         "hbp": 0,
-        "outs": 3,
-        "er": 0,
-        "avg": ".000",
-        "ipOuts": 3,
-        "ip": "1",
-        "era": 0,
-        "whip": 1,
-        "isop": ".000"
+        "outs": 8,
+        "er": 2,
+        "avg": ".182",
+        "ipOuts": 8,
+        "ip": "2.2",
+        "era": 6.75,
+        "whip": 1.875,
+        "isop": ".364"
       }
     ],
     "byStadium": [
+      {
+        "key": "バンテリンD",
+        "label": "バンテリンD",
+        "ipOuts": 3,
+        "ip": "1",
+        "bf": 3,
+        "h": 0,
+        "hr": 0,
+        "so": 3,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "pitches": 15,
+        "era": 0,
+        "whip": 0,
+        "wins": 0,
+        "losses": 0,
+        "games": 1,
+        "qsCount": 0
+      },
       {
         "key": "マツダ",
         "label": "マツダ",
@@ -2270,25 +2305,47 @@
         "qsCount": 1
       },
       {
+        "key": "京セラD大阪",
+        "label": "京セラD大阪",
+        "ipOuts": 3,
+        "ip": "1",
+        "bf": 4,
+        "h": 0,
+        "hr": 0,
+        "so": 0,
+        "bb": 0,
+        "hbp": 0,
+        "bk": 0,
+        "r": 0,
+        "er": 0,
+        "pitches": 11,
+        "era": 0,
+        "whip": 0,
+        "wins": 0,
+        "losses": 0,
+        "games": 1,
+        "qsCount": 0
+      },
+      {
         "key": "神宮球場",
         "label": "神宮球場",
-        "ipOuts": 58,
-        "ip": "19.1",
-        "bf": 98,
-        "h": 28,
-        "hr": 3,
-        "so": 19,
-        "bb": 11,
+        "ipOuts": 61,
+        "ip": "20.1",
+        "bf": 105,
+        "h": 30,
+        "hr": 4,
+        "so": 20,
+        "bb": 13,
         "hbp": 2,
         "bk": 0,
-        "r": 17,
-        "er": 17,
-        "pitches": 377,
-        "era": 7.91,
-        "whip": 2.017,
+        "r": 19,
+        "er": 19,
+        "pitches": 410,
+        "era": 8.41,
+        "whip": 2.115,
         "wins": 0,
-        "losses": 3,
-        "games": 6,
+        "losses": 4,
+        "games": 7,
         "qsCount": 0
       },
       {
@@ -2362,9 +2419,9 @@
       {
         "key": "阪神タイガース",
         "label": "阪神タイガース",
-        "ipOuts": 12,
-        "ip": "4",
-        "bf": 19,
+        "ipOuts": 15,
+        "ip": "5",
+        "bf": 23,
         "h": 5,
         "hr": 1,
         "so": 6,
@@ -2373,56 +2430,56 @@
         "bk": 0,
         "r": 3,
         "er": 3,
-        "pitches": 80,
-        "era": 6.75,
-        "whip": 1.75,
+        "pitches": 91,
+        "era": 5.4,
+        "whip": 1.4,
         "wins": 0,
         "losses": 0,
-        "games": 1,
+        "games": 2,
         "qsCount": 0
       },
       {
         "key": "中日ドラゴンズ",
         "label": "中日ドラゴンズ",
-        "ipOuts": 15,
-        "ip": "5",
-        "bf": 24,
+        "ipOuts": 18,
+        "ip": "6",
+        "bf": 27,
         "h": 5,
         "hr": 1,
-        "so": 5,
+        "so": 8,
         "bb": 3,
         "hbp": 1,
         "bk": 0,
         "r": 4,
         "er": 4,
-        "pitches": 99,
-        "era": 7.2,
-        "whip": 1.6,
+        "pitches": 114,
+        "era": 6,
+        "whip": 1.333,
         "wins": 0,
         "losses": 1,
-        "games": 1,
+        "games": 2,
         "qsCount": 0
       },
       {
         "key": "読売ジャイアンツ",
         "label": "読売ジャイアンツ",
-        "ipOuts": 14,
-        "ip": "4.2",
-        "bf": 28,
-        "h": 10,
-        "hr": 0,
-        "so": 4,
-        "bb": 3,
+        "ipOuts": 17,
+        "ip": "5.2",
+        "bf": 35,
+        "h": 12,
+        "hr": 1,
+        "so": 5,
+        "bb": 5,
         "hbp": 2,
         "bk": 0,
-        "r": 7,
-        "er": 7,
-        "pitches": 102,
-        "era": 13.5,
-        "whip": 2.786,
+        "r": 9,
+        "er": 9,
+        "pitches": 135,
+        "era": 14.29,
+        "whip": 3,
         "wins": 0,
-        "losses": 1,
-        "games": 3,
+        "losses": 2,
+        "games": 4,
         "qsCount": 0
       }
     ],
@@ -2430,45 +2487,45 @@
       {
         "key": "home",
         "label": "ホーム",
-        "ipOuts": 58,
-        "ip": "19.1",
-        "bf": 98,
-        "h": 28,
-        "hr": 3,
-        "so": 19,
-        "bb": 11,
+        "ipOuts": 61,
+        "ip": "20.1",
+        "bf": 105,
+        "h": 30,
+        "hr": 4,
+        "so": 20,
+        "bb": 13,
         "hbp": 2,
         "bk": 0,
-        "r": 17,
-        "er": 17,
-        "pitches": 377,
-        "era": 7.91,
-        "whip": 2.017,
+        "r": 19,
+        "er": 19,
+        "pitches": 410,
+        "era": 8.41,
+        "whip": 2.115,
         "wins": 0,
-        "losses": 3,
-        "games": 6,
+        "losses": 4,
+        "games": 7,
         "qsCount": 0
       },
       {
         "key": "away",
         "label": "アウェー",
-        "ipOuts": 27,
-        "ip": "9",
-        "bf": 32,
+        "ipOuts": 33,
+        "ip": "11",
+        "bf": 39,
         "h": 2,
         "hr": 0,
-        "so": 7,
+        "so": 10,
         "bb": 1,
         "hbp": 2,
         "bk": 0,
         "r": 0,
         "er": 0,
-        "pitches": 126,
+        "pitches": 152,
         "era": 0,
-        "whip": 0.333,
+        "whip": 0.273,
         "wins": 1,
         "losses": 0,
-        "games": 3,
+        "games": 5,
         "qsCount": 1
       }
     ],
@@ -2476,45 +2533,45 @@
       {
         "key": "day",
         "label": "デー",
-        "ipOuts": 6,
-        "ip": "2",
-        "bf": 8,
+        "ipOuts": 9,
+        "ip": "3",
+        "bf": 11,
         "h": 2,
         "hr": 0,
-        "so": 0,
+        "so": 3,
         "bb": 0,
         "hbp": 1,
         "bk": 0,
         "r": 0,
         "er": 0,
-        "pitches": 25,
+        "pitches": 40,
         "era": 0,
-        "whip": 1,
+        "whip": 0.667,
         "wins": 0,
         "losses": 0,
-        "games": 2,
+        "games": 3,
         "qsCount": 0
       },
       {
         "key": "night",
         "label": "ナイター",
-        "ipOuts": 76,
-        "ip": "25.1",
-        "bf": 118,
-        "h": 27,
+        "ipOuts": 82,
+        "ip": "27.1",
+        "bf": 126,
+        "h": 28,
         "hr": 3,
-        "so": 25,
+        "so": 26,
         "bb": 12,
         "hbp": 3,
         "bk": 0,
         "r": 17,
         "er": 17,
-        "pitches": 463,
-        "era": 6.04,
-        "whip": 1.539,
+        "pitches": 489,
+        "era": 5.6,
+        "whip": 1.463,
         "wins": 1,
         "losses": 3,
-        "games": 6,
+        "games": 8,
         "qsCount": 1
       }
     ],
@@ -2522,53 +2579,79 @@
       {
         "yahooCatcherId": "1600078",
         "label": "古賀 優大",
-        "bf": 102,
-        "ab": 87,
+        "bf": 105,
+        "ab": 90,
         "h": 20,
         "hr": 3,
-        "so": 21,
+        "so": 24,
         "bb": 9,
         "hbp": 3,
-        "avg": ".230",
-        "era": 3.8,
-        "ip": "23.2",
-        "ipOuts": 71,
+        "avg": ".222",
+        "era": 3.65,
+        "ip": "24.2",
+        "ipOuts": 74,
         "wl": "1-2",
-        "kPct": 20.6,
-        "kBbPct": 11.8,
-        "whip": 1.225,
-        "games": 6,
+        "kPct": 22.9,
+        "kBbPct": 14.3,
+        "whip": 1.176,
+        "games": 7,
         "wins": 1,
         "losses": 2,
         "qsCount": 1,
-        "qsPct": 16.7,
+        "qsPct": 14.3,
         "er": 10,
         "ibb": 0
       },
       {
-        "yahooCatcherId": "2109495",
-        "label": "鈴木 叶",
-        "bf": 8,
-        "ab": 8,
-        "h": 2,
+        "yahooCatcherId": "1700090",
+        "label": "松本 直樹",
+        "bf": 4,
+        "ab": 4,
+        "h": 0,
         "hr": 0,
-        "so": 1,
+        "so": 0,
         "bb": 0,
         "hbp": 0,
-        "avg": ".250",
+        "avg": ".000",
         "era": 0,
-        "ip": "2",
-        "ipOuts": 6,
+        "ip": "1",
+        "ipOuts": 3,
         "wl": "0-0",
-        "kPct": 12.5,
-        "kBbPct": 12.5,
-        "whip": 1,
-        "games": 2,
+        "kPct": 0,
+        "kBbPct": 0,
+        "whip": 0,
+        "games": 1,
         "wins": 0,
         "losses": 0,
         "qsCount": 0,
         "qsPct": 0,
         "er": 0,
+        "ibb": 0
+      },
+      {
+        "yahooCatcherId": "2109495",
+        "label": "鈴木 叶",
+        "bf": 15,
+        "ab": 13,
+        "h": 4,
+        "hr": 1,
+        "so": 2,
+        "bb": 2,
+        "hbp": 0,
+        "avg": ".308",
+        "era": 6,
+        "ip": "3",
+        "ipOuts": 9,
+        "wl": "0-1",
+        "kPct": 13.3,
+        "kBbPct": 0,
+        "whip": 2,
+        "games": 3,
+        "wins": 0,
+        "losses": 1,
+        "qsCount": 0,
+        "qsPct": 0,
+        "er": 2,
         "ibb": 0
       },
       {

@@ -19,7 +19,9 @@ import {
   sumPitchingSeasonAggYahoo,
   type PitchingSeasonAggYahoo,
 } from "./yahooGame/canonicalPitchingSeasonAgg"
+import { parseGameDateYmdFromCanonical } from "./yahooGame/gameDateFromCanonical"
 import { loadCanonicalGameDocument } from "./yahooGame/loadCanonicalGame"
+import { isRegularSeasonCanonicalGame } from "./npbRegularSeason"
 import { overlayPitchingBasicFromRankings } from "@/lib/ranking/playerSeasonTotalsFromRankings"
 
 /** 援護率（nf3 近似）: (援護点合計×9)÷先発投球回 */
@@ -150,7 +152,13 @@ function mergeSeasonCoreCountsFromCanonical(
   const docs = []
   for (const gid of gameIds) {
     const doc = loadCanonicalGameDocument(projectRoot, gid)
-    if (doc) docs.push(doc)
+    if (!doc) continue
+    const ymd = parseGameDateYmdFromCanonical(doc)
+    if (!ymd) continue
+    if (!isRegularSeasonCanonicalGame(payload.seasonYear, ymd, doc.game?.meta?.documentTitle)) {
+      continue
+    }
+    docs.push(doc)
   }
   if (docs.length === 0) {
     return { ...payload, basic: qualityStartRatesFromCounts(b) }
