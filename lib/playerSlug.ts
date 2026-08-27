@@ -143,6 +143,7 @@ export function playerPagePathSegment(link: PlayerLinkIds): string {
 export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
   const publicId = String(link.playerId ?? "").trim()
   const resolvedPublicId = resolveNpbPlayerIdFromPublicIdManual(publicId)
+  const season = String(link.season ?? "").trim()
   const npbIdCandidates = [
     String(link.npbPlayerId ?? "").trim(),
     resolvedPublicId,
@@ -150,8 +151,15 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
     publicId,
   ].filter((value, index, arr) => Boolean(value) && arr.indexOf(value) === index)
 
-  // Historical IDs are authoritative. Resolve them before any current-roster
-  // fallback because short roman names such as "S.Abe" are not unique.
+  if (!season || season === "2026") {
+    for (const npbId of npbIdCandidates) {
+      const rosterSlug = CURRENT_ROSTER_PLAYER_SLUGS[npbId] ?? currentRosterSlugByNpbId.get(npbId)
+      if (rosterSlug) return rosterSlug
+    }
+  }
+
+  // Historical IDs stay authoritative outside the current roster context
+  // because short roman names such as "S.Abe" are not unique.
   for (const npbId of npbIdCandidates) {
     const historicalIdSlug = historicalSlugOverrideById(npbId)?.slug
     if (historicalIdSlug) return historicalIdSlug
@@ -161,7 +169,6 @@ export function playerPagePathSegmentKnown(link: PlayerLinkIds): string | null {
     if (rosterSlug) return rosterSlug
   }
 
-  const season = String(link.season ?? "").trim()
   const historicalNameSlug = historicalSlugOverrideByName(link.name)?.slug
   const historicalRomanSlug = historicalSlugOverrideByRoman(link.romanName)?.slug
   if (season && season !== "2026") return historicalNameSlug ?? historicalRomanSlug ?? null
