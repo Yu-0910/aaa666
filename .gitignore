@@ -25,6 +25,7 @@ logs/
 
 # vercel
 .vercel
+.codex-worktrees/
 
 # typescript
 *.tsbuildinfo
@@ -60,11 +61,22 @@ _data/_tmp*
 _data/_*trial*
 _data/diag_*
 _data/*.out.txt
+_data/scraped_games/_meta/*.lock
+_data/scraped_games/_meta/pipeline_v2_run_summary_*_prefetch-only.json
+_data/scraped_games/_meta/pipeline_v2_run_summary_*_watchpid*.json
+_data/scraped_games/_meta/watch_pipeline_v2_summary_*.json
+_data/scraped_games/_meta/top-leaders_pipeline_v2_meta.json
+_data/scraped_games/_meta/top-weekly-leaders_pipeline_v2_meta.json
+_data/scraped_games/_meta/vs_hand_failure_*.json
+_data/unknown_players/
+_data/sportsnavi_schedule_snapshots/by_date/
 
 # ローカル作業ログ・一時ファイル（リポジトリ直下）
 _tmp_*
 build-log.txt
 _phase10_batch_logs/
+.tmp-main-publish*/
+x[0])
 
 # Python キャッシュ
 __pycache__/
