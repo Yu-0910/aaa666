@@ -173,7 +173,12 @@ export async function GET(
     }
     const domesticFa = await loadDomesticFaEstimateForPlayer(npbId, faSeasonYear)
     const meta = rosterPlayer ? null : await readMetaForRoman(npbId)
-    const nameEnFull = rosterPlayer ? "" : resolveNonRosterNameEnFull(meta)
+    const nonRosterRomanResolved = rosterPlayer ? "" : resolveNonRosterNameEnFull(meta)
+    const payloadNameEnFull = String(payload.name_en_full ?? "").trim()
+    const slugRomanFull = String(slugEntry?.romanFull ?? "").trim()
+    const nameEnFull = rosterPlayer
+      ? ""
+      : nonRosterRomanResolved || slugRomanFull || payloadNameEnFull
     const effectivePayload = rosterPlayer
       ? stripNonRosterPageKindForRosterPlayer(payload)
       : payload
