@@ -23,6 +23,8 @@ import RankingBottomNav, {
   type TopWeeklyView,
 } from "@/app/components/common/RankingBottomNav"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import { TEAM_PAGE_DRAWER_NAV, teamPageNavEnabledForYear, teamPageNavHref } from "@/lib/teamPage/teamPageNavLinks"
+import { teamDisplayNameFromCode } from "@/lib/standings/teamCodes"
 
 export type TopPageClientProps = {
   layout: TopPageLayoutMode
@@ -82,6 +84,17 @@ export function TopPageClient({
     selectedYear >= 2026
       ? mainTabs
       : mainTabs.filter((tab) => tab.tabId === 0 || tab.tabId === 4)
+  const showTopInstallAndTeamLinks = activeMainTab === 0
+  const showTeamPageLinks = showTopInstallAndTeamLinks && teamPageNavEnabledForYear(selectedYear)
+  const teamPageNavRows = showTeamPageLinks
+    ? (["CL", "PL"] as const).map((leagueKey) =>
+        TEAM_PAGE_DRAWER_NAV[leagueKey].map(({ teamCode }) => ({
+          teamCode,
+          label: teamDisplayNameFromCode(teamCode),
+          href: teamPageNavHref(teamCode, selectedYear),
+        })),
+      )
+    : null
 
   const mainTabButtons = (
     <div
@@ -233,8 +246,43 @@ export function TopPageClient({
 
       {isMobile && <TopPageMobileDrawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)} selectedYear={selectedYear} />}
 
-      {activeMainTab === 0 && <TopPageInstallButton layout={layout} />}
       {mainTabButtons}
+      {showTopInstallAndTeamLinks &&
+        (showTeamPageLinks ? (
+          <div className={isMobile ? "bg-black px-2 pb-1" : "bg-black px-4 pb-2"}>
+            <div className="mx-auto flex max-w-6xl flex-col gap-1.5">
+              <div className="flex items-start gap-1.5">
+                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                  {teamPageNavRows?.[0].map(({ teamCode, label, href }) => (
+                    <Link
+                      key={teamCode}
+                      href={href}
+                      className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-2 py-0.5 text-[11px] text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+                <div className="ml-auto shrink-0">
+                  <TopPageInstallButton layout={layout} compact />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {teamPageNavRows?.[1].map(({ teamCode, label, href }) => (
+                  <Link
+                    key={teamCode}
+                    href={href}
+                    className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-2 py-0.5 text-[11px] text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <TopPageInstallButton layout={layout} />
+        ))}
 
       <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
