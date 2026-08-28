@@ -37,13 +37,12 @@ import {
   getWeeklyPitchingRankingUrl,
 } from "@/lib/topPage/weeklyRankingUrl"
 import { leaderListReactKey, type LeaderRow } from "@/lib/ranking/leadersTypes"
+import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
 
 function withPinnedMetricParam(url: string): string {
   const separator = url.includes("?") ? "&" : "?"
   return `${url}${separator}pinActiveMetric=1`
 }
-
-export type TopPageLayoutMode = "mobile" | "desktop"
 
 type LeadersPanelProps = {
   data: LeadersConfig

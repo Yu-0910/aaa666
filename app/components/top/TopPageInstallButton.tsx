@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Download, Share2, X } from "lucide-react"
-import { type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>

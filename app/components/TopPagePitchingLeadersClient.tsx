@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
-import { LeadersPanel, type TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import { LeadersPanel } from "@/app/components/top/TopPagePanels"
+import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
 import type { LeadersConfig } from "@/lib/ranking/leadersTypes"
 import { fetchTopLeadersForPage } from "@/lib/topPage/fetchTopLeadersClient"
 import { fetchTopWeeklyLeadersForPage } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
