@@ -27,6 +27,7 @@ import {
 } from "./playerPageShared"
 
 const CAREER_HIGH_TAB_GRID_CLASS = "career-high-tab-stat-grid"
+const ROSTER_LIKE_CAREER_HIGH_GRID_CLASS = "roster-like-career-high-grid"
 
 function careerHighTabGridClassName(className?: string): string {
   return [CAREER_HIGH_TAB_GRID_CLASS, className].filter(Boolean).join(" ")
@@ -137,12 +138,17 @@ export function PlayerPageCareerSection(props: PlayerPageCareerSectionProps) {
 
   const salaryHeadingSuffix = showSalaryColumn ? "／年俸" : ""
   const battingCareerHighGridClassName = useRosterLikeCareerHighCardUi
-    ? ["fielder-basic-career-high-grid", "mb-12", careerHighBattingGridClassName]
+    ? [
+        "fielder-basic-career-high-grid",
+        ROSTER_LIKE_CAREER_HIGH_GRID_CLASS,
+        "mb-12",
+        careerHighBattingGridClassName,
+      ]
         .filter(Boolean)
         .join(" ")
     : careerHighTabGridClassName(careerHighBattingGridClassName)
   const pitchingCareerHighGridClassName = useRosterLikeCareerHighCardUi
-    ? "pitcher-basic-career-high-grid mb-12"
+    ? ["pitcher-basic-career-high-grid", ROSTER_LIKE_CAREER_HIGH_GRID_CLASS, "mb-12"].join(" ")
     : CAREER_HIGH_TAB_GRID_CLASS
   const content = (
     <>
