@@ -5,6 +5,10 @@
   "engines": {
     "node": "24.x"
   },
+  "allowScripts": {
+    "esbuild@0.27.4": true,
+    "sharp@0.34.5": true
+  },
   "scripts": {
     "build": "npm run validate:bridge && next build --webpack",
     "build:vercel": "npm run validate:bridge && next build --webpack",

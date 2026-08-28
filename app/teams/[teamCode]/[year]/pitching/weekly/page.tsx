@@ -3,6 +3,8 @@ import { readWeeklyCurrentWeekJsonAsync } from "@/lib/topPage/weeklyCurrentWeekM
 import { teamPageHref } from "@/lib/teamPage/teamPageHref"
 import { parseTeamPageParams } from "@/lib/teamPage/teamPageParams"
 
+export const dynamic = "force-dynamic"
+
 type Props = {
   params: Promise<{ teamCode: string; year: string }>
   searchParams: Promise<{ sort?: string; order?: string }>

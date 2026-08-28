@@ -41,7 +41,13 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // Next.js 公式のメモリ削減オプションを明示で有効化
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
+    staticGenerationMaxConcurrency: 4,
+    staticGenerationMinPagesPerWorker: 50,
   },
+  productionBrowserSourceMaps: false,
   // 出力先を明示的に設定（OneDriveの同期問題を回避）
   distDir: '.next',
   async rewrites() {
