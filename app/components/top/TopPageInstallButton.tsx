@@ -14,6 +14,9 @@ type TopPageInstallButtonProps = {
   compact?: boolean
 }
 
+export const TOP_PAGE_COMPACT_ACTION_BUTTON_CLASS =
+  "inline-flex h-7 items-center justify-center gap-1 rounded border border-[#444] bg-[#141414] px-2 py-0.5 text-[11px] font-semibold text-gray-300 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+
 function isStandaloneDisplay(): boolean {
   if (typeof window === "undefined") return false
   return window.matchMedia("(display-mode: standalone)").matches || Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
@@ -78,7 +81,7 @@ export function TopPageInstallButton({ layout, compact = false }: TopPageInstall
   }
 
   const buttonClassName = compact
-    ? "inline-flex h-7 items-center justify-center gap-1 rounded border border-[#444] bg-[#141414] px-2 py-0.5 text-[11px] font-semibold text-gray-300 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+    ? TOP_PAGE_COMPACT_ACTION_BUTTON_CLASS
     : `inline-flex items-center justify-center gap-1.5 border border-[#ffff44] bg-[#ffff44] text-black font-black shadow-[0_0_0_1px_rgba(255,255,68,0.15)] transition-colors hover:bg-white ${
         isMobile ? "h-8 px-2.5 text-[11px]" : "h-9 px-3 text-xs"
       }`

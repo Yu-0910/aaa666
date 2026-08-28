@@ -15,7 +15,10 @@ import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabCo
 import { TopPageWeeklyTabContent } from "@/app/components/top/TopPageWeeklyTabContent"
 import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
-import { TopPageInstallButton } from "@/app/components/top/TopPageInstallButton"
+import {
+  TOP_PAGE_COMPACT_ACTION_BUTTON_CLASS,
+  TopPageInstallButton,
+} from "@/app/components/top/TopPageInstallButton"
 import SiteFooter from "@/app/components/common/SiteFooter"
 import RankingBottomNav, {
   type TopSeasonStatView,
@@ -102,6 +105,7 @@ export function TopPageClient({
       ? mainTabs
       : mainTabs.filter((tab) => tab.tabId === 0 || tab.tabId === 4)
   const showTopInstallAndTeamLinks = activeMainTab === 0
+  const showWeeklyB9Link = activeMainTab === 1 && selectedYear === 2026
   const showTeamPageLinks = showTopInstallAndTeamLinks && selectedYear === 2026
   const teamPageNavRows = showTeamPageLinks
     ? TOP_TEAM_PAGE_NAV_ROWS.map((row) =>
@@ -300,6 +304,15 @@ export function TopPageClient({
         ) : (
           <TopPageInstallButton layout={layout} />
         ))}
+      {showWeeklyB9Link && (
+        <div className={isMobile ? "bg-black px-2 pb-1" : "bg-black px-4 pb-2"}>
+          <div className="mx-auto flex max-w-6xl items-start">
+            <Link href="/ore-no-b9-yosou" className={TOP_PAGE_COMPACT_ACTION_BUTTON_CLASS}>
+              #俺のB9予想
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className={isMobile ? "container mx-auto px-2 py-2" : "max-w-6xl mx-auto px-4 py-4"}>
         <div>{tabContentInner}</div>
