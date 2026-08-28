@@ -236,7 +236,7 @@ export function teamHistoricalDisplayName(npbLabel: string, code: string): strin
   if (npbLabel.includes("ヤクルト")) return "ヤクルト"
   if (npbLabel.includes("アトム")) return "アトムズ"
   if (npbLabel.includes("楽天")) return "楽天"
-  if (npbLabel.includes("読売")) return "読売"
+  if (npbLabel.includes("読売")) return "巨人"
   if (npbLabel.includes("巨人")) return "巨人"
   if (npbLabel.includes("大阪タイガース")) return "大阪"
   if (npbLabel.includes("阪神") || npbLabel.includes("阪急タイガ")) return "阪神"
