@@ -1,5 +1,6 @@
 import { convertKanaToRomaji } from "@/lib/kanaToRomaji"
 import { resolveOfficialRomanOverride } from "@/lib/playerOfficialRomanOverrides"
+import { preferredRomanNameFromRankingSource } from "@/lib/ranking/preferredRomanName.server"
 
 /** `M.Ikenaga` など略式 */
 export function isAbbreviatedRomanName(s: string): boolean {
@@ -26,6 +27,9 @@ export function resolveNonRosterNameEnFull(meta: NpbPlayerMetaRoman | null | und
     name: meta?.name_ja,
   })
   if (official) return official
+
+  const fromRanking = preferredRomanNameFromRankingSource(meta?.npb_player_id ?? meta?.player_id)
+  if (fromRanking) return fromRanking
 
   const kana = (meta?.name_kana ?? "").trim()
   const fromKana = kana ? convertKanaToRomaji(kana) : ""
