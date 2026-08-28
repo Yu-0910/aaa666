@@ -23,8 +23,25 @@ import RankingBottomNav, {
   type TopWeeklyView,
 } from "@/app/components/common/RankingBottomNav"
 import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
-import { TEAM_PAGE_DRAWER_NAV, teamPageNavEnabledForYear, teamPageNavHref } from "@/lib/teamPage/teamPageNavLinks"
-import { teamDisplayNameFromCode } from "@/lib/standings/teamCodes"
+
+const TOP_TEAM_PAGE_NAV_ROWS = [
+  [
+    { teamCode: "G", label: "巨人" },
+    { teamCode: "H", label: "阪神" },
+    { teamCode: "DB", label: "DeNA" },
+    { teamCode: "D", label: "中日" },
+    { teamCode: "C", label: "広島" },
+    { teamCode: "S", label: "ヤクルト" },
+  ],
+  [
+    { teamCode: "Hs", label: "ソフトバンク" },
+    { teamCode: "Bs", label: "オリックス" },
+    { teamCode: "L", label: "西武" },
+    { teamCode: "M", label: "ロッテ" },
+    { teamCode: "F", label: "日本ハム" },
+    { teamCode: "E", label: "楽天" },
+  ],
+] as const
 
 export type TopPageClientProps = {
   layout: TopPageLayoutMode
@@ -85,13 +102,13 @@ export function TopPageClient({
       ? mainTabs
       : mainTabs.filter((tab) => tab.tabId === 0 || tab.tabId === 4)
   const showTopInstallAndTeamLinks = activeMainTab === 0
-  const showTeamPageLinks = showTopInstallAndTeamLinks && teamPageNavEnabledForYear(selectedYear)
+  const showTeamPageLinks = showTopInstallAndTeamLinks && selectedYear === 2026
   const teamPageNavRows = showTeamPageLinks
-    ? (["CL", "PL"] as const).map((leagueKey) =>
-        TEAM_PAGE_DRAWER_NAV[leagueKey].map(({ teamCode }) => ({
+    ? TOP_TEAM_PAGE_NAV_ROWS.map((row) =>
+        row.map(({ teamCode, label }) => ({
           teamCode,
-          label: teamDisplayNameFromCode(teamCode),
-          href: teamPageNavHref(teamCode, selectedYear),
+          label,
+          href: `/teams/${encodeURIComponent(teamCode)}/${selectedYear}`,
         })),
       )
     : null
