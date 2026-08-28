@@ -178,7 +178,7 @@ export async function GET(
     const slugRomanFull = String(slugEntry?.romanFull ?? "").trim()
     const nameEnFull = rosterPlayer
       ? ""
-      : nonRosterRomanResolved || slugRomanFull || payloadNameEnFull
+      : slugRomanFull || nonRosterRomanResolved || payloadNameEnFull
     const effectivePayload = rosterPlayer
       ? stripNonRosterPageKindForRosterPlayer(payload)
       : payload
