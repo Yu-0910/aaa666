@@ -20,6 +20,7 @@ import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
 import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
@@ -316,10 +317,12 @@ export default function WeeklyRankingPageClient({
 
       if (cancelled || !meta?.availableWeekKeys?.length) return
 
-      setWeekOptions(
-
-        meta.availableWeekKeys.map((k) => ({ weekKey: k, weekLabel: weekLabelForKey(k) }))
-
+      setWeekOptions((current) =>
+        mergeAvailableWeekKeys(
+          current.map((w) => w.weekKey),
+          meta.availableWeekKeys,
+          weekKey
+        ).map((k) => ({ weekKey: k, weekLabel: weekLabelForKey(k) }))
       )
 
     })
@@ -330,7 +333,7 @@ export default function WeeklyRankingPageClient({
 
     }
 
-  }, [year])
+  }, [year, weekKey])
 
 
 

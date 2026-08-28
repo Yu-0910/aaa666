@@ -8,6 +8,7 @@ import { getDefaultBattingSortOrder } from "@/lib/ranking/battingSortOrder"
 import { useBattingRankingTable } from "@/hooks/useBattingRankingTable"
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
 import { teamPageHref } from "@/lib/teamPage/teamPageHref"
 import { FullPageLoading } from "@/components/ui/spinner"
 
@@ -39,8 +40,12 @@ export default function TeamBattingRankingPageClient({
     let cancelled = false
     fetchWeeklyCurrentWeekClient(initialViewModel.season).then((meta) => {
       if (cancelled || !meta?.availableWeekKeys?.length) return
-      setWeekOptions(
-        meta.availableWeekKeys.map((k) => ({ weekKey: k, weekLabel: weekLabelForKey(k) })),
+      setWeekOptions((current) =>
+        mergeAvailableWeekKeys(
+          current.map((w) => w.weekKey),
+          meta.availableWeekKeys,
+          weekKey
+        ).map((k) => ({ weekKey: k, weekLabel: weekLabelForKey(k) })),
       )
     })
     return () => {
