@@ -42,14 +42,9 @@ export function usePitchingRankingTable({
 
   const season = initialViewModel.season
   const leagueUpper = initialViewModel.league.toUpperCase()
-  const is2026 = season === "2026"
   const metricDef = initialViewModel.metrics.find((m) => m.key === sortKey)
 
   useEffect(() => {
-    if (!is2026) {
-      setPitchingThresholdsCanonical(null)
-      return
-    }
     let cancelled = false
     fetchPitchingThresholdsClient(season, leagueUpper, weekKey)
       .then((t) => {
@@ -61,7 +56,7 @@ export function usePitchingRankingTable({
     return () => {
       cancelled = true
     }
-  }, [is2026, season, leagueUpper, weekKey])
+  }, [season, leagueUpper, weekKey])
 
   useEffect(() => {
     if (!metricDef) {
@@ -101,7 +96,7 @@ export function usePitchingRankingTable({
       })
       .catch((e: Error) => {
         if (cancelled) return
-        const missingDataHint = is2026
+        const missingDataHint = season === "2026"
           ? "2026年の投手ランキングデータが見つかりません（JSON 未配置の可能性）。npm run phase19:build:pitching-rankings を実行してください。"
           : `${season}年の投手ランキングデータが見つかりません。npm run pitching-rankings:build:historical を実行してください。`
         setLoadError(
@@ -120,9 +115,9 @@ export function usePitchingRankingTable({
   }, [initialViewModel.season, initialViewModel.league, sortKey, metricDef?.label, teamCode, weekKey])
 
   const pitchingQualifyingThresholds = useMemo(() => {
-    if (is2026 && pitchingThresholdsCanonical) return pitchingThresholdsCanonical
+    if (pitchingThresholdsCanonical) return pitchingThresholdsCanonical
     return computePitchingQualifyingMinIpByTeam(rowsFromJson)
-  }, [is2026, pitchingThresholdsCanonical, rowsFromJson])
+  }, [pitchingThresholdsCanonical, rowsFromJson])
 
   const { rows: sortedRows, qualifyingDividerAfterRank } = useMemo(
     () =>

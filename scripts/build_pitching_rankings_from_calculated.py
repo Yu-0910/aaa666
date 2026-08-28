@@ -48,6 +48,8 @@ from lib.pitching_historical_metrics import (  # noqa: E402
 CALCULATED_DIR = ROOT / "_data" / "master_csv_calculated"
 OUTPUT_BASE = ROOT / "public" / "data" / "rankings"
 METRIC_MAP_PATH = ROOT / "config" / "pitching_metric_map.json"
+STANDINGS_DIR = ROOT / "public" / "data" / "standings"
+LEGACY_STANDINGS_DIR = ROOT / "public" / "standings-json"
 TOP_N = 100
 QUALIFYING_IP_PER_TEAM_GAME = 1.0
 
@@ -131,8 +133,82 @@ def assign_ranks(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [{**row, "rank": idx + 1} for idx, row in enumerate(rows)]
 
 
+def get_required_innings(
+    year: int,
+    league: str,
+    team_games: int,
+    team_rank: Optional[int] = None,
+) -> Optional[float]:
+    league_upper = safe_str(league).upper()
+    if league_upper not in {"CL", "PL"}:
+        return None
+    if year >= 1964:
+        return team_games * QUALIFYING_IP_PER_TEAM_GAME
+    if year == 1950:
+        return 180.0 if league_upper == "CL" else 135.0
+    if year == 1951:
+        return 135.0
+    if year == 1952:
+        if league_upper == "CL":
+            return 180.0
+        if team_rank is None:
+            return None
+        return 180.0 if team_rank <= 4 else 162.0
+    if year == 1953:
+        return 176.0 if league_upper == "CL" else 180.0
+    if year == 1954:
+        return 198.0 if league_upper == "CL" else 210.0
+    if year == 1955:
+        return 190.0 if league_upper == "CL" else 210.0
+    if year == 1956:
+        return 190.0 if league_upper == "CL" else 230.0
+    if year == 1957:
+        return 195.0 if league_upper == "CL" else 198.0
+    if year == 1958:
+        return 190.0
+    if year == 1959:
+        return 182.0 if league_upper == "CL" else team_games * 1.4
+    if year == 1960:
+        return 182.0 if league_upper == "CL" else team_games * 1.4
+    if year == 1961:
+        return 182.0 if league_upper == "CL" else 196.0
+    if year == 1962:
+        return team_games * 1.4
+    if year == 1963:
+        return 196.0 if league_upper == "CL" else 210.0
+    return None
+
+
+def load_standings_rows(year: int, league: str) -> Optional[List[Dict[str, Any]]]:
+    league_upper = safe_str(league).upper()
+    candidate_paths = [
+        STANDINGS_DIR / str(year) / f"{league_upper}.json",
+        LEGACY_STANDINGS_DIR / str(year) / f"{league_upper}.json",
+    ]
+    for candidate_path in candidate_paths:
+        if not candidate_path.is_file():
+            continue
+        try:
+            raw = json.loads(candidate_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        rows = raw.get("rows")
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
+    return None
+
+
+def set_threshold_alias(by_team: Dict[str, float], key: str, min_ip: float) -> None:
+    normalized = safe_str(key)
+    if not normalized:
+        return
+    by_team[normalized] = max(by_team.get(normalized, 0.0), min_ip)
+
+
 def compute_qualifying_thresholds(
     rows: List[Dict[str, Any]],
+    year: int,
+    league: str,
 ) -> Tuple[Dict[str, float], float]:
     by_team_max_g: Dict[str, int] = {}
     global_max_g = 0
@@ -142,12 +218,34 @@ def compute_qualifying_thresholds(
         team = safe_str(row.get("team"))
         if team:
             by_team_max_g[team] = max(by_team_max_g.get(team, 0), g)
-    by_team = {
-        team: games * QUALIFYING_IP_PER_TEAM_GAME
-        for team, games in by_team_max_g.items()
-    }
+    by_team: Dict[str, float] = {}
+
+    standings_rows = load_standings_rows(year, league)
+    if standings_rows:
+        for standing in standings_rows:
+            team = safe_str(standing.get("team"))
+            team_name = safe_str(standing.get("teamName"))
+            npb_label = safe_str(standing.get("npbLabel"))
+            games = safe_int(standing.get("g"), 0)
+            rank = safe_int(standing.get("rank"), 0)
+            if games <= 0:
+                continue
+            required = get_required_innings(year, league, games, rank if rank > 0 else None)
+            min_ip = required if required is not None else games * QUALIFYING_IP_PER_TEAM_GAME
+            set_threshold_alias(by_team, team, min_ip)
+            set_threshold_alias(by_team, team_name, min_ip)
+            set_threshold_alias(by_team, npb_label, min_ip)
+            global_max_g = max(global_max_g, games)
+    else:
+        for team, games in by_team_max_g.items():
+            required = get_required_innings(year, league, games)
+            by_team[team] = required if required is not None else games * QUALIFYING_IP_PER_TEAM_GAME
+
     max_from_teams = max(by_team_max_g.values()) if by_team_max_g else 0
-    fallback = max(global_max_g, max_from_teams) * QUALIFYING_IP_PER_TEAM_GAME
+    fallback_games = max(global_max_g, max_from_teams)
+    fallback = get_required_innings(year, league, fallback_games)
+    if fallback is None:
+        fallback = fallback_games * QUALIFYING_IP_PER_TEAM_GAME
     return by_team, fallback
 
 
@@ -156,7 +254,7 @@ def row_meets_qualifying(
     by_team: Dict[str, float],
     fallback: float,
 ) -> bool:
-    ip = safe_float(row.get("ip"), 0.0)
+    ip = ip_baseball_to_decimal(row.get("ip"))
     team = safe_str(row.get("team"))
     min_ip = by_team.get(team, fallback) if team else fallback
     return ip >= min_ip
@@ -293,7 +391,7 @@ def process_pitching_csv(
     if not player_rows:
         return False, {"year": year, "league": league_key, "error": "行が0件"}
 
-    by_team, fallback = compute_qualifying_thresholds(player_rows)
+    by_team, fallback = compute_qualifying_thresholds(player_rows, year, league_key)
     written = 0
 
     if dry_run:

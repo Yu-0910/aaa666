@@ -382,7 +382,13 @@ export function buildWeeklyRankingsFromPeriod(
           return asc ? av - bv : bv - av
         })
         const teamGames = weekTeamGames[lg]
-        const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
+        const filtered = filterPitchingRowsForQualifyingAtBuild(
+          sorted,
+          metricKey,
+          year,
+          lg,
+          teamGames
+        )
         const allRanked = assignRanks(sorted)
         const ranked = assignRanks(filtered)
         writeJsonFileWithRetry(publicPath, ranked)

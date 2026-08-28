@@ -38,12 +38,13 @@ export function filterPitchingRowsForQualifyingAtBuild(
   rows: Record<string, unknown>[],
   metricKey: string,
   year: string,
+  league: string,
   teamGames: Record<string, number> | undefined
 ): Record<string, unknown>[] {
   if (!shouldRequireQualifyingPitching(metricKey)) return rows
   if (year !== "2026") return rows
   if (!teamGames || Object.keys(teamGames).length === 0) return rows
-  const thresholds = buildPitchingThresholdsFromTeamGames(teamGames)
+  const thresholds = buildPitchingThresholdsFromTeamGames(teamGames, year, league)
   return rows.filter((row) =>
     rowMeetsPitchingQualifyingIp(row as Parameters<typeof rowMeetsPitchingQualifyingIp>[0], thresholds)
   )

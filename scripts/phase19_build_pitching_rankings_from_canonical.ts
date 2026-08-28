@@ -379,7 +379,13 @@ function main(): void {
       })
       const rankedAll = assignRanks(sorted)
       const teamGames = teamGamesByLeague[lg]
-      const filtered = filterPitchingRowsForQualifyingAtBuild(sorted, metricKey, year, teamGames)
+      const filtered = filterPitchingRowsForQualifyingAtBuild(
+        sorted,
+        metricKey,
+        year,
+        lg,
+        teamGames
+      )
       const rankedPublic = assignRanks(filtered)
 
       writeJsonFileWithRetrySync(join(outDir, `${fileBase}.json`), rankedPublic)

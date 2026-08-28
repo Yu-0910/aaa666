@@ -74,13 +74,14 @@ function main(): void {
       continue
     }
 
-    const games = Object.values(tg.teams)
+    const games = Object.values(tg.teams).map((value) => Number(value))
     const uniqueGames = new Set(games)
     const minPAByTeam = buildMinPAByTeamFromTeamGames(tg.teams, year)
-    const thresholds = buildPitchingThresholdsFromTeamGames(tg.teams)
+    const thresholds = buildPitchingThresholdsFromTeamGames(tg.teams, year, lg)
 
     console.log(`[${lg}] team-games: ${JSON.stringify(tg.teams)}`)
-    for (const [team, g] of Object.entries(tg.teams)) {
+    for (const [team, rawGames] of Object.entries(tg.teams)) {
+      const g = Number(rawGames)
       const minPA = minPAFromTeamGames(g, year)
       const minIp = g * QUALIFYING_IP_INNINGS_PER_TEAM_GAME
       console.log(`  ${team}: games=${g} minPA=${minPA} minIp=${minIp}`)
@@ -166,7 +167,7 @@ function main(): void {
       )
       if (wOps) {
         const minPAByTeam = buildMinPAByTeamFromTeamGames(wtg.teams, year)
-        const maxG = Math.max(...Object.values(wtg.teams))
+        const maxG = Math.max(...Object.values(wtg.teams).map((value) => Number(value)))
         const fallback = minPAFromTeamGames(maxG, year)
         for (const row of wOps) {
           if (!rowPassesQualifyingPAWithMinMap(row, minPAByTeam, fallback)) {
