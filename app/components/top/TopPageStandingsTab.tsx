@@ -71,6 +71,8 @@ const TEAM_BAR_WIDTH = 4
 const TEAM_NAME_BLOCK_HEIGHT = 32
 /** 球団名・ローマ字ブロックの下方向オフセット（px・行スケール前） */
 const TEAM_NAME_OFFSET_Y = 3
+/** 2025年以前の順位表は 2026 より少し上寄りに見えるため、名前ブロックだけ追加で下げる */
+const HISTORICAL_TEAM_NAME_OFFSET_Y_EXTRA = 2
 /** 球団帯カラー（縦ストライプ）の高さ */
 const TEAM_BAR_HEIGHT = Math.round(TEAM_NAME_BLOCK_HEIGHT * 1.2)
 const METRIC_COL_MIN = 52
@@ -234,7 +236,12 @@ export function TeamStandingsTable({
   const teamNameFontSize = `${Math.round(13 * teamScale)}px`
   const teamRomanFontSize = `${Math.round(10 * teamScale)}px`
   const metricCellPy = Math.max(2, Math.round(6 * metricScale))
-  const teamNameOffsetY = Math.round(TEAM_NAME_OFFSET_Y * teamScale)
+  const teamNameOffsetY =
+    Math.round(
+      (TEAM_NAME_OFFSET_Y +
+        (source === "npb_official_yearly" && year < 2026 ? HISTORICAL_TEAM_NAME_OFFSET_Y_EXTRA : 0)) *
+        teamScale
+    )
   const rankNumericClass = STANDINGS_NUMERIC_CLASS
   const metricNumericClass = STANDINGS_NUMERIC_CLASS
 
