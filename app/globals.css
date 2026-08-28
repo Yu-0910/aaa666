@@ -493,6 +493,7 @@
     }
 
     .player-page-fonts.roster-fielder-pc-table-css .fielder-basic-career-high-grid,
+    .player-page-fonts .roster-like-career-high-grid,
     .player-page-fonts.roster-fielder-pc-table-css .season-pitch-chart-panel {
       width: 100% !important;
       max-width: 430px !important;
@@ -555,8 +556,15 @@
       container-type: inline-size;
     }
 
+    .player-page-fonts .roster-like-career-high-grid {
+      container-type: inline-size;
+    }
+
     .player-page-fonts.roster-fielder-pc-table-css
       .fielder-basic-career-high-grid
+      [data-career-high-value],
+    .player-page-fonts
+      .roster-like-career-high-grid
       [data-career-high-value] {
       font-size: 1.012em !important;
     }
