@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
 import TopPageLeadersClient from "@/app/components/TopPageLeadersClient"
 import TopPagePitchingLeadersClient from "@/app/components/TopPagePitchingLeadersClient"
-import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
 import {
   fetchCurrentWeekMeta,
   fetchTopWeeklyLeadersForPage,

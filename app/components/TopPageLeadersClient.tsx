@@ -10,7 +10,7 @@ import Link from "next/link"
 import { Spinner } from "@/components/ui/spinner"
 import { useRouter } from "next/navigation"
 import metricMap from "@/config/metric_map.json"
-import type { TopPageLayoutMode } from "@/app/components/top/TopPagePanels"
+import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
 import { TopPageModernLeaderRow } from "@/app/components/top/TopPageModernLeaderRow"
 import {
   battingMiniMetricsForSeasonTab,
