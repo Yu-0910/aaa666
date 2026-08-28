@@ -1,6 +1,7 @@
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
 import { HISTORICAL_PLAYER_DISAMBIGUATED_SLUGS } from "@/lib/historicalPlayerSlugDisambiguation.generated"
 import historicalPlayerSlugOverrides from "@/lib/historicalPlayerSlugOverrides.generated.json"
+import historicalPlayerRankingRoman from "@/lib/historicalPlayerRankingRoman.generated.json"
 
 export type HistoricalPlayerSlugOverride = {
   npbPlayerId: string
@@ -21,16 +22,27 @@ type HistoricalPlayerSlugOverrideTuple = [
   legacySlugs: string[],
 ]
 
+const historicalRankingRomanById = historicalPlayerRankingRoman as Record<string, string>
+
 const historicalOverridesBase = (historicalPlayerSlugOverrides as HistoricalPlayerSlugOverrideTuple[]).map(
-  ([npbPlayerId, nameJa, romanFull, position, slug, legacySlugs]) => ({
-    npbPlayerId,
-    nameJa,
-    romanFull,
-    position,
-    teamCode: "",
-    slug,
-    legacySlugs,
-  }),
+  ([npbPlayerId, nameJa, romanFull, position, slug, legacySlugs]) => {
+    const rankingRoman = String(historicalRankingRomanById[npbPlayerId] ?? "").trim()
+    const normalizedRomanFull = rankingRoman || romanFull
+    const normalizedSlug = rankingRoman ? romanSlug(rankingRoman) || slug : slug
+    const normalizedLegacySlugs =
+      normalizedSlug && normalizedSlug !== slug
+        ? Array.from(new Set([slug, ...legacySlugs].filter(Boolean)))
+        : legacySlugs
+    return {
+      npbPlayerId,
+      nameJa,
+      romanFull: normalizedRomanFull,
+      position,
+      teamCode: "",
+      slug: normalizedSlug,
+      legacySlugs: normalizedLegacySlugs,
+    }
+  },
 )
 
 export const HISTORICAL_PLAYER_SLUG_OVERRIDES = historicalOverridesBase.map(

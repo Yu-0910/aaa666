@@ -1,4 +1,5 @@
 import { weekLabelForKey, isValidWeeklyWeekKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyAvailableWeekKeys"
 import { readWeeklyCurrentWeekJson } from "@/lib/topPage/weeklyCurrentWeekMeta"
 import { listWeeklyRankingWeekKeys } from "@/lib/topPage/weeklyLeadersSnapshotBuild"
 
@@ -27,20 +28,4 @@ export function weeklyRankingPageWeekMeta(
   }
 }
 
-export function mergeAvailableWeekKeys(
-  ...groups: Array<readonly string[] | string | null | undefined>
-): string[] {
-  const merged = new Set<string>()
-  for (const group of groups) {
-    if (typeof group === "string") {
-      const wk = group.trim()
-      if (wk) merged.add(wk)
-      continue
-    }
-    for (const value of group ?? []) {
-      const wk = String(value ?? "").trim()
-      if (wk) merged.add(wk)
-    }
-  }
-  return [...merged].sort().reverse()
-}
+export { mergeAvailableWeekKeys }

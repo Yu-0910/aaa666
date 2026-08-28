@@ -19,8 +19,8 @@ import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
 
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyAvailableWeekKeys"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
 import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
