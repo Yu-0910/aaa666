@@ -12,7 +12,10 @@ import {
   rowMeetsPitchingQualifyingIp,
   shouldRequireQualifyingPitching,
 } from "@/lib/ranking/qualifyingPitching"
-import { resolvePitchingThresholdsForRanking } from "@/lib/ranking/qualifyingThresholds"
+import {
+  resolvePitchingThresholdsForRanking,
+  resolvePitchingThresholdsForRankingAsync,
+} from "@/lib/ranking/qualifyingThresholds"
 import type { LeaderRow, LeadersConfig } from "@/lib/ranking/leadersTypes"
 import {
   PITCHING_TOP_2026_GRID_METRICS,
@@ -204,6 +207,47 @@ function buildPitchingLeadersFromMetricRows(
   })
 }
 
+async function buildPitchingLeadersFromMetricRowsAsync(
+  year: string,
+  league: string,
+  metricRows: Map<string, RankingJsonRow[]>
+): Promise<LeadersConfig | null> {
+  const upperLeague = league.toUpperCase()
+  const leaders: Record<string, LeaderRow[]> = {}
+  const allMetrics = [...PITCHING_TOP_2026_GRID_METRICS, ...PITCHING_TOP_2026_MINI_METRICS]
+  const thresholds = await resolvePitchingThresholdsForRankingAsync(
+    process.cwd(),
+    year,
+    upperLeague
+  )
+
+  for (const metricLabel of allMetrics) {
+    const rows = metricRows.get(metricLabel)
+    if (!rows?.length) continue
+    const topN = topNForPitchingMetric(metricLabel)
+    const metricKey = getPitchingJsonKey(metricLabel)
+    const filteredRows =
+      shouldRequireQualifyingPitching(metricKey) && thresholds
+        ? rows.filter((row) =>
+            rowMeetsPitchingQualifyingIp(
+              row as Parameters<typeof rowMeetsPitchingQualifyingIp>[0],
+              thresholds
+            )
+          )
+        : rows
+    const top = filteredRows.slice(0, topN).map((row, i) => toLeaderRow(row, i + 1, metricLabel))
+    if (top.length > 0) leaders[metricLabel] = top
+  }
+
+  if (Object.keys(leaders).length === 0) return null
+
+  return normalizePitchingLeadersConfigFor2026({
+    top3Metrics: [...PITCHING_TOP_2026_GRID_METRICS],
+    miniMetrics: [...PITCHING_TOP_2026_MINI_METRICS],
+    leaders,
+  })
+}
+
 export function buildPitchingLeadersConfigFromRankings(
   year: string,
   league: string
@@ -240,7 +284,7 @@ export async function buildPitchingLeadersConfigFromRankingsAsync(
     }
     if (rows?.length) metricRows.set(metricLabel, rows)
   }
-  return buildPitchingLeadersFromMetricRows(year, league, metricRows)
+  return buildPitchingLeadersFromMetricRowsAsync(year, league, metricRows)
 }
 
 export function getPitchingLeaders(year: string, league: string): LeadersConfig {

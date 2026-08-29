@@ -13,6 +13,7 @@ import {
   type TeamGamesJson,
 } from "@/lib/ranking/qualifyingThresholdsShared"
 import type { PitchingQualifyingThresholds } from "@/lib/ranking/qualifyingPitching"
+import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import {
   readTeamGamesJsonFile,
   seasonTeamGamesJsonPath,
@@ -70,6 +71,34 @@ function loadStandingsThresholdRowsSync(
   return null
 }
 
+async function loadStandingsThresholdRowsAsync(
+  projectRoot: string,
+  year: string,
+  league: "CL" | "PL",
+  weekKey?: string
+): Promise<StandingsThresholdRow[] | null> {
+  const local = loadStandingsThresholdRowsSync(projectRoot, year, league, weekKey)
+  if (local?.length) return local
+
+  const sitePaths = weekKey
+    ? [`/data/standings/weekly/${year}/${weekKey}/${league}.json`]
+    : [
+        `/data/standings/${year}/${league}.json`,
+        `/standings-json/${year}/${league}.json`,
+      ]
+
+  for (const sitePath of sitePaths) {
+    try {
+      const raw = await fetchDisplayJsonServer<{ rows?: unknown[] }>(sitePath)
+      if (Array.isArray(raw?.rows)) return raw.rows as StandingsThresholdRow[]
+    } catch {
+      continue
+    }
+  }
+
+  return null
+}
+
 export function resolveMinPAByTeamForRanking(
   projectRoot: string,
   year: string,
@@ -92,6 +121,24 @@ export function resolvePitchingThresholdsForRanking(
 ): PitchingQualifyingThresholds | null {
   const lg = league.toUpperCase() as "CL" | "PL"
   const standingsRows = loadStandingsThresholdRowsSync(projectRoot, year, lg, weekKey)
+  if (standingsRows && standingsRows.length > 0) {
+    return buildPitchingThresholdsFromStandingsRows(standingsRows, year, lg)
+  }
+  const json = loadTeamGamesJsonSync(projectRoot, year, lg, weekKey)
+  if (json?.teams && Object.keys(json.teams).length > 0) {
+    return buildPitchingThresholdsFromTeamGames(json.teams, year, lg)
+  }
+  return null
+}
+
+export async function resolvePitchingThresholdsForRankingAsync(
+  projectRoot: string,
+  year: string,
+  league: string,
+  weekKey?: string
+): Promise<PitchingQualifyingThresholds | null> {
+  const lg = league.toUpperCase() as "CL" | "PL"
+  const standingsRows = await loadStandingsThresholdRowsAsync(projectRoot, year, lg, weekKey)
   if (standingsRows && standingsRows.length > 0) {
     return buildPitchingThresholdsFromStandingsRows(standingsRows, year, lg)
   }
