@@ -71,6 +71,29 @@ function loadStandingsThresholdRowsSync(
   return null
 }
 
+function getServerSiteOrigin(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (explicit) return explicit.replace(/\/+$/, "")
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`
+  return "http://localhost:3000"
+}
+
+async function fetchJsonDirect<T>(path: string): Promise<T | null> {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  try {
+    const response = await fetch(`${getServerSiteOrigin()}${normalizedPath}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+    if (!response.ok) return null
+    return (await response.json()) as T
+  } catch {
+    return null
+  }
+}
+
 async function loadStandingsThresholdRowsAsync(
   projectRoot: string,
   year: string,
@@ -80,12 +103,18 @@ async function loadStandingsThresholdRowsAsync(
   const local = loadStandingsThresholdRowsSync(projectRoot, year, league, weekKey)
   if (local?.length) return local
 
+  const directPaths = weekKey
+    ? [`/data/standings/weekly/${year}/${weekKey}/${league}.json`]
+    : [`/standings-json/${year}/${league}.json`, `/data/standings/${year}/${league}.json`]
+
+  for (const directPath of directPaths) {
+    const raw = await fetchJsonDirect<{ rows?: unknown[] }>(directPath)
+    if (Array.isArray(raw?.rows)) return raw.rows as StandingsThresholdRow[]
+  }
+
   const sitePaths = weekKey
     ? [`/data/standings/weekly/${year}/${weekKey}/${league}.json`]
-    : [
-        `/data/standings/${year}/${league}.json`,
-        `/standings-json/${year}/${league}.json`,
-      ]
+    : [`/data/standings/${year}/${league}.json`]
 
   for (const sitePath of sitePaths) {
     try {
