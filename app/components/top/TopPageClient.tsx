@@ -274,7 +274,7 @@ export function TopPageClient({
                     <Link
                       key={teamCode}
                       href={href}
-                      className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-1.5 py-0.5 text-[10px] text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                      className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-[1px] py-px text-[7px] leading-none text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
                     >
                       {label}
                     </Link>
@@ -289,7 +289,7 @@ export function TopPageClient({
                   <Link
                     key={teamCode}
                     href={href}
-                    className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-1.5 py-0.5 text-[10px] text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                    className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-[1px] py-px text-[7px] leading-none text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
                   >
                     {label}
                   </Link>
