@@ -8,7 +8,7 @@ import ArticlesListClient from "@/app/components/ArticlesListClient"
 import { TopPageMobileDrawer } from "@/app/components/top/TopPageMobileDrawer"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
 import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
-import { mainTabs, dummyArticles } from "@/app/components/top/topPageConstants"
+import { mainTabs, dummyArticles, teamColors } from "@/app/components/top/topPageConstants"
 import { type TopPageTabId } from "@/app/components/top/topPageRouteConfig"
 import { usesTopBattingModernLayout } from "@/lib/topPageBatting2025Grid"
 import { TopPageSeasonTabContent } from "@/app/components/top/TopPageSeasonTabContent"
@@ -17,6 +17,7 @@ import { TopPageStandingsTab } from "@/app/components/top/TopPageStandingsTab"
 import { TopPageProbablesTab } from "@/app/components/top/TopPageProbablesTab"
 import { TopPageInstallButton } from "@/app/components/top/TopPageInstallButton"
 import SiteFooter from "@/app/components/common/SiteFooter"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import RankingBottomNav, {
   type TopSeasonStatView,
   type TopStandingsView,
@@ -112,6 +113,8 @@ export function TopPageClient({
         })),
       )
     : null
+  const teamLinkBorderColor = (teamCode: string) =>
+    teamColors[teamCode] ?? rankingTeamStripeColor(teamCode)
 
   const mainTabButtons = (
     <div
@@ -275,6 +278,7 @@ export function TopPageClient({
                       key={teamCode}
                       href={href}
                       className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-[1px] py-px text-[7px] leading-none text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                      style={{ borderColor: teamLinkBorderColor(teamCode) }}
                     >
                       {label}
                     </Link>
@@ -290,6 +294,7 @@ export function TopPageClient({
                     key={teamCode}
                     href={href}
                     className="inline-flex items-center rounded border border-[#444] bg-[#141414] px-[1px] py-px text-[7px] leading-none text-gray-400 transition-colors hover:border-[#666] hover:text-[#ffff44]"
+                    style={{ borderColor: teamLinkBorderColor(teamCode) }}
                   >
                     {label}
                   </Link>
