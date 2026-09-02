@@ -76,7 +76,7 @@ const DEFAULT_STATE: PitcherCardState = {
 }
 
 const SECTION_HEADING_CLASS = "text-[1.125rem]"
-const SECTION_HEADING_SHELL = `${SECTION_HEADING_CLASS} mb-4 pl-4`
+const SECTION_HEADING_SHELL = `${SECTION_HEADING_CLASS} mb-1 py-1 pl-5 pr-2 bg-[rgba(255,255,255,0.035)]`
 
 function PitcherSectionHeading({
   stripeColor,
@@ -211,7 +211,7 @@ function DetailedStatsTables({ payload }: { payload: PitcherSeasonPocPayload | n
   ]
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {rows.map((row, index) => (
         <div key={index} className="player-page-table-shell w-full min-w-0 max-w-full overflow-hidden overflow-x-auto">
           <table
@@ -480,7 +480,7 @@ function PitchDataCharts({
 
   return (
     <div className="mb-0">
-      <div className="flex flex-wrap items-start justify-center gap-2">
+      <div className="flex flex-wrap items-start justify-center gap-1.5">
         {rightRows.length > 0 ? (
           <PitchTypePieChart
             title="対右"
@@ -520,7 +520,7 @@ function CompactPitchTypeSplit({
 }) {
   return (
     <section className="min-w-0 lg:col-span-4">
-      <PitcherSectionHeading stripeColor={stripeColor} title={title} className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+      <PitcherSectionHeading stripeColor={stripeColor} title={title} className={SECTION_HEADING_SHELL} />
       <div className="min-w-0 overflow-hidden">{children}</div>
     </section>
   )
@@ -586,7 +586,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
 
   return (
     <article className="min-w-0 px-4 py-4 lg:px-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-b border-[#333333] pb-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 border-b border-[#333333] pb-2">
         <div className="flex items-center gap-2">
           <div className="player-page-team-color-bar h-12 w-1.5 flex-shrink-0" style={{ backgroundColor: stripeColor }} />
           <div className="flex flex-col">
@@ -611,10 +611,10 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
       </div>
 
       <div className="player-season-tab-numerics">
-        <div className="pitcher-season-career-high-numerics grid grid-cols-1 items-start gap-x-5 gap-y-6 lg:grid-cols-12">
+        <div className="pitcher-season-career-high-numerics grid grid-cols-1 items-start gap-x-3.5 gap-y-4 lg:grid-cols-12">
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="プロフィール" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
-            <div className="space-y-2">
+            <PitcherSectionHeading stripeColor={stripeColor} title="プロフィール" className={SECTION_HEADING_SHELL} />
+            <div className="space-y-1.5">
               <PlayerContextTable player={player} />
               <PlayerPageProfileTableBlock
                 {...profileTableProps(player.profileMerged)}
@@ -625,12 +625,12 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-6">
-            <PitcherSectionHeading stripeColor={stripeColor} title="詳細成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="詳細成績" className={SECTION_HEADING_SHELL} />
             <DetailedStatsTables payload={seasonPitching} />
           </section>
 
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="左右別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="左右別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="条件"
               headers={["被打率", "打数", "被安打", "K-BB％", "K％", "BB％", "被本"]}
@@ -641,12 +641,12 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="投球データ" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="投球データ" className={SECTION_HEADING_SHELL} />
             <PitchDataCharts seasonPitching={seasonPitching} seasonPitchTypes={seasonPitchTypes} />
           </section>
 
           <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="球種別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="球種別の投球成績" className={SECTION_HEADING_SHELL} />
             <div className="min-w-0 overflow-hidden">
               <PitcherSeasonPitchTypesTable rows={seasonPitchTypes?.rows ?? []} />
             </div>
@@ -661,7 +661,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </CompactPitchTypeSplit>
 
           <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="巡目別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="巡目別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="巡目"
               headers={["被打率", "打数", "被安打", "K-BB％", "K％", "BB％", "被本"]}
@@ -692,12 +692,12 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="イニング別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="イニング別の投球成績" className={SECTION_HEADING_SHELL} />
             <InningSplitTable payload={seasonPitching} inningCount={inningCount} />
           </section>
 
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="捕手別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="捕手別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="捕手"
               headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "QS％"]}
@@ -707,7 +707,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="ホーム&ビジター別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="ホーム&ビジター別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="種別"
               headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "被打率"]}
@@ -717,7 +717,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="デー&ナイター別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="デー&ナイター別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="種別"
               headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "QS％"]}
@@ -727,7 +727,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="カウント別の投球成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="カウント別の投球成績" className={SECTION_HEADING_SHELL} />
             <StandardSplitTable
               firstHeader="カウント"
               headers={["被打率", "打数", "安打", "単打", "二塁打", "三塁打", "本塁打"]}
@@ -737,7 +737,7 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
           </section>
 
           <section className="min-w-0 lg:col-span-6">
-            <PitcherSectionHeading stripeColor={stripeColor} title="対戦成績" className={`${SECTION_HEADING_CLASS} mb-2 pl-4`} />
+            <PitcherSectionHeading stripeColor={stripeColor} title="対戦成績" className={SECTION_HEADING_SHELL} />
             <MatchupTable payload={matchup} opponentTeamCode={player.opponentTeamCode} />
           </section>
         </div>
