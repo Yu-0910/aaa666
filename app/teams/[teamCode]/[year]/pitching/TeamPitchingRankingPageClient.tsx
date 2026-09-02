@@ -8,7 +8,7 @@ import { getPitchingSortOrderForKey } from "@/lib/ranking/pitchingSortOrder"
 import { usePitchingRankingTable } from "@/hooks/usePitchingRankingTable"
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParamsShared"
 import { teamPageHref } from "@/lib/teamPage/teamPageHref"
 import { FullPageLoading } from "@/components/ui/spinner"
 

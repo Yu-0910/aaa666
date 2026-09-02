@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises"
-import path from "node:path"
 import { loadPlayerProfileMergedForInitialHtml, type PlayerProfileMergedPayload } from "@/lib/playerProfileMergedServer"
 import { resolvePlayerSlugEntry } from "@/lib/playerSlug.server"
 import { TEAM_CODE_TO_SHORT } from "@/lib/standings/teamCodes"
+import { fetchDisplayJsonServer } from "@/lib/ranking/fetchDisplayJsonServer"
 import CompactProbablesBoard from "./CompactProbablesBoard"
 import type { Metadata } from "next"
 
@@ -53,6 +52,8 @@ export const metadata: Metadata = {
   },
 }
 
+export const dynamic = "force-dynamic"
+
 function teamNameFromCode(code: string): string {
   return TEAM_CODE_TO_SHORT[code] ?? code
 }
@@ -62,8 +63,10 @@ function byPreferredOrder(a: ProbableBoardPlayer, b: ProbableBoardPlayer): numbe
 }
 
 async function loadBoardPlayers(): Promise<ProbableBoardPlayer[]> {
-  const filePath = path.join(process.cwd(), "public", "data", "top-probables", "2026", "current.json")
-  const snapshot = JSON.parse(await readFile(filePath, "utf8")) as TopProbablesSnapshot
+  const snapshot = await fetchDisplayJsonServer<TopProbablesSnapshot>(
+    "/data/top-probables/2026/current.json"
+  )
+  if (!snapshot) return []
   const players: ProbableBoardPlayer[] = []
 
   for (const card of snapshot.cards ?? []) {

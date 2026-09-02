@@ -1,7 +1,12 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
+import {
+  CountPitchTypeChart,
+  PaRoundPitchTypeChart,
+} from "@/app/components/PitchTypeSplitViewsSection"
 import { PlayerPageProfileTableBlock } from "@/app/players/[playerId]/PlayerPageProfileTableBlock"
 import type { ProfileMergedPayload } from "@/app/players/[playerId]/playerPageShared"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
@@ -17,12 +22,18 @@ import {
   pitcherPocHomeAwayRows,
   pitcherPocInningRow,
 } from "@/lib/pitcherSeasonPocUi"
-import type { PitcherSeasonPocPayload, PitcherSeasonPocPitchTypesSplitRow } from "@/lib/pitcherSeasonPocTypes"
+import type { PitcherSeasonPocPayload } from "@/lib/pitcherSeasonPocTypes"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
 import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import type { PlayerProfileMergedPayload } from "@/lib/playerProfileMergedServer"
 import type { PlayerMatchupDerived } from "@/lib/playerMatchupTypes"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
+
+const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
+const PitchTypeChartLegend = dynamic(
+  () => import("@/app/components/PitchTypePieChart").then((module) => ({ default: module.PitchTypeChartLegend })),
+  { ssr: false },
+)
 
 type BoardPlayer = {
   publicId: string
@@ -146,19 +157,6 @@ function profileTableProps(profileMerged: PlayerProfileMergedPayload | null) {
   }
 }
 
-function splitSummaryRows(rows: PitcherSeasonPocPitchTypesSplitRow[] | null | undefined) {
-  return (rows ?? []).map((row) => ({
-    label: row.label,
-    cells: [
-      String(row.pitches_total || "—"),
-      row.rows
-        .slice(0, 4)
-        .map((pitch) => `${pitch.pitch_type} ${pitch.pct.toFixed(1)}%`)
-        .join(" / ") || "—",
-    ],
-  }))
-}
-
 function paRoundResultRows(payload: PitcherSeasonPocPayload | null) {
   const byKey = new Map((payload?.splits.byPaRound ?? []).map((row) => [row.key, row]))
   return PA_ROUND_ORDERED_KEYS.map((key) => {
@@ -218,6 +216,65 @@ function matchupRows(payload: PlayerMatchupDerived | null, opponentTeamCode: str
   }))
 }
 
+function PitchDataCharts({
+  seasonPitching,
+  seasonPitchTypes,
+}: {
+  seasonPitching: PitcherSeasonPocPayload | null
+  seasonPitchTypes: PitcherSeasonPitchTypesPayload | null
+}) {
+  const rows = seasonPitchTypes?.rows ?? []
+  const colorOrder = rows.map((row) => row.pitch_type)
+  const toChart = (key: "pct_vs_left" | "pct_vs_right") =>
+    rows
+      .map((row) => ({
+        pitch_type: row.pitch_type,
+        pitches: row.pitches,
+        pct: row[key] ?? 0,
+      }))
+      .filter((row) => row.pct > 0)
+  const leftRows = toChart("pct_vs_left")
+  const rightRows = toChart("pct_vs_right")
+  const hand = seasonPitching?.splits.vsHand
+  const centerStats = (value: NonNullable<typeof hand>["vsL"] | undefined) => {
+    if (!value || value.bf <= 0) return undefined
+    const cells = pitcherPocHandCells(value)
+    return { avgAgainst: cells[0], kBbPct: cells[3] }
+  }
+
+  if (!leftRows.length && !rightRows.length) return null
+
+  return (
+    <div className="mb-4 rounded border border-[#333] bg-[#111] px-2 py-3">
+      <div className="flex flex-wrap items-start justify-center gap-2">
+        {rightRows.length > 0 ? (
+          <PitchTypePieChart
+            title="対右"
+            rows={rightRows}
+            centerStats={centerStats(hand?.vsR)}
+            pitchTypeColorOrder={colorOrder}
+            compact
+            sizeScale={0.78}
+            isAnimationActive={false}
+          />
+        ) : null}
+        {leftRows.length > 0 ? (
+          <PitchTypePieChart
+            title="対左"
+            rows={leftRows}
+            centerStats={centerStats(hand?.vsL)}
+            pitchTypeColorOrder={colorOrder}
+            compact
+            sizeScale={0.78}
+            isAnimationActive={false}
+          />
+        ) : null}
+      </div>
+      <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} className="mb-0" scale={0.82} />
+    </div>
+  )
+}
+
 function usePitcherCardData(player: BoardPlayer): PitcherCardState {
   const [state, setState] = useState<PitcherCardState>(DEFAULT_STATE)
 
@@ -269,14 +326,6 @@ function PitcherCard({ player }: { player: BoardPlayer }) {
     () => (seasonPitching ? pitcherPocCountRows(seasonPitching) : []),
     [seasonPitching],
   )
-  const paRoundPitchRows = useMemo(
-    () => splitSummaryRows(seasonPitching?.splits.byPaRoundPitchTypes),
-    [seasonPitching],
-  )
-  const countPitchRows = useMemo(
-    () => splitSummaryRows(seasonPitching?.splits.byCountPitchTypes),
-    [seasonPitching],
-  )
   const opponentMatchupRows = useMemo(
     () => matchupRows(matchup, player.opponentTeamCode),
     [matchup, player.opponentTeamCode],
@@ -305,7 +354,7 @@ function PitcherCard({ player }: { player: BoardPlayer }) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-4">
           <section>
             <SectionTitle stripeColor={stripeColor} title="名前" />
@@ -348,19 +397,20 @@ function PitcherCard({ player }: { player: BoardPlayer }) {
 
           <section>
             <SectionTitle stripeColor={stripeColor} title="投球データ" />
-            <PitcherSeasonPitchTypesTable rows={seasonPitchTypes?.rows ?? []} compactOverlay />
+            <PitchDataCharts seasonPitching={seasonPitching} seasonPitchTypes={seasonPitchTypes} />
+            <PitcherSeasonPitchTypesTable rows={seasonPitchTypes?.rows ?? []} />
           </section>
 
           <section>
             <SectionTitle stripeColor={stripeColor} title="巡目別の球種一覧" />
-            <CompactTable headers={["総投球数", "上位球種"]} rows={paRoundPitchRows.length ? paRoundPitchRows : [{ label: "—", cells: ["—", "—"] }]} />
+            <PaRoundPitchTypeChart splits={seasonPitching?.splits.byPaRoundPitchTypes ?? null} />
           </section>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 border-t border-[#333] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
           <section>
             <SectionTitle stripeColor={stripeColor} title="カウント別の球種一覧" />
-            <CompactTable headers={["総投球数", "上位球種"]} rows={countPitchRows.length ? countPitchRows : [{ label: "—", cells: ["—", "—"] }]} />
+            <CountPitchTypeChart splits={seasonPitching?.splits.byCountPitchTypes ?? null} />
           </section>
 
           <section>

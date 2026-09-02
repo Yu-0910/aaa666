@@ -20,7 +20,7 @@ import { lookupRomanInMap } from "@/lib/ranking/romanNameLookup"
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParamsShared"
 import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"

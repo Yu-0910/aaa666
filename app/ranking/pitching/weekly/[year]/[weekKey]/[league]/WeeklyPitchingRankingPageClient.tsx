@@ -36,7 +36,7 @@ import { mergeRomanNamesFromCsv, normalizeRankingRow } from "@/lib/ranking/norma
 import { fetchWeeklyCurrentWeekClient } from "@/lib/ranking/fetchWeeklyCurrentWeekClient"
 
 import { weekLabelForKey } from "@/lib/ranking/weeklyRankingsWeekKeys"
-import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParams"
+import { mergeAvailableWeekKeys } from "@/lib/ranking/weeklyRankingPageParamsShared"
 import { buildWeeklyRankingTopNavGroups } from "@/lib/ranking/rankingNavLinks"
 
 import { FullPageLoading } from "@/components/ui/spinner"
