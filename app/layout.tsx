@@ -1,7 +1,9 @@
 import type React from "react"
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Bebas_Neue, Inter, Noto_Sans_JP } from "next/font/google"
 import AnalyticsWrapper from "@/components/AnalyticsWrapper"
+import GoogleAnalytics from "@/components/GoogleAnalytics"
 import "./globals.css"
 
 const inter = Inter({
@@ -108,6 +110,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         <AnalyticsWrapper />
       </body>
     </html>
