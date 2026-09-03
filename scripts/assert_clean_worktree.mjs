@@ -8,7 +8,7 @@ function runGit(args) {
     cwd: process.cwd(),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-  }).trim()
+  }).trimEnd()
 }
 
 function parseStatusLines(raw) {
@@ -71,7 +71,7 @@ try {
   if (entries.length > 12) {
     console.error(`  ...and ${entries.length - 12} more`)
   }
-  console.error("[clean-worktree] Use `npm run deploy:vercel:prod:clean` to deploy from the dedicated clean worktree.")
+  console.error("[clean-worktree] Commit or stash the changes, then run `npm run deploy:vercel:prod`.")
   process.exit(1)
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
