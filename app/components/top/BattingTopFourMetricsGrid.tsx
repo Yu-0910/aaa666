@@ -94,11 +94,12 @@ function MetricPanel({
   const topN = battingTop2025SeasonTopN(metric, String(year))
   const displayRows = topN != null ? rows.slice(0, topN) : rows
 
-  const statsListClass = `relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
+  const panelBgClass = "bg-[#1f1f1f]"
+  const statsListClass = `relative z-20 ml-auto shrink-0 ${panelBgClass} py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
   const borderClass = bordered ? "border border-[#555]" : ""
 
   return (
-    <div className={`top-page-table-shell bg-[#1f1f1f] ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
+    <div className={`top-page-table-shell ${panelBgClass} ${borderClass} rounded relative min-w-0 overflow-hidden ${panelClassName}`}>
       <div className={`relative mb-1 flex ${typography.metricHeaderMinH} items-center`}>
         <Link
           href={getRankingUrl(metric)}
