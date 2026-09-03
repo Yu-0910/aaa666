@@ -25,6 +25,12 @@ logs/
 
 # vercel
 .vercel
+
+# Local deployment copies and Codex release artifacts
+.codex-deploy-*/
+.codex-release/
+tmp_probables_url_diff.txt
+x[[]0])
 .codex-worktrees/
 
 # typescript
