@@ -32,9 +32,9 @@ const PROBABLES_PITCH_LABEL_SCALE = 0.8 * 1.05
 const PROBABLES_CHARTS_ROW_REF_PX = 11 * 16 * 2 + 32
 /** モバイルは全幅、sm 以上は基準最大幅 */
 const PROBABLES_PITCH_DIALOG_CLASS =
-  "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] bg-black p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
+  "w-full max-w-[calc(100%-2rem)] gap-0 border border-[#555] site-bg p-3 text-white shadow-md overflow-visible sm:max-w-[min(96vw,56rem)]"
 const PROBABLES_PA_ROUND_DIALOG_CLASS =
-  "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] bg-black p-2 pt-8 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
+  "max-h-[90vh] w-full max-w-[calc(100%-2rem)] gap-0 overflow-auto border border-[#555] site-bg p-2 pt-8 text-white shadow-md sm:max-w-[min(96vw,62rem)]"
 const PROBABLES_PA_ROUND_CHART_CLASS = "mx-auto w-[93.75%] -translate-x-1"
 const PROBABLES_PA_ROUND_ROW_LABEL_CLASS =
   "pitch-type-split-row-label text-[8px] text-gray-200 font-black tabular-nums leading-tight"

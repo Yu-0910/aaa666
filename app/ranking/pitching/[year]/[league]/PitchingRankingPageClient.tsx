@@ -40,7 +40,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
+      <div className="min-h-screen site-bg text-white flex items-center justify-center px-4">
         <div className="text-center max-w-lg">
           <h1 className="text-2xl font-bold mb-4">エラー</h1>
           <p className="text-gray-400 text-sm leading-relaxed">{loadError}</p>
@@ -74,7 +74,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
       : undefined
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col">
       {!loadError && emptyNoData && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-3 py-2 text-center text-xs sm:text-sm text-amber-100/90">
           この指標のランキングデータがまだありません。public/data/rankings/pitching/{initialViewModel.season}/

@@ -53,7 +53,7 @@ export default async function WeeklyPitchingRankingPage({ params }: WeeklyPitchi
     const metrics = loadMetricsFromRecordPitching()
     if (metrics.length === 0) {
       return (
-        <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="min-h-screen site-bg text-white flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">エラー</h1>
             <p className="text-gray-400">利用可能な指標が見つかりませんでした。</p>
@@ -95,7 +95,7 @@ export default async function WeeklyPitchingRankingPage({ params }: WeeklyPitchi
     }
 
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen site-bg text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">エラー</h1>
           <p className="text-gray-400 mb-2">

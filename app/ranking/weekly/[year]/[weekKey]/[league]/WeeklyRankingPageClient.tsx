@@ -202,7 +202,7 @@ function WeeklyPageShell({
 
   return (
 
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col">
 
       {emptyNoData && <WeeklyEmptyBanner league={league} />}
 
@@ -504,7 +504,7 @@ export default function WeeklyRankingPageClient({
 
     return (
 
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen site-bg text-white flex items-center justify-center">
 
         <div className="text-center">
 

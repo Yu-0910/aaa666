@@ -265,7 +265,7 @@ export default function TopPageLeadersClient({
           <div className="grid grid-cols-2 gap-1">
             {data.top3Metrics.slice(0, 2).map((metric) =>
               data.leaders[metric] ? (
-                <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded p-1 relative min-w-0">
+                <div key={metric} className="top-page-table-shell site-bg border border-[#555] rounded p-1 relative min-w-0">
                   <div className="relative mb-1 flex min-h-[22px] items-center">
                     <Link
                       href={getRankingUrl(metric)}
@@ -287,7 +287,7 @@ export default function TopPageLeadersClient({
                         }
                         router.push(url)
                       }}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                      className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                     >
                       成績一覧
                     </button>
@@ -309,7 +309,7 @@ export default function TopPageLeadersClient({
             )}
           </div>
           {data.leaders[data.top3Metrics[2]!] && (
-            <div className="top-page-table-shell bg-black border border-[#555] rounded p-1 relative w-full">
+            <div className="top-page-table-shell site-bg border border-[#555] rounded p-1 relative w-full">
               <div className="relative mb-1 flex min-h-[22px] items-center">
                 <Link
                   href={getRankingUrl(data.top3Metrics[2]!)}
@@ -331,7 +331,7 @@ export default function TopPageLeadersClient({
                     }
                     router.push(url)
                   }}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                  className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                 >
                   成績一覧
                 </button>
@@ -354,7 +354,7 @@ export default function TopPageLeadersClient({
       ) : !isWeeklyBattingTab ? (
         <div className={layout === "desktop" ? "grid grid-cols-3 gap-1" : "grid grid-cols-1 gap-1"}>
           {data.top3Metrics.map((metric) => (
-            <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded p-1 relative">
+            <div key={metric} className="top-page-table-shell site-bg border border-[#555] rounded p-1 relative">
               {usesTopBattingModernLayout(Number(year), isWeeklyBattingTab) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
@@ -377,7 +377,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -386,7 +386,7 @@ export default function TopPageLeadersClient({
                 <div className="flex items-stretch justify-between mb-1">
                   <Link
                     href={getRankingUrl(metric)}
-                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                    className="site-bg py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
                   >
                     <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
                   </Link>
@@ -400,7 +400,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -429,7 +429,7 @@ export default function TopPageLeadersClient({
           const leader = data.leaders[metric]?.[0]
           if (!leader) return null
           return (
-            <div key={metric} className="top-page-table-shell bg-black border border-[#555] rounded p-0.5 relative">
+            <div key={metric} className="top-page-table-shell site-bg border border-[#555] rounded p-0.5 relative">
               {usesTopBattingModernLayout(Number(year), isWeeklyBattingTab) ? (
                 <div className="relative mb-1 flex min-h-[22px] items-center">
                   <Link
@@ -452,7 +452,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>
@@ -461,7 +461,7 @@ export default function TopPageLeadersClient({
                 <div className="flex items-stretch justify-between mb-1">
                   <Link
                     href={getRankingUrl(metric)}
-                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                    className="site-bg py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
                   >
                     <span
                       className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
@@ -479,7 +479,7 @@ export default function TopPageLeadersClient({
                       }
                       router.push(url)
                     }}
-                    className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
+                    className={`bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center cursor-pointer`}
                   >
                     成績一覧
                   </button>

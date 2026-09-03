@@ -20,7 +20,7 @@ function FullPageLoading({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'min-h-screen bg-black text-white flex items-center justify-center',
+        'min-h-screen site-bg text-white flex items-center justify-center',
         className
       )}
       role="status"

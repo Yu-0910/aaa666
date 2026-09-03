@@ -616,9 +616,9 @@ export default function RankingUI({
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen site-bg text-white">
       <div
-        className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]"
+        className="sticky top-0 z-50 site-header-bg backdrop-blur-sm border-b border-[#333]"
         style={{ zIndex: 300 }}
       >
         <div className="container mx-auto px-4 py-1 border-b border-[#333] flex items-center justify-between">

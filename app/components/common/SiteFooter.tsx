@@ -17,7 +17,7 @@ type SiteFooterProps = {
 export default function SiteFooter({ className = "" }: SiteFooterProps) {
   return (
     <footer
-      className={`border-t border-[#333] bg-black text-gray-400 ${className}`.trim()}
+      className={`border-t border-[#333] site-bg text-gray-400 ${className}`.trim()}
       aria-label="サイトフッター"
     >
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

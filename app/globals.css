@@ -4,6 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --site-background: #23272a;
+  --site-background-rgb: 35 39 42;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -127,7 +129,7 @@
     /* text-foreground は :root でほぼ黒。ここでは #000 背景に白文字を固定したいため併用しない
        （@apply と color:#fff の順が崩れると継承が黒になり、個人ページの表の数値が見えなくなる） */
     @apply bg-background;
-    background-color: #000;
+    background-color: var(--site-background);
     color: #fff;
     /* Set default font weight to semibold for all Japanese text */
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif;
@@ -160,6 +162,20 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer utilities {
+  .site-bg {
+    background-color: var(--site-background);
+  }
+
+  .site-bg-95 {
+    background-color: rgb(var(--site-background-rgb) / 0.95);
+  }
+
+  .site-header-bg {
+    background-color: #000;
   }
 }
 

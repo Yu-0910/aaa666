@@ -174,7 +174,7 @@ export function TopPageClient({
               <Link
                 key={article.id}
                 href={`/articles/${article.id}`}
-                className="flex gap-2 bg-black border border-[#333] p-1.5 hover:bg-[#2a2a2a] transition-colors"
+                className="flex gap-2 site-bg border border-[#333] p-1.5 hover:bg-[#2a2a2a] transition-colors"
               >
                 <img src={article.image || "/placeholder.svg"} alt={article.title} className="w-20 h-16 object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -196,9 +196,9 @@ export function TopPageClient({
   )
 
   return (
-    <div className={`min-h-screen bg-black text-white ${activeMainTab === 0 || activeMainTab === 1 || activeMainTab === 4 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen site-bg text-white ${activeMainTab === 0 || activeMainTab === 1 || activeMainTab === 4 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
+        <header className="sticky top-0 z-50 site-header-bg backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
             <button
               type="button"
@@ -229,7 +229,7 @@ export function TopPageClient({
           </div>
         </header>
       ) : (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
+        <header className="sticky top-0 z-50 site-header-bg backdrop-blur-sm border-b border-[#333]">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
             <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />
@@ -269,7 +269,7 @@ export function TopPageClient({
       {mainTabButtons}
       {showTopInstallAndTeamLinks &&
         (showTeamPageLinks ? (
-          <div className={isMobile ? "bg-black px-2 pb-1" : "bg-black px-4 pb-2"}>
+          <div className={isMobile ? "site-bg px-2 pb-1" : "site-bg px-4 pb-2"}>
             <div className="mx-auto flex max-w-6xl flex-col gap-1.5">
               <div className="flex items-start gap-1.5">
                 <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">

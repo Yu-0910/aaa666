@@ -242,10 +242,10 @@ function opponentOverlayTriggerClass(opponentStripeSide: "left" | "right" | unde
 
 function opponentOverlayContentClass(textScale = 1, contentLayout: "rows" | "table" = "rows"): string {
   if (contentLayout === "table") {
-    return "w-auto max-w-none rounded border-0 bg-black p-0 shadow-md overflow-hidden"
+    return "w-auto max-w-none rounded border-0 site-bg p-0 shadow-md overflow-hidden"
   }
   const sizeClass = scaledTextClass(OPPONENT_OVERLAY_CONTENT_BASE_PX, textScale)
-  return `w-auto max-w-none border border-[#555] bg-black p-2 ${sizeClass} text-white shadow-md text-left text-wrap`.trim()
+  return `w-auto max-w-none border border-[#555] site-bg p-2 ${sizeClass} text-white shadow-md text-left text-wrap`.trim()
 }
 
 function opponentOverlayContentStyle(textScale = 1): CSSProperties | undefined {
@@ -551,7 +551,7 @@ function OpponentBatterOverlay({
       return (
         <Dialog>
           <DialogTrigger asChild>{renderTrigger()}</DialogTrigger>
-          <DialogContent className="border border-[#555] bg-black text-white sm:max-w-md">
+          <DialogContent className="border border-[#555] site-bg text-white sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="text-sm text-white">苦手な打者</DialogTitle>
             </DialogHeader>
@@ -938,7 +938,7 @@ function ProbablesCard({
         </div>
       </div>
 
-      <div className="top-page-table-shell rounded border border-[#555] bg-black overflow-hidden">
+      <div className="top-page-table-shell rounded border border-[#555] site-bg overflow-hidden">
         {displayCard.games.map((g, idx) => (
           <GameRow
             key={`${g.dateJst}-${g.gameId ?? "tbd"}`}

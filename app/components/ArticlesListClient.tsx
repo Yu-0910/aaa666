@@ -311,7 +311,7 @@ export default function ArticlesListClient() {
         <Link
           key={`${article.id}-${index}`}
           href={article.link}
-          className="flex gap-2 bg-black border border-[#333] p-1.5 hover:bg-[#2a2a2a] transition-colors"
+          className="flex gap-2 site-bg border border-[#333] p-1.5 hover:bg-[#2a2a2a] transition-colors"
         >
           <img
             src={article.image || "/placeholder.svg"}

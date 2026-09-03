@@ -248,7 +248,7 @@ export function TeamStandingsTable({
   return (
     <div
       ref={scrollContainerRef}
-      className="top-page-table-shell top-page-standings-scroll-shell w-full min-w-0 rounded border border-[#555] bg-black overflow-x-auto overflow-y-hidden overscroll-x-contain max-w-full"
+      className="top-page-table-shell top-page-standings-scroll-shell w-full min-w-0 rounded border border-[#555] site-bg overflow-x-auto overflow-y-hidden overscroll-x-contain max-w-full"
       style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pinch-zoom" }}
     >
       <table

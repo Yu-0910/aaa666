@@ -191,7 +191,7 @@ function DonutCenterPanel({
       aria-hidden
     >
       <div
-        className="flex flex-col items-center justify-center rounded-full border border-[#555] bg-[#0a0a0a]"
+        className="flex flex-col items-center justify-center rounded-full border border-[#555] site-bg"
         style={{
           width: discSize,
           height: discSize,

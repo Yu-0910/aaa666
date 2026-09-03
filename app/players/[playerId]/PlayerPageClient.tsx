@@ -1746,7 +1746,7 @@ export function PlayerPageClient({
       <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
       {/* Header */}
       {isMobile ? (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
+        <header className="sticky top-0 z-50 site-bg-95 backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
             <button
               type="button"
@@ -1777,7 +1777,7 @@ export function PlayerPageClient({
           </div>
         </header>
       ) : (
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-[#333]">
+        <header className="sticky top-0 z-50 site-bg-95 backdrop-blur-sm border-b border-[#333]">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
             <Link href={SITE_TOP_HREF} className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
               <Image src="/logo.png" alt="Short-Stop" width={36} height={36} className="object-contain" />

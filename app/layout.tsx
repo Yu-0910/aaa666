@@ -96,7 +96,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Short-Stop" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#23272A" />
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5927852752448438"

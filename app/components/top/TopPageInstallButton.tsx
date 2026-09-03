@@ -118,7 +118,7 @@ export function TopPageInstallButton({ layout, compact = false }: TopPageInstall
   if (compact) return button
 
   return (
-    <div className={isMobile ? "bg-black px-2 pt-2" : "bg-black px-4 pt-3"}>
+    <div className={isMobile ? "site-bg px-2 pt-2" : "site-bg px-4 pt-3"}>
       <div className={isMobile ? "mx-auto flex max-w-6xl items-start justify-end gap-2" : "mx-auto flex max-w-6xl items-center justify-end gap-2"}>
         {button}
       </div>

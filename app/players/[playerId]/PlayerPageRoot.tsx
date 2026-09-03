@@ -41,14 +41,14 @@ function PlayerPageClientLoader(props: PlayerPageClientProps) {
 
   if (loadError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4 text-center text-white">
+      <div className="flex min-h-screen items-center justify-center site-bg px-4 text-center text-white">
         選手ページの読み込みに失敗しました。ページを再読み込みしてください。
       </div>
     )
   }
   if (!Client) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="flex min-h-screen items-center justify-center site-bg">
         <SectionLoadingSpinner />
       </div>
     )

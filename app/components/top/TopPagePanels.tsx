@@ -222,7 +222,7 @@ export function LeadersPanel({
                     </Link>
                     <Link
                       href={getStatsListUrl(metric)}
-                      className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                      className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                     >
                       成績一覧
                     </Link>
@@ -258,7 +258,7 @@ export function LeadersPanel({
                 </Link>
                 <Link
                   href={getStatsListUrl(data.top3Metrics[2]!)}
-                  className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                  className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                 >
                   成績一覧
                 </Link>
@@ -296,7 +296,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -305,13 +305,13 @@ export function LeadersPanel({
                 <div className="flex items-stretch justify-between mb-1">
                   <Link
                     href={getRankingUrl(metric)}
-                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                    className="site-bg py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
                   >
                     <span className="latin text-[#ffff44] text-xs tracking-wider">{metric}</span>
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`bg-black py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`bg-[#1f1f1f] py-0.5 px-1 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -355,7 +355,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`relative z-20 ml-auto shrink-0 bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`relative z-20 ml-auto shrink-0 bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -364,7 +364,7 @@ export function LeadersPanel({
                 <div className="flex items-stretch justify-between mb-1">
                   <Link
                     href={getRankingUrl(metric)}
-                    className="bg-black py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
+                    className="site-bg py-0.5 flex-1 text-center hover:opacity-80 transition-opacity"
                   >
                     <span
                       className={`text-[#ffff44] text-xs ${/[a-zA-Z]/.test(metric) ? "latin" : ""}`}
@@ -374,7 +374,7 @@ export function LeadersPanel({
                   </Link>
                   <Link
                     href={getStatsListUrl(metric)}
-                    className={`bg-black py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
+                    className={`bg-[#1f1f1f] py-0.5 px-0.5 ${rowTypography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`}
                   >
                     成績一覧
                   </Link>
@@ -410,7 +410,7 @@ export function StandingsPanel({ league, leagueColor }: { league: string; league
           </div>
         </div>
       </div>
-      <div className="top-page-table-shell bg-black border border-[#555] rounded overflow-hidden p-4">
+      <div className="top-page-table-shell site-bg border border-[#555] rounded overflow-hidden p-4">
         <table className="w-full">
           <thead>
             <tr>

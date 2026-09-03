@@ -47,7 +47,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen site-bg text-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">エラー</h1>
           <p className="text-gray-400">{loadError}</p>
@@ -73,7 +73,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     !yahooPoc
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col">
       {emptyAfterFilter && (
         <div className="border-b border-[#444] bg-[#141414] px-3 py-2 text-center text-xs sm:text-sm text-gray-400">
           規定打席を満たす選手がいません。別の指標を選ぶか、team-games.json の生成（npm run phase12:build:rankings）を確認してください。
