@@ -551,7 +551,6 @@ export function PitchTypeSplitViewsSection({
             barTrackClassName="h-6"
             rowWrapperClassName="mb-[10px]"
             chartClassName="pitch-type-pa-round-vs-hand-chart"
-            chartStyle={{ width: "125%", maxWidth: "none" }}
           />
         )}
         renderVsRChart={(stagger, generation) => (
@@ -564,7 +563,6 @@ export function PitchTypeSplitViewsSection({
             barTrackClassName="h-6"
             rowWrapperClassName="mb-[10px]"
             chartClassName="pitch-type-pa-round-vs-hand-chart"
-            chartStyle={{ width: "125%", maxWidth: "none" }}
           />
         )}
         chartRevealAnimate={chartRevealAnimate}
