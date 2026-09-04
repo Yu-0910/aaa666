@@ -206,10 +206,10 @@ export function TeamStandingsTable({
     0,
   )
   const tableMinWidth = leftBlockWidth + metricsBlockWidth
-  const metricLeagueRanksByTeam = useMemo(
-    () => (showMetricLeagueRanks ? computeStandingsMetricLeagueRanks(rows) : null),
-    [rows, showMetricLeagueRanks],
-  )
+  const orderedRows = [...rows].sort((a, b) => a.rank - b.rank || a.team.localeCompare(b.team))
+  const metricLeagueRanksByTeam = showMetricLeagueRanks
+    ? computeStandingsMetricLeagueRanks(orderedRows)
+    : null
 
   useEffect(() => {
     if (!jumpRequest) return
@@ -333,7 +333,7 @@ export function TeamStandingsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, idx) => {
+          {orderedRows.map((row, idx) => {
             const rowBg = rowBackgroundColor(idx)
             return (
               <tr
