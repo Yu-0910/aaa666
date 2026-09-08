@@ -1,13 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import dynamic from "next/dynamic"
+import { useEffect, useMemo, useState } from "react"
 import PitcherSeasonPitchTypesTable from "@/app/components/PitcherSeasonPitchTypesTable"
-import { CountPitchTypeChart, PaRoundPitchTypeChart } from "@/app/components/PitchTypeSplitViewsSection"
 import { PlayerPageProfileTableBlock } from "@/app/players/[playerId]/PlayerPageProfileTableBlock"
 import type { ProfileMergedPayload } from "@/app/players/[playerId]/playerPageShared"
 import { formatSlashStatDisplay } from "@/lib/battingRateFormat"
 import {
+  PA_ROUND_ORDERED_KEYS,
   pitcherPocBasicRow1,
   pitcherPocBasicRow2,
   pitcherPocBasicRow3,
@@ -17,25 +16,13 @@ import {
   pitcherPocHandCells,
   pitcherPocHomeAwayRows,
   pitcherPocInningRow,
-  resolvePaRoundPitchTypeSplits,
 } from "@/lib/pitcherSeasonPocUi"
-import type { PitcherSeasonPocPayload } from "@/lib/pitcherSeasonPocTypes"
+import type { PitcherSeasonPocPayload, PitcherSeasonPocPitchTypesSplitRow } from "@/lib/pitcherSeasonPocTypes"
 import { matchupOpponentDisplayNameJa } from "@/lib/playerNameNormalize"
-import {
-  compareMatchupOpponentsByOpsDesc,
-  PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX,
-  PLAYER_MATCHUP_TABLE_COLUMNS,
-} from "@/lib/playerMatchupSeasonTab"
+import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import type { PlayerProfileMergedPayload } from "@/lib/playerProfileMergedServer"
 import type { PlayerMatchupDerived } from "@/lib/playerMatchupTypes"
-import { rankingTeamStripeColor } from "@/lib/ranking/teamStripeColor"
 import type { PitcherSeasonPitchTypesPayload } from "@/lib/yahooGame/pitcherSeasonPitchTypes"
-
-const PitchTypePieChart = dynamic(() => import("@/app/components/PitchTypePieChart"), { ssr: false })
-const PitchTypeChartLegend = dynamic(
-  () => import("@/app/components/PitchTypePieChart").then((module) => ({ default: module.PitchTypeChartLegend })),
-  { ssr: false },
-)
 
 type BoardPlayer = {
   publicId: string
@@ -50,14 +37,6 @@ type BoardPlayer = {
   profileMerged: PlayerProfileMergedPayload | null
 }
 
-export type BoardMatchup = {
-  gameId: string
-  gameDateJst: string
-  matchupLabel: string
-  leftPlayer: BoardPlayer
-  rightPlayer: BoardPlayer
-}
-
 type DerivedEnvelope<T> = {
   hasData: boolean
   payload: T | null
@@ -69,36 +48,80 @@ type PitcherCardState = {
   matchup: PlayerMatchupDerived | null
 }
 
+const BASIC_ROW_1_HEADERS = ["防御率", "試合", "先発", "救援", "勝利", "敗戦", "S", "HP", "被打率", "QS"]
+const BASIC_ROW_2_HEADERS = ["完投", "完封", "無四球", "勝率", "回数", "被打者", "投球数", "P/IP", "被安", "K%"]
+const BASIC_ROW_3_HEADERS = ["被本", "奪三振", "四球", "敬遠", "死球", "暴投", "失点", "自責", "WHIP", "QS率"]
+const HAND_HEADERS = ["被打率", "打数", "被安打", "K-BB%", "K%", "BB%", "被本"]
+const PA_ROUND_RESULT_HEADERS = ["被打率", "打数", "被安打", "K-BB%", "K%", "BB%", "被本"]
+const INNING_HEADERS = ["防御率", "打数", "K-BB%", "K%", "BB%", "WHIP", "被打率", "被本"]
+const CATCHER_HEADERS = ["防御率", "勝敗", "回数", "K-BB%", "K%", "WHIP", "QS%"]
+const HOME_AWAY_HEADERS = ["防御率", "勝敗", "回数", "K-BB%", "K%", "WHIP", "被打率"]
+const DAY_NIGHT_HEADERS = ["防御率", "勝敗", "回数", "K-BB%", "K%", "WHIP", "QS%"]
+const MATCHUP_HEADERS = ["打数", "安打", "本塁打", "三振", "打率", "OPS"]
 const DEFAULT_STATE: PitcherCardState = {
   seasonPitching: null,
   seasonPitchTypes: null,
   matchup: null,
 }
 
-const DEFAULT_SELECTED_PLAYER_ID = "11515133"
-
-const SECTION_HEADING_CLASS = "text-[1.125rem]"
-const SECTION_HEADING_SHELL = `${SECTION_HEADING_CLASS} mb-1 py-1 pl-5 pr-2 bg-[rgba(255,255,255,0.035)]`
-
-function PitcherSectionHeading({
+function SectionTitle({
   stripeColor,
   title,
-  className = SECTION_HEADING_SHELL,
 }: {
   stripeColor: string
   title: string
-  className?: string
 }) {
   return (
-    <h2
-      className={className}
+    <h3
+      className="mb-2 mt-0 text-[11px] font-black tracking-[0.08em] text-white"
       style={{
-        borderLeft: `6px solid ${stripeColor}`,
-        fontWeight: 900,
+        borderLeft: `5px solid ${stripeColor}`,
+        paddingLeft: "0.55rem",
       }}
     >
       {title}
-    </h2>
+    </h3>
+  )
+}
+
+function CompactTable({
+  headers,
+  rows,
+  firstHeader = "項目",
+}: {
+  headers: string[]
+  rows: Array<{ label: string; cells: string[] }>
+  firstHeader?: string
+}) {
+  return (
+    <div className="overflow-hidden rounded border border-[#3d3d3d]">
+      <table className="w-full border-collapse text-[10px] leading-tight text-white">
+        <thead>
+          <tr className="bg-[#ffff44] text-black">
+            <th className="border border-[#3d3d3d] px-1 py-1 text-left font-black">{firstHeader}</th>
+            {headers.map((header) => (
+              <th key={header} className="border border-[#3d3d3d] px-1 py-1 text-center font-black">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label} className="bg-[#121212]">
+              <th className="border border-[#3d3d3d] px-1 py-1 text-left font-bold text-[#f4f4f4]">
+                {row.label}
+              </th>
+              {row.cells.map((cell, index) => (
+                <td key={`${row.label}-${index}`} className="border border-[#3d3d3d] px-1 py-1 text-center font-black tabular-nums">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -121,6 +144,78 @@ function profileTableProps(profileMerged: PlayerProfileMergedPayload | null) {
       name_ja: "",
     }) as ProfileMergedPayload,
   }
+}
+
+function splitSummaryRows(rows: PitcherSeasonPocPitchTypesSplitRow[] | null | undefined) {
+  return (rows ?? []).map((row) => ({
+    label: row.label,
+    cells: [
+      String(row.pitches_total || "—"),
+      row.rows
+        .slice(0, 4)
+        .map((pitch) => `${pitch.pitch_type} ${pitch.pct.toFixed(1)}%`)
+        .join(" / ") || "—",
+    ],
+  }))
+}
+
+function paRoundResultRows(payload: PitcherSeasonPocPayload | null) {
+  const byKey = new Map((payload?.splits.byPaRound ?? []).map((row) => [row.key, row]))
+  return PA_ROUND_ORDERED_KEYS.map((key) => {
+    const row = byKey.get(key)
+    if (!row || row.bf <= 0) {
+      return { label: key === "5" ? "5巡目+" : `${key}巡目`, cells: Array.from({ length: 7 }, () => "—") }
+    }
+    return {
+      label: key === "5" ? "5巡目+" : `${key}巡目`,
+      cells: [
+        row.avg ?? "—",
+        String(row.ab),
+        String(row.h),
+        `${(((row.so - row.bb) / row.bf) * 100).toFixed(1)}%`,
+        `${((row.so / row.bf) * 100).toFixed(1)}%`,
+        `${((row.bb / row.bf) * 100).toFixed(1)}%`,
+        String(row.hr),
+      ],
+    }
+  })
+}
+
+function inningRows(payload: PitcherSeasonPocPayload | null) {
+  return Array.from({ length: 9 }, (_, index) => {
+    const inning = index + 1
+    return {
+      label: `${inning}回`,
+      cells: payload ? pitcherPocInningRow(payload, inning) : Array.from({ length: 8 }, () => "—"),
+    }
+  })
+}
+
+function relevantHomeAwayRows(payload: PitcherSeasonPocPayload | null, homeAway: "home" | "away") {
+  const label = homeAway === "home" ? "ホーム" : "アウェー"
+  const row = payload ? pitcherPocHomeAwayRows(payload).find((item) => item.label === label) : null
+  return [{ label, cells: row ? [row.era, row.wl, row.ip, row.k_bb_pct, row.k_pct, row.whip, row.avg] : Array.from({ length: 7 }, () => "—") }]
+}
+
+function relevantDayNightRows(payload: PitcherSeasonPocPayload | null, dayNight: "day" | "night") {
+  const label = dayNight === "day" ? "デー" : "ナイター"
+  const row = payload ? pitcherPocDayNightRows(payload).find((item) => item.label === label) : null
+  return [{ label, cells: row ? [row.era, row.wl, row.ip, row.k_bb_pct, row.k_pct, row.whip, row.qs_pct] : Array.from({ length: 7 }, () => "—") }]
+}
+
+function matchupRows(payload: PlayerMatchupDerived | null, opponentTeamCode: string) {
+  const team = payload?.teams.find((item) => item.teamCode === opponentTeamCode)
+  return (team?.opponents ?? []).map((row) => ({
+    label: matchupOpponentDisplayNameJa(row.opponentName),
+    cells: [
+      String(row.ab),
+      String(row.h),
+      String(row.hr),
+      String(row.so),
+      row.avg ? formatSlashStatDisplay(row.avg) : "—",
+      row.ops ? formatSlashStatDisplay(row.ops) : "—",
+    ],
+  }))
 }
 
 function usePitcherCardData(player: BoardPlayer): PitcherCardState {
@@ -156,387 +251,9 @@ function usePitcherCardData(player: BoardPlayer): PitcherCardState {
   return state
 }
 
-function PlayerContextTable({ player }: { player: BoardPlayer }) {
-  const rows = [
-    { label: "対戦カード", value: `${player.teamName} vs ${player.opponentTeamName}` },
-    { label: "ホーム&ビジター", value: player.homeAway === "home" ? "ホーム" : "ビジター" },
-    { label: "デー&ナイター", value: player.dayNight === "night" ? "ナイター" : "デー" },
-    { label: "日付", value: player.gameDateJst },
-  ]
-
-  return (
-    <div
-      className="player-page-profile-table-shell w-full min-w-0 max-w-full rounded overflow-hidden"
-      style={{ border: "1px solid #333333", borderRadius: "0.25rem" }}
-    >
-      <table className="player-page-profile-table-base w-full border-collapse" style={{ border: "0", maxWidth: "100%", tableLayout: "fixed" }}>
-        <tbody style={{ fontWeight: 900, lineHeight: 1.35, fontSize: "0.875rem" }}>
-          {rows.map((row) => (
-            <tr key={row.label}>
-              <td
-                className="px-2 py-1.5"
-                style={{
-                  backgroundColor: "#FFFF44",
-                  color: "#000000",
-                  border: "1px solid #333333",
-                  width: "35%",
-                  fontWeight: 900,
-                }}
-              >
-                {row.label}
-              </td>
-              <td className="px-2 py-1.5" style={{ border: "1px solid #333333" }}>
-                {row.value}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function DetailedStatsTables({ payload }: { payload: PitcherSeasonPocPayload | null }) {
-  const rows = [
-    {
-      headers: ["防御率", "試合", "先発", "救援", "勝利", "敗戦", "Ｓ", "ＨＰ", "被打率", "QS"],
-      cells: payload ? pitcherPocBasicRow1(payload) : Array.from({ length: 10 }, () => "—"),
-    },
-    {
-      headers: ["完投", "完封", "無四球", "勝率", "回数", "被打者", "投球数", "P/IP", "被安", "K%"],
-      cells: payload ? pitcherPocBasicRow2(payload) : Array.from({ length: 10 }, () => "—"),
-    },
-    {
-      headers: ["被本", "三振", "四球", "故意四", "死球", "暴投", "失点", "自責", "WHIP", "QS率"],
-      cells: payload ? pitcherPocBasicRow3(payload) : Array.from({ length: 10 }, () => "—"),
-    },
-  ]
-
-  return (
-    <div className="space-y-1.5">
-      {rows.map((row, index) => (
-        <div key={index} className="player-page-table-shell w-full min-w-0 max-w-full overflow-hidden overflow-x-auto">
-          <table
-            className="text-xs"
-            style={{
-              fontVariantNumeric: "tabular-nums",
-              borderCollapse: "collapse",
-              border: "1px solid #555",
-              width: "100%",
-              maxWidth: "100%",
-              minWidth: 0,
-              tableLayout: "fixed",
-            }}
-          >
-            <tbody>
-              <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-                {row.headers.map((header, headerIndex) => (
-                  <th
-                    key={header}
-                    className={`px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-gray-500${
-                      headerIndex === 0 ? " first:border-l-0" : ""
-                    }`}
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-              <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", borderTop: "1px solid #333" }}>
-                {row.cells.map((cell, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className={`px-1 py-2 text-center latin font-black tabular-nums text-[14px] border-l border-gray-500${
-                      cellIndex === 0 ? " first:border-l-0" : ""
-                    }`}
-                  >
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function StandardSplitTable({
-  firstHeader,
-  headers,
-  rows,
-  firstColWidth,
-  firstCellAlign = "text-left",
-}: {
-  firstHeader: string
-  headers: string[]
-  rows: Array<{ label: string; cells: string[] }>
-  firstColWidth: string
-  firstCellAlign?: "text-left" | "text-center"
-}) {
-  return (
-    <div className="player-page-table-shell w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden">
-      <table
-        className="text-xs"
-        style={{
-          fontVariantNumeric: "tabular-nums",
-          borderCollapse: "separate",
-          borderSpacing: 0,
-          border: "1px solid #555",
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          tableLayout: "fixed",
-        }}
-      >
-        <colgroup>
-          <col style={{ width: firstColWidth }} />
-          {headers.map((_, index) => (
-            <col key={index} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-              {firstHeader}
-            </th>
-            {headers.map((header) => (
-              <th
-                key={header}
-                className="px-0.5 py-1 text-center font-bold text-[10px] latin tabular-nums whitespace-nowrap border-l border-b border-gray-500"
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={`${row.label}-${rowIndex}`} style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
-              <td
-                className={`px-1 py-1 ${firstCellAlign} latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]`}
-                style={{ backgroundColor: "#1a1a1a" }}
-              >
-                {row.label}
-              </td>
-              {row.cells.map((cell, cellIndex) => (
-                <td
-                  key={cellIndex}
-                  className="px-0.5 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function InningSplitTable({
-  payload,
-  inningCount,
-}: {
-  payload: PitcherSeasonPocPayload | null
-  inningCount: number
-}) {
-  const rows = Array.from({ length: inningCount }, (_, index) => {
-    const inning = index + 1
-    return {
-      label: `${inning}回`,
-      cells: payload ? pitcherPocInningRow(payload, inning) : Array.from({ length: 8 }, () => "—"),
-    }
-  })
-
-  return (
-    <StandardSplitTable
-      firstHeader="イニング"
-      headers={["防御率", "打数", "K-BB％", "K％", "BB％", "WHIP", "被打率", "被本塁打"]}
-      rows={rows}
-      firstColWidth="58px"
-      firstCellAlign="text-center"
-    />
-  )
-}
-
-function MatchupTable({
-  payload,
-  opponentTeamCode,
-}: {
-  payload: PlayerMatchupDerived | null
-  opponentTeamCode: string
-}) {
-  const team = payload?.teams.find((item) => item.teamCode === opponentTeamCode)
-  const rows = [...(team?.opponents ?? [])].sort(compareMatchupOpponentsByOpsDesc)
-
-  return (
-    <div className="player-page-table-shell w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden">
-      <table
-        className="text-xs"
-        style={{
-          fontVariantNumeric: "tabular-nums",
-          borderCollapse: "separate",
-          borderSpacing: 0,
-          border: "1px solid #555",
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          tableLayout: "fixed",
-        }}
-      >
-        <colgroup>
-          <col style={{ width: `${PLAYER_MATCHUP_NAME_COLUMN_WIDTH_PX}px` }} />
-          {PLAYER_MATCHUP_TABLE_COLUMNS.map((column) => (
-            <col key={column.key} style={{ width: "48px" }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr style={{ backgroundColor: "#FFFF44", color: "#000000" }}>
-            <th className="px-1 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500 first:border-l-0 sticky left-0 bg-[#FFFF44] z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]">
-              打者
-            </th>
-            {PLAYER_MATCHUP_TABLE_COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                className="px-0 py-1 text-center font-bold text-[10px] latin tabular-nums border-l border-b border-gray-500"
-              >
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(rows.length ? rows : []).map((row) => (
-            <tr key={row.opponentNpbId} style={{ backgroundColor: "rgba(255,255,255,0.03)", color: "#f5f5f5" }}>
-              <td
-                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                style={{ backgroundColor: "#1a1a1a" }}
-              >
-                {matchupOpponentDisplayNameJa(row.opponentName)}
-              </td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{String(row.ab)}</td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{String(row.h)}</td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{String(row.hr)}</td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">{String(row.so)}</td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                {row.avg != null ? formatSlashStatDisplay(row.avg) : "—"}
-              </td>
-              <td className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500">
-                {row.ops != null ? formatSlashStatDisplay(row.ops) : "—"}
-              </td>
-            </tr>
-          ))}
-          {!rows.length ? (
-            <tr style={{ backgroundColor: "rgba(255,255,255,0.03)", color: "#f5f5f5" }}>
-              <td
-                className="px-1 py-1 text-left latin font-black tabular-nums text-[13px] border-l border-b border-gray-500 first:border-l-0 sticky left-0 z-20 whitespace-nowrap shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
-                style={{ backgroundColor: "#1a1a1a" }}
-              >
-                —
-              </td>
-              {PLAYER_MATCHUP_TABLE_COLUMNS.map((column) => (
-                <td
-                  key={column.key}
-                  className="px-0 py-1 text-center latin font-black tabular-nums text-[14px] border-l border-b border-gray-500"
-                >
-                  —
-                </td>
-              ))}
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function PitchDataCharts({
-  seasonPitching,
-  seasonPitchTypes,
-}: {
-  seasonPitching: PitcherSeasonPocPayload | null
-  seasonPitchTypes: PitcherSeasonPitchTypesPayload | null
-}) {
-  const rows = seasonPitchTypes?.rows ?? []
-  const colorOrder = rows.map((row) => row.pitch_type)
-  const toChart = (key: "pct_vs_left" | "pct_vs_right") =>
-    rows
-      .map((row) => ({
-        pitch_type: row.pitch_type,
-        pitches: row.pitches,
-        pct: row[key] ?? 0,
-      }))
-      .filter((row) => row.pct > 0)
-  const leftRows = toChart("pct_vs_left")
-  const rightRows = toChart("pct_vs_right")
-  const hand = seasonPitching?.splits.vsHand
-  const centerStats = (value: NonNullable<typeof hand>["vsL"] | undefined) => {
-    if (!value || value.bf <= 0) return undefined
-    const cells = pitcherPocHandCells(value)
-    return { avgAgainst: cells[0], kBbPct: cells[3] }
-  }
-
-  if (!leftRows.length && !rightRows.length) return null
-
-  return (
-    <div className="mb-0">
-      <div className="flex flex-wrap items-start justify-center gap-1.5">
-        {rightRows.length > 0 ? (
-          <PitchTypePieChart
-            title="対右"
-            rows={rightRows}
-            centerStats={centerStats(hand?.vsR)}
-            pitchTypeColorOrder={colorOrder}
-            compact
-            sizeScale={0.58}
-            isAnimationActive={false}
-          />
-        ) : null}
-        {leftRows.length > 0 ? (
-          <PitchTypePieChart
-            title="対左"
-            rows={leftRows}
-            centerStats={centerStats(hand?.vsL)}
-            pitchTypeColorOrder={colorOrder}
-            compact
-            sizeScale={0.58}
-            isAnimationActive={false}
-          />
-        ) : null}
-      </div>
-      <PitchTypeChartLegend pitchTypes={colorOrder} pitchTypeColorOrder={colorOrder} className="mb-0" scale={0.7} />
-    </div>
-  )
-}
-
-function CompactPitchTypeSplit({
-  title,
-  stripeColor,
-  children,
-}: {
-  title: string
-  stripeColor: string
-  children: ReactNode
-}) {
-  return (
-    <section className="min-w-0 lg:col-span-4">
-      <PitcherSectionHeading stripeColor={stripeColor} title={title} className={SECTION_HEADING_SHELL} />
-      <div className="min-w-0 overflow-hidden">{children}</div>
-    </section>
-  )
-}
-
-function PitcherPanel({ player }: { player: BoardPlayer }) {
+function PitcherCard({ player }: { player: BoardPlayer }) {
   const stripeColor = rankingTeamStripeColor(player.teamCode)
   const { seasonPitching, seasonPitchTypes, matchup } = usePitcherCardData(player)
-  const inningCount = useMemo(() => {
-    const fallback = 9
-    const maxFromData =
-      seasonPitching?.splits?.byInning?.reduce((max, row) => Math.max(max, row.inning ?? 0), 0) ?? 0
-    return Math.min(18, Math.max(fallback, maxFromData))
-  }, [seasonPitching])
   const handRows = useMemo(() => {
     const vsHand = seasonPitching?.splits.vsHand
     return [
@@ -548,199 +265,141 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
     () => (seasonPitching ? pitcherPocCatcherRows(seasonPitching) : [{ label: "—", cells: Array.from({ length: 7 }, () => "—") }]),
     [seasonPitching],
   )
-  const homeAwayRows = useMemo(
-    () =>
-      seasonPitching
-        ? pitcherPocHomeAwayRows(seasonPitching).map((row) => ({
-            label: row.label,
-            cells: [row.era, row.wl, row.ip, row.k_bb_pct, row.k_pct, row.whip, formatSlashStatDisplay(row.avg)],
-          }))
-        : (["ホーム", "アウェー"] as const).map((label) => ({
-            label,
-            cells: Array.from({ length: 7 }, () => "—"),
-          })),
-    [seasonPitching],
-  )
-  const dayNightRows = useMemo(
-    () =>
-      seasonPitching
-        ? pitcherPocDayNightRows(seasonPitching).map((row) => ({
-            label: row.label,
-            cells: [row.era, row.wl, row.ip, row.k_bb_pct, row.k_pct, row.whip, row.qs_pct],
-          }))
-        : (["デー", "ナイター"] as const).map((label) => ({
-            label,
-            cells: Array.from({ length: 7 }, () => "—"),
-          })),
-    [seasonPitching],
-  )
   const countRows = useMemo(
-    () =>
-      seasonPitching
-        ? pitcherPocCountRows(seasonPitching).map((row) => ({ label: row.label, cells: row.cells }))
-        : [{ label: "—", cells: Array.from({ length: 7 }, () => "—") }],
+    () => (seasonPitching ? pitcherPocCountRows(seasonPitching) : []),
     [seasonPitching],
   )
-  const paRoundPitchTypeSplits = useMemo(
-    () => resolvePaRoundPitchTypeSplits(seasonPitching, seasonPitchTypes?.rows ?? null, null, "byPaRoundPitchTypes"),
-    [seasonPitching, seasonPitchTypes],
+  const paRoundPitchRows = useMemo(
+    () => splitSummaryRows(seasonPitching?.splits.byPaRoundPitchTypes),
+    [seasonPitching],
+  )
+  const countPitchRows = useMemo(
+    () => splitSummaryRows(seasonPitching?.splits.byCountPitchTypes),
+    [seasonPitching],
+  )
+  const opponentMatchupRows = useMemo(
+    () => matchupRows(matchup, player.opponentTeamCode),
+    [matchup, player.opponentTeamCode],
   )
 
   return (
-    <article className="min-w-0 px-4 py-4 lg:px-6">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 border-b border-[#333333] pb-2">
-        <div className="flex items-center gap-2">
-          <div className="player-page-team-color-bar h-12 w-1.5 flex-shrink-0" style={{ backgroundColor: stripeColor }} />
-          <div className="flex flex-col">
-            <h1
-              className="player-page-display-name text-[1.5rem] leading-tight"
-              style={{
-                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                fontWeight: 900,
-              }}
-            >
-              {player.nameJa}
-            </h1>
-            <span className="player-page-roman-name text-sm leading-tight text-gray-400 mt-0.5">{player.teamName}</span>
-          </div>
+    <article
+      className="rounded-xl border border-[#2c2c2c] bg-[#0b0b0b] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.35)]"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, rgba(255,255,255,0.02), transparent 22%), radial-gradient(circle at top right, rgba(255,255,68,0.08), transparent 26%)",
+      }}
+    >
+      <div className="mb-3 flex items-end justify-between gap-3 border-b border-[#2f2f2f] pb-3">
+        <div>
+          <p className="text-[22px] font-black leading-none text-white">{player.nameJa}</p>
+          <p className="mt-1 text-[11px] font-semibold tracking-[0.12em] text-[#bdbdbd]">
+            {player.teamName} vs {player.opponentTeamName} / {player.homeAway === "home" ? "ホーム" : "ビジター"} / {player.dayNight === "night" ? "ナイター" : "デー"}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold text-gray-300">
-          <span>{player.teamName} vs {player.opponentTeamName}</span>
-          <span>{player.gameDateJst}</span>
-          <span>{player.homeAway === "home" ? "ホーム" : "ビジター"}</span>
-          <span>{player.dayNight === "night" ? "ナイター" : "デー"}</span>
+        <div
+          className="rounded-full px-3 py-1 text-[10px] font-black tracking-[0.14em] text-black"
+          style={{ backgroundColor: stripeColor }}
+        >
+          {player.gameDateJst}
         </div>
       </div>
 
-      <div className="player-season-tab-numerics">
-        <div className="pitcher-season-career-high-numerics grid grid-cols-1 items-start gap-x-3.5 gap-y-4 lg:grid-cols-12">
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="プロフィール" className={SECTION_HEADING_SHELL} />
-            <div className="space-y-1.5">
-              <PlayerContextTable player={player} />
-              <PlayerPageProfileTableBlock
-                {...profileTableProps(player.profileMerged)}
-                tableClassName="player-page-profile-table-base"
-                showFinancialFields={false}
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="space-y-4">
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="名前" />
+            <div className="rounded border border-[#3d3d3d] bg-[#111] px-3 py-2 text-[18px] font-black text-white">
+              {player.nameJa}
+            </div>
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="プロフィール表" />
+            <PlayerPageProfileTableBlock
+              {...profileTableProps(player.profileMerged)}
+              tableClassName="text-[11px]"
+              showFinancialFields={false}
+            />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="基本成績" />
+            <div className="space-y-2">
+              <CompactTable
+                headers={BASIC_ROW_1_HEADERS}
+                rows={[{ label: "基本1", cells: seasonPitching ? pitcherPocBasicRow1(seasonPitching) : Array.from({ length: 10 }, () => "—") }]}
+              />
+              <CompactTable
+                headers={BASIC_ROW_2_HEADERS}
+                rows={[{ label: "基本2", cells: seasonPitching ? pitcherPocBasicRow2(seasonPitching) : Array.from({ length: 10 }, () => "—") }]}
+              />
+              <CompactTable
+                headers={BASIC_ROW_3_HEADERS}
+                rows={[{ label: "基本3", cells: seasonPitching ? pitcherPocBasicRow3(seasonPitching) : Array.from({ length: 10 }, () => "—") }]}
               />
             </div>
           </section>
 
-          <section className="min-w-0 lg:col-span-6">
-            <PitcherSectionHeading stripeColor={stripeColor} title="詳細成績" className={SECTION_HEADING_SHELL} />
-            <DetailedStatsTables payload={seasonPitching} />
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="左右別" />
+            <CompactTable headers={HAND_HEADERS} rows={handRows} />
           </section>
 
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="左右別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="条件"
-              headers={["被打率", "打数", "被安打", "K-BB％", "K％", "BB％", "被本"]}
-              rows={handRows}
-              firstColWidth="48px"
-              firstCellAlign="text-center"
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="投球データ" />
+            <PitcherSeasonPitchTypesTable rows={seasonPitchTypes?.rows ?? []} compactOverlay />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="巡目別の球種一覧" />
+            <CompactTable headers={["総投球数", "上位球種"]} rows={paRoundPitchRows.length ? paRoundPitchRows : [{ label: "—", cells: ["—", "—"] }]} />
+          </section>
+        </div>
+
+        <div className="space-y-4">
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="カウント別の球種一覧" />
+            <CompactTable headers={["総投球数", "上位球種"]} rows={countPitchRows.length ? countPitchRows : [{ label: "—", cells: ["—", "—"] }]} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="巡目別の成績" />
+            <CompactTable headers={PA_ROUND_RESULT_HEADERS} rows={paRoundResultRows(seasonPitching)} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="イニング別" />
+            <CompactTable headers={INNING_HEADERS} rows={inningRows(seasonPitching)} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="捕手別" />
+            <CompactTable headers={CATCHER_HEADERS} rows={catcherRows} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="ホームアンドビジターの成績" />
+            <CompactTable headers={HOME_AWAY_HEADERS} rows={relevantHomeAwayRows(seasonPitching, player.homeAway)} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="デーアンドナイターの成績" />
+            <CompactTable headers={DAY_NIGHT_HEADERS} rows={relevantDayNightRows(seasonPitching, player.dayNight)} />
+          </section>
+
+          <section>
+            <SectionTitle stripeColor={stripeColor} title={`対戦成績一覧（対${player.opponentTeamName}）`} />
+            <CompactTable
+              headers={MATCHUP_HEADERS}
+              rows={opponentMatchupRows.length ? opponentMatchupRows : [{ label: "—", cells: Array.from({ length: 6 }, () => "—") }]}
+              firstHeader="打者"
             />
           </section>
 
-          <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="投球データ" className={SECTION_HEADING_SHELL} />
-            <PitchDataCharts seasonPitching={seasonPitching} seasonPitchTypes={seasonPitchTypes} />
-          </section>
-
-          <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="球種別の投球成績" className={SECTION_HEADING_SHELL} />
-            <div className="min-w-0 overflow-hidden">
-              <PitcherSeasonPitchTypesTable rows={seasonPitchTypes?.rows ?? []} />
-            </div>
-          </section>
-
-          <CompactPitchTypeSplit title="巡目別の球種一覧" stripeColor={stripeColor}>
-            <PaRoundPitchTypeChart splits={paRoundPitchTypeSplits} />
-          </CompactPitchTypeSplit>
-
-          <CompactPitchTypeSplit title="カウント別の球種一覧" stripeColor={stripeColor}>
-            <CountPitchTypeChart splits={seasonPitching?.splits.byCountPitchTypes ?? null} />
-          </CompactPitchTypeSplit>
-
-          <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="巡目別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="巡目"
-              headers={["被打率", "打数", "被安打", "K-BB％", "K％", "BB％", "被本"]}
-              rows={["1", "2", "3", "4", "5"].map((key) => {
-                const row = seasonPitching?.splits.byPaRound?.find((item) => item.key === key)
-                if (!row || row.bf <= 0) {
-                  return {
-                    label: key === "5" ? "5巡目+" : `${key}巡目`,
-                    cells: Array.from({ length: 7 }, () => "—"),
-                  }
-                }
-                return {
-                  label: key === "5" ? "5巡目+" : `${key}巡目`,
-                  cells: [
-                    row.avg ?? "—",
-                    String(row.ab),
-                    String(row.h),
-                    `${(((row.so - row.bb) / row.bf) * 100).toFixed(1)}%`,
-                    `${((row.so / row.bf) * 100).toFixed(1)}%`,
-                    `${((row.bb / row.bf) * 100).toFixed(1)}%`,
-                    String(row.hr),
-                  ],
-                }
-              })}
-              firstColWidth="58px"
-              firstCellAlign="text-center"
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-4">
-            <PitcherSectionHeading stripeColor={stripeColor} title="イニング別の投球成績" className={SECTION_HEADING_SHELL} />
-            <InningSplitTable payload={seasonPitching} inningCount={inningCount} />
-          </section>
-
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="捕手別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="捕手"
-              headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "QS％"]}
-              rows={catcherRows}
-              firstColWidth="65px"
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="ホーム&ビジター別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="種別"
-              headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "被打率"]}
-              rows={homeAwayRows}
-              firstColWidth="65px"
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="デー&ナイター別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="種別"
-              headers={["防御率", "勝‐敗", "回数", "K-BB％", "K％", "WHIP", "QS％"]}
-              rows={dayNightRows}
-              firstColWidth="65px"
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-3">
-            <PitcherSectionHeading stripeColor={stripeColor} title="カウント別の投球成績" className={SECTION_HEADING_SHELL} />
-            <StandardSplitTable
-              firstHeader="カウント"
-              headers={["被打率", "打数", "安打", "単打", "二塁打", "三塁打", "本塁打"]}
-              rows={countRows}
-              firstColWidth="72px"
-            />
-          </section>
-
-          <section className="min-w-0 lg:col-span-6">
-            <PitcherSectionHeading stripeColor={stripeColor} title="対戦成績" className={SECTION_HEADING_SHELL} />
-            <MatchupTable payload={matchup} opponentTeamCode={player.opponentTeamCode} />
+          <section>
+            <SectionTitle stripeColor={stripeColor} title="カウント別" />
+            <CompactTable headers={["被打率", "打数", "安打", "単打", "二塁打", "三塁打", "本塁打"]} rows={countRows.length ? countRows : [{ label: "—", cells: Array.from({ length: 7 }, () => "—") }]} />
           </section>
         </div>
       </div>
@@ -748,59 +407,22 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
   )
 }
 
-export default function CompactProbablesBoard({ matchups }: { matchups: BoardMatchup[] }) {
-  const players = useMemo(() => {
-    const byPublicId = new Map<string, BoardPlayer>()
-    for (const player of matchups.flatMap((matchup) => [matchup.leftPlayer, matchup.rightPlayer])) {
-      if (!byPublicId.has(player.publicId)) byPublicId.set(player.publicId, player)
-    }
-    return [...byPublicId.values()].sort((a, b) => {
-      if (a.publicId === DEFAULT_SELECTED_PLAYER_ID) return -1
-      if (b.publicId === DEFAULT_SELECTED_PLAYER_ID) return 1
-      return 0
-    })
-  }, [matchups])
-  const [selectedPlayerId, setSelectedPlayerId] = useState(() =>
-    players.some((player) => player.publicId === DEFAULT_SELECTED_PLAYER_ID)
-      ? DEFAULT_SELECTED_PLAYER_ID
-      : players[0]?.publicId ?? "",
-  )
-  const selectedPlayer = players.find((player) => player.publicId === selectedPlayerId) ?? players[0] ?? null
-
-  useEffect(() => {
-    if (!players.some((player) => player.publicId === selectedPlayerId)) {
-      setSelectedPlayerId(players[0]?.publicId ?? "")
-    }
-  }, [players, selectedPlayerId])
-
+export default function CompactProbablesBoard({ players }: { players: BoardPlayer[] }) {
   return (
-    <main className="player-page-fonts pitcher-season-numerics-ui min-h-screen overflow-x-hidden bg-[#050505] text-white">
-      <div className="mx-auto w-full max-w-[2000px] px-4 py-4 lg:px-6 lg:py-5">
-        <header className="mb-3 flex flex-wrap items-end justify-between gap-3 border-b border-[#333333] pb-3">
-          <div>
-            <h1 className="player-page-display-name text-[1.5rem] leading-tight" style={{ fontWeight: 900 }}>
-              セ・リーグ予告先発 + 大野雄大
-            </h1>
-            <p className="mt-1 text-sm text-gray-400">2026-09-02 / 投手別データシート</p>
-          </div>
-          <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-            表示する投手
-            <select
-              value={selectedPlayer?.publicId ?? ""}
-              onChange={(event) => setSelectedPlayerId(event.target.value)}
-              className="h-9 max-w-[min(100%,22rem)] border border-[#555] bg-[#1a1a1a] px-2 text-sm font-bold text-white outline-none focus:border-[#FFFF44]"
-            >
-              {players.map((player) => (
-                <option key={player.publicId} value={player.publicId}>
-                  {player.nameJa} / {player.teamName} vs {player.opponentTeamName}
-                </option>
-              ))}
-            </select>
-          </label>
+    <main className="min-h-screen bg-[#050505] px-4 py-6 text-white">
+      <div className="mx-auto max-w-[2200px]">
+        <header className="mb-6 rounded-2xl border border-[#242424] bg-[#0d0d0d] p-5">
+          <p className="text-[12px] font-bold tracking-[0.18em] text-[#ffff88]">COMPACT BOARD</p>
+          <h1 className="mt-1 text-[28px] font-black leading-tight">予告先発6人 スクショ用まとめ</h1>
+          <p className="mt-2 text-[12px] leading-relaxed text-[#bfbfbf]">
+            2026-09-02 セ・リーグ予告先発。個人ページの縦積みではなく、左右2カラムで圧縮表示しています。
+          </p>
         </header>
 
-        <div className="border border-[#333333] bg-[rgba(255,255,255,0.02)]">
-          {selectedPlayer ? <PitcherPanel player={selectedPlayer} /> : <p className="p-6 text-sm text-gray-400">予告先発データがありません。</p>}
+        <div className="grid gap-5 2xl:grid-cols-2">
+          {players.map((player) => (
+            <PitcherCard key={player.publicId} player={player} />
+          ))}
         </div>
       </div>
     </main>
