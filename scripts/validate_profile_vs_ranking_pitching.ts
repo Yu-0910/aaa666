@@ -11,13 +11,30 @@ type JsonValue =
 
 const root = process.cwd()
 
+function cliArg(name: string): string | null {
+  const prefix = `--${name}=`
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i] ?? ""
+    if (arg === `--${name}`) return process.argv[i + 1] ?? null
+    if (arg.startsWith(prefix)) return arg.slice(prefix.length)
+  }
+  return null
+}
+
+const targetYear = cliArg("year")?.trim() || "2026"
+
 const profileDirs = [
   path.join(root, "_data", "derived", "player_profile", "profile_npb"),
   path.join(root, "public", "data", "player_profile", "profile_npb"),
 ]
 
+const mergedProfileDirs = [
+  path.join(root, "_data", "derived", "player_profile", "merged"),
+  path.join(root, "public", "data", "player_profile", "merged"),
+]
+
 const rankingDirs = [
-  path.join(root, "public", "data", "rankings", "pitching"),
+  path.join(root, "public", "data", "rankings", "pitching", targetYear),
 ]
 
 const masterCsvDir = path.join(root, "_data", "master_csv")
@@ -61,6 +78,13 @@ const nameKeys = new Set([
   "playerNameJa",
   "display_name",
 ])
+
+function normalizeName(value: string): string {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/\s+/g, "")
+    .trim()
+}
 
 function listFiles(dir: string, ext: string): string[] {
   if (!fs.existsSync(dir)) return []
@@ -118,13 +142,13 @@ function asId(value: JsonValue | undefined): string | null {
   return null
 }
 
-function hasName(obj: Record<string, JsonValue>): boolean {
+function objectName(obj: Record<string, JsonValue>): string | null {
   for (const key of Object.keys(obj)) {
     if (nameKeys.has(key) && typeof obj[key] === "string" && obj[key].trim()) {
-      return true
+      return obj[key].trim()
     }
   }
-  return false
+  return null
 }
 
 function parseCsvLine(line: string): string[] {
@@ -184,6 +208,30 @@ function collectProfileNpbIds(): Set<string> {
   const ids = new Set<string>()
 
   for (const dir of profileDirs) {
+    for (const file of listFiles(dir, ".json")) {
+      const base = path.basename(file)
+      const m = base.match(/^npb_(\d+)\.json$/)
+      if (m) ids.add(m[1])
+
+      const data = readJson(file)
+      if (!data) continue
+
+      walkJson(data, (obj) => {
+        for (const key of npbIdKeys) {
+          const id = asId(obj[key])
+          if (id) ids.add(id)
+        }
+      })
+    }
+  }
+
+  return ids
+}
+
+function collectMergedProfileNpbIds(): Set<string> {
+  const ids = new Set<string>()
+
+  for (const dir of mergedProfileDirs) {
     for (const file of listFiles(dir, ".json")) {
       const base = path.basename(file)
       const m = base.match(/^npb_(\d+)\.json$/)
@@ -274,10 +322,40 @@ function collectYahooToNpbMap(): Map<string, string> {
   return map
 }
 
-function collectRankingNpbIds(yahooToNpb: Map<string, string>, profileNpbIds: Set<string>) {
+function collectRosterNameToNpbMap(year: string): Map<string, string> {
+  const map = new Map<string, string>()
+  const rosterCsv = path.join(root, "_data", `npb_roster_${year}.csv`)
+  if (!fs.existsSync(rosterCsv)) return map
+
+  let rows: Record<string, string>[] = []
+  try {
+    rows = readCsvRows(rosterCsv)
+  } catch {
+    return map
+  }
+
+  for (const row of rows) {
+    const npb = row["npb_player_id"] || row["npbPlayerId"] || ""
+    const name = row["name_ja"] || row["nameJa"] || row["name"] || ""
+    const key = normalizeName(name)
+    if (numericId.test(npb) && key && !map.has(key)) {
+      map.set(key, npb)
+    }
+  }
+
+  return map
+}
+
+function collectRankingNpbIds(
+  yahooToNpb: Map<string, string>,
+  profileNpbIds: Set<string>,
+  rosterNameToNpb: Map<string, string>,
+) {
   const npbIds = new Set<string>()
+  const rosterNameResolved = new Set<string>()
   const unmappedYahoo = new Set<string>()
   const ambiguousGeneric = new Set<string>()
+  const unresolvedNamedGeneric = new Map<string, string>()
   let rankingFiles = 0
 
   for (const dir of rankingDirs) {
@@ -308,7 +386,8 @@ function collectRankingNpbIds(yahooToNpb: Map<string, string>, profileNpbIds: Se
 
         // id/player_id は危険なので、profile_npbに同名IDがある場合だけNPB扱い
         // または yahooToNpb に存在する場合だけYahoo→NPB扱い
-        if (hasName(obj)) {
+        const name = objectName(obj)
+        if (name) {
           for (const key of genericIdKeys) {
             const id = asId(obj[key])
             if (!id) continue
@@ -320,7 +399,14 @@ function collectRankingNpbIds(yahooToNpb: Map<string, string>, profileNpbIds: Se
               if (npb) {
                 npbIds.add(npb)
               } else {
-                ambiguousGeneric.add(id)
+                const rosterNpb = rosterNameToNpb.get(normalizeName(name))
+                if (rosterNpb) {
+                  npbIds.add(rosterNpb)
+                  rosterNameResolved.add(id)
+                } else {
+                  ambiguousGeneric.add(id)
+                  if (!unresolvedNamedGeneric.has(id)) unresolvedNamedGeneric.set(id, name)
+                }
               }
             }
           }
@@ -329,28 +415,36 @@ function collectRankingNpbIds(yahooToNpb: Map<string, string>, profileNpbIds: Se
     }
   }
 
-  return { npbIds, unmappedYahoo, ambiguousGeneric, rankingFiles }
+  return { npbIds, rosterNameResolved, unmappedYahoo, ambiguousGeneric, unresolvedNamedGeneric, rankingFiles }
 }
 
 const profileNpbIds = collectProfileNpbIds()
+const mergedProfileNpbIds = collectMergedProfileNpbIds()
+const pageProfileNpbIds = new Set([...profileNpbIds, ...mergedProfileNpbIds])
 const yahooToNpb = collectYahooToNpbMap()
-const ranking = collectRankingNpbIds(yahooToNpb, profileNpbIds)
+const rosterNameToNpb = collectRosterNameToNpbMap(targetYear)
+const ranking = collectRankingNpbIds(yahooToNpb, pageProfileNpbIds, rosterNameToNpb)
 
 const rankingNpbIds = ranking.npbIds
 
 const missingProfile = [...rankingNpbIds]
-  .filter((id) => !profileNpbIds.has(id))
+  .filter((id) => !pageProfileNpbIds.has(id))
   .sort()
 
-const profileOnly = [...profileNpbIds]
+const profileOnly = [...pageProfileNpbIds]
   .filter((id) => !rankingNpbIds.has(id))
   .sort()
 
 console.log("[validate_profile_vs_ranking_pitching]")
+console.log(`  year: ${targetYear}`)
 console.log(`  profile npb ids: ${profileNpbIds.size}`)
+console.log(`  merged profile ids: ${mergedProfileNpbIds.size}`)
+console.log(`  page profile ids: ${pageProfileNpbIds.size}`)
 console.log(`  yahoo->npb map: ${yahooToNpb.size}`)
+console.log(`  roster name map: ${rosterNameToNpb.size}`)
 console.log(`  ranking files: ${ranking.rankingFiles}`)
 console.log(`  ranking npb ids resolved: ${rankingNpbIds.size}`)
+console.log(`  ranking generic ids resolved by roster name: ${ranking.rosterNameResolved.size}`)
 console.log(`  ranking without profile: ${missingProfile.length}`)
 console.log(`  profile only, safe: ${profileOnly.length}`)
 console.log(`  unmapped explicit yahoo ids, warning: ${ranking.unmappedYahoo.size}`)
@@ -379,7 +473,8 @@ if (ranking.ambiguousGeneric.size > 0) {
   console.log("  warning: id/player_id は Yahoo/NPB 判定が曖昧なため、検証対象から除外しました。")
   console.log("  sample ignored generic ids:")
   for (const id of [...ranking.ambiguousGeneric].slice(0, 30)) {
-    console.log(`    ${id}`)
+    const name = ranking.unresolvedNamedGeneric.get(id)
+    console.log(`    ${id}${name ? ` (${name})` : ""}`)
   }
 }
 
@@ -387,6 +482,13 @@ if (profileNpbIds.size === 0) {
   console.error("")
   console.error("[validate_profile_vs_ranking_pitching] ERROR: profile_npb が見つかりません。")
   console.error("  expected: _data/derived/player_profile/profile_npb/npb_*.json")
+  process.exit(1)
+}
+
+if (pageProfileNpbIds.size === 0) {
+  console.error("")
+  console.error("[validate_profile_vs_ranking_pitching] ERROR: 個人ページ用プロフィールが見つかりません。")
+  console.error("  expected: _data/derived/player_profile/{profile_npb,merged}/npb_*.json")
   process.exit(1)
 }
 
@@ -401,7 +503,7 @@ if (rankingNpbIds.size === 0) {
 if (missingProfile.length > 0) {
   console.error("")
   console.error("[validate_profile_vs_ranking_pitching] 不一致:")
-  console.error("  投手ランキングに存在するNPB IDのプロフィールが見つかりません。")
+  console.error("  投手ランキングに存在するNPB IDの個人ページ用プロフィールが見つかりません。")
   for (const id of missingProfile.slice(0, 80)) {
     console.error(`  missing profile for ranking NPB ID: ${id}`)
   }
