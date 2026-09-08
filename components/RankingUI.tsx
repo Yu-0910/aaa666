@@ -164,7 +164,7 @@ function RankingTableHeaderRow({
             key={metric.key}
             data-active={isActive}
             className={`p-0 text-[10px] font-bold leading-none border-r border-[#333] ${
-              metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''
+              metricIdx === 0 ? 'pl-0' : ''
             }`}
             style={{
               width: `${metricColMinWidth}px`,
@@ -173,7 +173,6 @@ function RankingTableHeaderRow({
               backgroundColor: labelBg,
               color: labelText,
               paddingLeft: metricIdx === 0 ? 0 : undefined,
-              marginLeft: metricIdx === 0 ? '-2px' : undefined,
               position: isPrimary ? 'sticky' : undefined,
               top: isPrimary ? 0 : undefined,
               zIndex: isPrimary ? 50 : undefined,
@@ -375,11 +374,11 @@ export default function RankingUI({
           <div
             ref={tableScrollRef}
             onScroll={() => syncRankingTableScroll("table")}
-            className="overflow-x-auto overscroll-x-contain max-w-full"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            className="overflow-x-auto overflow-y-clip overscroll-x-contain max-w-full"
+            style={{ WebkitOverflowScrolling: "touch", overflowY: "clip" }}
           >
             <table
-              className="border-collapse border-spacing-0 max-w-none"
+              className="border-separate border-spacing-0 max-w-none"
               style={{
                 tableLayout: "fixed",
                 width: `${tableMinWidthPx}px`,
@@ -446,6 +445,7 @@ export default function RankingUI({
                           boxSizing: 'border-box',
                           padding: 0,
                           verticalAlign: 'middle',
+                          backgroundColor: row.rank % 2 === 0 ? '#292929' : '#1f1f1f',
                         }}
                       >
                         <div className="flex flex-nowrap items-stretch w-full" style={{ width: leftBlockWidth }}>
@@ -546,13 +546,12 @@ export default function RankingUI({
                             key={metric.key}
                             className={`px-1.5 py-0.5 text-center tabular-nums font-normal border-r border-[#444] text-white ${
                               isActive ? 'bg-[#3a3a3a]' : ''
-                            } ${metricIdx === 0 ? 'pl-0 ml-0 -ml-[2px]' : ''}`}
+                            } ${metricIdx === 0 ? 'pl-0' : ''}`}
                             style={{
                               width: `${metricColMinWidth}px`,
                               minWidth: `${metricColMinWidth}px`,
                               backgroundColor: cellBgColor,
                               paddingLeft: metricIdx === 0 ? 0 : undefined,
-                              marginLeft: metricIdx === 0 ? '-2px' : undefined,
                             }}
                           >
                             <span className={`bebas tabular-nums ${metricValueTextClass} font-normal tracking-[-0.01em] text-white`}>

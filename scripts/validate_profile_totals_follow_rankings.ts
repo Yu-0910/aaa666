@@ -47,6 +47,16 @@ function parseNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+function inningsPitchedToOuts(value: unknown): number | null {
+  const match = String(value ?? "").trim().match(/^(\d+)(?:\.(\d))?$/)
+  if (!match) return null
+
+  const completeInnings = Number(match[1])
+  const extraOuts = Number(match[2] ?? "0")
+  if (!Number.isSafeInteger(completeInnings) || extraOuts > 2) return null
+  return completeInnings * 3 + extraOuts
+}
+
 function compareBatting(year: string, yahooIds: string[]): string[] {
   const failures: string[] = []
   for (const yahooId of yahooIds) {
@@ -99,7 +109,7 @@ function comparePitching(year: string, npbIds: string[]): string[] {
       continue
     }
     const basic = payload.basic
-    const expectedIpOuts = Math.round((parseNumber(ranking.ip) ?? 0) * 3)
+    const expectedIpOuts = inningsPitchedToOuts(ranking.ip)
     const comparisons: Array<[string, number | null | undefined, number | null | undefined, number]> = [
       ["g", basic.gamesAppeared ?? null, parseNumber(ranking.g), 0],
       ["gs", basic.gamesStarted ?? null, parseNumber(ranking.gs), 0],

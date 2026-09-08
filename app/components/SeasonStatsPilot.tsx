@@ -632,9 +632,6 @@ export default function SeasonStatsPilot({
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  パ・リーグ: 日本ハム・楽天・西武・ロッテ・オリックス・ソフトバンク　／　セ・リーグ: 巨人・ヤクルト・横浜・中日・阪神・広島
-                </p>
               </>
             )
           })()}
@@ -726,8 +723,13 @@ export default function SeasonStatsPilot({
           {/* 週間成績（Phase 17: calendar_week） */}
           {showPilotTab("basic") && (() => {
             const na = "—"
-            const weekRows = effectiveStats
-              .filter((r) => r.split_type === "calendar_week" && r.pa > 0)
+            const weekRowsByKey = new Map<string, SeasonStatsRow>()
+            for (const row of effectiveStats) {
+              if (row.split_type === "calendar_week" && row.pa > 0) {
+                weekRowsByKey.set(row.split_value, row)
+              }
+            }
+            const weekRows = [...weekRowsByKey.values()]
               .sort((a, b) => b.split_value.localeCompare(a.split_value))
             return (
               <>

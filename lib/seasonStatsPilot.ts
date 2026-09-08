@@ -1839,9 +1839,15 @@ function mergePilotSeasonStatsCore(
   for (const row of phase16) {
     out.push(normalizeDerivedRowLabels(row))
   }
-  const phase17KeySet = new Set(phase17.map((r) => `${r.split_type}\t${r.split_value}`))
-  out = out.filter((r) => !phase17KeySet.has(`${r.split_type}\t${r.split_value}`))
+  // 古い Phase 17 ファイルに重複期間があっても、再集計で後から追加された行を優先する。
+  const phase17BySplitKey = new Map<string, SeasonStatsRow>()
   for (const row of phase17) {
+    phase17BySplitKey.set(`${row.split_type}\t${row.split_value}`, row)
+  }
+  const uniquePhase17 = [...phase17BySplitKey.values()]
+  const phase17KeySet = new Set(uniquePhase17.map((r) => `${r.split_type}\t${r.split_value}`))
+  out = out.filter((r) => !phase17KeySet.has(`${r.split_type}\t${r.split_value}`))
+  for (const row of uniquePhase17) {
     out.push(normalizeDerivedRowLabels(row))
   }
 

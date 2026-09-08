@@ -81,7 +81,7 @@ export const CURRENT_ROSTER_PLAYER_ENTRIES: CurrentRosterPlayerEntry[] = [
   { npbPlayerId: "11815152", nameJa: "北斗", romanFull: "Hokuto", position: "投手", teamCode: "Hs", slug: "hokuto" },
   { npbPlayerId: "01905151", nameJa: "黒川 史陽", romanFull: "Kurokawa Fumiya", position: "内野手", teamCode: "E", slug: "fumiya-kurokawa" },
   { npbPlayerId: "51555130", nameJa: "小野 郁", romanFull: "Ono Fumiya", position: "投手", teamCode: "M", slug: "fumiya-ono" },
-  { npbPlayerId: "21325155", nameJa: "大竹 風雅", romanFull: "Ohtake Fuuga", position: "投手", teamCode: "H", slug: "fuuga-ohtake" },
+  { npbPlayerId: "21325155", nameJa: "大竹 風雅", romanFull: "Ohtake Fuuga", position: "投手", teamCode: "Hs", slug: "fuuga-ohtake" },
   { npbPlayerId: "33135152", nameJa: "皆川 岳飛", romanFull: "Minakawa Gakuto", position: "外野手", teamCode: "G", slug: "gakuto-minakawa" },
   { npbPlayerId: "53555153", nameJa: "若林 楽人", romanFull: "Wakabayashi Gakuto", position: "外野手", teamCode: "G", slug: "gakuto-wakabayashi" },
   { npbPlayerId: "61165152", nameJa: "石垣 元気", romanFull: "Ishigaki Genki", position: "投手", teamCode: "M", slug: "genki-ishigaki" },
