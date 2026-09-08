@@ -3,6 +3,13 @@
 import { execFileSync } from "node:child_process"
 import path from "node:path"
 
+const args = new Set(process.argv.slice(2))
+const allowData = args.has("--allow-data")
+const allowUi = args.has("--allow-ui") || (!args.has("--strict") && !allowData)
+
+const DATA_PATH_RE = /^(?:_data\/|public\/data\/|output\/|\.next\/|\.vercel\/)/
+const UI_PATH_RE = /^(?:app\/|components\/|lib\/|config\/|public\/(?!data\/)|scripts\/|tests\/|docs\/|package(?:-lock)?\.json$|next\.config\.mjs$|tsconfig\.json$|postcss\.config\.mjs$|vercel\.json$)/
+
 function runGit(args) {
   return execFileSync("git", args, {
     cwd: process.cwd(),
@@ -20,6 +27,17 @@ function parseStatusLines(raw) {
       code: line.slice(0, 2),
       path: line.slice(3),
     }))
+}
+
+function normalizePath(filePath) {
+  return String(filePath || "").replace(/\\/g, "/")
+}
+
+function classifyEntry(entry) {
+  const filePath = normalizePath(entry.path.replace(/^.* -> /, ""))
+  if (DATA_PATH_RE.test(filePath)) return "data"
+  if (UI_PATH_RE.test(filePath)) return "ui"
+  return "other"
 }
 
 function summarize(entries) {
@@ -58,20 +76,44 @@ try {
   if (!raw) process.exit(0)
 
   const entries = parseStatusLines(raw)
+  const blocked = entries.filter((entry) => {
+    const kind = classifyEntry(entry)
+    if (kind === "data") return !allowData
+    if (kind === "ui") return !allowUi
+    return true
+  })
+
+  if (blocked.length === 0) {
+    const relRoot = path.relative(repoRoot, process.cwd()) || "."
+    console.error(`[clean-worktree] allowed dirty worktree at ${relRoot}`)
+    console.error(`[clean-worktree] policy allowUi=${allowUi} allowData=${allowData}`)
+    console.error(
+      entries
+        .slice(0, 12)
+        .map((entry) => `  ${entry.code} ${entry.path}`)
+        .join("\n"),
+    )
+    if (entries.length > 12) {
+      console.error(`  ...and ${entries.length - 12} more`)
+    }
+    process.exit(0)
+  }
+
   const counts = summarize(entries)
-  const preview = entries
+  const preview = blocked
     .slice(0, 12)
     .map((entry) => `  ${entry.code} ${entry.path}`)
     .join("\n")
   const relRoot = path.relative(repoRoot, process.cwd()) || "."
 
-  console.error(`[clean-worktree] deploy blocked: worktree is dirty at ${relRoot}`)
+  console.error(`[clean-worktree] deploy blocked: disallowed dirty paths at ${relRoot}`)
+  console.error(`[clean-worktree] policy allowUi=${allowUi} allowData=${allowData}`)
   console.error(`[clean-worktree] ${formatCounts(counts)}`)
   console.error(preview)
-  if (entries.length > 12) {
-    console.error(`  ...and ${entries.length - 12} more`)
+  if (blocked.length > 12) {
+    console.error(`  ...and ${blocked.length - 12} more blocked paths`)
   }
-  console.error("[clean-worktree] Commit or stash the changes, then run `npm run deploy:vercel:prod`.")
+  console.error("[clean-worktree] Commit/stash blocked changes, or rerun with an explicit policy such as `--allow-data`.")
   process.exit(1)
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)

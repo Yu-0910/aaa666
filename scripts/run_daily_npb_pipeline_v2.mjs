@@ -220,6 +220,70 @@ function topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow =
   return todayJstYmd()
 }
 
+const PIPELINE_CODE_PATH_RE = /^(?:app\/|components\/|lib\/|config\/|public\/(?!data\/)|scripts\/|tests\/|docs\/|package(?:-lock)?\.json$|next\.config\.mjs$|tsconfig\.json$|postcss\.config\.mjs$|vercel\.json$)/
+
+function gitStatusLines() {
+  try {
+    const raw = execSync("git status --short", {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim()
+    return raw ? raw.split(/\r?\n/).filter(Boolean) : []
+  } catch (error) {
+    return [`!! git status failed (${String(error?.message ?? error)})`]
+  }
+}
+
+function gitStatusPath(line) {
+  return String(line || "")
+    .slice(3)
+    .replace(/^.* -> /, "")
+    .replace(/\\/g, "/")
+}
+
+function reportCodeChangesBeforeRun() {
+  const lines = gitStatusLines()
+  const codeLines = lines.filter((line) => PIPELINE_CODE_PATH_RE.test(gitStatusPath(line)))
+  if (codeLines.length === 0) return
+  const reportLines = [
+    `[daily:npb-pipeline:v2] warning: code/UI changes already existed before run: ${codeLines.length} file(s)`,
+    ...codeLines.slice(0, 12).map((line) => `[daily:npb-pipeline:v2]   ${line}`),
+    ...(codeLines.length > 12 ? [`[daily:npb-pipeline:v2]   ...and ${codeLines.length - 12} more`] : []),
+  ]
+  for (const line of reportLines) console.warn(line)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", reportLines.join(" | "))
+  pushRunSummaryEvent("warnings", {
+    kind: "preexisting_code_or_ui_changes",
+    message: "pipeline v2 start detected preexisting code/UI worktree changes",
+    files: codeLines,
+  })
+  writeRunSummary()
+}
+
+function gitStatusReportLines() {
+  const lines = gitStatusLines()
+  if (lines.length === 0) return ["[daily:npb-pipeline:v2] worktree changes: none"]
+  if (lines.length === 1 && lines[0].startsWith("!! git status failed")) {
+    return [`[daily:npb-pipeline:v2] worktree changes: ${lines[0].slice(3)}`]
+  }
+  return [
+    `[daily:npb-pipeline:v2] worktree changes after run: ${lines.length} file(s)`,
+    ...lines.slice(0, 20).map((line) => `[daily:npb-pipeline:v2]   ${line}`),
+    ...(lines.length > 20 ? [`[daily:npb-pipeline:v2]   ...and ${lines.length - 20} more`] : []),
+  ]
+}
+
+function reportWorktreeChangesAfterRun() {
+  const lines = gitStatusReportLines()
+  for (const line of lines) console.log(line)
+  appendPipelineBulkLog(root, "daily:npb-pipeline:v2", lines.join(" | "))
+  if (runSummary) {
+    runSummary.worktreeStatusAfterRun = lines
+    writeRunSummary()
+  }
+}
+
 function topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow = false }) {
   const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
   return `npx tsx scripts/phase36_build_top_probables.ts --year ${year} --as-of ${asOfDate}`
@@ -5316,6 +5380,7 @@ function main() {
     })
     writeRunSummary()
   }
+  reportCodeChangesBeforeRun()
   configureResume(args)
   const modeCount = [args.prefetchOnly, args.fastOnly, args.fullOnly, args.finalizePrecomputed].filter(Boolean).length
   if (modeCount > 1) {
@@ -5463,6 +5528,7 @@ function main() {
     completedAtJst: formatJstTimestamp(),
   })
   console.log(`\n[daily:npb-pipeline:v2] ${completion.consoleLabel}\n`)
+  reportWorktreeChangesAfterRun()
 }
 
 try {
@@ -5537,6 +5603,7 @@ try {
       message: String(e?.message ?? e),
     })
   }
+  reportWorktreeChangesAfterRun()
   console.error("[daily:npb-pipeline:v2] failed:", e?.message || e)
   process.exit(1)
 }
