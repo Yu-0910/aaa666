@@ -1738,10 +1738,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className={`player-page-fonts min-h-screen text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${useRosterPitcherPcTableCss ? " roster-pitcher-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
-      style={{
-        background: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
-      }}
+      className={`player-page-fonts min-h-screen site-bg text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${useRosterPitcherPcTableCss ? " roster-pitcher-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
     >
       <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
       {/* Header */}
