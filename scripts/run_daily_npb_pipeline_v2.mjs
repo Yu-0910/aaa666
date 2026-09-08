@@ -31,6 +31,7 @@ import crypto from "node:crypto"
 import { execSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
+import { assertPipelineRequiredFiles, assertTopProbablesFresh } from "./pipeline_output_guards.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -851,6 +852,11 @@ function derivedYahooArgsArg(ids, { from, to } = {}) {
   return args.length > 0 ? ` -- ${args.join(" ")}` : ""
 }
 
+function phase17YahooArgsArg(ids) {
+  const uniqueIds = uniqueStrings(ids)
+  return uniqueIds.length > 0 ? ` -- --only-yahoo-ids ${uniqueIds.join(",")}` : ""
+}
+
 function phase17WindowValidateArg(ids, { year, from, to, fail = true } = {}) {
   const args = []
   if (year) args.push("--year", year)
@@ -1218,7 +1224,7 @@ function ensureBattingPeriodFresh({
     repairYahooIds.length > 0
       ? `派生: phase17 period（鮮度NGのため再生成・差分 ${repairYahooIds.length}人）`
       : "派生: phase17 period（鮮度NGのため再生成）",
-    `npm run phase17:build:period${derivedYahooArgsArg(repairYahooIds, { from, to })}`,
+    `npm run phase17:build:period${phase17YahooArgsArg(repairYahooIds)}`,
     { dryRun },
   )
   if (repairYahooIds.length > 0) {
@@ -1646,7 +1652,7 @@ function runPhase17PeriodAndValidate({
   strictValidate = false,
   label = "派生: phase17 period",
 }) {
-  run(label, `npm run phase17:build:period${derivedYahooArgsArg(affectedYahooIds, { from, to })}`, { dryRun })
+  run(label, `npm run phase17:build:period${phase17YahooArgsArg(affectedYahooIds)}`, { dryRun })
   if (affectedYahooIds.length > 0) {
     runWarnOnlyValidation(
       `検証: phase17 period window（差分 ${affectedYahooIds.length}人）`,
@@ -3144,13 +3150,14 @@ function readVsHandRetryYahooIds(reportPath, fallbackYahooIds = []) {
   const fallbackIds = [...new Set((fallbackYahooIds || []).map(String).filter(Boolean))].sort()
   const report = readJsonOrNull(reportPath)
   if (!report || typeof report !== "object") return fallbackIds
-  const mismatchIds = Array.isArray(report.mismatchPlayerIds)
-    ? report.mismatchPlayerIds.map(String).filter(Boolean)
-    : []
-  if (mismatchIds.length === 0) return fallbackIds
-  if (fallbackIds.length === 0) return [...new Set(mismatchIds)].sort()
+  const retryIds = [report.mismatchPlayerIds, report.missingSplitsPlayerIds]
+    .flatMap((ids) => (Array.isArray(ids) ? ids : []))
+    .map(String)
+    .filter(Boolean)
+  if (retryIds.length === 0) return fallbackIds
+  if (fallbackIds.length === 0) return [...new Set(retryIds)].sort()
   const fallbackSet = new Set(fallbackIds)
-  const filtered = mismatchIds.filter((id) => fallbackSet.has(String(id)))
+  const filtered = retryIds.filter((id) => fallbackSet.has(String(id)))
   return [...new Set(filtered)].sort()
 }
 
@@ -3185,7 +3192,7 @@ function readVsHandFailureReportSummary(reportPath, fallbackYahooIds = []) {
     missingSplits,
     mismatches,
     negativeReconPlayers,
-    canRetryPhase15: missingSplitsPlayerIds.length > 0,
+    canRetryPhase15: mismatchPlayerIds.length > 0 || missingSplitsPlayerIds.length > 0,
   }
 }
 
@@ -3942,20 +3949,29 @@ function runAncillaryFutureScheduleAndProbablesStage({ year, from, to, dryRun, a
   } else {
     logDeltaSkip("Phase0 未来日程", "future_schedule")
   }
-  if (shouldRunDeltaPhase("top_probables")) {
+  const asOfDate = topProbablesAsOfDateForWindow({ from, to, advanceAfterCompletedWindow })
+  let needsBuild = shouldRunDeltaPhase("top_probables")
+  if (!dryRun && !needsBuild) {
+    try {
+      assertTopProbablesFresh(root, year, asOfDate)
+    } catch {
+      needsBuild = true
+    }
+  }
+  if (needsBuild) {
     runTopProbablesInputRefresh({ year, from, to, dryRun, advanceAfterCompletedWindow })
-    runBestEffortStep(
+    run(
       "トップ表示: 予想投手",
       topProbablesBuildCommand({ year, from, to, advanceAfterCompletedWindow }),
       {
         dryRun,
-        warningKind: "top_probables_build_failed",
-        warningMessage: "予想投手トップ表示の生成に失敗しましたが、full 派生・公開は継続します。",
       },
     )
   } else {
     logDeltaSkip("トップ表示: 予想投手", "top_probables")
   }
+  // Uploading an old file successfully is not evidence that this day's build succeeded.
+  if (!dryRun) assertTopProbablesFresh(root, year, asOfDate)
 }
 
 function runPhase13ValidationWithRetry({
@@ -4045,7 +4061,7 @@ function runVsHandValidationWithRetry({
     run("派生: phase15 batting splits（vs_hand検証NG後の再生成）", retryBuildCommand, { dryRun })
   } else {
     const skipMessage =
-      `phase11 vs vs_hand 検証NGだが missingSplits=0 のため Phase15 再生成はスキップします。` +
+      `phase11 vs vs_hand 検証NGだが再生成対象の選手IDがないため Phase15 再生成はスキップします。` +
       ` mismatches=${failureSummary.mismatches} negativeReconPlayers=${failureSummary.negativeReconPlayers}`
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `skip: ${skipMessage}`)
     pushRunSummaryEvent("warnings", {
@@ -5261,6 +5277,7 @@ function runFullStage({
 }
 
 function main() {
+  assertPipelineRequiredFiles(root)
   const args = applyResumeFromCheckpoint(parseArgs(process.argv))
   currentArgs = args
   initRunSummary(args)

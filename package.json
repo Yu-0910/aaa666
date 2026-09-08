@@ -263,6 +263,7 @@
     "guard:analytics": "node scripts/guard_analytics.mjs",
     "guard:no-generated-tracked": "node scripts/guard_no_generated_tracked.mjs",
     "guard:no-generated-tracked:enforce": "node scripts/guard_no_generated_tracked.mjs --enforce",
+    "validate:pipeline-output-guards": "node scripts/validate_pipeline_output_guards_unit.mjs",
     "guard:clean-worktree": "node scripts/assert_clean_worktree.mjs",
     "worktree:deploy:init": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create_deploy_worktree.ps1",
     "deploy:vercel:prod": "npm run guard:clean-worktree && npx --yes vercel@latest deploy --prod --yes --scope yu-cb8b43e3",

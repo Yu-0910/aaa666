@@ -18,6 +18,7 @@ import { execSync, spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { appendPipelineBulkLog, formatJstTimestamp } from "./pipelineBulkLog.mjs"
 import { writeJsonFileWithRetrySync } from "./writeFileWithRetry.mjs"
+import { assertPipelineRequiredFiles } from "./pipeline_output_guards.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, "..")
@@ -60,6 +61,12 @@ function todayJstYmd() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date())
+}
+
+function addDaysYmdJst(ymd, days) {
+  const d = new Date(`${ymd}T12:00:00+09:00`)
+  d.setDate(d.getDate() + days)
+  return formatYmd(d.getFullYear(), d.getMonth() + 1, d.getDate())
 }
 
 function nowJstParts() {
@@ -224,20 +231,25 @@ function tryWriteJsonFile(filePath, payload, label) {
   }
 }
 
-function extractPipelineWindowFromReason(reason) {
-  const text = String(reason || "")
-  const match = text.match(/--from (\d{4}-\d{2}-\d{2}) --to (\d{4}-\d{2}-\d{2})/)
-  if (!match) return null
-  return { from: match[1], to: match[2] }
+function shouldAutoReplaceFailedLock(dateJst, existing) {
+  return Boolean(existing?.state === "failed" && existing.dateJst && String(existing.dateJst) === String(dateJst))
 }
 
-function shouldAutoReplaceFailedLock(dateJst, existing) {
-  if (!existing || existing.state !== "failed") return false
-  if (existing.dateJst && String(existing.dateJst) === String(dateJst)) return true
-  if (existing.dateJst && String(existing.dateJst) !== String(dateJst)) return true
-  const window = extractPipelineWindowFromReason(existing.reason)
-  if (!window) return false
-  return true
+function isProcessAlive(pid) {
+  const n = Number(pid)
+  if (!Number.isInteger(n) || n <= 0) return false
+  try {
+    process.kill(n, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function shouldAutoReplaceStaleRunningLock(dateJst, existing) {
+  if (!existing?.state || !String(existing.state).startsWith("running")) return false
+  if (!existing.dateJst || String(existing.dateJst) !== String(dateJst)) return false
+  return !isProcessAlive(existing.pid)
 }
 
 function writeWatchSummary(dateJst, summary) {
@@ -305,6 +317,15 @@ function acquireStartupLock(dateJst, { force, year, dryRun }) {
         })
         return { acquired: true, payload, replaced: true, replacedExisting: existing }
       }
+      if (shouldAutoReplaceStaleRunningLock(dateJst, existing)) {
+        writeLockPayload(dateJst, {
+          ...payload,
+          autoReplacedStaleRunningLock: true,
+          replacedStaleRunningLockPid: existing?.pid || null,
+          replacedStaleRunningLockReason: existing?.reason || null,
+        })
+        return { acquired: true, payload, replaced: true, replacedExisting: existing, staleReason: "running_pid_not_alive" }
+      }
       return { acquired: false, existing }
     }
     throw error
@@ -313,6 +334,18 @@ function acquireStartupLock(dateJst, { force, year, dryRun }) {
 
 function alreadyRanToday(dateJst, force) {
   return !force && fs.existsSync(lockPath(dateJst))
+}
+
+function defaultWatchDateJst(deadlineHm) {
+  const today = todayJstYmd()
+  const { hour, minute } = parseHm(deadlineHm)
+  const deadlineTodayMs = jstMsFromYmdHm(today, hour, minute)
+  if (Date.now() < deadlineTodayMs) return addDaysYmdJst(today, -1)
+  return today
+}
+
+function resolveWatchDate(args) {
+  return args.dateJst || defaultWatchDateJst(args.deadline)
 }
 
 function writeLock(dateJst, payload) {
@@ -753,6 +786,8 @@ function ensureStandingsFreshAfterFinalize(args, dateJst, summary, runId) {
   try {
     validateStandingsWindowFreshness(args.year, dateJst, args.dryRun)
   } catch (error) {
+    // Only the validator's stale-output status warrants rebuilding and publishing.
+    if (error?.status !== 2) throw error
     const message = String(error?.message || error)
     log(`順位表 freshness 検証で不一致を検出したため phase29 を自己修復します: ${message}`)
     appendPipelineBulkLog(root, "watch:daily-pipeline:v2", `standings_window_repair date=${dateJst}`)
@@ -963,7 +998,7 @@ function handoffToFinalize(args, dateJst, summary, readiness, options = {}) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const dateJst = args.dateJst || todayJstYmd()
+  const dateJst = resolveWatchDate(args)
   const summary = {
     schemaVersion: "watch-pipeline-v2-summary-1",
     dateJst,
@@ -991,7 +1026,7 @@ async function main() {
   if (!lockAcquired.acquired) {
     const existing = lockAcquired.existing || {}
     const message =
-      `本日 (${dateJst}) は既に起動中または完了済みです。` +
+      `対象日 (${dateJst}) は既に起動中または完了済みです。` +
       ` state=${existing.state || "unknown"} startedAtJst=${existing.startedAtJst || "-"} ` +
       `reason=${existing.reason || "-"} --force で再実行`
     log(message)
@@ -1004,13 +1039,16 @@ async function main() {
     writeWatchSummary(dateJst, summary)
     return
   }
+  assertPipelineRequiredFiles(root)
   if (lockAcquired.replacedExisting) {
     log(
-      `前回 failed lock を自動置換して再開します。 previousReason=${lockAcquired.replacedExisting.reason || "-"}`,
+      `前回 lock を自動置換して再開します。 staleReason=${lockAcquired.staleReason || "failed"} previousReason=${lockAcquired.replacedExisting.reason || "-"}`,
     )
     pushWatchSummaryEvent(summary, "warnings", {
-      kind: "auto_replaced_failed_lock",
-      message: "failed lock from another pipeline window was automatically replaced",
+      kind: lockAcquired.staleReason ? "auto_replaced_stale_running_lock" : "auto_replaced_failed_lock",
+      message: lockAcquired.staleReason
+        ? "stale running lock was automatically replaced because its PID is not alive"
+        : "failed lock from another pipeline window was automatically replaced",
       previous: lockAcquired.replacedExisting,
     })
     writeWatchSummary(dateJst, summary)
@@ -1206,7 +1244,7 @@ async function main() {
 
 main().catch((e) => {
   const args = parseArgs(process.argv.slice(2))
-  const dateJst = args.dateJst || todayJstYmd()
+  const dateJst = resolveWatchDate(args)
   const summaryPath = watchSummaryPath(dateJst)
   let summary = {}
   try {
