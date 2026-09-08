@@ -15,13 +15,12 @@ const blockedTrackedPathspecs = [
   "_data/scraped_games/raw_yahoo_text",
   "_data/scraped_games/_meta",
   "_data/unknown_players",
-]
-
-const reviewTrackedPathspecs = [
   "public/data/top-probables",
   "public/data/standings",
   "_data/scraped_games/canonical",
 ]
+
+const reviewTrackedPathspecs = []
 
 function gitLines(args) {
   const output = execFileSync("git", args, {

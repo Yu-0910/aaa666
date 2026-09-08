@@ -44,6 +44,8 @@ output/reports/
 output/master/
 public/data/rankings/
 public/data/top-leaders/
+public/data/standings/
+public/data/top-probables/
 # 表示用派生 JSON（本番 SSOT は R2。ローカル工場出力のみ Git 外）
 _data/derived/
 
@@ -54,6 +56,7 @@ _data/scraped_games/raw_sportsnavi_text/
 _data/scraped_games/raw_sportsnavi_stats/
 _data/scraped_games/raw_sportsnavi_score/
 _data/scraped_games/raw_yahoo_text/
+_data/scraped_games/canonical/
 _data/scraped_games/derived/*
 !_data/scraped_games/derived/*_batting_master_bridge.csv
 

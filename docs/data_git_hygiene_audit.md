@@ -8,10 +8,10 @@ Keep Google Analytics and other production-critical integrations intact while re
 
 ## Current Findings
 
-- `git status --short --untracked-files=all` currently reports 2222 changed or untracked entries.
-- Generated-data candidates still tracked by Git total 5168 files across `_data/derived`, `public/data`, and scraped-game output areas.
+- Initial `git status --short --untracked-files=all` reported 2222 changed or untracked entries before cleanup.
+- Generated-data candidates were found across `_data/derived`, `public/data`, and scraped-game output areas.
 - `_data/derived` alone still has 1918 tracked files.
-- `public/data/rankings`, `public/data/top-leaders`, `public/data/top-probables`, and `public/data/standings` together still have 1104 tracked files.
+- `public/data/rankings`, `public/data/top-leaders`, `public/data/top-probables`, and `public/data/standings` are generated display outputs. The deployed runtime uses the R2-backed `/data/*` route and Vercel already excludes `public/data/*` except `public/data/player_page_roman_aliases.json`.
 - `.gitignore` already contains rules for generated outputs such as `_data/derived/`, `public/data/rankings/`, and `public/data/top-leaders/`.
 - Because many generated files are already tracked, `.gitignore` does not prevent their future modifications from appearing in `git status`.
 
@@ -73,7 +73,7 @@ Blocked generated-data pathspecs:
 - `_data/scraped_games/_meta`
 - `_data/unknown_players`
 
-Review-only pathspecs that need runtime-source confirmation before untracking:
+The second pass also blocks:
 
 - `public/data/top-probables`
 - `public/data/standings`
@@ -89,11 +89,7 @@ Start with generated data that should not be part of the deployed source:
 - `public/data/rankings/`
 - `public/data/top-leaders/`
 
-Handle these only after confirming the runtime source of truth:
-
-- `public/data/top-probables/`
-- `public/data/standings/`
-- `_data/scraped_games/canonical/`
+Completed in Phase 4 after confirming they are excluded from Vercel deployment and used as local pipeline/display outputs.
 
 ## Safety Rule For Later Phases
 
@@ -122,8 +118,18 @@ Verification after untracking:
 - `git ls-files` for blocked generated-data pathspecs returns 0 files.
 - Local generated files remain on disk; only Git tracking was removed.
 
-Still review-only:
+## Phase 4 Untracking
 
-- `_data/scraped_games/canonical`: 763 tracked files.
-- `public/data/standings`: 208 tracked files.
-- `public/data/top-probables`: 1 tracked file.
+Confirmed that Vercel excludes `public/data/*` and `_data/*`, while keeping only the explicitly allowed deploy inputs. Also confirmed the app routes use R2-backed `/data/*` paths for generated display data, with static fallbacks where applicable.
+
+Moved these from review-only to blocked generated-data pathspecs and removed them from Git tracking with `git rm --cached`, leaving local files in place:
+
+- `_data/scraped_games/canonical`
+- `public/data/standings`
+- `public/data/top-probables`
+
+Verification after Phase 4:
+
+- `npm run guard:no-generated-tracked:enforce` passes.
+- `npm run guard:analytics` passes.
+- Local files remain on disk; only Git tracking was removed.
