@@ -63,7 +63,12 @@ function byPreferredOrder(a: ProbableBoardPlayer, b: ProbableBoardPlayer): numbe
 
 async function loadBoardPlayers(): Promise<ProbableBoardPlayer[]> {
   const filePath = path.join(process.cwd(), "public", "data", "top-probables", "2026", "current.json")
-  const snapshot = JSON.parse(await readFile(filePath, "utf8")) as TopProbablesSnapshot
+  let snapshot: TopProbablesSnapshot = {}
+  try {
+    snapshot = JSON.parse(await readFile(filePath, "utf8")) as TopProbablesSnapshot
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") throw error
+  }
   const players: ProbableBoardPlayer[] = []
 
   for (const card of snapshot.cards ?? []) {
