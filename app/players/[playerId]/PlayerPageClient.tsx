@@ -1854,7 +1854,7 @@ export function PlayerPageClient({
                 className={`player-page-display-name ${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
                 style={{
                   textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                  fontWeight: isSasakiTaiPage ? 700 : 900,
+                  fontWeight: 900,
                 }}
               >
                 {displayNameForHeader}
