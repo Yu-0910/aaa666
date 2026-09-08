@@ -248,8 +248,8 @@
     font-weight: 900 !important;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
-    -webkit-text-stroke: 0 !important;
-    paint-order: normal !important;
+    -webkit-text-stroke: 0.03em currentColor !important;
+    paint-order: stroke fill !important;
   }
 
   .player-page-table-shell {
