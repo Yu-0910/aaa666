@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { getProjectRoot } from "@/lib/projectRoot"
+import { writeTextFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 import {
   detectThreeGameSeriesFromGames,
   MAX_PROBABLES_CARDS,
@@ -127,6 +128,61 @@ function hasBothProbablePitcherNames(game: TopProbablesGame): boolean {
   )
 }
 
+function probablePitcherIdentity(slot: TopProbablesPitcherSlot | null): string {
+  if (!slot) return ""
+  const npbId = String(slot.pitcherNpbId ?? "").replace(/\D/g, "").replace(/^0+/, "")
+  if (npbId) return `id:${npbId}`
+  return `name:${String(slot.pitcherNameJa ?? "").normalize("NFKC").replace(/\s+/g, "")}`
+}
+
+type SportingNewsSlotLookup = (
+  teamCode: string,
+  opponentTeamCode: string,
+  dateJst: string,
+) => TopProbablesPitcherSlot | null
+
+/**
+ * Yahoo の公式予告先発と Sporting News の日付予想が連投になるとき、公式枠は維持し、
+ * Sporting News 側だけを公式日付にあった同ソースの候補へ差し替える。
+ *
+ * 例: SN が 9/4=A, 9/5=B、Yahoo が 9/5=A の場合は 9/4=B, 9/5=A とする。
+ */
+export function reconcileOfficialProbablesWithSportingNews(
+  games: TopProbablesGame[],
+  sportingNewsSlotFor: SportingNewsSlotLookup,
+  warnings: string[],
+): void {
+  const sides = ["homeProbable", "awayProbable"] as const
+  for (let i = 0; i < games.length - 1; i++) {
+    const currentGame = games[i]!
+    const nextGame = games[i + 1]!
+    for (const side of sides) {
+      const current = currentGame[side]
+      const next = nextGame[side]
+      if (!current || !next || current.teamCode !== next.teamCode) continue
+      if (probablePitcherIdentity(current) !== probablePitcherIdentity(next)) continue
+      if (current.source === next.source) continue
+
+      const officialGame = current.source === "yahoo-schedule" ? currentGame : nextGame
+      const sportingNewsGame = current.source === "sportingnews" ? currentGame : nextGame
+      const sportingNewsSide = current.source === "sportingnews" ? side : side
+      const teamCode = sportingNewsGame[sportingNewsSide]?.teamCode
+      if (!teamCode) continue
+      const opponentTeamCode =
+        sportingNewsGame.homeTeamCode === teamCode
+          ? sportingNewsGame.awayTeamCode
+          : sportingNewsGame.homeTeamCode
+      const replacement = sportingNewsSlotFor(teamCode, opponentTeamCode, officialGame.dateJst)
+      if (!replacement || probablePitcherIdentity(replacement) === probablePitcherIdentity(current)) continue
+
+      sportingNewsGame[sportingNewsSide] = replacement
+      warnings.push(
+        `公式予告先発を優先して連投を回避: ${teamCode} ${currentGame.dateJst}/${nextGame.dateJst}`,
+      )
+    }
+  }
+}
+
 export async function buildTopProbablesSnapshot(options: {
   year: string
   projectRoot?: string
@@ -222,6 +278,13 @@ export async function buildTopProbablesSnapshot(options: {
     }
     if (games.length === 0) continue
 
+    reconcileOfficialProbablesWithSportingNews(
+      games,
+      (teamCode, opponentTeamCode, dateJst) =>
+        buildPitcherSlot(year, teamCode, opponentTeamCode, dateJst, snByTeam, warnings),
+      warnings,
+    )
+
     const card: TopProbablesCard = {
       cardKey: series.cardKey,
       teamCodes: series.teamCodes,
@@ -316,6 +379,6 @@ export function writeTopProbablesSnapshot(
 ): string {
   const outPath = topProbablesOutputPath(projectRoot, snapshot.seasonYear)
   fs.mkdirSync(path.dirname(outPath), { recursive: true })
-  fs.writeFileSync(outPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8")
+  writeTextFileWithRetrySync(outPath, `${JSON.stringify(snapshot, null, 2)}\n`)
   return outPath
 }

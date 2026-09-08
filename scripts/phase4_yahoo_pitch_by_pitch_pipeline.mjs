@@ -516,7 +516,7 @@ async function main() {
               phase10RowsFingerprint: fp,
             },
             { pitchRowCount: rows.length },
-          )
+          ) && isCanonicalConsistentWithPhase10(canonPath, phase10Path)
         ) {
           skippedMerge += 1
           gameReport.mergeStatus = "skipped_stamp_match"

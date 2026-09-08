@@ -27,10 +27,18 @@ export function isFutureOrTodayGameYmd(ymd: string): boolean {
   const y = parseInt(m[1], 10)
   const mo = parseInt(m[2], 10)
   const d = parseInt(m[3], 10)
-  const now = new Date()
-  const ty = now.getFullYear()
-  const tm = now.getMonth() + 1
-  const td = now.getDate()
+  // Scheduled-game dates are NPB/JST dates. Node can run in UTC on CI or R2 jobs.
+  const jst = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date())
+  const part = (type: "year" | "month" | "day") =>
+    parseInt(jst.find((value) => value.type === type)?.value ?? "0", 10)
+  const ty = part("year")
+  const tm = part("month")
+  const td = part("day")
   if (y > ty) return true
   if (y < ty) return false
   if (mo > tm) return true

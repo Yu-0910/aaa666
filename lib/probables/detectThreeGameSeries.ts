@@ -11,7 +11,7 @@ function isNextCalendarDay(prev: string, next: string): boolean {
   return addDaysYmd(prev, 1) === next
 }
 
-/** 同一 cardKey の試合を日付順に並べ、連続 3 日の三連戦系列を抽出 */
+/** 同一 cardKey の試合を日付順に並べ、連続 2 日以上のカード系列を抽出 */
 export function detectThreeGameSeriesFromGames(
   games: readonly ScheduleDayGame[],
 ): ThreeGameSeriesCard[] {
@@ -31,7 +31,7 @@ export function detectThreeGameSeriesFromGames(
       if (!byDate.has(g.dateJst)) byDate.set(g.dateJst, g)
     }
     const dates = [...byDate.keys()].sort()
-    if (dates.length < 3) continue
+    if (dates.length < 2) continue
 
     let runStart = 0
     for (let i = 1; i <= dates.length; i++) {
@@ -41,7 +41,19 @@ export function detectThreeGameSeriesFromGames(
       if (!breaks) continue
 
       const runDates = dates.slice(runStart, i)
-      if (runDates.length >= 3) {
+      // 地方開催などでは同一カードが 2 試合だけになる。2 連戦も予想先発の
+      // 表示対象にし、3 試合以上は従来どおり 3 試合単位で扱う。
+      if (runDates.length === 2) {
+        const duoGames = runDates.map((d) => byDate.get(d)!)
+        const teamCodes = sortedPairCodes(duoGames[0]!)
+        cards.push({
+          cardKey,
+          teamCodes,
+          seriesStart: runDates[0]!,
+          seriesEnd: runDates[1]!,
+          games: duoGames,
+        })
+      } else if (runDates.length >= 3) {
         for (let j = 0; j <= runDates.length - 3; j++) {
           const trio = runDates.slice(j, j + 3)
           if (!isConsecutiveDates(trio)) continue
@@ -97,46 +109,41 @@ export function pickRecentThreeGameSeriesCards(
   asOfDateJst: string,
   maxCards = MAX_PROBABLES_CARDS,
 ): ThreeGameSeriesCard[] {
+  const windowEnd = probablesDisplayWindowEnd(asOfDateJst)
   const filtered = cards
-    .filter((c) => c.games.some((g) => g.dateJst >= asOfDateJst))
+    .filter((c) => {
+      if (!c.games.some((g) => g.dateJst >= asOfDateJst)) return false
+      // 火曜開始枠は日曜、金曜開始枠は翌水曜まで。次々カードを混在させない。
+      return firstFutureGameDate(c, asOfDateJst) <= windowEnd
+    })
     .sort((a, b) => {
       const aDate = firstFutureGameDate(a, asOfDateJst)
       const bDate = firstFutureGameDate(b, asOfDateJst)
       return aDate.localeCompare(bDate) || a.seriesStart.localeCompare(b.seriesStart) || a.cardKey.localeCompare(b.cardKey)
     })
 
-  const selected = filtered.slice(0, maxCards)
-  if (selected.length === 0) return selected
-
-  const allSelectedCardsAreOnLastGame = selected.every(
-    (card) => seriesFutureGameCount(card, asOfDateJst) === 1,
-  )
-  if (allSelectedCardsAreOnLastGame) {
-    const selectedIds = new Set(selected.map(seriesIdentity))
-    const nextFirstGameDate = filtered
-      .filter((card) => !selectedIds.has(seriesIdentity(card)))
-      .map((card) => firstFutureGameDate(card, asOfDateJst))
-      .sort()[0]
-
-    if (nextFirstGameDate) {
-      for (const card of filtered) {
-        if (selectedIds.has(seriesIdentity(card))) continue
-        if (firstFutureGameDate(card, asOfDateJst) !== nextFirstGameDate) continue
-        selected.push(card)
-        selectedIds.add(seriesIdentity(card))
-      }
-    }
+  const picked = filtered.slice(0, maxCards)
+  if (picked.length === 0 || !picked.every(card => card.games.filter(game => game.dateJst >= asOfDateJst).length === 1)) {
+    return picked
   }
-
-  return selected
+  const remaining = filtered.slice(picked.length)
+  const nextDate = remaining[0] && firstFutureGameDate(remaining[0], asOfDateJst)
+  if (!nextDate) return picked
+  return [...picked, ...remaining.filter(card => firstFutureGameDate(card, asOfDateJst) === nextDate)]
 }
 
-function seriesIdentity(card: ThreeGameSeriesCard): string {
-  return `${card.cardKey}:${card.seriesStart}:${card.seriesEnd}`
-}
-
-function seriesFutureGameCount(card: ThreeGameSeriesCard, asOfDateJst: string): number {
-  return card.games.filter((g) => g.dateJst >= asOfDateJst).length
+/**
+ * 予想先発タブの表示編成枠の終端。
+ * 火曜開始の枠は日曜、金曜開始の枠は翌水曜まで表示する。
+ */
+export function probablesDisplayWindowEnd(asOfDateJst: string): string {
+  // Treat the supplied JST calendar date as a calendar date, without shifting it to the previous UTC day.
+  const date = new Date(`${asOfDateJst}T00:00:00Z`)
+  const weekday = date.getUTCDay()
+  const sinceTuesday = (weekday - 2 + 7) % 7
+  const sinceFriday = (weekday - 5 + 7) % 7
+  const sinceStart = Math.min(sinceTuesday, sinceFriday)
+  return addDaysYmd(asOfDateJst, 5 - sinceStart)
 }
 
 function firstFutureGameDate(card: ThreeGameSeriesCard, asOfDateJst: string): string {

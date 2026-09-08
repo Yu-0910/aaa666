@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { writeTextFileWithRetrySync } from "@/lib/fs/writeFileWithRetry"
 import { CURRENT_ROSTER_PLAYER_ENTRIES } from "@/lib/currentRosterPlayerEntries"
 import { playerPageHrefKnown } from "@/lib/playerPageHref"
 import { compactPlayerName, rosterNameMatchKey } from "@/lib/playerNameNormalize"
@@ -240,18 +241,7 @@ function writeReport(args: Args, rows: UnknownPlayerReportRow[], scannedGameIds:
   const latestPath = path.join(outDir, "latest.json")
   const body = `${JSON.stringify(payload, null, 2)}\n`
   for (const filePath of [reportPath, latestPath]) {
-    let lastError: unknown = null
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        fs.writeFileSync(filePath, body, "utf8")
-        lastError = null
-        break
-      } catch (error) {
-        lastError = error
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 120 * attempt)
-      }
-    }
-    if (lastError) throw lastError
+    writeTextFileWithRetrySync(filePath, body)
   }
   return reportPath
 }

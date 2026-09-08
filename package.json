@@ -214,6 +214,7 @@
     "validate:sportingnews-rotation-parse:fail": "tsx scripts/validate_sportingnews_rotation_parse_unit.ts",
     "validate:probables-series-detect": "tsx scripts/validate_probables_series_detect_unit.ts",
     "validate:probables-series-detect:fail": "tsx scripts/validate_probables_series_detect_unit.ts",
+    "validate:probables-official-rotation-reconcile": "tsx scripts/validate_probables_official_rotation_reconcile_unit.ts",
     "validate:team-standings:2026": "tsx scripts/validate_team_standings_2026.ts --year 2026",
     "validate:team-standings:2026:fail": "tsx scripts/validate_team_standings_2026.ts --year 2026 --fail",
     "validate:standings-window-freshness": "tsx scripts/validate_standings_window_freshness.ts --year 2026",

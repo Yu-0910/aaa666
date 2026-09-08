@@ -204,7 +204,12 @@ function monthLabel(mk: string): string {
 }
 
 function sortPeriodRows(rows: readonly SeasonStatsRow[]): SeasonStatsRow[] {
-  return [...rows].sort((a, b) => {
+  // 差分更新で既存行と再集計行が重なっても、最新の再集計行を一意に保持する。
+  const bySplitKey = new Map<string, SeasonStatsRow>()
+  for (const row of rows) {
+    bySplitKey.set(`${row.split_type}\t${row.split_value}`, row)
+  }
+  return [...bySplitKey.values()].sort((a, b) => {
     if (a.split_type !== b.split_type) {
       if (a.split_type === "calendar_month") return -1
       if (b.split_type === "calendar_month") return 1

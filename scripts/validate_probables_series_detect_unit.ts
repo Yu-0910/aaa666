@@ -6,6 +6,7 @@ import {
   cardKeyFromTeamCodes,
   detectThreeGameSeriesFromGames,
   pickRecentThreeGameSeriesCards,
+  probablesDisplayWindowEnd,
 } from "@/lib/probables/detectThreeGameSeries"
 import type { ScheduleDayGame } from "@/lib/probables/types"
 
@@ -31,29 +32,49 @@ assert.equal(dbH!.seriesStart, "2026-06-19")
 const picked = pickRecentThreeGameSeriesCards(series, "2026-06-19", 6)
 assert.ok(picked.length >= 1)
 
-const lastGameAndNextSeriesGames: ScheduleDayGame[] = [
-  { dateJst: "2026-08-11", gameId: "a1", homeTeamCode: "G", awayTeamCode: "H" },
-  { dateJst: "2026-08-12", gameId: "a2", homeTeamCode: "G", awayTeamCode: "H" },
-  { dateJst: "2026-08-13", gameId: "a3", homeTeamCode: "G", awayTeamCode: "H" },
-  { dateJst: "2026-08-11", gameId: "b1", homeTeamCode: "D", awayTeamCode: "DB" },
-  { dateJst: "2026-08-12", gameId: "b2", homeTeamCode: "D", awayTeamCode: "DB" },
-  { dateJst: "2026-08-13", gameId: "b3", homeTeamCode: "D", awayTeamCode: "DB" },
-  { dateJst: "2026-08-14", gameId: "c1", homeTeamCode: "G", awayTeamCode: "D" },
-  { dateJst: "2026-08-15", gameId: "c2", homeTeamCode: "G", awayTeamCode: "D" },
-  { dateJst: "2026-08-16", gameId: "c3", homeTeamCode: "D", awayTeamCode: "G" },
-  { dateJst: "2026-08-14", gameId: "d1", homeTeamCode: "H", awayTeamCode: "DB" },
-  { dateJst: "2026-08-15", gameId: "d2", homeTeamCode: "H", awayTeamCode: "DB" },
-  { dateJst: "2026-08-16", gameId: "d3", homeTeamCode: "DB", awayTeamCode: "H" },
-  { dateJst: "2026-08-18", gameId: "e1", homeTeamCode: "G", awayTeamCode: "DB" },
-  { dateJst: "2026-08-19", gameId: "e2", homeTeamCode: "G", awayTeamCode: "DB" },
-  { dateJst: "2026-08-20", gameId: "e3", homeTeamCode: "DB", awayTeamCode: "G" },
+const twoGameAndNextCardGames: ScheduleDayGame[] = [
+  { dateJst: "2026-09-04", gameId: "a1", homeTeamCode: "G", awayTeamCode: "H" },
+  { dateJst: "2026-09-05", gameId: "a2", homeTeamCode: "G", awayTeamCode: "H" },
+  { dateJst: "2026-09-06", gameId: "a3", homeTeamCode: "G", awayTeamCode: "H" },
+  { dateJst: "2026-09-05", gameId: "b1", homeTeamCode: "H", awayTeamCode: "DB" },
+  { dateJst: "2026-09-06", gameId: "b2", homeTeamCode: "H", awayTeamCode: "DB" },
+  { dateJst: "2026-09-08", gameId: "c1", homeTeamCode: "Bs", awayTeamCode: "L" },
+  { dateJst: "2026-09-09", gameId: "c2", homeTeamCode: "Bs", awayTeamCode: "L" },
+  { dateJst: "2026-09-10", gameId: "c3", homeTeamCode: "Bs", awayTeamCode: "L" },
 ]
 
-const lastGameSeries = detectThreeGameSeriesFromGames(lastGameAndNextSeriesGames)
-const pickedWithNextCardGroup = pickRecentThreeGameSeriesCards(lastGameSeries, "2026-08-13", 2)
+const cardsWithTwoGameSeries = detectThreeGameSeriesFromGames(twoGameAndNextCardGames)
+const hanshinDeNA = cardsWithTwoGameSeries.find((s) => s.cardKey === "DB-H")
+assert.ok(hanshinDeNA, "two-game DB-H series")
+assert.equal(hanshinDeNA!.games.length, 2)
+
+assert.equal(probablesDisplayWindowEnd("2026-09-04"), "2026-09-09")
+assert.equal(probablesDisplayWindowEnd("2026-09-05"), "2026-09-09")
+assert.equal(probablesDisplayWindowEnd("2026-09-06"), "2026-09-09")
+assert.equal(probablesDisplayWindowEnd("2026-09-08"), "2026-09-13")
+
+const pickedWithinTuesdayWindow = pickRecentThreeGameSeriesCards(cardsWithTwoGameSeries, "2026-09-04", 6)
 assert.deepEqual(
-  pickedWithNextCardGroup.map((s) => `${s.cardKey}:${s.seriesStart}`),
-  ["D-DB:2026-08-11", "G-H:2026-08-11", "D-G:2026-08-14", "DB-H:2026-08-14"],
+  pickedWithinTuesdayWindow.map((s) => `${s.cardKey}:${s.seriesStart}`),
+  ["G-H:2026-09-04", "DB-H:2026-09-05", "Bs-L:2026-09-08"],
 )
+
+// A full six-card slate must not crowd out next Tuesday when Sunday is all that remains.
+const fullSlate = Array.from({ length: 6 }, (_, i) => ({
+  ...cardsWithTwoGameSeries[0]!, cardKey: `current-${i}`,
+  seriesStart: "2026-09-04", seriesEnd: "2026-09-06",
+  games: ["2026-09-04", "2026-09-05", "2026-09-06"].map(dateJst => ({
+    dateJst, gameId: `${i}-${dateJst}`, homeTeamCode: "G", awayTeamCode: "H",
+  })),
+}))
+const nextSlate = fullSlate.map((card, i) => ({
+  ...card, cardKey: `next-${i}`, seriesStart: "2026-09-08", seriesEnd: "2026-09-10",
+  games: ["2026-09-08", "2026-09-09", "2026-09-10"].map(dateJst => ({
+    dateJst, gameId: `next-${i}-${dateJst}`, homeTeamCode: "G", awayTeamCode: "H",
+  })),
+}))
+assert.equal(pickRecentThreeGameSeriesCards([...fullSlate, ...nextSlate], "2026-09-05").length, 6)
+assert.equal(pickRecentThreeGameSeriesCards([...fullSlate, ...nextSlate], "2026-09-06").length, 12)
+assert.equal(pickRecentThreeGameSeriesCards([...fullSlate, ...nextSlate], "2026-09-08").length, 6)
 
 console.log("[validate:probables-series-detect] OK")
