@@ -75,6 +75,8 @@ const DEFAULT_STATE: PitcherCardState = {
   matchup: null,
 }
 
+const DEFAULT_SELECTED_PLAYER_ID = "11515133"
+
 const SECTION_HEADING_CLASS = "text-[1.125rem]"
 const SECTION_HEADING_SHELL = `${SECTION_HEADING_CLASS} mb-1 py-1 pl-5 pr-2 bg-[rgba(255,255,255,0.035)]`
 
@@ -747,11 +749,22 @@ function PitcherPanel({ player }: { player: BoardPlayer }) {
 }
 
 export default function CompactProbablesBoard({ matchups }: { matchups: BoardMatchup[] }) {
-  const players = useMemo(
-    () => matchups.flatMap((matchup) => [matchup.leftPlayer, matchup.rightPlayer]),
-    [matchups],
+  const players = useMemo(() => {
+    const byPublicId = new Map<string, BoardPlayer>()
+    for (const player of matchups.flatMap((matchup) => [matchup.leftPlayer, matchup.rightPlayer])) {
+      if (!byPublicId.has(player.publicId)) byPublicId.set(player.publicId, player)
+    }
+    return [...byPublicId.values()].sort((a, b) => {
+      if (a.publicId === DEFAULT_SELECTED_PLAYER_ID) return -1
+      if (b.publicId === DEFAULT_SELECTED_PLAYER_ID) return 1
+      return 0
+    })
+  }, [matchups])
+  const [selectedPlayerId, setSelectedPlayerId] = useState(() =>
+    players.some((player) => player.publicId === DEFAULT_SELECTED_PLAYER_ID)
+      ? DEFAULT_SELECTED_PLAYER_ID
+      : players[0]?.publicId ?? "",
   )
-  const [selectedPlayerId, setSelectedPlayerId] = useState(() => players[0]?.publicId ?? "")
   const selectedPlayer = players.find((player) => player.publicId === selectedPlayerId) ?? players[0] ?? null
 
   useEffect(() => {
@@ -766,7 +779,7 @@ export default function CompactProbablesBoard({ matchups }: { matchups: BoardMat
         <header className="mb-3 flex flex-wrap items-end justify-between gap-3 border-b border-[#333333] pb-3">
           <div>
             <h1 className="player-page-display-name text-[1.5rem] leading-tight" style={{ fontWeight: 900 }}>
-            セ・リーグ予告先発
+              セ・リーグ予告先発 + 大野雄大
             </h1>
             <p className="mt-1 text-sm text-gray-400">2026-09-02 / 投手別データシート</p>
           </div>

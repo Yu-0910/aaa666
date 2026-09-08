@@ -663,6 +663,12 @@ export function PlayerPageClient({
     displayRomanName,
     rosterMatchedNpbId,
   })
+  const isSasakiTaiPage =
+    rosterMatchedNpbId === "11015150" ||
+    playerSegmentCore === "11015150" ||
+    playerIdNormalized === "11015150" ||
+    compactPlayerName(displayName) === compactPlayerName("佐々木泰") ||
+    pathname.includes("tai-sasaki")
   const rosterKnownFielder =
     isRosterPlayer &&
     isFielderRegistrationPosition(rosterMatchedPosition, {
@@ -1738,7 +1744,7 @@ export function PlayerPageClient({
 
   return (
     <div
-      className={`player-page-fonts min-h-screen site-bg text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${useRosterPitcherPcTableCss ? " roster-pitcher-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}`}
+      className={`player-page-fonts min-h-screen site-bg text-white${showPitcherSeasonSuganoUi || showFielderSeasonPilotUi ? ` ${PITCHER_SEASON_NUMERICS_UI_CLASS}` : ""}${isItoDaiyaPage ? ` ${ITO_DAIYA_PROFILE_UI_CLASS}` : ""}${useRosterFielderPcTableCss ? " roster-fielder-pc-table-css" : ""}${useRosterPitcherPcTableCss ? " roster-pitcher-pc-table-css" : ""}${isTakahashiHarutoPage ? " takahashi-haruto-pitcher-pc-table-css" : ""}${isSasakiTaiPage ? " sasaki-tai-ku-tooltip-name-font" : ""}`}
     >
       <div data-build-marker={BUILD_MARKER} style={{ display: "none" }} />
       {/* Header */}
@@ -1848,7 +1854,7 @@ export function PlayerPageClient({
                 className={`player-page-display-name ${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
                 style={{
                   textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-                  fontWeight: 900,
+                  fontWeight: isSasakiTaiPage ? 700 : 900,
                 }}
               >
                 {displayNameForHeader}

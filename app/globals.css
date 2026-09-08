@@ -243,6 +243,13 @@
     border-radius: 0.625rem !important;
   }
 
+  .player-page-fonts.sasaki-tai-ku-tooltip-name-font .player-page-display-name {
+    font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
+    font-weight: 700 !important;
+    -webkit-text-stroke: 0 !important;
+    paint-order: normal !important;
+  }
+
   .player-page-table-shell {
     border-radius: 0.625rem !important;
     overflow: hidden !important;

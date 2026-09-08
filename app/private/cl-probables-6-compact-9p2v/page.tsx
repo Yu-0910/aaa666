@@ -43,6 +43,12 @@ type ProbableBoardPlayer = {
 const TARGET_DATE = "2026-09-02"
 const TARGET_TEAM_CODES = new Set(["H", "G", "DB", "S", "D", "C"])
 const PREFERRED_ORDER = ["H", "S", "G", "DB", "D", "C"]
+const EXTRA_PLAYER = {
+  publicId: "11515133",
+  nameJa: "大野 雄大",
+  teamCode: "D",
+  opponentTeamCode: "C",
+} as const
 
 export const metadata: Metadata = {
   title: "CL Probables Compact Board",
@@ -93,14 +99,26 @@ async function buildBoardPlayer(input: {
   }
 }
 
+async function buildExtraBoardPlayer(): Promise<ProbableBoardPlayer | null> {
+  return buildBoardPlayer({
+    probable: {
+      pitcherNameJa: EXTRA_PLAYER.nameJa,
+      pitcherPublicId: EXTRA_PLAYER.publicId,
+      teamCode: EXTRA_PLAYER.teamCode,
+    },
+    teamCode: EXTRA_PLAYER.teamCode,
+    opponentTeamCode: EXTRA_PLAYER.opponentTeamCode,
+    homeAway: "home",
+  })
+}
+
 async function loadBoardMatchups(): Promise<BoardMatchup[]> {
   const snapshot = await fetchDisplayJsonServer<TopProbablesSnapshot>(
     "/data/top-probables/2026/current.json"
   )
-  if (!snapshot) return []
   const matchups: BoardMatchup[] = []
 
-  for (const card of snapshot.cards ?? []) {
+  for (const card of snapshot?.cards ?? []) {
     for (const game of card.games ?? []) {
       if ((game.dateJst ?? "") !== TARGET_DATE) continue
       const homeTeamCode = game.homeProbable?.teamCode ?? game.homeTeamCode ?? ""
@@ -130,6 +148,31 @@ async function loadBoardMatchups(): Promise<BoardMatchup[]> {
         rightPlayer: ordered[1],
       })
     }
+  }
+
+  const extraPlayer = await buildExtraBoardPlayer()
+  const fallbackOpponent =
+    matchups
+      .flatMap((matchup) => [matchup.leftPlayer, matchup.rightPlayer])
+      .find((player) => player.teamCode === EXTRA_PLAYER.opponentTeamCode) ??
+    matchups[0]?.rightPlayer ??
+    extraPlayer
+  if (
+    extraPlayer &&
+    fallbackOpponent &&
+    !matchups.some(
+      (matchup) =>
+        matchup.leftPlayer.publicId === extraPlayer.publicId ||
+        matchup.rightPlayer.publicId === extraPlayer.publicId,
+    )
+  ) {
+    matchups.push({
+      gameId: `${TARGET_DATE}-${extraPlayer.teamCode}-${extraPlayer.publicId}`,
+      gameDateJst: TARGET_DATE,
+      matchupLabel: `${extraPlayer.teamName} vs ${extraPlayer.opponentTeamName}`,
+      leftPlayer: extraPlayer,
+      rightPlayer: fallbackOpponent,
+    })
   }
 
   return matchups.sort((a, b) => byPreferredOrder(a.leftPlayer, b.leftPlayer))
