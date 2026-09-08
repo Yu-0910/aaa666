@@ -1853,7 +1853,7 @@ export function PlayerPageClient({
               <h1
                 className={`player-page-display-name ${isMobile ? "text-[1.75rem]" : "text-[1.5rem]"} leading-tight`}
                 style={{
-                  textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+                  textShadow: isSasakiTaiPage ? "none" : "2px 2px 4px rgba(0,0,0,0.5)",
                   fontWeight: 900,
                 }}
               >

@@ -246,8 +246,10 @@
   .player-page-fonts.sasaki-tai-ku-tooltip-name-font .player-page-display-name {
     font-family: var(--font-noto-sans-jp), var(--font-inter), "Noto Sans JP", "Inter", sans-serif !important;
     font-weight: 900 !important;
-    -webkit-text-stroke: 0.018em currentColor !important;
-    paint-order: stroke fill !important;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    -webkit-text-stroke: 0 !important;
+    paint-order: normal !important;
   }
 
   .player-page-table-shell {
