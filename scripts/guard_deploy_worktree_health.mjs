@@ -14,6 +14,7 @@ const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
 }).trim()
+const mainHead = git(["rev-parse", "HEAD"])
 
 const worktreeRoot = path.join(repoRoot, ".codex-worktrees")
 const prodPath = path.join(worktreeRoot, "prod")
@@ -53,4 +54,14 @@ if (status) {
   process.exit(1)
 }
 
+const prodHead = git(["rev-parse", "HEAD"], prodPath)
+if (prodHead !== mainHead) {
+  console.error("[deploy-worktree-health] .codex-worktrees/prod is not synced to main worktree HEAD.")
+  console.error(`  main=${mainHead.slice(0, 9)}`)
+  console.error(`  prod=${prodHead.slice(0, 9)}`)
+  console.error("  Run `npm run worktree:deploy:init` to sync it.")
+  process.exit(1)
+}
+
 console.log("deploy worktree prod is clean.")
+console.log("deploy worktree prod is synced to main HEAD.")
