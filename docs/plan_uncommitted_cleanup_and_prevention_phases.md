@@ -161,6 +161,14 @@ npm run guard:deploy-data-worktree
 
 このゲートで止まった場合は、deploy せず Phase 1 に戻る。
 
+clean deploy の標準導線:
+
+```powershell
+npm run deploy:vercel:prod:clean
+```
+
+このコマンドは `scripts/deploy_vercel_prod_from_worktree.ps1` を通り、`.codex-worktrees/prod` の clean worktree を `HEAD` に合わせてから本番 deploy と公開確認を行う。通常の `deploy:vercel:prod` は直接 deploy 用であり、日常運用では `deploy:vercel:prod:clean` を優先する。
+
 ## Phase 7: 検証と commit の分離
 
 検証用スクリプト・再発防止テストは commit 対象に含める。
