@@ -3263,10 +3263,20 @@ function readVsHandFailureReportSummary(reportPath, fallbackYahooIds = []) {
 function deployProductionViaVercelAndWait({ publishStage, dryRun }) {
   const scopePrefix = vercelScopePrefix()
   const deployCommand = `${VERCEL_CLI}${scopePrefix} --prod --yes`
+  const guardCommand = "npm run guard:deploy-data-worktree"
   if (dryRun) {
+    appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${publishStage} deploy guard=${guardCommand}`)
     appendPipelineBulkLog(root, "daily:npb-pipeline:v2", `dry-run: ${publishStage} deploy cmd=${deployCommand}`)
     return
   }
+
+  execSync(guardCommand, {
+    cwd: root,
+    encoding: "utf8",
+    env: childEnv,
+    stdio: ["ignore", "pipe", "inherit"],
+    timeout: commandTimeoutMs("validate"),
+  })
 
   const deployStdout = execSync(deployCommand, {
     cwd: root,

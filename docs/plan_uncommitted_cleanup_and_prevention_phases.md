@@ -178,6 +178,8 @@ npm run deploy:vercel:prod:clean
 
 このコマンドは `scripts/deploy_vercel_prod_from_worktree.ps1` を通り、`.codex-worktrees/prod` の clean worktree を `HEAD` に合わせてから本番 deploy と公開確認を行う。通常の `deploy:vercel:prod` は直接 deploy 用であり、日常運用では `deploy:vercel:prod:clean` を優先する。
 
+日次パイプライン内の自動 Vercel deploy も、実行直前に `npm run guard:deploy-data-worktree` を通す。これにより、R2 反映後のプロキシ再デプロイでも UI / script の未コミット差分が混ざる経路を塞ぐ。
+
 ## Phase 7: 検証と commit の分離
 
 検証用スクリプト・再発防止テストは commit 対象に含める。

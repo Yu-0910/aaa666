@@ -44,6 +44,17 @@ test("operational scripts keep clean-worktree and deploy-artifact gates wired", 
   assert.match(scripts["deploy:vercel:prod:clean"], /deploy_vercel_prod_from_worktree\.ps1/)
 })
 
+test("daily pipeline production deploy path keeps deploy-data guard", () => {
+  const source = fs.readFileSync(new URL("./run_daily_npb_pipeline_v2.mjs", import.meta.url), "utf8")
+  const start = source.indexOf("function deployProductionViaVercelAndWait(")
+  const end = source.indexOf("function isRecoverableProductionProxyInspectFailure(")
+  assert.ok(start >= 0, "deployProductionViaVercelAndWait exists")
+  assert.ok(end > start, "deployProductionViaVercelAndWait section end exists")
+  const deploySection = source.slice(start, end)
+  assert.match(deploySection, /npm run guard:deploy-data-worktree/)
+  assert.match(deploySection, /execSync\(guardCommand/)
+})
+
 test("freshness rejects missing, malformed, old-date and invalid timestamp outputs", t => {
   const { root, file, write } = fixture(t)
   const check = () => assertTopProbablesFresh(root, "2026", "2026-09-06")
