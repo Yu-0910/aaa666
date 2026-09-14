@@ -116,6 +116,11 @@ hotfix の完了定義:
 3. `.codex-deploy-*` を削除する。
 4. `git status --short` が空であることを確認する。
 
+機械ガード:
+
+- `npm run guard:no-deploy-artifacts` は、リポジトリ直下の `.codex-deploy-*` ディレクトリ / zip が残っていれば失敗する。
+- `guard:clean-worktree` / `guard:deploy-ui-worktree` / `guard:deploy-data-worktree` は、このガードを先頭で実行する。
+
 ## Phase 5: 削除前バックアップ
 
 未コミット差分を消す場合、削除前に必ずバックアップを作る。
@@ -261,4 +266,3 @@ git status --short
 - 生成物や deploy 一時ファイルが Git 状態に混ざらない。
 - 同じ失敗ケースが検証スクリプトで落ちる。
 - 「今の本番が理想」と言われたとき、ローカル差分ではなく本番相当 commit を基準に復元できる。
-
