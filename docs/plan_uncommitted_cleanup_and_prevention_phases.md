@@ -44,12 +44,14 @@ Date: 2026-09-15
 すべての作業開始時に、最初に以下を確認する。
 
 ```powershell
-git status --short
+npm run ops:work-start
 ```
 
 合格条件:
 
-- 何も表示されない。
+- `guard:no-deploy-artifacts passed.` が出る。
+- dirty worktree の警告が出ない。
+- 現在の `HEAD` commit が表示される。
 
 未コミットがある場合:
 
@@ -209,12 +211,14 @@ npm run deploy:vercel:prod:clean
 作業終了前に必ず以下を確認する。
 
 ```powershell
-git status --short
+npm run ops:work-finish
 ```
 
 合格条件:
 
-- 空である。
+- `guard:no-deploy-artifacts passed.` が出る。
+- dirty worktree の警告が出ない。
+- 最終 commit が表示される。
 
 空でない場合:
 
