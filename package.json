@@ -290,6 +290,7 @@
     "ops:cleanup-deploy-artifacts:apply": "node scripts/cleanup_deploy_artifacts.mjs --apply",
     "ops:cleanup-stale-worktrees": "node scripts/cleanup_stale_worktrees.mjs",
     "ops:cleanup-stale-worktrees:apply": "node scripts/cleanup_stale_worktrees.mjs --apply",
+    "ops:cleanup-stale-worktrees:discard": "node scripts/cleanup_stale_worktrees.mjs --apply --discard-dirty-with-backup",
     "worktree:deploy:init": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create_deploy_worktree.ps1",
     "deploy:vercel:prod": "npm run guard:deploy-ui-worktree && npx --yes vercel@latest deploy --prod --yes --scope yu-cb8b43e3",
     "deploy:vercel:prod:data": "npm run guard:deploy-data-worktree && npx --yes vercel@latest deploy --prod --yes --scope yu-cb8b43e3",

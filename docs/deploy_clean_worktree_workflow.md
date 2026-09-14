@@ -18,6 +18,8 @@ UI やページ構成は変えず、`push` / 本番 deploy の安全性だけを
   - `.codex-worktrees/prod` 以外の管理 worktree 削除候補を dry-run 表示する。
 - `npm run ops:cleanup-stale-worktrees:apply`
   - dirty でない候補だけを `git worktree remove --force` で削除し、`git worktree prune` を実行する。
+- `npm run ops:cleanup-stale-worktrees:discard`
+  - dirty な候補を `%TEMP%` に patch / status / 未追跡ファイル付きで退避してから削除する。
 - `npm run guard:clean-worktree`
   - 今の worktree に未コミット差分や未追跡ファイルがあると止める。`.codex-deploy-*` が残っている場合も止める。
 - `npm run guard:deploy-worktree-health`

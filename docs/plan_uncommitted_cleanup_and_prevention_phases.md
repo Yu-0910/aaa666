@@ -127,6 +127,7 @@ hotfix の完了定義:
 - `npm run ops:cleanup-deploy-artifacts:apply` は、リポジトリ直下の `.codex-deploy-*` だけをパス検証後に削除する。
 - `npm run ops:cleanup-stale-worktrees` は、`.codex-worktrees/prod` 以外の管理 worktree 削除候補を dry-run 表示する。
 - `npm run ops:cleanup-stale-worktrees:apply` は、dirty でない候補だけを `git worktree remove --force` で削除し、`git worktree prune` を実行する。
+- `npm run ops:cleanup-stale-worktrees:discard` は、dirty な候補を `%TEMP%` に patch / status / 未追跡ファイル付きで退避してから削除する。
 
 ## Phase 5: 削除前バックアップ
 
