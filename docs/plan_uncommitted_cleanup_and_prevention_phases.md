@@ -268,6 +268,11 @@ npm run ops:work-finish
 6. commit
 7. Phase 9
 
+運用 script の配線確認:
+
+- `npm run validate:pipeline-output-guards` は、`guard:clean-worktree` が deploy artifact guard を含むこと、`ops:work-start` / `ops:work-finish` が clean gate を通ること、`deploy:vercel:prod:clean` が deploy worktree スクリプトを使うことを検証する。
+- この検証が落ちた場合は、未コミット混乱防止の運用が壊れたものとして扱う。
+
 ## 今回の失敗を防ぐための合格条件
 
 この計画が効いている状態とは、次を満たす状態である。

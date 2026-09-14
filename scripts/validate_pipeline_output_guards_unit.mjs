@@ -6,6 +6,8 @@ import vm from "node:vm"
 import { test } from "node:test"
 import { assertPipelineRequiredFiles, assertTopProbablesFresh } from "./pipeline_output_guards.mjs"
 
+const packageJson = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "toppage-output-guards-"))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
@@ -26,6 +28,17 @@ test("preflight catches missing validator before work starts", t => {
     fs.writeFileSync(path.join(root, "scripts", name), "")
   }
   assert.doesNotThrow(() => assertPipelineRequiredFiles(root))
+})
+
+test("operational scripts keep clean-worktree and deploy-artifact gates wired", () => {
+  const scripts = packageJson.scripts ?? {}
+  assert.match(scripts["guard:clean-worktree"], /guard_no_deploy_artifacts\.mjs/)
+  assert.match(scripts["guard:clean-worktree"], /assert_clean_worktree\.mjs --strict/)
+  assert.match(scripts["guard:deploy-ui-worktree"], /guard_no_deploy_artifacts\.mjs/)
+  assert.match(scripts["guard:deploy-data-worktree"], /guard_no_deploy_artifacts\.mjs/)
+  assert.match(scripts["ops:work-start"], /guard:clean-worktree/)
+  assert.match(scripts["ops:work-finish"], /guard:clean-worktree/)
+  assert.match(scripts["deploy:vercel:prod:clean"], /deploy_vercel_prod_from_worktree\.ps1/)
 })
 
 test("freshness rejects missing, malformed, old-date and invalid timestamp outputs", t => {
