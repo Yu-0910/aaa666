@@ -38,6 +38,7 @@ test("operational scripts keep clean-worktree and deploy-artifact gates wired", 
   assert.match(scripts["guard:deploy-data-worktree"], /guard_no_deploy_artifacts\.mjs/)
   assert.match(scripts["ops:work-start"], /guard:clean-worktree/)
   assert.match(scripts["ops:work-finish"], /guard:clean-worktree/)
+  assert.match(scripts["ops:backup-dirty-worktree"], /backup_dirty_worktree\.mjs/)
   assert.match(scripts["deploy:vercel:prod:clean"], /deploy_vercel_prod_from_worktree\.ps1/)
 })
 

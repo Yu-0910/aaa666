@@ -127,9 +127,14 @@ hotfix の完了定義:
 
 未コミット差分を消す場合、削除前に必ずバックアップを作る。
 
+```powershell
+npm run ops:backup-dirty-worktree
+```
+
 最低限残すもの:
 
 - `git diff` の patch
+- staged diff の patch
 - `git status --short` の結果
 - 未追跡ファイル一覧
 - 未追跡ファイルのコピー

@@ -284,6 +284,7 @@
     "guard:deploy-data-worktree": "node scripts/guard_no_deploy_artifacts.mjs && node scripts/assert_clean_worktree.mjs --allow-data",
     "ops:work-start": "npm run guard:clean-worktree && git log -1 --oneline",
     "ops:work-finish": "npm run guard:clean-worktree && git log -1 --oneline",
+    "ops:backup-dirty-worktree": "node scripts/backup_dirty_worktree.mjs",
     "worktree:deploy:init": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create_deploy_worktree.ps1",
     "deploy:vercel:prod": "npm run guard:deploy-ui-worktree && npx --yes vercel@latest deploy --prod --yes --scope yu-cb8b43e3",
     "deploy:vercel:prod:data": "npm run guard:deploy-data-worktree && npx --yes vercel@latest deploy --prod --yes --scope yu-cb8b43e3",
