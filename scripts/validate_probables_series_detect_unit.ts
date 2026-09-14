@@ -24,10 +24,12 @@ const games: ScheduleDayGame[] = [
 const series = detectThreeGameSeriesFromGames(games)
 assert.ok(series.length >= 2, `expected >=2 series, got ${series.length}`)
 
-const dbH = series.find((s) => s.cardKey === "DB-H")
-assert.ok(dbH, "DB-H series")
-assert.equal(dbH!.games.length, 3)
-assert.equal(dbH!.seriesStart, "2026-06-19")
+const dbH = series.filter((s) => s.cardKey === "DB-H")
+assert.equal(dbH.length, 2)
+assert.deepEqual(
+  dbH.map((s) => `${s.seriesStart}:${s.seriesEnd}:${s.teamCodes.join("-")}:${s.games.length}`),
+  ["2026-06-19:2026-06-20:H-DB:2", "2026-06-21:2026-06-21:DB-H:1"],
+)
 
 const picked = pickRecentThreeGameSeriesCards(series, "2026-06-19", 6)
 assert.ok(picked.length >= 1)

@@ -15,6 +15,7 @@ type TopPageModernLeaderRowProps = {
   typography: TopLeaderRowTypography
   /** MiniLeaderRow 用の縦バー高さ */
   miniTeamBar?: string
+  playerHref?: string | null
 }
 
 export function TopPageModernLeaderRow({
@@ -24,6 +25,7 @@ export function TopPageModernLeaderRow({
   modernLeaderRow,
   typography,
   miniTeamBar,
+  playerHref,
 }: TopPageModernLeaderRowProps) {
   const formattedValue = formatRankingStatDisplay(String(stat ?? ""), leader.value)
   const l = leader as {
@@ -68,7 +70,7 @@ export function TopPageModernLeaderRow({
         style={{ backgroundColor: teamColors[teamKey] || rankingTeamStripeColor(teamKey) }}
       />
       <a
-        href={playerPageHref({
+        href={playerHref === null ? undefined : playerHref ?? playerPageHref({
           npbPlayerId: l.npbPlayerId,
           playerId: l.playerId,
           name: playerName,

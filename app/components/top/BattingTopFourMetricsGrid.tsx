@@ -23,6 +23,7 @@ type LeaderRowRenderProps = {
 }
 
 type BattingTopFourMetricsGridProps = {
+  emptyLabel?: string
   year: number
   isWeeklyTab: boolean
   leaders: Record<string, unknown[] | undefined>
@@ -66,7 +67,7 @@ function StatsListControl({
   )
 }
 
-function MetricPanel({
+export function MetricPanel({
   metric,
   leaders,
   year,
@@ -77,6 +78,7 @@ function MetricPanel({
   typography,
   panelClassName = "p-1",
   bordered = true,
+  emptyLabel,
 }: {
   metric: string
   leaders: Record<string, unknown[] | undefined>
@@ -88,11 +90,12 @@ function MetricPanel({
   typography: ReturnType<typeof topLeaderRowTypography>
   panelClassName?: string
   bordered?: boolean
+  emptyLabel?: string
 }) {
   const rows = leaders[metric]
-  if (!rows?.length) return null
+  if (!rows?.length && !emptyLabel) return null
   const topN = battingTop2025SeasonTopN(metric, String(year))
-  const displayRows = topN != null ? rows.slice(0, topN) : rows
+  const displayRows = topN != null ? (rows ?? []).slice(0, topN) : (rows ?? [])
 
   const panelBgClass = "bg-[#1f1f1f]"
   const statsListClass = `relative z-20 ml-auto shrink-0 ${panelBgClass} py-0.5 px-0.5 ${typography.statsListLink} text-[#e8e8e8] hover:text-white transition-colors flex items-center`
@@ -110,6 +113,7 @@ function MetricPanel({
         <StatsListControl href={getStatsListUrl(metric)} onNavigate={onStatsListNavigate} className={statsListClass} />
       </div>
       <div className="min-w-0 space-y-0 overflow-hidden">
+        {!displayRows.length && <p className="py-3 text-center text-xs text-gray-400">{emptyLabel}</p>}
         {displayRows.map((leader, leaderIndex) =>
           renderLeaderRow({ leader: leader as Record<string, unknown>, stat: metric, index: leaderIndex })
         )}
@@ -119,6 +123,7 @@ function MetricPanel({
 }
 
 export function BattingTopFourMetricsGrid({
+  emptyLabel,
   year,
   isWeeklyTab,
   leaders,
@@ -152,7 +157,7 @@ export function BattingTopFourMetricsGrid({
     }
     const seasonMetrics = battingSeasonGridMetrics(year)
     const hasAny = seasonMetrics.some((m) => (displayLeaders[m]?.length ?? 0) > 0)
-    if (!hasAny) return null
+    if (!hasAny && !emptyLabel) return null
 
     const seasonPanelClass = "p-1 min-w-0 h-full flex flex-col overflow-hidden"
     const gridClass = usesBatting2026SeasonSixMetricGrid(year, isWeeklyTab)
@@ -163,7 +168,7 @@ export function BattingTopFourMetricsGrid({
       <div className={BATTING_TOP_2025_FOUR_METRICS_WRAPPER_CLASS}>
         <div className={gridClass}>
           {seasonMetrics.map((metric) => {
-            if (!(displayLeaders[metric]?.length ?? 0)) return null
+            if (!(displayLeaders[metric]?.length ?? 0) && !emptyLabel) return null
             return (
               <div key={metric} className={`${seasonAreaClass[metric] ?? ""} min-w-0`}>
                 <MetricPanel
@@ -176,6 +181,7 @@ export function BattingTopFourMetricsGrid({
                   renderLeaderRow={renderLeaderRow}
                   typography={typography}
                   panelClassName={seasonPanelClass}
+                  emptyLabel={emptyLabel}
                 />
               </div>
             )

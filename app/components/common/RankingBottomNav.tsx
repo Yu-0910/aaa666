@@ -3,7 +3,7 @@
 import { BarChart3, Gauge, Table2 } from "lucide-react"
 
 export type TopSeasonStatView = "cl-batting" | "cl-pitching" | "pl-batting" | "pl-pitching"
-export type TopWeeklyView = TopSeasonStatView
+export type TopWeeklyView = "cl-batting" | "pl-batting"
 export type TopStandingsView = "cl-season" | "pl-season" | "cl-weekly" | "pl-weekly"
 
 type TopSeasonBottomNavProps = {
@@ -52,9 +52,7 @@ export default function RankingBottomNav(props: RankingBottomNavProps) {
       : isWeeklyMode
       ? ([
           { view: "cl-batting", label: "セ野手", icon: BarChart3 },
-          { view: "cl-pitching", label: "セ投手", icon: Gauge },
           { view: "pl-batting", label: "パ野手", icon: BarChart3 },
-          { view: "pl-pitching", label: "パ投手", icon: Gauge },
         ] as const)
       : ([
           { view: "cl-batting", label: "セ野手", icon: BarChart3 },
@@ -65,10 +63,10 @@ export default function RankingBottomNav(props: RankingBottomNavProps) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 md:hidden"
+      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-2 ${isWeeklyMode ? "" : "md:hidden"}`}
       aria-label={isStandingsMode ? "順位表表示切り替え" : isWeeklyMode ? "今週表示切り替え" : "TOP成績切り替え"}
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md">
+      <div className={`mx-auto grid max-w-md ${isWeeklyMode ? "grid-cols-2" : "grid-cols-4"} rounded-full border border-white/35 bg-white/20 p-1 shadow-[0_4px_14px_rgba(0,0,0,0.08)] backdrop-blur-md`}>
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.view
@@ -81,8 +79,10 @@ export default function RankingBottomNav(props: RankingBottomNavProps) {
                 isActive
                   ? "bg-white/25 text-[#ffff44]"
                   : "bg-transparent text-white/90 hover:text-white"
-              }`}
-              aria-current={isActive ? "page" : undefined}
+              } ${isWeeklyMode ? "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffff44]" : ""}`}
+              aria-current={!isWeeklyMode && isActive ? "page" : undefined}
+              aria-pressed={isWeeklyMode ? isActive : undefined}
+              aria-controls={isWeeklyMode ? "weekly-ranking-content" : undefined}
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
               <span className="whitespace-nowrap">{item.label}</span>

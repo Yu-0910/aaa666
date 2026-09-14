@@ -1,133 +1,64 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Spinner } from "@/components/ui/spinner"
-import TopPageLeadersClient from "@/app/components/TopPageLeadersClient"
-import TopPagePitchingLeadersClient from "@/app/components/TopPagePitchingLeadersClient"
-import type { TopPageLayoutMode } from "@/app/components/top/topPageLayoutMode"
-import {
-  fetchCurrentWeekMeta,
-  fetchTopWeeklyLeadersForPage,
-} from "@/lib/topPage/fetchTopWeeklyLeadersClient"
-import { TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/weeklyLeadersSnapshotShared"
-import type { WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import type { TopPageLayoutMode } from "./topPageLayoutMode"
 import type { TopWeeklyView } from "@/app/components/common/RankingBottomNav"
+import type { RecentV2CardsPayload } from "@/lib/topPage/recentGamesV2Cards"
+import { recentV2Href } from "@/lib/ranking/recentGamesV2Page"
+import { BattingTopFourMetricsGrid } from "./BattingTopFourMetricsGrid"
+import { TopPageModernLeaderRow } from "./TopPageModernLeaderRow"
+import { topLeaderRowTypography, battingSeasonGridMetrics, battingTop2025SeasonTopN } from "@/lib/topPageBatting2025Grid"
+import { recentGamesAreStale } from "@/lib/ranking/recentGamesFreshness"
 
-type TopPageWeeklyTabContentProps = {
-  year: number
-  layout: TopPageLayoutMode
-  /** サーバー先読み済み（週メタ + 4 リーグ分 JSON） */
-  initialPayload?: WeeklyTabPayload | null
-  activeView: TopWeeklyView
+export function TopPageWeeklyTabContent({ year, activeView }: {
+  year: number; layout: TopPageLayoutMode; activeView: TopWeeklyView
+}) {
+  const league = activeView.startsWith("cl") ? "CL" : "PL"
+  return <RecentCards key={league + year} league={league} year={year} />
 }
 
-export function TopPageWeeklyTabContent({
-  year,
-  layout,
-  initialPayload,
-  activeView,
-}: TopPageWeeklyTabContentProps) {
-  const [payload, setPayload] = useState<WeeklyTabPayload | null>(initialPayload ?? null)
-  const [loading, setLoading] = useState(!initialPayload)
-  const [error, setError] = useState<string | null>(null)
-
+function RecentCards({ league, year }: { league: "CL" | "PL"; year: number }) {
+  const [data, setData] = useState<RecentV2CardsPayload | null>(null)
+  const [error, setError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
-    if (year !== Number(TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR)) {
-      setLoading(false)
-      return
-    }
-    if (initialPayload) {
-      setPayload(initialPayload)
-      setLoading(false)
-      setError(null)
-      return
-    }
+    const controller = new AbortController()
+    setData(null)
+    setError(false)
+    if (year !== 2026) return () => controller.abort()
+    fetch(`/api/recent-games-v2/${league}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unavailable")
+        const payload: RecentV2CardsPayload = await response.json()
+        if (payload.schemaVersion !== "recent-10-cards-v2" || payload.league !== league || !Array.isArray(payload.cards)
+          || payload.cards.length !== battingSeasonGridMetrics(year).length
+          || !battingSeasonGridMetrics(year).every((label, index) => payload.cards[index]?.label === label
+            && payload.cards[index]?.limit === battingTop2025SeasonTopN(label, String(year))
+            && Array.isArray(payload.cards[index]?.rows))) throw new Error("Invalid data")
+        if (!controller.signal.aborted) setData(payload)
+      }).catch(() => { if (!controller.signal.aborted) setError(true) })
+    return () => controller.abort()
+  }, [league, year, attempt])
 
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    setPayload(null)
-
-    fetchCurrentWeekMeta(year)
-      .then(async (weekMeta) => {
-        const weekKey = weekMeta.weekKey
-        const [clBat, plBat, clPitch, plPitch] = await Promise.all([
-          fetchTopWeeklyLeadersForPage(year, "CL", "batting", weekKey),
-          fetchTopWeeklyLeadersForPage(year, "PL", "batting", weekKey),
-          fetchTopWeeklyLeadersForPage(year, "CL", "pitching", weekKey),
-          fetchTopWeeklyLeadersForPage(year, "PL", "pitching", weekKey),
-        ])
-        if (cancelled) return
-        setPayload({
-          weekMeta,
-          batting: { CL: clBat.config, PL: plBat.config },
-          pitching: { CL: clPitch.config, PL: plPitch.config },
-        })
-        setLoading(false)
-      })
-      .catch((err: Error) => {
-        if (cancelled) return
-        setError(err.message || "今週のデータを取得できませんでした")
-        setLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [year, initialPayload])
-
-  if (year !== Number(TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR)) {
-    return (
-      <div className="text-white text-center py-8 text-sm">
-        今週タブは {TOP_WEEKLY_LEADERS_SNAPSHOT_YEAR} シーズンのみ表示しています。
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="読み込み中">
-        <Spinner className="size-8 text-[#FFFF44]" />
-      </div>
-    )
-  }
-
-  if (error || !payload) {
-    return (
-      <div className="text-white text-center py-8 space-y-2 text-sm">
-        <p>今週の成績データを表示できませんでした。</p>
-        <p className="text-gray-400 text-xs">
-          しばらくしてから、もう一度お試しください。
-        </p>
-      </div>
-    )
-  }
-
-  const { weekKey, weekLabel } = payload.weekMeta
-  const league: "CL" | "PL" = activeView.startsWith("cl") ? "CL" : "PL"
-  const isPitching = activeView.endsWith("pitching")
-
-  return (
-    <div className="space-y-6">
-      {isPitching ? (
-        <TopPagePitchingLeadersClient
-          year={year}
-          league={league}
-          layout={layout}
-          weekKey={weekKey}
-          weekLabel={weekLabel}
-          initialData={payload.pitching[league]}
-        />
-      ) : (
-        <TopPageLeadersClient
-          year={year}
-          league={league}
-          layout={layout}
-          weekKey={weekKey}
-          weekLabel={weekLabel}
-          initialData={payload.batting[league]}
-        />
-      )}
-    </div>
-  )
+  if (year !== 2026) return <p className="py-8 text-sm">直近10試合は2026年のみ表示しています。</p>
+  return <section aria-label="直近10試合打撃ランキング" className="space-y-1">
+    <div className="flex items-center gap-2"><div style={{ width: 4, height: 32, backgroundColor: league === "CL" ? "#039850" : "#10b8ce" }} /><div><h2 className="text-sm font-medium">{league === "CL" ? "セ" : "パ"}・直近10試合 打撃ランキング</h2><p className="text-[10px] text-gray-400">{league === "CL" ? "Central" : "Pacific"} League / Last 10 Team Games</p></div></div>
+    {error ? <div role="alert" className="rounded border border-[#444] p-4 text-sm">
+      <p>直近10試合の成績データを取得できませんでした。</p>
+      <button type="button" onClick={() => setAttempt(n => n + 1)} className="mt-2 text-[#ffff44] underline">再読み込み</button>
+    </div> : !data ? <p role="status" className="py-8 text-sm">直近10試合を読み込み中...</p> : <>
+      {recentGamesAreStale(data.generatedAt) && <p role="status" className="text-sm text-amber-300">更新から48時間以上経過しているか、更新日時が不正です。最新の成績ではない可能性があります。</p>}
+      <BattingTopFourMetricsGrid year={year} isWeeklyTab={false}
+        leaders={Object.fromEntries(data.cards.map(card => [card.label, card.rows]))}
+        getRankingUrl={label => recentV2Href(league, data.cards.find(card => card.label === label)!.key)}
+        getStatsListUrl={label => recentV2Href(league, data.cards.find(card => card.label === label)!.key)}
+        emptyLabel="対象者なし"
+        renderLeaderRow={({ leader, stat, index }) => <TopPageModernLeaderRow
+          key={String(leader.playerId)} leader={leader} stat={stat} index={index}
+          playerHref={typeof leader.href === "string" ? leader.href : null}
+          modernLeaderRow={true} typography={topLeaderRowTypography(year, "batting", false)}
+        />}
+      />
+    </>}
+  </section>
 }

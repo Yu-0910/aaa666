@@ -60,7 +60,6 @@ export function TopPageClient({
   articlesMode,
   activeMainTab,
   seasonInitial = null,
-  weeklyInitial = null,
 }: TopPageClientProps) {
   const isMobile = layout === "mobile"
   const [selectedYear, setSelectedYear] = useState(initialYear)
@@ -137,7 +136,6 @@ export function TopPageClient({
   )
 
   const prefetchSeasonTab = activeMainTab === 0 && selectedYear === 2026 && seasonInitial != null
-  const prefetchWeeklyTab = activeMainTab === 1 && selectedYear === 2026 && weeklyInitial != null
 
   const tabContentInner = (
     <>
@@ -152,11 +150,10 @@ export function TopPageClient({
         </div>
       )}
       {activeMainTab === 1 && (
-        <div>
+        <div id="weekly-ranking-content">
           <TopPageWeeklyTabContent
             year={selectedYear}
             layout={layout}
-            initialPayload={prefetchWeeklyTab ? weeklyInitial : undefined}
             activeView={topWeeklyView}
           />
         </div>
@@ -193,7 +190,7 @@ export function TopPageClient({
   )
 
   return (
-    <div className={`min-h-screen site-bg text-white ${activeMainTab === 0 || activeMainTab === 1 || activeMainTab === 4 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
+    <div className={`min-h-screen site-bg text-white ${isWeeklyMainTab ? "pb-[calc(env(safe-area-inset-bottom)+120px)]" : activeMainTab === 0 || activeMainTab === 4 ? "pb-24 md:pb-0" : ""} ${isTopBattingModernPage ? "top-2025-font latin font-light" : ""}`}>
       {isMobile ? (
         <header className="sticky top-0 z-50 site-header-bg backdrop-blur-sm border-b border-[#333] py-1 px-3">
           <div className="flex items-center justify-between relative">
@@ -301,11 +298,11 @@ export function TopPageClient({
       {activeMainTab === 0 && (
         <RankingBottomNav activeView={topSeasonView} onViewChange={setTopSeasonView} />
       )}
-      {activeMainTab === 1 && (
-        <RankingBottomNav mode="weekly" activeView={topWeeklyView} onViewChange={setTopWeeklyView} />
-      )}
       {activeMainTab === 4 && (
         <RankingBottomNav mode="standings" year={selectedYear} activeView={standingsView} onViewChange={setStandingsView} />
+      )}
+      {isWeeklyMainTab && (
+        <RankingBottomNav mode="weekly" activeView={topWeeklyView} onViewChange={setTopWeeklyView} />
       )}
       <SiteFooter className="mt-12" />
     </div>

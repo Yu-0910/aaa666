@@ -11,7 +11,7 @@ function isNextCalendarDay(prev: string, next: string): boolean {
   return addDaysYmd(prev, 1) === next
 }
 
-/** 同一 cardKey の試合を日付順に並べ、連続 2 日以上のカード系列を抽出 */
+/** 同一 cardKey の試合を日付順に並べ、連続日かつ同じホーム/ビジター構成のカード系列を抽出 */
 export function detectThreeGameSeriesFromGames(
   games: readonly ScheduleDayGame[],
 ): ThreeGameSeriesCard[] {
@@ -37,15 +37,35 @@ export function detectThreeGameSeriesFromGames(
     for (let i = 1; i <= dates.length; i++) {
       const prev = dates[i - 1]!
       const cur = dates[i]
-      const breaks = !cur || !isNextCalendarDay(prev, cur)
+      const prevGame = byDate.get(prev)!
+      const curGame = cur ? byDate.get(cur)! : null
+      const breaks =
+        !cur ||
+        !isNextCalendarDay(prev, cur) ||
+        !curGame ||
+        !sameHomeAwayPair(prevGame, curGame)
       if (!breaks) continue
 
       const runDates = dates.slice(runStart, i)
+      const hasAdjacentSameMatchup =
+        (runStart > 0 && isNextCalendarDay(dates[runStart - 1]!, runDates[0]!)) ||
+        (i < dates.length && isNextCalendarDay(runDates[runDates.length - 1]!, dates[i]!))
       // 地方開催などでは同一カードが 2 試合だけになる。2 連戦も予想先発の
-      // 表示対象にし、3 試合以上は従来どおり 3 試合単位で扱う。
-      if (runDates.length === 2) {
+      // 表示対象にし、ホーム/ビジター入れ替わりで分断された場合は 1 試合カードも残す。
+      // 3 試合以上は従来どおり 3 試合単位で扱う。
+      if (runDates.length === 1 && hasAdjacentSameMatchup) {
+        const soloGames = runDates.map((d) => byDate.get(d)!)
+        const teamCodes = displayPairCodes(soloGames[0]!)
+        cards.push({
+          cardKey,
+          teamCodes,
+          seriesStart: runDates[0]!,
+          seriesEnd: runDates[0]!,
+          games: soloGames,
+        })
+      } else if (runDates.length === 2) {
         const duoGames = runDates.map((d) => byDate.get(d)!)
-        const teamCodes = sortedPairCodes(duoGames[0]!)
+        const teamCodes = displayPairCodes(duoGames[0]!)
         cards.push({
           cardKey,
           teamCodes,
@@ -58,7 +78,7 @@ export function detectThreeGameSeriesFromGames(
           const trio = runDates.slice(j, j + 3)
           if (!isConsecutiveDates(trio)) continue
           const trioGames = trio.map((d) => byDate.get(d)!)
-          const teamCodes = sortedPairCodes(trioGames[0]!)
+          const teamCodes = displayPairCodes(trioGames[0]!)
           cards.push({
             cardKey,
             teamCodes,
@@ -82,8 +102,12 @@ function isConsecutiveDates(dates: string[]): boolean {
   return true
 }
 
-function sortedPairCodes(g: ScheduleDayGame): [string, string] {
-  return [g.homeTeamCode, g.awayTeamCode].sort() as [string, string]
+function sameHomeAwayPair(a: ScheduleDayGame, b: ScheduleDayGame): boolean {
+  return a.homeTeamCode === b.homeTeamCode && a.awayTeamCode === b.awayTeamCode
+}
+
+function displayPairCodes(g: ScheduleDayGame): [string, string] {
+  return [g.awayTeamCode, g.homeTeamCode]
 }
 
 function dedupeSeriesCards(cards: ThreeGameSeriesCard[]): ThreeGameSeriesCard[] {
@@ -101,8 +125,10 @@ function dedupeSeriesCards(cards: ThreeGameSeriesCard[]): ThreeGameSeriesCard[] 
 /**
  * 今日以降の試合が 1 つ以上残る系列のみ。
  *
- * 通常は直近 6 カードまでに絞る。ただし直近表示カードがすべて残り 1 試合の
- * 状態では、翌カードへの切り替わりが見えるように次の日程グループをまとめて足す。
+ * 通常は直近 6 カードを基準に絞る。ただし同じ次回試合日のカードを途中で切ると
+ * 同日開始の系列が一部だけ欠落するため、上限位置の日付グループはまとめて残す。
+ * さらに直近表示カードがすべて残り 1 試合の状態では、翌カードへの切り替わりが
+ * 見えるように次の日程グループをまとめて足す。
  */
 export function pickRecentThreeGameSeriesCards(
   cards: readonly ThreeGameSeriesCard[],
@@ -122,7 +148,12 @@ export function pickRecentThreeGameSeriesCards(
       return aDate.localeCompare(bDate) || a.seriesStart.localeCompare(b.seriesStart) || a.cardKey.localeCompare(b.cardKey)
     })
 
-  const picked = filtered.slice(0, maxCards)
+  const basePicked = filtered.slice(0, maxCards)
+  const cutoffDate = basePicked[basePicked.length - 1] && firstFutureGameDate(basePicked[basePicked.length - 1]!, asOfDateJst)
+  let picked = cutoffDate
+    ? filtered.filter((card, index) => index < maxCards || firstFutureGameDate(card, asOfDateJst) === cutoffDate)
+    : basePicked
+  picked = includeAdjacentSplitCards(picked, filtered)
   if (picked.length === 0 || !picked.every(card => card.games.filter(game => game.dateJst >= asOfDateJst).length === 1)) {
     return picked
   }
@@ -130,6 +161,37 @@ export function pickRecentThreeGameSeriesCards(
   const nextDate = remaining[0] && firstFutureGameDate(remaining[0], asOfDateJst)
   if (!nextDate) return picked
   return [...picked, ...remaining.filter(card => firstFutureGameDate(card, asOfDateJst) === nextDate)]
+}
+
+function includeAdjacentSplitCards(
+  picked: readonly ThreeGameSeriesCard[],
+  filtered: readonly ThreeGameSeriesCard[],
+): ThreeGameSeriesCard[] {
+  const out = [...picked]
+  const seen = new Set(out.map(seriesIdentity))
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const card of filtered) {
+      const id = seriesIdentity(card)
+      if (seen.has(id)) continue
+      if (!out.some((pickedCard) => isAdjacentSplitCard(pickedCard, card))) continue
+      seen.add(id)
+      out.push(card)
+      changed = true
+    }
+  }
+  const order = new Map(filtered.map((card, index) => [seriesIdentity(card), index]))
+  return out.sort((a, b) => (order.get(seriesIdentity(a)) ?? 0) - (order.get(seriesIdentity(b)) ?? 0))
+}
+
+function isAdjacentSplitCard(a: ThreeGameSeriesCard, b: ThreeGameSeriesCard): boolean {
+  if (a.cardKey !== b.cardKey) return false
+  return addDaysYmd(a.seriesEnd, 1) === b.seriesStart || addDaysYmd(b.seriesEnd, 1) === a.seriesStart
+}
+
+function seriesIdentity(card: ThreeGameSeriesCard): string {
+  return `${card.cardKey}:${card.seriesStart}:${card.seriesEnd}`
 }
 
 /**

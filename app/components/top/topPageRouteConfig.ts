@@ -31,7 +31,7 @@ export const TOP_PAGE_ROUTE_CONFIGS: Record<TopPageRouteKey, TopPageRouteConfig>
   weekly: {
     key: "weekly",
     tabId: 1,
-    label: "今週",
+    label: "直近",
     href: "/weekly-stats",
     title: "プロ野球 今週の成績ランキング 2026 | Short-Stop",
     description:

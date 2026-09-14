@@ -9,7 +9,7 @@
 
 "use client"
 
-import { Fragment, useEffect, useRef } from "react"
+import { Fragment, useEffect, useRef, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
@@ -24,6 +24,11 @@ import { dedupeRankingRowsForDisplay } from '@/lib/ranking/dedupeRankingRows'
 import SiteFooter from "@/app/components/common/SiteFooter"
 
 interface RankingUIProps {
+  allowActiveMetricToggle?: boolean
+  titleOverride?: string
+  beforeTitle?: ReactNode
+  beforeTable?: ReactNode
+  formatMetricValue?: (label: string, value: unknown) => string
   viewModel: RankingViewModel
   sortedRows: RankingRow[]
   sortKey: string
@@ -81,6 +86,7 @@ function rankingTableMinWidthPx(leftBlockWidth: number, metricColMinWidth: numbe
 }
 
 type RankingTableHeaderRowProps = {
+  allowActiveMetricToggle?: boolean
   variant: 'primary' | 'repeat'
   leftBlockWidth: number
   playerWidth: number
@@ -91,6 +97,7 @@ type RankingTableHeaderRowProps = {
 }
 
 function RankingTableHeaderRow({
+  allowActiveMetricToggle = false,
   variant,
   leftBlockWidth,
   playerWidth,
@@ -182,7 +189,7 @@ function RankingTableHeaderRow({
             <button
               type="button"
               onClick={() => {
-                if (sortKey === metric.key) return
+                if (sortKey === metric.key && !allowActiveMetricToggle) return
                 onSortChange(metric.key)
               }}
               title={metric.label}
@@ -223,6 +230,11 @@ function RankingTableHeaderRow({
 }
 
 export default function RankingUI({
+  allowActiveMetricToggle = false,
+  titleOverride,
+  beforeTitle,
+  beforeTable,
+  formatMetricValue,
   viewModel,
   sortedRows,
   sortKey,
@@ -332,7 +344,7 @@ export default function RankingUI({
     <>
       <div className="flex items-center gap-1.5 mb-1">
         <div className="w-0.5 h-5 bg-[#039850]" />
-        <h1 className="text-base font-bold text-white">{displayTitle}</h1>
+        <h1 className="text-base font-bold text-white">{titleOverride ?? displayTitle}</h1>
       </div>
       {titleSubNote ? (
         <p className="text-[10px] text-gray-500 mb-2 leading-snug max-w-[920px]">{titleSubNote}</p>
@@ -394,6 +406,7 @@ export default function RankingUI({
               <thead>
                 <RankingTableHeaderRow
                   variant="primary"
+                  allowActiveMetricToggle={allowActiveMetricToggle}
                   leftBlockWidth={leftBlockWidth}
                   playerWidth={playerWidth}
                   metricColMinWidth={metricColMinWidth}
@@ -420,6 +433,7 @@ export default function RankingUI({
                         <RankingTableHeaderRow
                           key={`header-${idx}`}
                           variant="repeat"
+                          allowActiveMetricToggle={allowActiveMetricToggle}
                           leftBlockWidth={leftBlockWidth}
                           playerWidth={playerWidth}
                           metricColMinWidth={metricColMinWidth}
@@ -528,7 +542,7 @@ export default function RankingUI({
                       {/* 層2: 指標の値のみ */}
                       {displayMetrics.map((metric, metricIdx) => {
                         const value = row[metric.key]
-                        const formattedValue = value !== null && value !== undefined && !isNaN(Number(value))
+                        const formattedValue = formatMetricValue ? formatMetricValue(metric.label, value) : value !== null && value !== undefined && !isNaN(Number(value))
                           ? formatStat(metric.label, value)
                           : '-'
                         const isActive = sortKey === metric.key
@@ -669,7 +683,9 @@ export default function RankingUI({
 
       <main className="max-w-[1400px] mx-auto px-2 py-3">
         {headerNavBlock}
+        {beforeTitle}
         {titleBlock}
+        {beforeTable}
         {tableBlock}
       </main>
       {debugBlock}
