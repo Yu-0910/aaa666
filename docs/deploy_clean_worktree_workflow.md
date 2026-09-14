@@ -14,6 +14,10 @@ UI やページ構成は変えず、`push` / 本番 deploy の安全性だけを
   - リポジトリ直下の `.codex-deploy-*` 一時成果物を dry-run 表示する。
 - `npm run ops:cleanup-deploy-artifacts:apply`
   - リポジトリ直下の `.codex-deploy-*` 一時成果物だけをパス検証後に削除する。
+- `npm run ops:cleanup-stale-worktrees`
+  - `.codex-worktrees/prod` 以外の管理 worktree 削除候補を dry-run 表示する。
+- `npm run ops:cleanup-stale-worktrees:apply`
+  - dirty でない候補だけを `git worktree remove --force` で削除し、`git worktree prune` を実行する。
 - `npm run guard:clean-worktree`
   - 今の worktree に未コミット差分や未追跡ファイルがあると止める。`.codex-deploy-*` が残っている場合も止める。
 - `npm run guard:deploy-worktree-health`

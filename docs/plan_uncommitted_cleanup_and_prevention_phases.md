@@ -125,6 +125,8 @@ hotfix の完了定義:
 - `npm run guard:deploy-worktree-health` は、`.codex-worktrees/prod` が存在する場合に dirty でないことを確認し、管理中 worktree の一覧を表示する。
 - `npm run ops:cleanup-deploy-artifacts` は削除対象の dry-run を表示する。
 - `npm run ops:cleanup-deploy-artifacts:apply` は、リポジトリ直下の `.codex-deploy-*` だけをパス検証後に削除する。
+- `npm run ops:cleanup-stale-worktrees` は、`.codex-worktrees/prod` 以外の管理 worktree 削除候補を dry-run 表示する。
+- `npm run ops:cleanup-stale-worktrees:apply` は、dirty でない候補だけを `git worktree remove --force` で削除し、`git worktree prune` を実行する。
 
 ## Phase 5: 削除前バックアップ
 
