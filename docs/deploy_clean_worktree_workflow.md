@@ -16,6 +16,8 @@ UI やページ構成は変えず、`push` / 本番 deploy の安全性だけを
   - リポジトリ直下の `.codex-deploy-*` 一時成果物だけをパス検証後に削除する。
 - `npm run guard:clean-worktree`
   - 今の worktree に未コミット差分や未追跡ファイルがあると止める。`.codex-deploy-*` が残っている場合も止める。
+- `npm run guard:deploy-worktree-health`
+  - `.codex-worktrees/prod` が存在する場合に dirty でないことを確認し、管理中 worktree の一覧を表示する。
 - `npm run guard:deploy-data-worktree`
   - R2 反映後のプロキシ再デプロイなど、データ反映用途の deploy 前 gate。日次パイプラインの自動 Vercel deploy 直前にも実行される。
 - `npm run worktree:deploy:init`

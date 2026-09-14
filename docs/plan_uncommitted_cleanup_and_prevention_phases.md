@@ -122,6 +122,7 @@ hotfix の完了定義:
 
 - `npm run guard:no-deploy-artifacts` は、リポジトリ直下の `.codex-deploy-*` ディレクトリ / zip が残っていれば失敗する。
 - `guard:clean-worktree` / `guard:deploy-ui-worktree` / `guard:deploy-data-worktree` は、このガードを先頭で実行する。
+- `npm run guard:deploy-worktree-health` は、`.codex-worktrees/prod` が存在する場合に dirty でないことを確認し、管理中 worktree の一覧を表示する。
 - `npm run ops:cleanup-deploy-artifacts` は削除対象の dry-run を表示する。
 - `npm run ops:cleanup-deploy-artifacts:apply` は、リポジトリ直下の `.codex-deploy-*` だけをパス検証後に削除する。
 
