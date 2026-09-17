@@ -29,10 +29,6 @@ export default function RecentGamesRankingClient({ snapshot, metrics, league, so
     onSortChange={key => router.replace(recentV2Href(league, key, recentV2NextOrder(key, sort, order)), { scroll: false })}
     yearOptions={[2026]} onYearChange={() => {}}
     titleOverride={title}
-    headerNavGroups={[{ ariaLabel: "ランキングナビゲーション", links: [
-      { href: "/weekly-stats", label: "今週" },
-      ...(["CL", "PL"] as const).map(value => ({ href: recentV2Href(value, sort, order), label: value === "CL" ? "セ野手" : "パ野手", active: value === league })),
-    ] }]}
     beforeTitle={<RecentGamesWeeklyLinks currentLeague={league} />}
     formatMetricValue={formatRankingStatDisplay}
     beforeTable={<>
