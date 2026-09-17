@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import type { TopPageLayoutMode } from "./topPageLayoutMode"
 import type { TopWeeklyView } from "@/app/components/common/RankingBottomNav"
+import type { WeeklyTabWeekMeta } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import type { RecentV2CardsPayload } from "@/lib/topPage/recentGamesV2Cards"
 import type { RecentTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 import { recentV2Href } from "@/lib/ranking/recentGamesV2Page"
@@ -11,11 +13,27 @@ import { TopPageModernLeaderRow } from "./TopPageModernLeaderRow"
 import { topLeaderRowTypography, battingSeasonGridMetrics, battingTop2025SeasonTopN } from "@/lib/topPageBatting2025Grid"
 import { recentGamesAreStale } from "@/lib/ranking/recentGamesFreshness"
 
-export function TopPageWeeklyTabContent({ year, activeView, initialPayload }: {
-  year: number; layout: TopPageLayoutMode; activeView: TopWeeklyView; initialPayload?: RecentTabPayload | null
+const rankingLinkClass =
+  "inline-flex items-center rounded border border-[#444] bg-[#141414] px-[7.2px] py-[1.8px] text-[9.9px] text-gray-400 hover:border-[#666] hover:text-[#ffff44] transition-colors focus-visible:outline focus-visible:outline-[#ffff44]"
+
+export function TopPageWeeklyTabContent({ year, activeView, initialPayload, weekMeta }: {
+  year: number; layout: TopPageLayoutMode; activeView: TopWeeklyView; initialPayload?: RecentTabPayload | null; weekMeta?: WeeklyTabWeekMeta | null
 }) {
   const league = activeView.startsWith("cl") ? "CL" : "PL"
-  return <RecentCards key={league + year} league={league} year={year} initialData={initialPayload?.[league] ?? null} />
+  return <>
+    {weekMeta ? <nav aria-label="今週ランキング" className="mb-4 space-y-1.5">
+      <p className="text-xs text-gray-400">今週ランキング（{weekMeta.weekLabel}）{weekMeta.isFallbackWeek ? " / 今週のデータ未確定のため直近の掲載週" : ""}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {(["CL", "PL"] as const).flatMap(linkLeague => (["batting", "pitching"] as const).map(category =>
+          <Link key={`${linkLeague}-${category}`} prefetch={false}
+            href={`/ranking/${category === "pitching" ? "pitching/" : ""}weekly/2026/${weekMeta.weekKey}/${linkLeague}`}
+            className={rankingLinkClass}>
+            {linkLeague === "CL" ? "セ" : "パ"}{category === "batting" ? "野手" : "投手"}
+          </Link>))}
+      </div>
+    </nav> : null}
+    <RecentCards key={league + year} league={league} year={year} initialData={initialPayload?.[league] ?? null} />
+  </>
 }
 
 function isValidRecentPayload(payload: RecentV2CardsPayload | null | undefined, league: "CL" | "PL", year: number): payload is RecentV2CardsPayload {

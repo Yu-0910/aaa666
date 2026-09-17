@@ -22,6 +22,7 @@ import RankingBottomNav, {
   type TopStandingsView,
   type TopWeeklyView,
 } from "@/app/components/common/RankingBottomNav"
+import type { WeeklyTabWeekMeta } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import type { RecentTabPayload, SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 const TOP_TEAM_PAGE_NAV_ROWS = [
@@ -54,6 +55,8 @@ export type TopPageClientProps = {
   weeklyInitial?: WeeklyTabPayload | null
   /** 2026: サーバーで読んだ直近タブ用データ */
   recentInitial?: RecentTabPayload | null
+  /** 2026: 直近タブ上部に出す今週ランキング用メタ */
+  recentWeekMeta?: WeeklyTabWeekMeta | null
 }
 
 export function TopPageClient({
@@ -63,6 +66,7 @@ export function TopPageClient({
   activeMainTab,
   seasonInitial = null,
   recentInitial = null,
+  recentWeekMeta = null,
 }: TopPageClientProps) {
   const isMobile = layout === "mobile"
   const [selectedYear, setSelectedYear] = useState(initialYear)
@@ -159,6 +163,7 @@ export function TopPageClient({
             layout={layout}
             activeView={topWeeklyView}
             initialPayload={activeMainTab === 1 && selectedYear === 2026 ? recentInitial : null}
+            weekMeta={activeMainTab === 1 && selectedYear === 2026 ? recentWeekMeta : null}
           />
         </div>
       )}
