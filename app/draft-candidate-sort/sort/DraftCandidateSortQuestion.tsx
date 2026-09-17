@@ -75,6 +75,12 @@ export function DraftCandidateSortQuestion() {
     totalComparisons > 0
       ? Math.min(100, Math.round((answeredComparisons / totalComparisons) * 100))
       : 0
+  const completionText =
+    sortState?.completedReason === "stable"
+      ? "上位36人が安定しました"
+      : sortState?.completedReason === "maxQuestions"
+        ? "必要な比較数に達しました"
+        : "上位36人を優先して確認中"
 
   function persist(nextState: DraftSortState) {
     if (!session) return
@@ -87,6 +93,8 @@ export function DraftCandidateSortQuestion() {
       candidateIds: nextState.candidateIds,
       answers: nextState.answers,
       ranking: nextState.ranking,
+      ratings: nextState.ratings,
+      completedReason: nextState.completedReason,
       unknownCounts: nextState.unknownCounts,
       tieGroups: nextState.tieGroups,
       updatedAt: new Date().toISOString(),
@@ -140,6 +148,7 @@ export function DraftCandidateSortQuestion() {
           </p>
           <p>完了率 {progressPercent}%</p>
         </div>
+        <p className="mt-2 text-xs text-slate-500">{completionText}</p>
         <div className="mt-3 h-2 overflow-hidden rounded bg-slate-100">
           <div
             className="h-full rounded bg-emerald-700 transition-all"

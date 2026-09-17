@@ -4,7 +4,7 @@ import type {
   DraftPredictionRow,
   UnknownCandidateRow,
 } from "./resultBuilder"
-import type { DraftSortAnswer } from "./sortEngine"
+import type { DraftSortAnswer, DraftSortRatingRecord } from "./sortEngine"
 
 export const draftSortStorageKey = "draft-candidate-sort:v1"
 export const resultRetentionMs = 24 * 60 * 60 * 1000
@@ -26,6 +26,8 @@ export type DraftSortSession = {
   candidateIds: string[]
   answers: DraftSortAnswer[]
   ranking: string[]
+  ratings?: Record<string, DraftSortRatingRecord>
+  completedReason?: "single" | "stable" | "maxQuestions" | null
   unknownCounts: Record<string, number>
   tieGroups: string[][]
   banzukeResult: BanzukeRow[]
@@ -56,6 +58,8 @@ export function createDraftSortSession(
     candidateIds: [],
     answers: [],
     ranking: [],
+    ratings: {},
+    completedReason: null,
     unknownCounts: {},
     tieGroups: [],
     banzukeResult: [],
