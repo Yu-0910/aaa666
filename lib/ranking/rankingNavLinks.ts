@@ -37,8 +37,10 @@ function buildLeagueNavRow(year: string, league: "CL" | "PL", activeKind: Rankin
 }
 
 export function buildRankingTopNavGroups(year: string, league: "CL" | "PL", kind: RankingPageKind): RankingNavGroup[] {
+  const otherLeague: "CL" | "PL" = league === "CL" ? "PL" : "CL"
   return [
     buildLeagueNavRow(year, league, kind, league),
+    buildLeagueNavRow(year, otherLeague, kind, league),
   ]
 }
 
@@ -93,7 +95,9 @@ export function buildWeeklyRankingTopNavGroups(
   league: "CL" | "PL",
   kind: RankingPageKind,
 ): RankingNavGroup[] {
+  const otherLeague: "CL" | "PL" = league === "CL" ? "PL" : "CL"
   return [
     buildLeagueWeeklyNavRow(year, weekKey, league, kind, league),
+    buildLeagueWeeklyNavRow(year, weekKey, otherLeague, kind, league),
   ]
 }
