@@ -77,10 +77,10 @@ export function DraftCandidateSortQuestion() {
       : 0
   const completionText =
     sortState?.completedReason === "stable"
-      ? "上位36人が安定しました"
+      ? "上位36人が確定したため終了します"
       : sortState?.completedReason === "maxQuestions"
         ? "必要な比較数に達しました"
-        : "上位36人を優先して確認中"
+        : "上位36人が確定した時点で終了します"
 
   function persist(nextState: DraftSortState) {
     if (!session) return
@@ -142,10 +142,6 @@ export function DraftCandidateSortQuestion() {
     <>
       <div className="mb-5 rounded border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-          <p>
-            比較 {Math.min(sortState.currentIndex + 1, totalComparisons)} /{" "}
-            {totalComparisons}
-          </p>
           <p>完了率 {progressPercent}%</p>
         </div>
         <p className="mt-2 text-xs text-slate-500">{completionText}</p>
