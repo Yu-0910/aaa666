@@ -22,7 +22,7 @@ import RankingBottomNav, {
   type TopStandingsView,
   type TopWeeklyView,
 } from "@/app/components/common/RankingBottomNav"
-import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import type { RecentTabPayload, SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
 
 const TOP_TEAM_PAGE_NAV_ROWS = [
   [
@@ -52,6 +52,8 @@ export type TopPageClientProps = {
   seasonInitial?: SeasonTabPayload | null
   /** 2026: サーバーで読んだ今週タブ用データ */
   weeklyInitial?: WeeklyTabPayload | null
+  /** 2026: サーバーで読んだ直近タブ用データ */
+  recentInitial?: RecentTabPayload | null
 }
 
 export function TopPageClient({
@@ -60,6 +62,7 @@ export function TopPageClient({
   articlesMode,
   activeMainTab,
   seasonInitial = null,
+  recentInitial = null,
 }: TopPageClientProps) {
   const isMobile = layout === "mobile"
   const [selectedYear, setSelectedYear] = useState(initialYear)
@@ -155,6 +158,7 @@ export function TopPageClient({
             year={selectedYear}
             layout={layout}
             activeView={topWeeklyView}
+            initialPayload={activeMainTab === 1 && selectedYear === 2026 ? recentInitial : null}
           />
         </div>
       )}

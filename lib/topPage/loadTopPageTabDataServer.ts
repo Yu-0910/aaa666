@@ -11,6 +11,9 @@ import { getProjectRoot } from "@/lib/projectRoot"
 import { fetchTopLeadersSnapshotRemote } from "@/lib/topPage/fetchTopLeadersSnapshotRemote"
 import { readTopLeadersSnapshot } from "@/lib/topPage/leadersSnapshot2026"
 import { getPitchingLeadersAsync } from "@/lib/ranking/leadersFromPitchingRankingsJson"
+import { loadRecentGamesV2 } from "@/lib/ranking/loadRecentGamesV2"
+import { loadMetricsFromRecord } from "@/lib/ranking/record"
+import { playerPageHrefKnown } from "@/lib/playerPageHref"
 import {
   publicWeeklyTeamStandingsRelPath,
   siteWeeklyTeamStandingsPath,
@@ -18,7 +21,8 @@ import {
 import { isTeamStandingsJson, type StandingsLeague, type TeamStandingsJson } from "@/lib/standings/types"
 import { TOP_LEADERS_SNAPSHOT_YEAR } from "@/lib/topPage/leadersSnapshotShared"
 import type { TopLeadersCategory } from "@/lib/topPage/leadersSnapshotShared"
-import type { SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import type { RecentTabPayload, SeasonTabPayload, WeeklyTabPayload } from "@/lib/topPage/topPageTabPayloadTypes"
+import { buildRecentV2Cards, type RecentV2CardsPayload } from "@/lib/topPage/recentGamesV2Cards"
 import {
   readWeeklyCurrentWeekJson,
   type WeeklyCurrentWeekJson,
@@ -218,6 +222,49 @@ export async function loadWeeklyTabPayloadServer(
     }
   } catch (err) {
     console.error("[loadWeeklyTabPayloadServer]", err)
+    return null
+  }
+}
+
+async function loadRecentCardsPayloadServer(
+  league: "CL" | "PL"
+): Promise<RecentV2CardsPayload> {
+  const metrics = loadMetricsFromRecord().map(({ key, label }) => ({ key, label }))
+  const snapshot = await loadRecentGamesV2(league, metrics)
+  const cards = buildRecentV2Cards(snapshot).map(card => ({
+    ...card,
+    rows: card.rows.map(row => ({
+      ...row,
+      href: playerPageHrefKnown({
+        playerId: row.playerId,
+        npbPlayerId: row.npbPlayerId ?? undefined,
+        name: row.name,
+        season: "2026",
+      }) ?? null,
+    })),
+  }))
+  return {
+    schemaVersion: "recent-10-cards-v2",
+    league,
+    asOf: snapshot.asOf,
+    latestGameDate: snapshot.latestGameDate,
+    generatedAt: snapshot.generatedAt,
+    cards,
+  }
+}
+
+export async function loadRecentTabPayloadServer(
+  year: string | number
+): Promise<RecentTabPayload | null> {
+  try {
+    if (String(year) !== "2026") return null
+    const [cl, pl] = await Promise.all([
+      loadRecentCardsPayloadServer("CL"),
+      loadRecentCardsPayloadServer("PL"),
+    ])
+    return { CL: cl, PL: pl }
+  } catch (err) {
+    console.error("[loadRecentTabPayloadServer]", err)
     return null
   }
 }
