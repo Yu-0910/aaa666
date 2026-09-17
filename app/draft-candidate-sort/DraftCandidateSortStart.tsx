@@ -41,6 +41,12 @@ export function DraftCandidateSortStart() {
   const selectedLabel = getCandidateFilterLabel(selectedFilter)
   const selectedAll = selectedFilter === "all"
   const allCandidates = getCandidatesForSort()
+  const savedResultExpiresAt = savedSession?.resultExpiresAt
+    ? new Date(savedSession.resultExpiresAt).toLocaleString("ja-JP", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : null
 
   function startSort() {
     const session = createDraftSortSession(selectedFilter)
@@ -70,6 +76,11 @@ export function DraftCandidateSortStart() {
                 {getCandidateFilterLabel(savedSession.targetFilter)} / 回答{" "}
                 {savedSession.answers.length}件
               </p>
+              {savedResultExpiresAt ? (
+                <p className="mt-1 text-xs text-emerald-800">
+                  結果の保存期限: {savedResultExpiresAt}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <button

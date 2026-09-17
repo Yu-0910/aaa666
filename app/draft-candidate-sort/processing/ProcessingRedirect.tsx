@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { buildDraftSortResults } from "../_lib/resultBuilder"
 import {
+  getResultExpiresAt,
   loadDraftSortSession,
   saveDraftSortSession,
   type DraftSortSession,
@@ -28,6 +29,7 @@ export function ProcessingRedirect() {
       ...builtResults,
       currentRoute: "/draft-candidate-sort/result",
       updatedAt: new Date().toISOString(),
+      resultExpiresAt: getResultExpiresAt(),
     }
 
     saveDraftSortSession(nextSession)

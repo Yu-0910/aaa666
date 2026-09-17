@@ -23,6 +23,7 @@ const {
   validateCandidateDataSet,
 } = candidateData
 const { createDraftSortSession } = storage
+const { getResultExpiresAt, resultRetentionMs } = storage
 
 const now = new Date("2026-09-17T00:00:00.000Z")
 
@@ -31,6 +32,11 @@ const now = new Date("2026-09-17T00:00:00.000Z")
   assert.equal(session.currentRoute, "/draft-candidate-sort/sort")
   assert.equal(session.targetFilter, "recommended")
   assert.deepEqual(session.answers, [])
+}
+
+{
+  const expiresAt = getResultExpiresAt(now)
+  assert.equal(Date.parse(expiresAt) - now.getTime(), resultRetentionMs)
 }
 
 {

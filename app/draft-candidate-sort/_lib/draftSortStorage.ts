@@ -7,6 +7,7 @@ import type {
 import type { DraftSortAnswer } from "./sortEngine"
 
 export const draftSortStorageKey = "draft-candidate-sort:v1"
+export const resultRetentionMs = 24 * 60 * 60 * 1000
 
 export type DraftSortRoute =
   | "/draft-candidate-sort"
@@ -21,6 +22,7 @@ export type DraftSortSession = {
   targetFilter: CandidateFilter
   createdAt: string
   updatedAt: string
+  resultExpiresAt?: string
   candidateIds: string[]
   answers: DraftSortAnswer[]
   ranking: string[]
@@ -79,6 +81,13 @@ export function loadDraftSortSession(): DraftSortSession | null {
     if (!Array.isArray(parsed.answers)) return null
     if (!Array.isArray(parsed.ranking)) return null
     if (!Array.isArray(parsed.candidateIds)) return null
+    if (parsed.resultExpiresAt) {
+      const expiresAt = Date.parse(parsed.resultExpiresAt)
+      if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+        clearDraftSortSession()
+        return null
+      }
+    }
     return parsed as DraftSortSession
   } catch {
     return null
@@ -87,4 +96,8 @@ export function loadDraftSortSession(): DraftSortSession | null {
 
 export function clearDraftSortSession(): void {
   window.localStorage.removeItem(draftSortStorageKey)
+}
+
+export function getResultExpiresAt(now = new Date()): string {
+  return new Date(now.getTime() + resultRetentionMs).toISOString()
 }
