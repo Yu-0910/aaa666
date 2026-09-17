@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   type CandidateFilter,
+  filterCandidatesForSort,
   getCandidateFilterLabel,
+  getCandidatesForSort,
 } from "./_lib/candidateData"
 import {
   clearDraftSortSession,
@@ -38,6 +40,7 @@ export function DraftCandidateSortStart() {
 
   const selectedLabel = getCandidateFilterLabel(selectedFilter)
   const selectedAll = selectedFilter === "all"
+  const allCandidates = getCandidatesForSort()
 
   function startSort() {
     const session = createDraftSortSession(selectedFilter)
@@ -93,6 +96,7 @@ export function DraftCandidateSortStart() {
           const label = getCandidateFilterLabel(filter)
           const recommended = filter === "recommended"
           const selected = filter === selectedFilter
+          const count = filterCandidatesForSort(allCandidates, filter).length
 
           return (
             <button
@@ -114,6 +118,9 @@ export function DraftCandidateSortStart() {
                 </span>
               ) : null}
               <span className="block text-lg font-bold">{label}</span>
+              <span className="mt-2 block text-sm text-slate-500">
+                {count}人
+              </span>
               {recommended ? (
                 <span className="mt-2 block text-sm text-slate-600">
                   迷ったらここから

@@ -1,3 +1,5 @@
+import { candidates2026DataSet } from "../_data/candidates2026"
+
 export type CandidateCategory = "highSchool" | "university" | "corporate"
 
 export type CandidatePositionGroup =
@@ -41,12 +43,7 @@ export type CandidateFilter =
   | "universityCorporate"
   | "recommended"
 
-const candidateDataSet: CandidateDataSet = {
-  version: "2026-draft-candidate-sort-v1",
-  updatedAt: "2026-09-17",
-  displayPlayers: [],
-  internalPriority: [],
-}
+const candidateDataSet: CandidateDataSet = candidates2026DataSet
 
 const categoryLabels = {
   highSchool: "高校生",
@@ -148,4 +145,3 @@ export function validateCandidateDataSet(dataSet: CandidateDataSet): string[] {
 
   return errors
 }
-

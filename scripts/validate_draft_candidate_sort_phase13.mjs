@@ -18,6 +18,8 @@ const {
 } = resultBuilder
 const {
   filterCandidatesForSort,
+  getCandidateDataSet,
+  getCandidatesForSort,
   validateCandidateDataSet,
 } = candidateData
 const { createDraftSortSession } = storage
@@ -29,6 +31,14 @@ const now = new Date("2026-09-17T00:00:00.000Z")
   assert.equal(session.currentRoute, "/draft-candidate-sort/sort")
   assert.equal(session.targetFilter, "recommended")
   assert.deepEqual(session.answers, [])
+}
+
+{
+  const dataSet = getCandidateDataSet()
+  assert.ok(dataSet.displayPlayers.length > 0)
+  assert.equal(dataSet.displayPlayers.length, dataSet.internalPriority.length)
+  assert.deepEqual(validateCandidateDataSet(dataSet), [])
+  assert.ok(filterCandidatesForSort(getCandidatesForSort(), "recommended").length > 0)
 }
 
 {
