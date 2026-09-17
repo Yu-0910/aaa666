@@ -157,7 +157,7 @@ export function DraftCandidateSortQuestion() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <CandidateCard
           label="左の候補"
           candidate={leftCandidate}
@@ -213,14 +213,14 @@ function CandidateCard({
     <button
       type="button"
       onClick={onSelect}
-      className="min-h-72 rounded border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-3 focus:ring-emerald-600"
+      className="min-h-64 rounded border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-3 focus:ring-emerald-600 sm:min-h-72 sm:p-5"
       aria-label={`${label}を上にする`}
     >
-      <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <h2 className="mt-4 text-2xl font-bold">
+      <p className="text-xs font-semibold text-slate-500 sm:text-sm">{label}</p>
+      <h2 className="mt-3 break-words text-lg font-bold leading-snug sm:mt-4 sm:text-2xl">
         {candidate?.name ?? "候補者名"}
       </h2>
-      <dl className="mt-5 grid gap-3 text-sm">
+      <dl className="mt-4 grid gap-2 text-xs sm:mt-5 sm:gap-3 sm:text-sm">
         <div>
           <dt className="text-slate-500">所属</dt>
           <dd className="font-semibold">{candidate?.schoolOrTeam ?? "所属名"}</dd>
