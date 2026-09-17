@@ -8,6 +8,7 @@
 import { useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import RankingUI from "@/components/RankingUI"
+import RankingPageBottomLinkNav from "@/app/components/common/RankingPageBottomLinkNav"
 import type { RankingViewModel } from "@/lib/ranking/types"
 import { getDefaultBattingSortOrder } from "@/lib/ranking/battingSortOrder"
 import { shouldRequireQualifyingPA } from "@/lib/ranking/qualifyingPA"
@@ -73,7 +74,7 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
     !yahooPoc
 
   return (
-    <div className="min-h-screen site-bg text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col pb-[calc(env(safe-area-inset-bottom)+112px)]">
       {emptyAfterFilter && (
         <div className="border-b border-[#444] bg-[#141414] px-3 py-2 text-center text-xs sm:text-sm text-gray-400">
           規定打席を満たす選手がいません。別の指標を選ぶか、team-games.json の生成（npm run phase12:build:rankings）を確認してください。
@@ -89,6 +90,17 @@ export default function RankingPageClient({ initialViewModel }: RankingPageClien
         headerNavGroups={headerNavGroups}
         pinActiveMetricNextToPlayer={pinActiveMetric}
       />
+      {initialViewModel.league === "CL" || initialViewModel.league === "PL" ? (
+        <RankingPageBottomLinkNav
+          ariaLabel="今季ランキング切り替え"
+          items={[
+            { href: `/ranking/${initialViewModel.season}/CL`, label: "セ野手", icon: "batting", active: initialViewModel.league === "CL" },
+            { href: `/ranking/pitching/${initialViewModel.season}/CL`, label: "セ投手", icon: "pitching" },
+            { href: `/ranking/${initialViewModel.season}/PL`, label: "パ野手", icon: "batting", active: initialViewModel.league === "PL" },
+            { href: `/ranking/pitching/${initialViewModel.season}/PL`, label: "パ投手", icon: "pitching" },
+          ]}
+        />
+      ) : null}
     </div>
   )
 }

@@ -7,6 +7,7 @@
 import { useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import RankingUI from "@/components/RankingUI"
+import RankingPageBottomLinkNav from "@/app/components/common/RankingPageBottomLinkNav"
 import type { RankingViewModel } from "@/lib/ranking/types"
 import { shouldRequireQualifyingPitching } from "@/lib/ranking/qualifyingPitching"
 import { season2026PitchingQualifyingNote } from "@/lib/ranking/qualifyingUiNotes"
@@ -74,7 +75,7 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
       : undefined
 
   return (
-    <div className="min-h-screen site-bg text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col pb-[calc(env(safe-area-inset-bottom)+112px)]">
       {!loadError && emptyNoData && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-3 py-2 text-center text-xs sm:text-sm text-amber-100/90">
           この指標のランキングデータがまだありません。public/data/rankings/pitching/{initialViewModel.season}/
@@ -98,6 +99,17 @@ export default function PitchingRankingPageClient({ initialViewModel }: Pitching
         headerNavGroups={headerNavGroups}
         pinActiveMetricNextToPlayer={pinActiveMetric}
       />
+      {initialViewModel.league === "CL" || initialViewModel.league === "PL" ? (
+        <RankingPageBottomLinkNav
+          ariaLabel="今季ランキング切り替え"
+          items={[
+            { href: `/ranking/${initialViewModel.season}/CL`, label: "セ野手", icon: "batting" },
+            { href: `/ranking/pitching/${initialViewModel.season}/CL`, label: "セ投手", icon: "pitching", active: initialViewModel.league === "CL" },
+            { href: `/ranking/${initialViewModel.season}/PL`, label: "パ野手", icon: "batting" },
+            { href: `/ranking/pitching/${initialViewModel.season}/PL`, label: "パ投手", icon: "pitching", active: initialViewModel.league === "PL" },
+          ]}
+        />
+      ) : null}
     </div>
   )
 }

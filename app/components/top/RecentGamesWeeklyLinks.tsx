@@ -9,45 +9,33 @@ const rankingLinkClass =
 type League = "CL" | "PL"
 type Category = "batting" | "pitching"
 
-const rankingLeagues: League[] = ["CL", "PL"]
 const rankingCategories: Category[] = ["batting", "pitching"]
 
 export function RecentGamesWeeklyLinks({ currentLeague, weekMeta }: {
   currentLeague: League
   weekMeta: WeeklyTabWeekMeta | null
 }) {
-  const linkedRecentLeague: League = currentLeague === "CL" ? "PL" : "CL"
   return <nav aria-label="ランキングページ" className="mb-4 space-y-2.5">
-    <div className="space-y-1.5">
-      <p className="text-xs text-gray-400">直近10試合ランキング</p>
-      <div className="flex flex-wrap gap-1.5">
-        <Link prefetch={false}
-          href={`/ranking/recent-games/2026/${linkedRecentLeague}/batting`}
-          className={rankingLinkClass}>
-          {linkedRecentLeague === "CL" ? "セ" : "パ"}野手
-        </Link>
-      </div>
-    </div>
     <div className="space-y-1.5">
       <p className="text-xs text-gray-400">2026ランキング</p>
       <div className="flex flex-wrap gap-1.5">
-        {rankingLeagues.flatMap(league => rankingCategories.map(category =>
-          <Link key={`season-${league}-${category}`} prefetch={false}
-            href={`/ranking/${category === "pitching" ? "pitching/" : ""}2026/${league}`}
+        {rankingCategories.map(category =>
+          <Link key={`season-${currentLeague}-${category}`} prefetch={false}
+            href={`/ranking/${category === "pitching" ? "pitching/" : ""}2026/${currentLeague}`}
             className={rankingLinkClass}>
-            {league === "CL" ? "セ" : "パ"}{category === "batting" ? "野手" : "投手"}
-          </Link>))}
+            {currentLeague === "CL" ? "セ" : "パ"}{category === "batting" ? "野手" : "投手"}
+          </Link>)}
       </div>
     </div>
     <div className="space-y-1.5">
       <p className="text-xs text-gray-400">今週ランキング{weekMeta ? `（${weekMeta.weekLabel}）${weekMeta.isFallbackWeek ? " / 今週のデータ未確定のため直近の掲載週" : ""}` : ""}</p>
       {weekMeta ? <div className="flex flex-wrap gap-1.5">
-      {rankingLeagues.flatMap(league => rankingCategories.map(category =>
-        <Link key={`${league}-${category}`} prefetch={false}
-          href={`/ranking/${category === "pitching" ? "pitching/" : ""}weekly/2026/${weekMeta.weekKey}/${league}`}
+      {rankingCategories.map(category =>
+        <Link key={`${currentLeague}-${category}`} prefetch={false}
+          href={`/ranking/${category === "pitching" ? "pitching/" : ""}weekly/2026/${weekMeta.weekKey}/${currentLeague}`}
           className={rankingLinkClass}>
-          {league === "CL" ? "セ" : "パ"}{category === "batting" ? "野手" : "投手"}
-        </Link>))}
+          {currentLeague === "CL" ? "セ" : "パ"}{category === "batting" ? "野手" : "投手"}
+        </Link>)}
       </div> : null}
     </div>
   </nav>

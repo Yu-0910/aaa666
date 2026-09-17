@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, type ReactNode } from "react"
 import { useClientSearchString } from "@/hooks/useIsDesktop"
 
 import RankingUI from "@/components/RankingUI"
+import RankingPageBottomLinkNav from "@/app/components/common/RankingPageBottomLinkNav"
 
 import type { RankingViewModel, RankingRow } from "@/lib/ranking/types"
 
@@ -202,7 +203,7 @@ function WeeklyPageShell({
 
   return (
 
-    <div className="min-h-screen site-bg text-white flex flex-col">
+    <div className="min-h-screen site-bg text-white flex flex-col pb-[calc(env(safe-area-inset-bottom)+112px)]">
 
       {emptyNoData && <WeeklyEmptyBanner league={league} />}
 
@@ -576,6 +577,17 @@ export default function WeeklyRankingPageClient({
         qualifyingDividerAfterRank={qualifyingDividerAfterRank}
 
       />
+      {league === "CL" || league === "PL" ? (
+        <RankingPageBottomLinkNav
+          ariaLabel="今週ランキング切り替え"
+          items={[
+            { href: `/ranking/weekly/${year}/${weekKey}/CL`, label: "セ野手", icon: "batting", active: league === "CL" },
+            { href: `/ranking/pitching/weekly/${year}/${weekKey}/CL`, label: "セ投手", icon: "pitching" },
+            { href: `/ranking/weekly/${year}/${weekKey}/PL`, label: "パ野手", icon: "batting", active: league === "PL" },
+            { href: `/ranking/pitching/weekly/${year}/${weekKey}/PL`, label: "パ投手", icon: "pitching" },
+          ]}
+        />
+      ) : null}
 
     </WeeklyPageShell>
 
