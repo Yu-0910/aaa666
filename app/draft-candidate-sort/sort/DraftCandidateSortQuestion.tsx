@@ -158,25 +158,19 @@ export function DraftCandidateSortQuestion() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <CandidateCard label="左の候補" candidate={leftCandidate} />
-        <CandidateCard label="右の候補" candidate={rightCandidate} />
+        <CandidateCard
+          label="左の候補"
+          candidate={leftCandidate}
+          onSelect={() => answer("left")}
+        />
+        <CandidateCard
+          label="右の候補"
+          candidate={rightCandidate}
+          onSelect={() => answer("right")}
+        />
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <button
-          type="button"
-          onClick={() => answer("left")}
-          className="rounded border border-slate-200 bg-white px-4 py-3 font-semibold transition hover:border-emerald-400 hover:bg-emerald-50"
-        >
-          左を上にする
-        </button>
-        <button
-          type="button"
-          onClick={() => answer("right")}
-          className="rounded border border-slate-200 bg-white px-4 py-3 font-semibold transition hover:border-emerald-400 hover:bg-emerald-50"
-        >
-          右を上にする
-        </button>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {showTie ? (
           <button
             type="button"
@@ -209,12 +203,19 @@ export function DraftCandidateSortQuestion() {
 function CandidateCard({
   label,
   candidate,
+  onSelect,
 }: {
   label: string
   candidate: CandidateForSort | null | undefined
+  onSelect: () => void
 }) {
   return (
-    <section className="min-h-72 rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <button
+      type="button"
+      onClick={onSelect}
+      className="min-h-72 rounded border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-3 focus:ring-emerald-600"
+      aria-label={`${label}を上にする`}
+    >
       <p className="text-sm font-semibold text-slate-500">{label}</p>
       <h2 className="mt-4 text-2xl font-bold">
         {candidate?.name ?? "候補者名"}
@@ -247,6 +248,6 @@ function CandidateCard({
           </dd>
         </div>
       </dl>
-    </section>
+    </button>
   )
 }
