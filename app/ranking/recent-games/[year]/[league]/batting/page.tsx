@@ -4,6 +4,9 @@ import { loadRecentGamesV2 } from "@/lib/ranking/loadRecentGamesV2"
 import { recentV2Query } from "@/lib/ranking/recentGamesV2Page"
 import type { V2Snapshot } from "@/lib/ranking/recentGamesV2"
 import { loadMetricsFromRecord } from "@/lib/ranking/record"
+import { getProjectRoot } from "@/lib/projectRoot"
+import { readWeeklyCurrentWeekJsonAsync } from "@/lib/topPage/weeklyCurrentWeekMeta"
+import type { WeeklyTabWeekMeta } from "@/lib/topPage/fetchTopWeeklyLeadersClient"
 import RecentGamesRankingClient from "../../../RecentGamesRankingClient"
 
 export const dynamic = "force-dynamic"
@@ -23,5 +26,21 @@ export default async function RecentGamesRankingPage({ params, searchParams }: P
   let snapshot: V2Snapshot | null = null
   try { snapshot = await loadRecentGamesV2(league, metrics.map(({ key, label }) => ({ key, label }))) }
   catch (error) { console.error("[recent-games-ranking]", error instanceof Error ? error.message : "Data load failed") }
-  return <RecentGamesRankingClient snapshot={snapshot} metrics={metrics} league={league} sort={sort} order={order} />
+  let weekMeta: WeeklyTabWeekMeta | null = null
+  try {
+    const raw = await readWeeklyCurrentWeekJsonAsync(getProjectRoot(), year)
+    if (raw?.weekKey && raw.weekLabel && raw.calendarWeekKey && raw.calendarWeekLabel) {
+      weekMeta = {
+        weekKey: raw.weekKey,
+        weekLabel: raw.weekLabel,
+        calendarWeekKey: raw.calendarWeekKey,
+        calendarWeekLabel: raw.calendarWeekLabel,
+        isFallbackWeek: raw.isFallbackWeek,
+        availableWeekKeys: raw.availableWeekKeys,
+      }
+    }
+  } catch (error) {
+    console.error("[recent-games-ranking-week-meta]", error instanceof Error ? error.message : "Week meta load failed")
+  }
+  return <RecentGamesRankingClient snapshot={snapshot} metrics={metrics} league={league} sort={sort} order={order} weekMeta={weekMeta} />
 }
