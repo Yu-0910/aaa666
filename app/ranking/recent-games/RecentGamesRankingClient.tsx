@@ -33,7 +33,7 @@ export default function RecentGamesRankingClient({ snapshot, metrics, league, so
       { href: "/weekly-stats", label: "今週" },
       ...(["CL", "PL"] as const).map(value => ({ href: recentV2Href(value, sort, order), label: value === "CL" ? "セ野手" : "パ野手", active: value === league })),
     ] }]}
-    beforeTitle={<RecentGamesWeeklyLinks />}
+    beforeTitle={<RecentGamesWeeklyLinks currentLeague={league} />}
     formatMetricValue={formatRankingStatDisplay}
     beforeTable={<>
       {snapshot ? (!rows.length && <p role="status" className="mb-2 text-sm text-gray-400">{snapshot.rows.length ? "この指標の掲載条件を満たす選手がいません。" : "この期間の打撃成績はまだありません。"}</p>) : <div role="alert" className="mb-3 rounded border border-[#555] p-4 text-sm">
