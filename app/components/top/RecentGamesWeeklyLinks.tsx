@@ -16,6 +16,7 @@ export function RecentGamesWeeklyLinks() {
     return () => { cancelled = true }
   }, [])
   return <nav aria-label="今週ランキングページ" className="mb-4 space-y-1.5">
+    <p className="text-xs font-semibold text-gray-300">2026ランキング</p>
     <p className="text-xs text-gray-400">今週ランキング{meta ? `（${meta.weekLabel}）${meta.isFallbackWeek ? " / 今週のデータ未確定のため直近の掲載週" : ""}` : ""}</p>
     {error ? <p role="status" className="text-xs text-gray-400">週間リンクを取得できませんでした。ページを再読み込みしてください。</p> : !meta ? <p role="status" className="text-xs text-gray-400">対象週を読み込み中...</p> : <div className="flex flex-wrap gap-1.5">
       {(["CL", "PL"] as const).flatMap(league => (["batting", "pitching"] as const).map(category =>
