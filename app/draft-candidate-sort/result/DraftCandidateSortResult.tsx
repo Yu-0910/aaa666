@@ -46,16 +46,17 @@ export function DraftCandidateSortResult() {
       </div>
     )
   }
+  const activeSession = session
 
   async function copyResultText() {
-    const text = buildResultText(session, candidateById)
+    const text = buildResultText(activeSession, candidateById)
     await navigator.clipboard.writeText(text)
     setCopyStatus("コピーしました")
     window.setTimeout(() => setCopyStatus(""), 1800)
   }
 
   function downloadPng() {
-    const text = buildResultText(session, candidateById)
+    const text = buildResultText(activeSession, candidateById)
     const lines = text.split("\n")
     const width = 1200
     const padding = 48
@@ -326,7 +327,7 @@ function DraftRoundTable({
   candidateById,
 }: {
   round: DraftPredictionRound
-  rows: { overallRank: number; candidateId: string }[]
+  rows: { overallRank: number; displayRank: number; candidateId: string }[]
   candidateById: Map<string, CandidateForSort>
 }) {
   return (
@@ -340,7 +341,7 @@ function DraftRoundTable({
               className="flex gap-3 rounded border border-slate-100 bg-slate-50 p-3"
             >
               <span className="w-7 shrink-0 text-right text-sm font-bold text-slate-500">
-                {row.overallRank}
+                {row.displayRank}
               </span>
               <ResultCandidate
                 candidate={candidateById.get(row.candidateId)}
@@ -429,7 +430,7 @@ function buildResultText(
     .join("\n")
 
   const draft = session.draftPredictionResult
-    .map((row) => `${row.overallRank}. ${candidateName(row.candidateId)}`)
+    .map((row) => `${row.displayRank}. ${candidateName(row.candidateId)}`)
     .join("\n")
 
   const unknown = session.unknownResult

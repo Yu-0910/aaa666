@@ -22,6 +22,7 @@ export function ProcessingRedirect() {
 
     const builtResults = buildDraftSortResults({
       ranking: saved.ranking,
+      rankEntries: saved.rankEntries,
       unknownCounts: saved.unknownCounts,
     })
     const nextSession: DraftSortSession = {

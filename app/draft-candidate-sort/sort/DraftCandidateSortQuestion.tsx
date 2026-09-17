@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   filterCandidatesForSort,
@@ -18,9 +18,11 @@ import {
   applyDraftSortAnswer,
   createInitialSortState,
   getCurrentComparison,
+  rebuildDraftSortState,
   shouldShowTieButton,
   undoDraftSortAnswer,
   type DraftSortChoice,
+  type DraftSortComparison,
   type DraftSortState,
 } from "../_lib/sortEngine"
 
@@ -28,6 +30,7 @@ export function DraftCandidateSortQuestion() {
   const router = useRouter()
   const [session, setSession] = useState<DraftSortSession | null>(null)
   const [sortState, setSortState] = useState<DraftSortState | null>(null)
+  const answeringRef = useRef(false)
 
   useEffect(() => {
     const saved = loadDraftSortSession()
@@ -40,16 +43,24 @@ export function DraftCandidateSortQuestion() {
       getCandidatesForSort(),
       saved.targetFilter,
     )
-    const candidateIds =
-      saved.candidateIds.length > 0
-        ? saved.candidateIds
-        : candidates.map((candidate) => candidate.id)
-    const initialState = createInitialSortState(candidateIds)
-    const replayedState = saved.answers.reduce(
-      (state, answer) =>
-        applyDraftSortAnswer(state, answer.choice, new Date(answer.answeredAt)),
-      initialState,
+    const currentCandidateIds = candidates.map((candidate) => candidate.id)
+    const currentCandidateIdSet = new Set(currentCandidateIds)
+    const savedCandidateIds = saved.candidateIds.filter((candidateId) =>
+      currentCandidateIdSet.has(candidateId),
     )
+    const candidateIds =
+      savedCandidateIds.length > 0
+        ? [
+            ...savedCandidateIds,
+            ...currentCandidateIds.filter(
+              (candidateId) => !savedCandidateIds.includes(candidateId),
+            ),
+          ]
+        : currentCandidateIds
+    const replayedState =
+      saved.answers.length > 0
+        ? rebuildDraftSortState(candidateIds, saved.answers)
+        : createInitialSortState(candidateIds)
 
     setSession(saved)
     setSortState(replayedState)
@@ -69,18 +80,11 @@ export function DraftCandidateSortQuestion() {
     ? candidateById.get(currentComparison.rightId)
     : null
   const showTie = sortState ? shouldShowTieButton(sortState.answers) : true
-  const totalComparisons = sortState?.comparisonQueue.length ?? 0
-  const answeredComparisons = sortState?.answers.length ?? 0
-  const progressPercent =
-    totalComparisons > 0
-      ? Math.min(100, Math.round((answeredComparisons / totalComparisons) * 100))
-      : 0
+  const progressPercent = sortState?.progressPercent ?? 0
   const completionText =
-    sortState?.completedReason === "stable"
+    sortState?.completedReason === "sorted"
       ? "上位36人が確定したため終了します"
-      : sortState?.completedReason === "maxQuestions"
-        ? "必要な比較数に達しました"
-        : "上位36人が確定した時点で終了します"
+      : "上位36人が確定した時点で終了します"
 
   function persist(nextState: DraftSortState) {
     if (!session) return
@@ -93,7 +97,9 @@ export function DraftCandidateSortQuestion() {
       candidateIds: nextState.candidateIds,
       answers: nextState.answers,
       ranking: nextState.ranking,
-      ratings: nextState.ratings,
+      rankEntries: nextState.rankEntries,
+      relations: nextState.relations,
+      progressPercent: nextState.progressPercent,
       completedReason: nextState.completedReason,
       unknownCounts: nextState.unknownCounts,
       tieGroups: nextState.tieGroups,
@@ -104,15 +110,19 @@ export function DraftCandidateSortQuestion() {
     setSession(nextSession)
   }
 
-  function answer(choice: DraftSortChoice) {
-    if (!sortState) return
-    const nextState = applyDraftSortAnswer(sortState, choice)
+  function answer(choice: DraftSortChoice, comparison: DraftSortComparison | null) {
+    if (!sortState || !comparison || answeringRef.current) return
+    answeringRef.current = true
+    const nextState = applyDraftSortAnswer(sortState, choice, new Date(), comparison)
     setSortState(nextState)
     persist(nextState)
 
     if (nextState.completed) {
       router.push("/draft-candidate-sort/complete")
     }
+    window.setTimeout(() => {
+      answeringRef.current = false
+    }, 0)
   }
 
   function undo() {
@@ -157,12 +167,12 @@ export function DraftCandidateSortQuestion() {
         <CandidateCard
           label="左の候補"
           candidate={leftCandidate}
-          onSelect={() => answer("left")}
+          onSelect={() => answer("left", currentComparison)}
         />
         <CandidateCard
           label="右の候補"
           candidate={rightCandidate}
-          onSelect={() => answer("right")}
+          onSelect={() => answer("right", currentComparison)}
         />
       </div>
 
@@ -170,7 +180,7 @@ export function DraftCandidateSortQuestion() {
         {showTie ? (
           <button
             type="button"
-            onClick={() => answer("tie")}
+            onClick={() => answer("tie", currentComparison)}
             className="rounded border border-slate-200 bg-white px-4 py-3 font-semibold transition hover:border-emerald-400 hover:bg-emerald-50"
           >
             どちらも同じくらい
@@ -178,7 +188,7 @@ export function DraftCandidateSortQuestion() {
         ) : null}
         <button
           type="button"
-          onClick={() => answer("unknown")}
+          onClick={() => answer("unknown", currentComparison)}
           className="rounded border border-slate-200 bg-white px-4 py-3 font-semibold transition hover:border-emerald-400 hover:bg-emerald-50"
         >
           両方知らない

@@ -1,3 +1,5 @@
+import type { DraftSortRankEntry } from "./sortEngine"
+
 export type BanzukeSide = "east" | "west"
 
 export type BanzukeRow = {
@@ -10,6 +12,7 @@ export type DraftPredictionRound = 1 | 2 | 3
 
 export type DraftPredictionRow = {
   overallRank: number
+  displayRank: number
   round: DraftPredictionRound
   candidateId: string
 }
@@ -27,14 +30,16 @@ export type DraftSortBuiltResults = {
 
 export function buildDraftSortResults({
   ranking,
+  rankEntries,
   unknownCounts,
 }: {
   ranking: string[]
+  rankEntries?: DraftSortRankEntry[]
   unknownCounts: Record<string, number>
 }): DraftSortBuiltResults {
   return {
     banzukeResult: buildBanzukeRows(ranking),
-    draftPredictionResult: buildDraftPredictionRows(ranking),
+    draftPredictionResult: buildDraftPredictionRows(ranking, rankEntries),
     unknownResult: buildUnknownRows(unknownCounts),
   }
 }
@@ -55,11 +60,20 @@ export function buildBanzukeRows(ranking: string[]): BanzukeRow[] {
 
 export function buildDraftPredictionRows(
   ranking: string[],
+  rankEntries: DraftSortRankEntry[] = ranking.map((candidateId, index) => ({
+    candidateId,
+    rank: index + 1,
+  })),
 ): DraftPredictionRow[] {
+  const rankByCandidateId = new Map(
+    rankEntries.map((entry) => [entry.candidateId, entry.rank]),
+  )
+
   return ranking.slice(0, 36).map((candidateId, index) => {
     const overallRank = index + 1
     return {
       overallRank,
+      displayRank: rankByCandidateId.get(candidateId) ?? overallRank,
       round: getDraftRound(overallRank),
       candidateId,
     }
@@ -90,4 +104,3 @@ function getDraftRound(overallRank: number): DraftPredictionRound {
   if (overallRank <= 24) return 2
   return 3
 }
-

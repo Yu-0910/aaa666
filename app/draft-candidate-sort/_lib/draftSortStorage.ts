@@ -4,9 +4,14 @@ import type {
   DraftPredictionRow,
   UnknownCandidateRow,
 } from "./resultBuilder"
-import type { DraftSortAnswer, DraftSortRatingRecord } from "./sortEngine"
+import type {
+  DraftSortAnswer,
+  DraftSortRankEntry,
+  DraftSortRelationRecord,
+} from "./sortEngine"
 
 export const draftSortStorageKey = "draft-candidate-sort:v1"
+export const draftSortSessionVersion = 2
 export const resultRetentionMs = 24 * 60 * 60 * 1000
 
 export type DraftSortRoute =
@@ -17,7 +22,9 @@ export type DraftSortRoute =
   | "/draft-candidate-sort/result"
 
 export type DraftSortSession = {
-  version: 1
+  version: 2
+  candidateSetVersion: "draft-candidates-2026"
+  algorithmVersion: 2
   currentRoute: DraftSortRoute
   targetFilter: CandidateFilter
   createdAt: string
@@ -26,8 +33,10 @@ export type DraftSortSession = {
   candidateIds: string[]
   answers: DraftSortAnswer[]
   ranking: string[]
-  ratings?: Record<string, DraftSortRatingRecord>
-  completedReason?: "single" | "stable" | "maxQuestions" | null
+  rankEntries: DraftSortRankEntry[]
+  relations: Record<string, DraftSortRelationRecord>
+  progressPercent: number
+  completedReason?: "single" | "sorted" | null
   unknownCounts: Record<string, number>
   tieGroups: string[][]
   banzukeResult: BanzukeRow[]
@@ -50,7 +59,9 @@ export function createDraftSortSession(
   const timestamp = now.toISOString()
 
   return {
-    version: 1,
+    version: draftSortSessionVersion,
+    candidateSetVersion: "draft-candidates-2026",
+    algorithmVersion: 2,
     currentRoute: "/draft-candidate-sort/sort",
     targetFilter,
     createdAt: timestamp,
@@ -58,7 +69,9 @@ export function createDraftSortSession(
     candidateIds: [],
     answers: [],
     ranking: [],
-    ratings: {},
+    rankEntries: [],
+    relations: {},
+    progressPercent: 0,
     completedReason: null,
     unknownCounts: {},
     tieGroups: [],
@@ -78,13 +91,22 @@ export function loadDraftSortSession(): DraftSortSession | null {
 
   try {
     const parsed = JSON.parse(raw) as Partial<DraftSortSession>
-    if (parsed.version !== 1 || !parsed.targetFilter) return null
+    if (
+      parsed.version !== draftSortSessionVersion ||
+      parsed.algorithmVersion !== 2 ||
+      !parsed.targetFilter
+    ) {
+      clearDraftSortSession()
+      return null
+    }
     if (!parsed.currentRoute || !validRoutes.includes(parsed.currentRoute)) {
       return null
     }
     if (!Array.isArray(parsed.answers)) return null
     if (!Array.isArray(parsed.ranking)) return null
     if (!Array.isArray(parsed.candidateIds)) return null
+    if (!Array.isArray(parsed.rankEntries)) return null
+    if (!parsed.relations || typeof parsed.relations !== "object") return null
     if (parsed.resultExpiresAt) {
       const expiresAt = Date.parse(parsed.resultExpiresAt)
       if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
