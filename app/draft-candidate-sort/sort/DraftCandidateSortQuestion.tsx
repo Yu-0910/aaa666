@@ -209,7 +209,7 @@ function CandidateCard({
     <button
       type="button"
       onClick={onSelect}
-      className="min-h-64 rounded border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-3 focus:ring-emerald-600 sm:min-h-72 sm:p-5"
+      className="min-h-64 rounded border border-slate-200 bg-white p-3 text-left shadow-sm transition duration-150 hover:border-emerald-500 hover:bg-emerald-50 active:scale-[0.98] active:border-emerald-600 active:bg-emerald-100 active:shadow-inner focus:outline-none focus:ring-3 focus:ring-emerald-600 sm:min-h-72 sm:p-5"
       aria-label={`${label}を上にする`}
     >
       <p className="text-xs font-semibold text-slate-500 sm:text-sm">{label}</p>
