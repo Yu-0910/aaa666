@@ -12,8 +12,22 @@ type Category = "batting" | "pitching"
 const rankingLeagues: League[] = ["CL", "PL"]
 const rankingCategories: Category[] = ["batting", "pitching"]
 
-export function RecentGamesWeeklyLinks({ weekMeta }: { weekMeta: WeeklyTabWeekMeta | null }) {
+export function RecentGamesWeeklyLinks({ currentLeague, weekMeta }: {
+  currentLeague: League
+  weekMeta: WeeklyTabWeekMeta | null
+}) {
+  const linkedRecentLeague: League = currentLeague === "CL" ? "PL" : "CL"
   return <nav aria-label="ランキングページ" className="mb-4 space-y-2.5">
+    <div className="space-y-1.5">
+      <p className="text-xs text-gray-400">直近10試合ランキング</p>
+      <div className="flex flex-wrap gap-1.5">
+        <Link prefetch={false}
+          href={`/ranking/recent-games/2026/${linkedRecentLeague}/batting`}
+          className={rankingLinkClass}>
+          {linkedRecentLeague === "CL" ? "セ" : "パ"}野手
+        </Link>
+      </div>
+    </div>
     <div className="space-y-1.5">
       <p className="text-xs text-gray-400">2026ランキング</p>
       <div className="flex flex-wrap gap-1.5">

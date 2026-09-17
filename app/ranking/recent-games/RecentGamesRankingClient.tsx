@@ -31,7 +31,7 @@ export default function RecentGamesRankingClient({ snapshot, metrics, league, so
     onSortChange={key => router.replace(recentV2Href(league, key, recentV2NextOrder(key, sort, order)), { scroll: false })}
     yearOptions={[2026]} onYearChange={() => {}}
     titleOverride={title}
-    beforeTitle={<RecentGamesWeeklyLinks weekMeta={weekMeta} />}
+    beforeTitle={<RecentGamesWeeklyLinks currentLeague={league} weekMeta={weekMeta} />}
     formatMetricValue={formatRankingStatDisplay}
     beforeTable={<>
       {snapshot ? (!rows.length && <p role="status" className="mb-2 text-sm text-gray-400">{snapshot.rows.length ? "この指標の掲載条件を満たす選手がいません。" : "この期間の打撃成績はまだありません。"}</p>) : <div role="alert" className="mb-3 rounded border border-[#555] p-4 text-sm">
