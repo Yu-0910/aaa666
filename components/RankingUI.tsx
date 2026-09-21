@@ -9,7 +9,7 @@
 
 "use client"
 
-import { Fragment, useEffect, useRef, type ReactNode } from "react"
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { SITE_TOP_HREF } from "@/lib/siteNavigation"
@@ -85,9 +85,34 @@ function rankingTableMinWidthPx(leftBlockWidth: number, metricColMinWidth: numbe
   return leftBlockWidth + metricCount * metricColMinWidth
 }
 
+function shouldDisableStickyLeftColumnForEmbeddedBrowser(): boolean {
+  const ua = window.navigator.userAgent || ""
+  const referrer = document.referrer || ""
+  const referrerLooksLikeX =
+    /^https?:\/\/([^/?#]+\.)?(x\.com|twitter\.com|t\.co)([/:?#]|$)/i.test(referrer)
+  const uaLooksLikeX =
+    /\bTwitter\b|Twitter-iPhone|TwitterAndroid|XTwitter|X\/[0-9.]+/i.test(ua)
+
+  if (referrerLooksLikeX || uaLooksLikeX) {
+    try {
+      window.sessionStorage.setItem("ranking-disable-sticky-left-column", "1")
+    } catch {
+      // Some embedded browsers block sessionStorage; the current page should still use the fallback.
+    }
+    return true
+  }
+
+  try {
+    return window.sessionStorage.getItem("ranking-disable-sticky-left-column") === "1"
+  } catch {
+    return false
+  }
+}
+
 type RankingTableHeaderRowProps = {
   allowActiveMetricToggle?: boolean
   variant: 'primary' | 'repeat'
+  disableStickyLeftColumn?: boolean
   leftBlockWidth: number
   playerWidth: number
   metricColMinWidth: number
@@ -99,6 +124,7 @@ type RankingTableHeaderRowProps = {
 function RankingTableHeaderRow({
   allowActiveMetricToggle = false,
   variant,
+  disableStickyLeftColumn = false,
   leftBlockWidth,
   playerWidth,
   metricColMinWidth,
@@ -116,11 +142,11 @@ function RankingTableHeaderRow({
       style={{ height: HEADER_ROW_HEIGHT }}
     >
       <th
-        className="sticky border-r-2 border-[#555] p-0"
+        className={`${disableStickyLeftColumn ? '' : 'sticky'} border-r-2 border-[#555] p-0`}
         style={{
-          position: 'sticky',
+          position: disableStickyLeftColumn ? 'relative' : 'sticky',
           top: isPrimary ? 0 : undefined,
-          left: 0,
+          left: disableStickyLeftColumn ? undefined : 0,
           zIndex: 100,
           width: `${leftBlockWidth}px`,
           maxWidth: `${leftBlockWidth}px`,
@@ -292,6 +318,11 @@ export default function RankingUI({
   const tableScrollRef = useRef<HTMLDivElement>(null)
   const bottomScrollRef = useRef<HTMLDivElement>(null)
   const scrollSyncLock = useRef(false)
+  const [disableStickyBodyLeftColumn, setDisableStickyBodyLeftColumn] = useState(false)
+
+  useEffect(() => {
+    setDisableStickyBodyLeftColumn(shouldDisableStickyLeftColumnForEmbeddedBrowser())
+  }, [])
 
   useEffect(() => {
     const table = tableScrollRef.current
@@ -433,6 +464,7 @@ export default function RankingUI({
                         <RankingTableHeaderRow
                           key={`header-${idx}`}
                           variant="repeat"
+                          disableStickyLeftColumn={disableStickyBodyLeftColumn}
                           allowActiveMetricToggle={allowActiveMetricToggle}
                           leftBlockWidth={leftBlockWidth}
                           playerWidth={playerWidth}
@@ -449,10 +481,10 @@ export default function RankingUI({
                       >
                       {/* 層1: 順位＋グレーフレーム＋選手名を1セルで一塊に */}
                       <td
-                        className="sticky border-r-2 border-[#555]"
+                        className={`${disableStickyBodyLeftColumn ? '' : 'sticky'} border-r-2 border-[#555]`}
                         style={{
-                          position: 'sticky',
-                          left: 0,
+                          position: disableStickyBodyLeftColumn ? 'relative' : 'sticky',
+                          left: disableStickyBodyLeftColumn ? undefined : 0,
                           zIndex: 40,
                           width: `${leftBlockWidth}px`,
                           maxWidth: `${leftBlockWidth}px`,
