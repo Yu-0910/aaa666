@@ -226,16 +226,8 @@ function drawTemplateRows(
         layout.rowTop + rowIndex * draftResultTemplateLayout.rowHeight
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
-      context.fillStyle = "#100F0F"
-      context.fillRect(
-        textLeft - 3,
-        rowTop + draftResultTemplateLayout.textBackgroundTopOffset,
-        draftResultTemplateLayout.textBackgroundWidth,
-        draftResultTemplateLayout.textBackgroundHeight,
-      )
-
       context.fillStyle = "#ffffff"
-      context.font = `900 ${getTemplateNameFontSize(row.name)}px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
+      context.font = `1000 ${getTemplateNameFontSize(row.name)}px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "TazuganeGothicKakuInfo", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
       context.fillText(
         row.name,
         textLeft,
@@ -245,7 +237,7 @@ function drawTemplateRows(
       if (row.subText) {
         context.fillStyle = "#ffffff"
         context.font =
-          '800 18px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
+          '700 18px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "TazuganeGothicKakuInfo", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
         context.fillText(
           trimForCanvas(row.subText, 15),
           textLeft,

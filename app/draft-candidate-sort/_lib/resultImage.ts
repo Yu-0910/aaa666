@@ -25,9 +25,6 @@ export const draftResultTemplateLayout = {
   ],
   rowHeight: 79.36,
   textLeftOffset: 47,
-  textBackgroundTopOffset: 3,
-  textBackgroundWidth: 237,
-  textBackgroundHeight: 73,
   nameBaselineOffset: 43,
   subTextBaselineOffset: 68,
 } as const
