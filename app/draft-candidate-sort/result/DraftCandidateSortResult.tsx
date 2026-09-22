@@ -226,14 +226,6 @@ function drawTemplateRows(
         layout.rowTop + rowIndex * draftResultTemplateLayout.rowHeight
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
-      context.fillStyle = "#f4f4f2"
-      context.fillRect(
-        textLeft - 5,
-        rowTop + 11,
-        draftResultTemplateLayout.textClearWidth,
-        draftResultTemplateLayout.textClearHeight,
-      )
-
       context.fillStyle = "#050505"
       context.font = `900 ${getTemplateNameFontSize(row.name)}px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
       context.fillText(

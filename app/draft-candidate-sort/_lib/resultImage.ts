@@ -14,19 +14,17 @@ export type DraftResultTemplateColumn = {
 
 export const draftResultTemplateSrc =
   "/draft-candidate-sort/result-template-2026.png"
-export const draftResultImageWidth = 1239
-export const draftResultImageHeight = 1359
+export const draftResultImageWidth = 1196
+export const draftResultImageHeight = 1315
 
 export const draftResultTemplateLayout = {
   columns: [
-    { x: 37, rowTop: 246 },
-    { x: 421, rowTop: 246 },
-    { x: 805, rowTop: 246 },
+    { x: 37, rowTop: 242 },
+    { x: 421, rowTop: 242 },
+    { x: 805, rowTop: 242 },
   ],
-  rowHeight: 76,
+  rowHeight: 75.18,
   textLeftOffset: 106,
-  textClearWidth: 225,
-  textClearHeight: 54,
   nameBaselineOffset: 35,
   subTextBaselineOffset: 58,
 } as const
