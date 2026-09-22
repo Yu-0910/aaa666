@@ -207,7 +207,10 @@ function DraftPredictionImageSection({
 async function templateToPngDataUrl(
   columns: DraftResultTemplateColumn[],
 ): Promise<string> {
-  const templateImage = await loadImage(draftResultTemplateSrc)
+  const [templateImage] = await Promise.all([
+    loadImage(draftResultTemplateSrc),
+    waitForDraftResultFonts(),
+  ])
   const canvas = document.createElement("canvas")
   canvas.width = draftResultImageWidth
   canvas.height = draftResultImageHeight
@@ -238,11 +241,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
+async function waitForDraftResultFonts(): Promise<void> {
+  await document.fonts.ready
+}
+
 function drawTemplateRows(
   context: CanvasRenderingContext2D,
   columns: DraftResultTemplateColumn[],
 ): void {
   context.textBaseline = "alphabetic"
+  context.textAlign = "left"
   const fontFamily = getDraftResultCanvasFontFamily()
 
   columns.forEach((column, columnIndex) => {
@@ -255,6 +263,7 @@ function drawTemplateRows(
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
       context.fillStyle = "#ffffff"
+      applyOpponentBatterNameCanvasTextSettings(context)
       context.font = `900 ${getTemplateNameFontSize(row.name)}px ${fontFamily}`
       context.fillText(
         row.name,
@@ -264,6 +273,7 @@ function drawTemplateRows(
 
       if (row.subText) {
         context.fillStyle = "#ffffff"
+        applyOpponentBatterNameCanvasTextSettings(context)
         context.font = `700 18px ${fontFamily}`
         context.fillText(
           trimForCanvas(row.subText, 17),
@@ -275,17 +285,36 @@ function drawTemplateRows(
   })
 }
 
+function applyOpponentBatterNameCanvasTextSettings(
+  context: CanvasRenderingContext2D,
+): void {
+  context.fontKerning = "normal"
+  context.fontVariantCaps = "normal"
+
+  const modernContext = context as CanvasRenderingContext2D & {
+    fontStretch?: string
+    fontVariantNumeric?: string
+    letterSpacing?: string
+    wordSpacing?: string
+  }
+  modernContext.fontStretch = "normal"
+  modernContext.fontVariantNumeric = "tabular-nums"
+  modernContext.letterSpacing = "0px"
+  modernContext.wordSpacing = "0px"
+}
+
 function getDraftResultCanvasFontFamily(): string {
   const rootStyle = window.getComputedStyle(document.documentElement)
   const notoSansJp = rootStyle.getPropertyValue("--font-noto-sans-jp").trim()
   const inter = rootStyle.getPropertyValue("--font-inter").trim()
   return [
-    notoSansJp,
     inter,
-    '"Noto Sans JP"',
     '"Inter"',
     '"Yu Gothic"',
+    '"Meiryo"',
     '"Hiragino Kaku Gothic ProN"',
+    notoSansJp,
+    '"Noto Sans JP"',
     "sans-serif",
   ]
     .filter(Boolean)
