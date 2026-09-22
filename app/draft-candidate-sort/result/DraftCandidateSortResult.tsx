@@ -262,7 +262,7 @@ function drawTemplateRows(
         layout.rowTop + rowIndex * draftResultTemplateLayout.rowHeight
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
-      context.fillStyle = "#ffffff"
+      context.fillStyle = "#000000"
       applyOpponentBatterNameCanvasTextSettings(context)
       context.font = `900 ${getTemplateNameFontSize(row.name)}px ${fontFamily}`
       drawDraftResultPlayerName(
@@ -273,9 +273,9 @@ function drawTemplateRows(
       )
 
       if (row.subText) {
-        context.fillStyle = "#ffffff"
+        context.fillStyle = "#000000"
         applyOpponentBatterNameCanvasTextSettings(context)
-        context.font = `700 18px ${fontFamily}`
+        context.font = `700 29px ${fontFamily}`
         context.fillText(
           trimForCanvas(row.subText, 17),
           textLeft,
@@ -294,9 +294,9 @@ function drawDraftResultPlayerName(
 ): void {
   const offsets = [
     [0, 0],
-    [0.45, 0],
-    [-0.45, 0],
-    [0, 0.35],
+    [0.72, 0],
+    [-0.72, 0],
+    [0, 0.56],
   ] as const
 
   offsets.forEach(([offsetX, offsetY]) => {
@@ -342,10 +342,10 @@ function getDraftResultCanvasFontFamily(): string {
 
 function getTemplateNameFontSize(name: string): number {
   const length = Array.from(name).length
-  if (length >= 12) return 30
-  if (length >= 10) return 34
-  if (length >= 8) return 37
-  return 40
+  if (length >= 12) return 48
+  if (length >= 10) return 54
+  if (length >= 8) return 59
+  return 64
 }
 
 function trimForCanvas(value: string, maxLength: number): string {
