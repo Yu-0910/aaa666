@@ -18,9 +18,8 @@ import {
   draftResultImageHeight,
   draftResultImageWidth,
 } from "../_lib/resultImage"
-import type { DraftPredictionRound } from "../_lib/resultBuilder"
 
-type ResultTab = "banzuke" | "draft" | "unknown"
+type ResultTab = "banzuke" | "unknown"
 
 export function DraftCandidateSortResult() {
   const router = useRouter()
@@ -111,12 +110,6 @@ export function DraftCandidateSortResult() {
           番付表
         </ResultTabButton>
         <ResultTabButton
-          active={activeTab === "draft"}
-          onClick={() => setActiveTab("draft")}
-        >
-          ドラフト順位予想表
-        </ResultTabButton>
-        <ResultTabButton
           active={activeTab === "unknown"}
           onClick={() => setActiveTab("unknown")}
         >
@@ -126,13 +119,6 @@ export function DraftCandidateSortResult() {
 
       {activeTab === "banzuke" ? (
         <BanzukeResultSection session={session} candidateById={candidateById} />
-      ) : null}
-
-      {activeTab === "draft" ? (
-        <DraftPredictionSection
-          session={session}
-          candidateById={candidateById}
-        />
       ) : null}
 
       {activeTab === "unknown" ? (
@@ -310,40 +296,6 @@ function BanzukeResultSection({
   )
 }
 
-function DraftPredictionSection({
-  session,
-  candidateById,
-}: {
-  session: DraftSortSession
-  candidateById: Map<string, CandidateForSort>
-}) {
-  return (
-      <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-        <div className="border-b border-[#333] p-5">
-          <h2 className="text-xl font-bold">ドラフト順位予想表</h2>
-        </div>
-        {session.draftPredictionResult.length > 0 ? (
-          <div className="grid gap-0 lg:grid-cols-3">
-            {[1, 2, 3].map((round) => (
-              <DraftRoundTable
-                key={round}
-                round={round as DraftPredictionRound}
-                rows={session.draftPredictionResult.filter(
-                  (row) => row.round === round,
-                )}
-                candidateById={candidateById}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="p-5 text-sm text-white/70">
-            結果作成後、ここにドラフト順位予想表を表示します。
-          </p>
-        )}
-      </section>
-  )
-}
-
 function UnknownResultSection({
   session,
   candidateById,
@@ -377,42 +329,6 @@ function UnknownResultSection({
         <p className="p-5 text-sm text-white/70">
           両方知らないを選んだ候補はありません。
         </p>
-      )}
-    </section>
-  )
-}
-
-function DraftRoundTable({
-  round,
-  rows,
-  candidateById,
-}: {
-  round: DraftPredictionRound
-  rows: { overallRank: number; displayRank: number; candidateId: string }[]
-  candidateById: Map<string, CandidateForSort>
-}) {
-  return (
-    <section className="border-b border-[#333] p-4 lg:border-b-0 lg:border-r last:lg:border-r-0">
-      <h3 className="mb-3 text-base font-bold">ドラフト{round}位予想</h3>
-      {rows.length > 0 ? (
-        <ol className="space-y-3">
-          {rows.map((row) => (
-            <li
-              key={`${round}-${row.overallRank}-${row.candidateId}`}
-              className="flex gap-3 rounded border border-[#333] bg-[#111315] p-3"
-            >
-              <span className="w-7 shrink-0 text-right text-sm font-bold text-[#ffff44]">
-                {row.displayRank}
-              </span>
-              <ResultCandidate
-                candidate={candidateById.get(row.candidateId)}
-                fallbackId={row.candidateId}
-              />
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="text-sm text-white/55">該当候補なし</p>
       )}
     </section>
   )
@@ -490,10 +406,6 @@ function buildResultText(
     )
     .join("\n")
 
-  const draft = session.draftPredictionResult
-    .map((row) => `${row.displayRank}. ${candidateName(row.candidateId)}`)
-    .join("\n")
-
   const unknown = session.unknownResult
     .map((row) => `${candidateName(row.candidateId)}: ${row.unknownCount}回`)
     .join("\n")
@@ -501,9 +413,6 @@ function buildResultText(
   return [
     "番付表",
     banzuke || "なし",
-    "",
-    "ドラフト順位予想表",
-    draft || "なし",
     "",
     "未評価が多い候補",
     unknown || "なし",
