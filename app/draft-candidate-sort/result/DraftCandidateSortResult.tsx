@@ -226,8 +226,16 @@ function drawTemplateRows(
         layout.rowTop + rowIndex * draftResultTemplateLayout.rowHeight
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
-      context.fillStyle = "#050505"
-      context.font = `900 ${getTemplateNameFontSize(row.name)}px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
+      context.fillStyle = "#100F0F"
+      context.fillRect(
+        textLeft - 3,
+        rowTop + draftResultTemplateLayout.textBackgroundTopOffset,
+        draftResultTemplateLayout.textBackgroundWidth,
+        draftResultTemplateLayout.textBackgroundHeight,
+      )
+
+      context.fillStyle = "#ffffff"
+      context.font = `900 ${getTemplateNameFontSize(row.name)}px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
       context.fillText(
         row.name,
         textLeft,
@@ -235,9 +243,9 @@ function drawTemplateRows(
       )
 
       if (row.subText) {
-        context.fillStyle = "#4b4f52"
+        context.fillStyle = "#ffffff"
         context.font =
-          '700 19px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
+          '800 18px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
         context.fillText(
           trimForCanvas(row.subText, 15),
           textLeft,
@@ -250,10 +258,10 @@ function drawTemplateRows(
 
 function getTemplateNameFontSize(name: string): number {
   const length = Array.from(name).length
-  if (length >= 12) return 23
-  if (length >= 10) return 26
-  if (length >= 8) return 29
-  return 32
+  if (length >= 12) return 30
+  if (length >= 10) return 34
+  if (length >= 8) return 37
+  return 40
 }
 
 function trimForCanvas(value: string, maxLength: number): string {
