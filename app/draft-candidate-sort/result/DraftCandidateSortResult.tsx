@@ -22,7 +22,7 @@ import {
   type DraftResultTemplateColumn,
 } from "../_lib/resultImage"
 
-type ResultTab = "banzuke" | "unknown"
+type ResultTab = "banzuke" | "draftPrediction" | "unknown"
 
 export function DraftCandidateSortResult() {
   const router = useRouter()
@@ -113,6 +113,12 @@ export function DraftCandidateSortResult() {
           番付表
         </ResultTabButton>
         <ResultTabButton
+          active={activeTab === "draftPrediction"}
+          onClick={() => setActiveTab("draftPrediction")}
+        >
+          ドラ1〜3予想
+        </ResultTabButton>
+        <ResultTabButton
           active={activeTab === "unknown"}
           onClick={() => setActiveTab("unknown")}
         >
@@ -124,26 +130,16 @@ export function DraftCandidateSortResult() {
         <BanzukeResultSection session={session} candidateById={candidateById} />
       ) : null}
 
+      {activeTab === "draftPrediction" ? (
+        <DraftPredictionImageSection
+          imageUrl={imageUrl}
+          onDownload={downloadPng}
+        />
+      ) : null}
+
       {activeTab === "unknown" ? (
         <UnknownResultSection session={session} candidateById={candidateById} />
       ) : null}
-
-      <section className="mt-8 rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-        <div className="border-b border-[#333] p-5">
-          <h2 className="text-xl font-bold">結果発表画像</h2>
-        </div>
-        <div className="bg-[#111315] p-4 sm:p-6">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt="2026 ドラフト1位〜3位予想"
-              className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
-            />
-          ) : (
-            <p className="text-sm text-white/70">画像を生成しています。</p>
-          )}
-        </div>
-      </section>
 
       <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
         {copyStatus ? (
@@ -151,13 +147,6 @@ export function DraftCandidateSortResult() {
             {copyStatus}
           </span>
         ) : null}
-        <button
-          type="button"
-          onClick={downloadPng}
-          className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
-        >
-          画像を保存
-        </button>
         <button
           type="button"
           onClick={copyResultText}
@@ -174,6 +163,44 @@ export function DraftCandidateSortResult() {
         </button>
       </div>
     </>
+  )
+}
+
+function DraftPredictionImageSection({
+  imageUrl,
+  onDownload,
+}: {
+  imageUrl: string
+  onDownload: () => void
+}) {
+  return (
+    <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#333] p-5">
+        <h2 className="text-xl font-bold">ドラ1〜3予想</h2>
+      </div>
+      <div className="bg-[#111315] p-4 sm:p-6">
+        {imageUrl ? (
+          <>
+            <img
+              src={imageUrl}
+              alt="2026 ドラフト1位〜3位予想"
+              className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
+            />
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={onDownload}
+                className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
+              >
+                画像を保存
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-white/70">画像を生成しています。</p>
+        )}
+      </div>
+    </section>
   )
 }
 
