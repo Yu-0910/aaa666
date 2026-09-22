@@ -56,10 +56,19 @@ export function DraftCandidateSortResult() {
       return
     }
 
-    const url = svgToObjectUrl(resultSvg)
-    setImageUrl(url)
+    let cancelled = false
 
-    return () => window.URL.revokeObjectURL(url)
+    svgToPngDataUrl(resultSvg)
+      .then((pngUrl) => {
+        if (!cancelled) setImageUrl(pngUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setImageUrl("")
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [resultSvg])
 
   if (!session) {
@@ -81,34 +90,9 @@ export function DraftCandidateSortResult() {
   async function downloadPng() {
     if (!resultSvg) return
 
-    const image = new Image()
-    const svgUrl = svgToObjectUrl(resultSvg)
-    image.decoding = "async"
-    image.width = draftResultImageWidth
-    image.height = draftResultImageHeight
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve()
-        image.onerror = () => reject(new Error("result image load failed"))
-        image.src = svgUrl
-      })
-    } finally {
-      window.URL.revokeObjectURL(svgUrl)
-    }
-
-    const canvas = document.createElement("canvas")
-    canvas.width = draftResultImageWidth
-    canvas.height = draftResultImageHeight
-
-    const context = canvas.getContext("2d")
-    if (!context) return
-
-    context.drawImage(image, 0, 0)
-
     const link = document.createElement("a")
     link.download = "draft-2026-round-prediction.png"
-    link.href = canvas.toDataURL("image/png")
+    link.href = imageUrl || (await svgToPngDataUrl(resultSvg))
     link.click()
   }
 
@@ -202,6 +186,35 @@ export function DraftCandidateSortResult() {
       </div>
     </>
   )
+}
+
+async function svgToPngDataUrl(svg: string): Promise<string> {
+  const image = new Image()
+  const svgUrl = svgToObjectUrl(svg)
+  image.decoding = "async"
+  image.width = draftResultImageWidth
+  image.height = draftResultImageHeight
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error("result image load failed"))
+      image.src = svgUrl
+    })
+  } finally {
+    window.URL.revokeObjectURL(svgUrl)
+  }
+
+  const canvas = document.createElement("canvas")
+  canvas.width = draftResultImageWidth
+  canvas.height = draftResultImageHeight
+
+  const context = canvas.getContext("2d")
+  if (!context) return ""
+
+  context.drawImage(image, 0, 0)
+
+  return canvas.toDataURL("image/png")
 }
 
 function svgToObjectUrl(svg: string): string {
