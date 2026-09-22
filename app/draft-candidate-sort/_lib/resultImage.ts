@@ -1,4 +1,7 @@
-import type { CandidateForSort } from "./candidateData"
+import {
+  getCandidatePositionGroupLabel,
+  type CandidateForSort,
+} from "./candidateData"
 import type { DraftSortSession } from "./draftSortStorage"
 
 export type DraftResultTemplateRow = {
@@ -49,10 +52,13 @@ function buildRowsForRound(
     .slice(0, 12)
     .map((row, index) => {
       const candidate = candidateById.get(row.candidateId)
+      const positionAndTeam = candidate
+        ? `${getCandidatePositionGroupLabel(candidate.positionGroup)}／${candidate.schoolOrTeam}`
+        : ""
       return {
         rank: index + 1,
         name: candidate?.name ?? row.candidateId,
-        subText: candidate?.schoolOrTeam ?? "",
+        subText: positionAndTeam,
       }
     })
 }

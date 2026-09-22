@@ -216,6 +216,7 @@ function drawTemplateRows(
   columns: DraftResultTemplateColumn[],
 ): void {
   context.textBaseline = "alphabetic"
+  const fontFamily = getDraftResultCanvasFontFamily()
 
   columns.forEach((column, columnIndex) => {
     const layout = draftResultTemplateLayout.columns[columnIndex]
@@ -227,7 +228,7 @@ function drawTemplateRows(
       const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
 
       context.fillStyle = "#ffffff"
-      context.font = `1000 ${getTemplateNameFontSize(row.name)}px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "TazuganeGothicKakuInfo", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
+      context.font = `900 ${getTemplateNameFontSize(row.name)}px ${fontFamily}`
       context.fillText(
         row.name,
         textLeft,
@@ -236,16 +237,32 @@ function drawTemplateRows(
 
       if (row.subText) {
         context.fillStyle = "#ffffff"
-        context.font =
-          '700 18px "たずがねゴシック角INFO", "Tazugane Gothic Kaku Info", "TazuganeGothicKakuInfo", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
+        context.font = `700 18px ${fontFamily}`
         context.fillText(
-          trimForCanvas(row.subText, 15),
+          trimForCanvas(row.subText, 17),
           textLeft,
           rowTop + draftResultTemplateLayout.subTextBaselineOffset,
         )
       }
     })
   })
+}
+
+function getDraftResultCanvasFontFamily(): string {
+  const rootStyle = window.getComputedStyle(document.documentElement)
+  const notoSansJp = rootStyle.getPropertyValue("--font-noto-sans-jp").trim()
+  const inter = rootStyle.getPropertyValue("--font-inter").trim()
+  return [
+    notoSansJp,
+    inter,
+    '"Noto Sans JP"',
+    '"Inter"',
+    '"Yu Gothic"',
+    '"Hiragino Kaku Gothic ProN"',
+    "sans-serif",
+  ]
+    .filter(Boolean)
+    .join(", ")
 }
 
 function getTemplateNameFontSize(name: string): number {
