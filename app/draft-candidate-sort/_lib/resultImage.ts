@@ -11,12 +11,7 @@ type DraftResultImageColumn = {
   round: 1 | 2 | 3
   title: string
   subtitle: string
-  palette: {
-    primary: string
-    dark: string
-    light: string
-    border: string
-  }
+  icon: string
   rows: DraftResultImageRow[]
 }
 
@@ -28,43 +23,48 @@ export function buildDraftResultAnnouncementSvg(
   candidateById: Map<string, CandidateForSort>,
 ): string {
   const columns = buildDraftResultImageColumns(session, candidateById)
-
   const width = draftResultImageWidth
   const height = draftResultImageHeight
   const columnWidth = 410
-  const gap = 34
-  const startX = 82
-  const top = 270
+  const gap = 30
+  const startX = 75
+  const top = 220
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
-    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#101820" flood-opacity="0.12"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#252827"/>
+      <stop offset="48%" stop-color="#070808"/>
+      <stop offset="100%" stop-color="#1a1d1c"/>
+    </linearGradient>
+    <linearGradient id="panelHeader" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#181a1a"/>
+      <stop offset="100%" stop-color="#050606"/>
+    </linearGradient>
+    <pattern id="texture" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M0 24 L24 0 M-6 6 L6 -6 M18 30 L30 18" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <filter id="rowShadow" x="-4%" y="-10%" width="108%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#000000" flood-opacity="0.45"/>
     </filter>
-    <linearGradient id="goldHeader" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#b99443"/>
-      <stop offset="100%" stop-color="#7d652d"/>
-    </linearGradient>
-    <linearGradient id="navyHeader" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#16334f"/>
-      <stop offset="100%" stop-color="#08192d"/>
-    </linearGradient>
-    <linearGradient id="grayHeader" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#5c6065"/>
-      <stop offset="100%" stop-color="#292d31"/>
-    </linearGradient>
   </defs>
 
-  <rect width="${width}" height="${height}" fill="#fbfaf7"/>
-  <rect x="36" y="36" width="${width - 72}" height="${height - 72}" fill="none" stroke="#d9d2c2" stroke-width="2"/>
+  <rect width="${width}" height="${height}" fill="url(#bg)"/>
+  <rect width="${width}" height="${height}" fill="url(#texture)"/>
+  <path d="M-120 0 L220 0 L-120 560 Z" fill="#000000" opacity="0.32"/>
+  <path d="M1180 0 L1440 0 L1440 390 Z" fill="#000000" opacity="0.32"/>
+  <path d="M-40 1490 L260 1800 L-40 1800 Z" fill="#000000" opacity="0.3"/>
+  <path d="M960 1800 L1440 1240 L1440 1800 Z" fill="#000000" opacity="0.36"/>
+  <path d="M350 0 L470 0 L50 1800 L-70 1800 Z" fill="#ffffff" opacity="0.035"/>
+  <path d="M1120 0 L1240 0 L820 1800 L700 1800 Z" fill="#ffffff" opacity="0.035"/>
 
-  <g font-family="Yu Mincho, Hiragino Mincho ProN, Noto Serif JP, serif" fill="#08192d">
-    <text x="${width / 2}" y="126" text-anchor="middle" font-size="74" font-weight="800">2026 ドラフト1位〜3位予想</text>
-    <text x="${width / 2}" y="184" text-anchor="middle" font-size="24" letter-spacing="11" fill="#9b7934">JAPAN BASEBALL DRAFT</text>
+  <g font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" fill="#ffffff">
+    <line x1="250" y1="52" x2="390" y2="52" stroke="#ffffff" stroke-width="2"/>
+    <line x1="1050" y1="52" x2="1190" y2="52" stroke="#ffffff" stroke-width="2"/>
+    <text x="${width / 2}" y="64" text-anchor="middle" font-size="31" font-weight="500" letter-spacing="10">2026 JAPAN BASEBALL DRAFT</text>
+    <text x="${width / 2}" y="160" text-anchor="middle" font-size="76" font-weight="900" letter-spacing="-1">ドラフト1位〜3位予想</text>
   </g>
-  <line x1="205" y1="178" x2="410" y2="178" stroke="#b99443" stroke-width="4"/>
-  <line x1="1030" y1="178" x2="1235" y2="178" stroke="#b99443" stroke-width="4"/>
 
   ${columns
     .map((column, index) =>
@@ -78,9 +78,9 @@ export function buildDraftResultAnnouncementSvg(
     .join("\n")}
 
   <g font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif">
-    <text x="78" y="1710" font-size="22" fill="#5d6470" letter-spacing="5">野球の、次の時代をつくる。</text>
-    <line x1="352" y1="1703" x2="992" y2="1703" stroke="#b99443" stroke-width="2"/>
-    <text x="1362" y="1714" text-anchor="end" font-size="24" font-weight="700" fill="#9b7934">short-stop.jp</text>
+    <line x1="290" y1="1718" x2="585" y2="1718" stroke="#ffffff" stroke-width="2"/>
+    <line x1="855" y1="1718" x2="1150" y2="1718" stroke="#ffffff" stroke-width="2"/>
+    <text x="${width / 2}" y="1728" text-anchor="middle" font-size="28" font-weight="600" letter-spacing="7" fill="#ffffff">short-stop.jp</text>
   </g>
 </svg>`
 }
@@ -94,36 +94,21 @@ function buildDraftResultImageColumns(
       round: 1,
       title: "1位予想",
       subtitle: "1st ROUND",
-      palette: {
-        primary: "#b99443",
-        dark: "url(#goldHeader)",
-        light: "#f4efe2",
-        border: "#b99443",
-      },
+      icon: "♛",
       rows: buildRowsForRound(session, candidateById, 1),
     },
     {
       round: 2,
       title: "2位予想",
       subtitle: "2nd ROUND",
-      palette: {
-        primary: "#16334f",
-        dark: "url(#navyHeader)",
-        light: "#eef3f8",
-        border: "#16334f",
-      },
+      icon: "⚾",
       rows: buildRowsForRound(session, candidateById, 2),
     },
     {
       round: 3,
       title: "3位予想",
       subtitle: "3rd ROUND",
-      palette: {
-        primary: "#5c6065",
-        dark: "url(#grayHeader)",
-        light: "#f0f1f2",
-        border: "#5c6065",
-      },
+      icon: "★",
       rows: buildRowsForRound(session, candidateById, 3),
     },
   ]
@@ -158,31 +143,40 @@ function renderColumn({
   y: number
   width: number
 }): string {
-  const headerHeight = 136
-  const rowHeight = 96
-  const rowGap = 10
-  const bodyPadding = 12
-  const bodyTop = y + headerHeight + bodyPadding
-  const totalHeight = headerHeight + bodyPadding * 2 + rowHeight * 12 + rowGap * 11
+  const headerHeight = 104
+  const rowHeight = 82
+  const rowGap = 4
+  const footerHeight = 78
+  const bodyTop = y + headerHeight
+  const totalHeight = headerHeight + rowHeight * 12 + rowGap * 11 + footerHeight
 
-  return `<g filter="url(#softShadow)">
-    <rect x="${x}" y="${y}" width="${width}" height="${totalHeight}" rx="10" fill="#ffffff" stroke="${column.palette.border}" stroke-opacity="0.45" stroke-width="2"/>
-    <rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" rx="10" fill="${column.palette.dark}"/>
-    <rect x="${x}" y="${y + headerHeight - 10}" width="${width}" height="10" fill="${column.palette.dark}"/>
-    <text x="${x + 70}" y="${y + 78}" font-family="Georgia, serif" font-size="46" fill="#ffffff">♕</text>
-    <text x="${x + 205}" y="${y + 78}" text-anchor="middle" font-family="Yu Mincho, Hiragino Mincho ProN, Noto Serif JP, serif" font-size="56" font-weight="800" fill="#ffffff">${escapeXml(column.title)}</text>
-    <text x="${x + width / 2}" y="${y + 112}" text-anchor="middle" font-family="Georgia, serif" font-size="21" letter-spacing="8" fill="#ffffff">${escapeXml(column.subtitle)}</text>
+  return `<g>
+    <rect x="${x}" y="${y}" width="${width}" height="${totalHeight}" fill="none" stroke="#cfd2d2" stroke-width="2"/>
+    <rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" fill="url(#panelHeader)" stroke="#cfd2d2" stroke-width="2"/>
+    <path d="M${x} ${y} L${x + 46} ${y} L${x} ${y + 62} Z" fill="#eef200"/>
+    <path d="M${x + 18} ${y} L${x + 34} ${y} L${x} ${y + 45} L${x} ${y + 24} Z" fill="#070808"/>
+    <path d="M${x + width - 46} ${y + headerHeight} L${x + width} ${y + headerHeight} L${x + width} ${y + 42} Z" fill="#eef200"/>
+    <path d="M${x + width - 22} ${y + headerHeight} L${x + width} ${y + headerHeight} L${x + width} ${y + 76} Z" fill="#070808"/>
+    <text x="${x + 66}" y="${y + 76}" font-family="Arial Black, Impact, sans-serif" font-size="80" font-weight="900" font-style="italic" fill="#eef200">${column.round}</text>
+    <text x="${x + 132}" y="${y + 68}" font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" font-size="44" font-weight="900" fill="#ffffff">${escapeXml(column.title)}</text>
+    <text x="${x + width - 72}" y="${y + 48}" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#eef200">${escapeXml(column.icon)}</text>
+    <text x="${x + width - 72}" y="${y + 78}" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="2" fill="#ffffff">${column.round === 1 ? "FIRST" : column.round === 2 ? "SECOND" : "THIRD"}</text>
+    <text x="${x + width - 72}" y="${y + 96}" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="2" fill="#ffffff">ROUND</text>
     ${Array.from({ length: 12 }, (_, index) => {
       const row = column.rows[index]
       return renderRow({
         row: row ?? { rank: index + 1, name: "-", subText: "" },
-        x: x + bodyPadding,
+        x,
         y: bodyTop + index * (rowHeight + rowGap),
-        width: width - bodyPadding * 2,
+        width,
         height: rowHeight,
-        column,
       })
     }).join("\n")}
+    <path d="M${x} ${y + totalHeight - footerHeight + 8} L${x + width} ${y + totalHeight - footerHeight + 8}" stroke="#eef200" stroke-width="5"/>
+    <path d="M${x + 22} ${y + totalHeight - footerHeight + 8} L${x + 50} ${y + totalHeight - footerHeight + 8} L${x + 30} ${y + totalHeight - footerHeight + 28} L${x + 2} ${y + totalHeight - footerHeight + 28} Z" fill="#eef200"/>
+    <path d="M${x + 58} ${y + totalHeight - footerHeight + 8} L${x + 86} ${y + totalHeight - footerHeight + 8} L${x + 66} ${y + totalHeight - footerHeight + 28} L${x + 38} ${y + totalHeight - footerHeight + 28} Z" fill="#ffffff"/>
+    <text x="${x + width / 2}" y="${y + totalHeight - 36}" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="6" fill="#ffffff">${escapeXml(column.subtitle.toUpperCase())}</text>
+    <text x="${x + width / 2}" y="${y + totalHeight - 13}" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="600" letter-spacing="6" fill="#ffffff">2026 JAPAN BASEBALL DRAFT</text>
   </g>`
 }
 
@@ -192,40 +186,38 @@ function renderRow({
   y,
   width,
   height,
-  column,
 }: {
   row: DraftResultImageRow
   x: number
   y: number
   width: number
   height: number
-  column: DraftResultImageColumn
 }): string {
-  const numberWidth = 72
+  const numberWidth = 102
   const nameFontSize = getNameFontSize(row.name)
-  const subText = row.subText ? trimForSvg(row.subText, 18) : ""
+  const subText = row.subText ? trimForSvg(row.subText, 16) : ""
 
-  return `<g>
-    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7" fill="#ffffff" stroke="#c7c2b8" stroke-width="1.5"/>
-    <rect x="${x}" y="${y}" width="${numberWidth}" height="${height}" rx="7" fill="${column.palette.primary}"/>
-    <rect x="${x + numberWidth - 8}" y="${y}" width="8" height="${height}" fill="${column.palette.primary}"/>
-    <text x="${x + numberWidth / 2}" y="${y + 62}" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="800" fill="#ffffff">${row.rank}</text>
-    <text x="${x + numberWidth + 30}" y="${y + (subText ? 48 : 59)}" font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" font-size="${nameFontSize}" font-weight="800" fill="#101820">${escapeXml(row.name)}</text>
+  return `<g filter="url(#rowShadow)">
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" fill="#f4f4f2" stroke="#050606" stroke-width="2"/>
+    <path d="M${x} ${y} L${x + numberWidth} ${y} L${x + numberWidth - 34} ${y + height} L${x} ${y + height} Z" fill="#eef200"/>
+    <path d="M${x + numberWidth} ${y} L${x + numberWidth + 18} ${y} L${x + numberWidth - 16} ${y + height} L${x + numberWidth - 34} ${y + height} Z" fill="#050606"/>
+    <text x="${x + 50}" y="${y + 58}" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="46" font-weight="900" font-style="italic" fill="#050606">${row.rank}</text>
+    <text x="${x + numberWidth + 38}" y="${y + (subText ? 39 : 54)}" font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" font-size="${nameFontSize}" font-weight="900" fill="#050606">${escapeXml(row.name)}</text>
     ${
       subText
-        ? `<text x="${x + numberWidth + 31}" y="${y + 75}" font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" font-size="16" font-weight="700" fill="#68717c">${escapeXml(subText)}</text>`
+        ? `<text x="${x + numberWidth + 40}" y="${y + 65}" font-family="Yu Gothic, Hiragino Kaku Gothic ProN, Noto Sans JP, sans-serif" font-size="19" font-weight="700" fill="#4b4f52">${escapeXml(subText)}</text>`
         : ""
     }
-    <line x1="${x + width - 132}" y1="${y + 58}" x2="${x + width - 28}" y2="${y + 58}" stroke="#8a929c" stroke-width="2"/>
+    <path d="M${x + width - 32} ${y + 22} L${x + width - 15} ${y + height / 2} L${x + width - 32} ${y + height - 22}" fill="none" stroke="#b9b9b9" stroke-width="6"/>
   </g>`
 }
 
 function getNameFontSize(name: string): number {
   const length = Array.from(name).length
-  if (length >= 12) return 24
-  if (length >= 10) return 27
-  if (length >= 8) return 30
-  return 34
+  if (length >= 12) return 25
+  if (length >= 10) return 28
+  if (length >= 8) return 32
+  return 36
 }
 
 function trimForSvg(value: string, maxLength: number): string {
