@@ -14,9 +14,12 @@ import {
   type DraftSortSession,
 } from "../_lib/draftSortStorage"
 import {
-  buildDraftResultAnnouncementSvg,
+  buildDraftResultTemplateColumns,
   draftResultImageHeight,
   draftResultImageWidth,
+  draftResultTemplateLayout,
+  draftResultTemplateSrc,
+  type DraftResultTemplateColumn,
 } from "../_lib/resultImage"
 
 type ResultTab = "banzuke" | "unknown"
@@ -44,20 +47,20 @@ export function DraftCandidateSortResult() {
     )
   }, [])
 
-  const resultSvg = useMemo(() => {
-    if (!session) return ""
-    return buildDraftResultAnnouncementSvg(session, candidateById)
+  const resultColumns = useMemo(() => {
+    if (!session) return []
+    return buildDraftResultTemplateColumns(session, candidateById)
   }, [candidateById, session])
 
   useEffect(() => {
-    if (!resultSvg) {
+    if (resultColumns.length === 0) {
       setImageUrl("")
       return
     }
 
     let cancelled = false
 
-    svgToPngDataUrl(resultSvg)
+    templateToPngDataUrl(resultColumns)
       .then((pngUrl) => {
         if (!cancelled) setImageUrl(pngUrl)
       })
@@ -68,7 +71,7 @@ export function DraftCandidateSortResult() {
     return () => {
       cancelled = true
     }
-  }, [resultSvg])
+  }, [resultColumns])
 
   if (!session) {
     return (
@@ -87,11 +90,11 @@ export function DraftCandidateSortResult() {
   }
 
   async function downloadPng() {
-    if (!resultSvg) return
+    if (resultColumns.length === 0) return
 
     const link = document.createElement("a")
     link.download = "draft-2026-round-prediction.png"
-    link.href = imageUrl || (await svgToPngDataUrl(resultSvg))
+    link.href = imageUrl || (await templateToPngDataUrl(resultColumns))
     link.click()
   }
 
@@ -174,23 +177,10 @@ export function DraftCandidateSortResult() {
   )
 }
 
-async function svgToPngDataUrl(svg: string): Promise<string> {
-  const image = new Image()
-  const svgUrl = svgToObjectUrl(svg)
-  image.decoding = "async"
-  image.width = draftResultImageWidth
-  image.height = draftResultImageHeight
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve()
-      image.onerror = () => reject(new Error("result image load failed"))
-      image.src = svgUrl
-    })
-  } finally {
-    window.URL.revokeObjectURL(svgUrl)
-  }
-
+async function templateToPngDataUrl(
+  columns: DraftResultTemplateColumn[],
+): Promise<string> {
+  const templateImage = await loadImage(draftResultTemplateSrc)
   const canvas = document.createElement("canvas")
   canvas.width = draftResultImageWidth
   canvas.height = draftResultImageHeight
@@ -198,15 +188,86 @@ async function svgToPngDataUrl(svg: string): Promise<string> {
   const context = canvas.getContext("2d")
   if (!context) return ""
 
-  context.drawImage(image, 0, 0)
+  context.drawImage(
+    templateImage,
+    0,
+    0,
+    draftResultImageWidth,
+    draftResultImageHeight,
+  )
+  drawTemplateRows(context, columns)
 
   return canvas.toDataURL("image/png")
 }
 
-function svgToObjectUrl(svg: string): string {
-  return window.URL.createObjectURL(
-    new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
-  )
+function loadImage(src: string): Promise<HTMLImageElement> {
+  const image = new Image()
+  image.decoding = "async"
+
+  return new Promise((resolve, reject) => {
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`image load failed: ${src}`))
+    image.src = src
+  })
+}
+
+function drawTemplateRows(
+  context: CanvasRenderingContext2D,
+  columns: DraftResultTemplateColumn[],
+): void {
+  context.textBaseline = "alphabetic"
+
+  columns.forEach((column, columnIndex) => {
+    const layout = draftResultTemplateLayout.columns[columnIndex]
+    if (!layout) return
+
+    column.rows.forEach((row, rowIndex) => {
+      const rowTop =
+        layout.rowTop + rowIndex * draftResultTemplateLayout.rowHeight
+      const textLeft = layout.x + draftResultTemplateLayout.textLeftOffset
+
+      context.fillStyle = "#f4f4f2"
+      context.fillRect(
+        textLeft - 5,
+        rowTop + 11,
+        draftResultTemplateLayout.textClearWidth,
+        draftResultTemplateLayout.textClearHeight,
+      )
+
+      context.fillStyle = "#050505"
+      context.font = `900 ${getTemplateNameFontSize(row.name)}px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`
+      context.fillText(
+        row.name,
+        textLeft,
+        rowTop + draftResultTemplateLayout.nameBaselineOffset,
+      )
+
+      if (row.subText) {
+        context.fillStyle = "#4b4f52"
+        context.font =
+          '700 19px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif'
+        context.fillText(
+          trimForCanvas(row.subText, 15),
+          textLeft,
+          rowTop + draftResultTemplateLayout.subTextBaselineOffset,
+        )
+      }
+    })
+  })
+}
+
+function getTemplateNameFontSize(name: string): number {
+  const length = Array.from(name).length
+  if (length >= 12) return 23
+  if (length >= 10) return 26
+  if (length >= 8) return 29
+  return 32
+}
+
+function trimForCanvas(value: string, maxLength: number): string {
+  const chars = Array.from(value)
+  if (chars.length <= maxLength) return value
+  return `${chars.slice(0, maxLength - 1).join("")}…`
 }
 
 function ResultTabButton({
