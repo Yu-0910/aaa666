@@ -265,7 +265,8 @@ function drawTemplateRows(
       context.fillStyle = "#ffffff"
       applyOpponentBatterNameCanvasTextSettings(context)
       context.font = `900 ${getTemplateNameFontSize(row.name)}px ${fontFamily}`
-      context.fillText(
+      drawDraftResultPlayerName(
+        context,
         row.name,
         textLeft,
         rowTop + draftResultTemplateLayout.nameBaselineOffset,
@@ -282,6 +283,24 @@ function drawTemplateRows(
         )
       }
     })
+  })
+}
+
+function drawDraftResultPlayerName(
+  context: CanvasRenderingContext2D,
+  name: string,
+  x: number,
+  y: number,
+): void {
+  const offsets = [
+    [0, 0],
+    [0.45, 0],
+    [-0.45, 0],
+    [0, 0.35],
+  ] as const
+
+  offsets.forEach(([offsetX, offsetY]) => {
+    context.fillText(name, x + offsetX, y + offsetY)
   })
 }
 
