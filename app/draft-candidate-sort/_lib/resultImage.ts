@@ -54,8 +54,8 @@ export const banzukeTemplateLayout = {
   rowHeight: 86.35,
   westTextCenter: 224,
   eastTextCenter: 735,
-  nameBaselineOffset: 46,
-  subTextBaselineOffset: 72,
+  nameBaselineOffset: 50,
+  subTextBaselineOffset: 76,
   maxRows: 12,
 } as const
 
