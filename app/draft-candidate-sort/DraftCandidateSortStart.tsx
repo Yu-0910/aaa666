@@ -17,11 +17,10 @@ import {
 } from "./_lib/draftSortStorage"
 
 const filters: CandidateFilter[] = [
+  "recommended",
   "all",
   "highSchool",
-  "university",
   "universityCorporate",
-  "recommended",
 ]
 
 export function DraftCandidateSortStart() {

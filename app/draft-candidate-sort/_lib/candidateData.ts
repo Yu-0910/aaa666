@@ -60,9 +60,9 @@ const positionGroupLabels = {
 
 const filterLabels = {
   all: "全候補",
-  highSchool: "高校生のみ",
+  highSchool: "高校生ドラフト",
   university: "大学生のみ",
-  universityCorporate: "大学、社会人のみ",
+  universityCorporate: "大学・社会人ドラフト",
   recommended: "中位以上候補",
 } satisfies Record<CandidateFilter, string>
 
