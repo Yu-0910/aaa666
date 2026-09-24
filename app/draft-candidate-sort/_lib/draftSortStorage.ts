@@ -10,7 +10,7 @@ import type {
   DraftSortRelationRecord,
 } from "./sortEngine"
 
-export const draftSortStorageKey = "draft-candidate-sort:v1"
+export const draftSortStorageKey = "draft-candidate-sort:v2"
 export const draftSortSessionVersion = 2
 export const resultRetentionMs = 24 * 60 * 60 * 1000
 

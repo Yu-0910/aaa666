@@ -38,7 +38,7 @@ export function DraftCandidateSortComplete() {
 
   if (!session) {
     return (
-      <div className="rounded border border-slate-200 bg-white p-6 text-slate-600">
+      <div className="rounded border border-[#333] bg-[#1a1a1a] p-6 text-white/70">
         読み込んでいます。
       </div>
     )
@@ -52,22 +52,22 @@ export function DraftCandidateSortComplete() {
 
   return (
     <>
-      <section className="rounded border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded border border-[#333] bg-[#1a1a1a] p-6 text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-slate-500">回答した比較数</dt>
+            <dt className="text-white/55">回答した比較数</dt>
             <dd className="mt-1 text-xl font-bold">{session.answers.length}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">選択したソート対象</dt>
+            <dt className="text-white/55">選択したソート対象</dt>
             <dd className="mt-1 text-xl font-bold">{targetLabel}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">引き分け</dt>
+            <dt className="text-white/55">引き分け</dt>
             <dd className="mt-1 text-xl font-bold">{tieCount}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">両方知らない</dt>
+            <dt className="text-white/55">両方知らない</dt>
             <dd className="mt-1 text-xl font-bold">{unknownCount}</dd>
           </div>
         </dl>
@@ -77,14 +77,14 @@ export function DraftCandidateSortComplete() {
         <button
           type="button"
           onClick={() => updateRouteAndGo("/draft-candidate-sort/sort")}
-          className="rounded border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 transition hover:border-emerald-400"
+          className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
         >
           少し戻って修正する
         </button>
         <button
           type="button"
           onClick={() => updateRouteAndGo("/draft-candidate-sort/processing")}
-          className="rounded bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800"
+          className="rounded bg-[#ffff44] px-5 py-3 font-semibold text-[#23272a] transition hover:bg-white"
         >
           結果を作成する
         </button>
@@ -92,4 +92,3 @@ export function DraftCandidateSortComplete() {
     </>
   )
 }
-

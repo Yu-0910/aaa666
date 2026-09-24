@@ -2145,12 +2145,246 @@ export const candidates2026DataSet = {
       "schoolOrTeam": "日本製鉄瀬戸内",
       "throwBat": "右左",
       "heightWeight": "173/75"
-    }
+    },
+    {
+      "id": "draft-2026-extra-yonezawa-yuto",
+      "name": "米沢友翔",
+      "category": "university",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "関西大",
+      "throwBat": "左左",
+      "heightWeight": "180/80"
+    },
+    {
+      "id": "draft-2026-extra-sawayama-yusuke",
+      "name": "沢山優介",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "ヤマハ",
+      "throwBat": "左左",
+      "heightWeight": "185/82"
+    },
+    {
+      "id": "draft-2026-extra-tanaka-kousei",
+      "name": "田中皐晴",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "日南学園",
+      "throwBat": "右左",
+      "heightWeight": "183/87"
+    },
+    {
+      "id": "draft-2026-extra-takada-eita",
+      "name": "高田瑛大",
+      "category": "highSchool",
+      "positionGroup": "infielder",
+      "schoolOrTeam": "都城",
+      "throwBat": "右左",
+      "heightWeight": "172/70"
+    },
+    {
+      "id": "draft-2026-extra-tsunemi-sota",
+      "name": "常深颯大",
+      "category": "university",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "大阪経済大",
+      "throwBat": "左左",
+      "heightWeight": "179/80"
+    },
+    {
+      "id": "draft-2026-extra-ogurai-kosei",
+      "name": "小金井凌生",
+      "category": "university",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "青森大",
+      "throwBat": "右右",
+      "heightWeight": "190/82"
+    },
+    {
+      "id": "draft-2026-extra-nishihira-haruto",
+      "name": "西平晴人",
+      "category": "university",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "日本体育大",
+      "throwBat": "左左",
+      "heightWeight": "178/86"
+    },
+    {
+      "id": "draft-2026-extra-fukushima-hinata",
+      "name": "福島陽奈汰",
+      "category": "highSchool",
+      "positionGroup": "infielder",
+      "schoolOrTeam": "東海大熊本星翔",
+      "throwBat": "右右",
+      "heightWeight": "176/75"
+    },
+    {
+      "id": "draft-2026-extra-kondo-ruito",
+      "name": "近藤琉唯斗",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "小樽双葉",
+      "throwBat": "右右",
+      "heightWeight": "181/77"
+    },
+    {
+      "id": "draft-2026-extra-okada-kohei",
+      "name": "岡田光平",
+      "category": "university",
+      "positionGroup": "outfielder",
+      "schoolOrTeam": "大阪工業大",
+      "throwBat": "右左",
+      "heightWeight": "184/85"
+    },
+    {
+      "id": "draft-2026-extra-ikemura-kentaro",
+      "name": "池村健太郎",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "トヨタ自動車",
+      "throwBat": "左左",
+      "heightWeight": "181/82"
+    },
+    {
+      "id": "draft-2026-extra-isogai-kazuma",
+      "name": "磯貝和賢",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "Honda",
+      "throwBat": "右右",
+      "heightWeight": "185/95"
+    },
+    {
+      "id": "draft-2026-extra-kawashima-kenshin",
+      "name": "川島謙心",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "龍谷大平安",
+      "throwBat": "右右",
+      "heightWeight": "185/76"
+    },
+    {
+      "id": "draft-2026-extra-fujii-yuma",
+      "name": "藤井悠貴",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "新宮",
+      "throwBat": "右右",
+      "heightWeight": "197/105"
+    },
+    {
+      "id": "draft-2026-extra-sato-kazuki",
+      "name": "佐藤夏月",
+      "category": "university",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "共栄大",
+      "throwBat": "左左",
+      "heightWeight": "182/74"
+    },
+    {
+      "id": "draft-2026-extra-naito-ryo",
+      "name": "内藤崚",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "上田西",
+      "throwBat": "右左",
+      "heightWeight": "180/80"
+    },
+    {
+      "id": "draft-2026-extra-tanaka-ryo",
+      "name": "田中諒",
+      "category": "highSchool",
+      "positionGroup": "catcher",
+      "schoolOrTeam": "日大三",
+      "throwBat": "右右",
+      "heightWeight": "180/92"
+    },
+    {
+      "id": "draft-2026-extra-ishizawa-yamato",
+      "name": "石澤大和",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "日本製鉄室蘭シャークス",
+      "throwBat": "左左",
+      "heightWeight": "176/78"
+    },
+    {
+      "id": "draft-2026-extra-kamiya-toranosuke",
+      "name": "神谷虎之介",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "千葉スカイセイラーズ",
+      "throwBat": "右右",
+      "heightWeight": "180/84"
+    },
+    {
+      "id": "draft-2026-extra-abe-koga",
+      "name": "阿部巧雅",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "ミキハウス",
+      "throwBat": "右左",
+      "heightWeight": "177/79"
+    },
+    {
+      "id": "draft-2026-extra-nishida-fushi",
+      "name": "西田櫂吏",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "京都国際",
+      "throwBat": "左左",
+      "heightWeight": "178/76"
+    },
+    {
+      "id": "draft-2026-extra-kitaguchi-kodai",
+      "name": "北口晃大",
+      "category": "highSchool",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "八戸学院光星",
+      "throwBat": "右右",
+      "heightWeight": "187/85"
+    },
+    {
+      "id": "draft-2026-extra-nagayama-takeyoshi",
+      "name": "長山武蔵",
+      "category": "highSchool",
+      "positionGroup": "infielder",
+      "schoolOrTeam": "日本ウェルネス沖縄",
+      "throwBat": "右左",
+      "heightWeight": "182/85"
+    },
+    {
+      "id": "draft-2026-extra-kawahara-shiki",
+      "name": "川原嗣貴",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "Honda鈴鹿",
+      "throwBat": "右左",
+      "heightWeight": "190/100"
+    },
+    {
+      "id": "draft-2026-extra-tanibuchi-eiji",
+      "name": "谷渕瑛仁",
+      "category": "highSchool",
+      "positionGroup": "infielder",
+      "schoolOrTeam": "大阪桐蔭",
+      "throwBat": "右左",
+      "heightWeight": "177/77"
+    },
+    {
+      "id": "draft-2026-extra-shimodo-shoshi",
+      "name": "下堂翔史",
+      "category": "corporate",
+      "positionGroup": "pitcher",
+      "schoolOrTeam": "日本製鉄瀬戸内",
+      "throwBat": "右右",
+      "heightWeight": "175/90"
+    },
   ],
   "internalPriority": [
     {
       "id": "draft-2026-39801",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41437",
@@ -2158,7 +2392,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-39442",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-45186",
@@ -2166,7 +2400,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-41378",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-37161",
@@ -2186,7 +2420,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-45864",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-44195",
@@ -2222,7 +2456,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-42084",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-38979",
@@ -2234,15 +2468,15 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-39577",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-43017",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-39547",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41425",
@@ -2258,11 +2492,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-39650",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41860",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-37529",
@@ -2270,11 +2504,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-44517",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-41219",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-44514",
@@ -2318,11 +2552,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-37164",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-44576",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-39050",
@@ -2338,7 +2572,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-41136",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-44025",
@@ -2350,7 +2584,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-40987",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41771",
@@ -2362,15 +2596,15 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-46374",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-42502",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-39654",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-40016",
@@ -2378,15 +2612,15 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-40866",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-38932",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-37216",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-42449",
@@ -2394,7 +2628,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-44234",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-37399",
@@ -2402,7 +2636,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-37865",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41519",
@@ -2410,11 +2644,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-45299",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-40818",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-38531",
@@ -2422,7 +2656,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-43629",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-45692",
@@ -2430,15 +2664,15 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-38006",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-40764",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-44273",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-38699",
@@ -2474,7 +2708,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-32181",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30625",
@@ -2486,7 +2720,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-31026",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41471",
@@ -2502,11 +2736,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-28693",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-28625",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-26287",
@@ -2518,7 +2752,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-30777",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-28269",
@@ -2534,11 +2768,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-31286",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-31847",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-29642",
@@ -2574,11 +2808,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-31854",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-28303",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-31888",
@@ -2594,7 +2828,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-29403",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-31220",
@@ -2602,7 +2836,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-29537",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-30370",
@@ -2610,7 +2844,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-30516",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-31999",
@@ -2622,11 +2856,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-29728",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30415",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30915",
@@ -2634,7 +2868,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-28840",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-31318",
@@ -2698,7 +2932,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-28129",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30137",
@@ -2706,7 +2940,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-30986",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-28096",
@@ -2718,7 +2952,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-26289",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-29620",
@@ -2730,11 +2964,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-45298",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-41945",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-27816",
@@ -2754,7 +2988,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-41426",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30952",
@@ -2770,11 +3004,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-22305",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-33741",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-25139",
@@ -2794,7 +3028,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-33392",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-30392",
@@ -2838,7 +3072,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-32076",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-25990",
@@ -2846,7 +3080,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-25858",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-24052",
@@ -2866,7 +3100,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-26519",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-28959",
@@ -2894,7 +3128,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-27113",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-25149",
@@ -2914,7 +3148,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-27496",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-25833",
@@ -2954,15 +3188,15 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-22077",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-26925",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-33441",
-      "priorityGroup": "normal"
+      "priorityGroup": "recommended"
     },
     {
       "id": "draft-2026-33378",
@@ -2990,11 +3224,11 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-22917",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-25822",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-25780",
@@ -3034,7 +3268,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-26607",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-26389",
@@ -3054,7 +3288,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-24485",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-36044",
@@ -3078,7 +3312,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-27368",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-33379",
@@ -3086,7 +3320,7 @@ export const candidates2026DataSet = {
     },
     {
       "id": "draft-2026-28585",
-      "priorityGroup": "recommended"
+      "priorityGroup": "normal"
     },
     {
       "id": "draft-2026-26626",
@@ -3099,6 +3333,110 @@ export const candidates2026DataSet = {
     {
       "id": "draft-2026-24221",
       "priorityGroup": "normal"
-    }
+    },
+    {
+      "id": "draft-2026-extra-yonezawa-yuto",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-sawayama-yusuke",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-tanaka-kousei",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-takada-eita",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-tsunemi-sota",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-ogurai-kosei",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-nishihira-haruto",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-fukushima-hinata",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-kondo-ruito",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-okada-kohei",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-ikemura-kentaro",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-isogai-kazuma",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-kawashima-kenshin",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-fujii-yuma",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-sato-kazuki",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-naito-ryo",
+      "priorityGroup": "normal"
+    },
+    {
+      "id": "draft-2026-extra-tanaka-ryo",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-ishizawa-yamato",
+      "priorityGroup": "normal"
+    },
+    {
+      "id": "draft-2026-extra-kamiya-toranosuke",
+      "priorityGroup": "normal"
+    },
+    {
+      "id": "draft-2026-extra-abe-koga",
+      "priorityGroup": "normal"
+    },
+    {
+      "id": "draft-2026-extra-nishida-fushi",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-kitaguchi-kodai",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-nagayama-takeyoshi",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-kawahara-shiki",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-tanibuchi-eiji",
+      "priorityGroup": "recommended"
+    },
+    {
+      "id": "draft-2026-extra-shimodo-shoshi",
+      "priorityGroup": "normal"
+    },
   ]
 } satisfies CandidateDataSet

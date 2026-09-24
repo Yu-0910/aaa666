@@ -18,11 +18,10 @@ export default function DraftCandidateSortProcessingPage() {
       description="順位結果から、番付表とドラフト順位予想表を作成しています。"
     >
       <ProcessingRedirect />
-      <div className="rounded border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto size-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
+      <div className="rounded border border-[#333] bg-[#1a1a1a] p-8 text-center text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="mx-auto size-10 animate-spin rounded-full border-4 border-[#333] border-t-[#ffff44]" />
         <p className="mt-5 font-semibold">結果を作成しています</p>
       </div>
     </DraftSortShell>
   )
 }
-

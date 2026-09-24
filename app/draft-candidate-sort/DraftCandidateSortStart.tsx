@@ -68,16 +68,16 @@ export function DraftCandidateSortStart() {
   return (
     <>
       {savedSession ? (
-        <section className="mb-6 rounded border border-emerald-200 bg-emerald-50 p-4">
+        <section className="mb-6 rounded border border-[#ffff44] bg-[#1a1a1a] p-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="font-bold text-emerald-950">前回の続きがあります</p>
-              <p className="mt-1 text-sm text-emerald-900">
+              <p className="font-bold text-white">前回の続きがあります</p>
+              <p className="mt-1 text-sm text-white/75">
                 {getCandidateFilterLabel(savedSession.targetFilter)} / 回答{" "}
                 {savedSession.answers.length}件
               </p>
               {savedResultExpiresAt ? (
-                <p className="mt-1 text-xs text-emerald-800">
+                <p className="mt-1 text-xs text-white/60">
                   結果の保存期限: {savedResultExpiresAt}
                 </p>
               ) : null}
@@ -86,14 +86,14 @@ export function DraftCandidateSortStart() {
               <button
                 type="button"
                 onClick={resumeSort}
-                className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                className="rounded bg-[#ffff44] px-4 py-2 text-sm font-semibold text-[#23272a] transition hover:bg-white"
               >
                 続きから再開
               </button>
               <button
                 type="button"
                 onClick={clearSaved}
-                className="rounded border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:border-emerald-500"
+                className="rounded border border-[#555] bg-[#111315] px-4 py-2 text-sm font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
               >
                 保存を消す
               </button>
@@ -116,24 +116,24 @@ export function DraftCandidateSortStart() {
               aria-pressed={selected}
               onClick={() => setSelectedFilter(filter)}
               className={[
-                "min-h-28 rounded border bg-white p-4 text-left shadow-sm transition",
+                "min-h-28 rounded border bg-[#1a1a1a] p-4 text-left text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition",
                 recommended
-                  ? "border-yellow-400 ring-2 ring-yellow-300"
-                  : "border-slate-200 hover:border-emerald-300",
-                selected ? "outline outline-3 outline-emerald-700" : "",
+                  ? "border-[#ffff44] ring-2 ring-[#ffff44]/60"
+                  : "border-[#333] hover:border-[#ffff44]",
+                selected ? "outline outline-3 outline-[#ffff44]" : "",
               ].join(" ")}
             >
               {recommended ? (
-                <span className="mb-2 inline-flex rounded bg-yellow-300 px-2 py-1 text-xs font-bold text-slate-950">
+                <span className="mb-2 inline-flex rounded bg-[#ffff44] px-2 py-1 text-xs font-bold text-[#23272a]">
                   オススメ
                 </span>
               ) : null}
               <span className="block text-lg font-bold">{label}</span>
-              <span className="mt-2 block text-sm text-slate-500">
+              <span className="mt-2 block text-sm text-white/60">
                 {count}人
               </span>
               {recommended ? (
-                <span className="mt-2 block text-sm text-slate-600">
+                <span className="mt-2 block text-sm text-white/70">
                   迷ったらここから
                 </span>
               ) : null}
@@ -143,19 +143,19 @@ export function DraftCandidateSortStart() {
       </div>
 
       {selectedAll ? (
-        <div className="mt-8 rounded border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+        <div className="mt-8 rounded border border-[#333] bg-[#1a1a1a] p-4 text-sm leading-6 text-white/70">
           全候補を対象にすると比較回数が多くなります。時間をかけてじっくり作成したい場合におすすめです。
         </div>
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-slate-600">
-          選択中: <span className="font-semibold text-slate-950">{selectedLabel}</span>
+        <p className="text-sm text-white/70">
+          選択中: <span className="font-semibold text-white">{selectedLabel}</span>
         </p>
         <button
           type="button"
           onClick={startSort}
-          className="rounded bg-emerald-700 px-5 py-3 font-semibold text-white transition hover:bg-emerald-800"
+          className="rounded bg-[#ffff44] px-5 py-3 font-semibold text-[#23272a] transition hover:bg-white"
         >
           開始
         </button>

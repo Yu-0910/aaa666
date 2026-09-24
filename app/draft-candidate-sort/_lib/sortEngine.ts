@@ -437,9 +437,7 @@ function cloneRelations(
 }
 
 function normalizeCandidateIds(candidateIds: string[]): string[] {
-  return Array.from(new Set(candidateIds)).sort(
-    (left, right) => stableHash(left) - stableHash(right) || left.localeCompare(right),
-  )
+  return Array.from(new Set(candidateIds))
 }
 
 function normalizeComparison(leftId: string, rightId: string): DraftSortComparison {
@@ -542,7 +540,8 @@ function calculateComparisonProgress(
 ): number {
   const estimatedComparisons = getFordJohnsonMaxComparisons(candidateCount)
   if (estimatedComparisons <= 0) return 0
-  return Math.floor((answerCount / estimatedComparisons) * 100)
+  const answerRatio = Math.min(1, answerCount / estimatedComparisons)
+  return Math.min(99, Math.floor(Math.sqrt(answerRatio) * 100))
 }
 
 function isValidRelationInput(
