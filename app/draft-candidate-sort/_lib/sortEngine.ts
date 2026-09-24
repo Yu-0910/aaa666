@@ -541,7 +541,7 @@ function calculateComparisonProgress(
   const estimatedComparisons = getFordJohnsonMaxComparisons(candidateCount)
   if (estimatedComparisons <= 0) return 0
   const answerRatio = Math.min(1, answerCount / estimatedComparisons)
-  return Math.min(99, Math.floor(Math.sqrt(answerRatio) * 100))
+  return Math.min(99, Math.floor(Math.pow(answerRatio, 0.7) * 100))
 }
 
 function isValidRelationInput(
