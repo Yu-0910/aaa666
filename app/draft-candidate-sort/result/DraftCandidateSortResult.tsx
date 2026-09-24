@@ -409,7 +409,7 @@ function drawBanzukeRows(
   rows: BanzukeTemplateRow[],
 ): void {
   context.textBaseline = "alphabetic"
-  context.textAlign = "left"
+  context.textAlign = "center"
   const fontFamily = getDraftResultCanvasFontFamily()
 
   rows.slice(0, banzukeTemplateLayout.maxRows).forEach((row, rowIndex) => {
@@ -420,14 +420,14 @@ function drawBanzukeRows(
     drawBanzukeCell(
       context,
       row.west,
-      banzukeTemplateLayout.westTextLeft,
+      banzukeTemplateLayout.westTextCenter,
       rowTop,
       fontFamily,
     )
     drawBanzukeCell(
       context,
       row.east,
-      banzukeTemplateLayout.eastTextLeft,
+      banzukeTemplateLayout.eastTextCenter,
       rowTop,
       fontFamily,
     )
@@ -437,7 +437,7 @@ function drawBanzukeRows(
 function drawBanzukeCell(
   context: CanvasRenderingContext2D,
   cell: BanzukeTemplateCell | null,
-  textLeft: number,
+  textCenter: number,
   rowTop: number,
   fontFamily: string,
 ): void {
@@ -449,7 +449,7 @@ function drawBanzukeCell(
   drawDraftResultPlayerName(
     context,
     cell.name,
-    textLeft,
+    textCenter,
     rowTop + banzukeTemplateLayout.nameBaselineOffset,
   )
 
@@ -459,7 +459,7 @@ function drawBanzukeCell(
     context.font = `700 20px ${fontFamily}`
     context.fillText(
       trimForCanvas(cell.subText, 18),
-      textLeft,
+      textCenter,
       rowTop + banzukeTemplateLayout.subTextBaselineOffset,
     )
   }

@@ -52,10 +52,10 @@ export const draftResultTemplateLayout = {
 export const banzukeTemplateLayout = {
   rowTop: 164,
   rowHeight: 86.35,
-  westTextLeft: 68,
-  eastTextLeft: 580,
-  nameBaselineOffset: 38,
-  subTextBaselineOffset: 66,
+  westTextCenter: 224,
+  eastTextCenter: 735,
+  nameBaselineOffset: 46,
+  subTextBaselineOffset: 72,
   maxRows: 12,
 } as const
 
