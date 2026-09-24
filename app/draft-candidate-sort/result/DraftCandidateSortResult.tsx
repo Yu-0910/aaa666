@@ -598,10 +598,8 @@ function TextResultSection({
                         key={`${round}-${row.candidateId}`}
                         className="rounded border border-[#333] bg-[#111315] p-3"
                       >
-                        <p className="text-xs font-bold text-white/45">
-                          {row.displayRank}位
-                        </p>
-                        <ResultCandidate
+                        <TextCandidateLine
+                          rankLabel={`${row.displayRank}位`}
                           candidate={candidateById.get(row.candidateId)}
                           fallbackId={row.candidateId}
                         />
@@ -636,6 +634,7 @@ function TextResultSection({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <BanzukeTextCandidate
                     label="西"
+                    rankLabel={row.rankLabel}
                     candidate={
                       row.westId ? candidateById.get(row.westId) : null
                     }
@@ -643,6 +642,7 @@ function TextResultSection({
                   />
                   <BanzukeTextCandidate
                     label="東"
+                    rankLabel={row.rankLabel}
                     candidate={
                       row.eastId ? candidateById.get(row.eastId) : null
                     }
@@ -664,18 +664,20 @@ function TextResultSection({
 
 function BanzukeTextCandidate({
   label,
+  rankLabel,
   candidate,
   fallbackId,
 }: {
   label: "西" | "東"
+  rankLabel: string
   candidate: CandidateForSort | null | undefined
   fallbackId: string | null
 }) {
   return (
     <div className="rounded border border-[#333] bg-[#111315] p-3">
-      <p className="mb-2 text-xs font-bold text-white/45">{label}</p>
       {fallbackId ? (
-        <ResultCandidate
+        <TextCandidateLine
+          rankLabel={`${rankLabel} ${label}`}
           candidate={candidate ?? undefined}
           fallbackId={fallbackId}
         />
@@ -686,25 +688,37 @@ function BanzukeTextCandidate({
   )
 }
 
-function ResultCandidate({
+function TextCandidateLine({
+  rankLabel,
   candidate,
   fallbackId,
 }: {
+  rankLabel: string
   candidate: CandidateForSort | undefined
   fallbackId: string
 }) {
   if (!candidate) {
-    return <p className="font-bold">{fallbackId}</p>
+    return (
+      <p className="text-sm font-bold leading-6">
+        <span className="text-[#ffff44]">{rankLabel}</span>
+        <span className="mx-2 text-white/30">/</span>
+        <span>{fallbackId}</span>
+      </p>
+    )
   }
 
   return (
-    <div>
-      <p className="font-bold">{candidate.name}</p>
-      <p className="mt-1 text-xs text-white/65">{candidate.schoolOrTeam}</p>
-      <p className="mt-1 text-xs text-white/50">
+    <p className="text-sm font-bold leading-6">
+      <span className="text-[#ffff44]">{rankLabel}</span>
+      <span className="mx-2 text-white/30">/</span>
+      <span>{candidate.name}</span>
+      <span className="mx-2 text-white/30">/</span>
+      <span className="text-white/70">{candidate.schoolOrTeam}</span>
+      <span className="mx-2 text-white/30">/</span>
+      <span className="text-white/60">
         {getCandidatePositionGroupLabel(candidate.positionGroup)}
-      </p>
-    </div>
+      </span>
+    </p>
   )
 }
 
