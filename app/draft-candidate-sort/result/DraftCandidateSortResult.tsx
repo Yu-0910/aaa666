@@ -225,7 +225,7 @@ function BanzukeResultSection({
 }) {
   return (
     <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#333] p-5">
+      <div className="select-none border-b border-[#333] p-5">
         <h2 className="text-xl font-bold">番付表</h2>
       </div>
       <div className="bg-[#111315] p-4 sm:p-6">
@@ -236,14 +236,14 @@ function BanzukeResultSection({
               alt="2026 ドラフト番付表"
               className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
             />
-            <p className="mt-3 text-center text-sm text-white/70">
+            <p className="mt-3 select-none text-center text-sm text-white/70">
               文字がない箇所を長押しすれば、画像が保存できます。
             </p>
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={onDownload}
-                className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
+                className="select-none rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
               >
                 画像を保存
               </button>
@@ -270,7 +270,7 @@ function DraftPredictionImageSection({
 }) {
   return (
     <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#333] p-5">
+      <div className="select-none border-b border-[#333] p-5">
         <h2 className="text-xl font-bold">ドラ1〜3予想</h2>
       </div>
       <div className="bg-[#111315] p-4 sm:p-6">
@@ -281,14 +281,14 @@ function DraftPredictionImageSection({
               alt="2026 ドラフト1位〜3位予想"
               className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
             />
-            <p className="mt-3 text-center text-sm text-white/70">
+            <p className="mt-3 select-none text-center text-sm text-white/70">
               文字がない箇所を長押しすれば、画像が保存できます。
             </p>
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={onDownload}
-                className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
+                className="select-none rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
               >
                 画像を保存
               </button>
@@ -555,7 +555,7 @@ function ResultTabButton({
       type="button"
       onClick={onClick}
       className={[
-        "rounded border px-4 py-2 text-sm font-semibold transition",
+        "select-none rounded border px-4 py-2 text-sm font-semibold transition",
         active
           ? "border-[#ffff44] bg-[#ffff44] text-[#23272a]"
           : "border-[#333] bg-[#1a1a1a] text-white hover:border-[#ffff44]",
