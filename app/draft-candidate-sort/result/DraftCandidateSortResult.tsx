@@ -186,6 +186,9 @@ function DraftPredictionImageSection({
               alt="2026 ドラフト1位〜3位予想"
               className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
             />
+            <p className="mt-3 text-center text-sm text-white/70">
+              文字がない箇所を長押しすれば、画像が保存できます。
+            </p>
             <div className="mt-4 flex justify-center">
               <button
                 type="button"
