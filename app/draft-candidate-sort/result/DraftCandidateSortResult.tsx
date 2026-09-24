@@ -14,11 +14,18 @@ import {
   type DraftSortSession,
 } from "../_lib/draftSortStorage"
 import {
+  banzukeImageHeight,
+  banzukeImageWidth,
+  banzukeTemplateLayout,
+  banzukeTemplateSrc,
+  buildBanzukeTemplateRows,
   buildDraftResultTemplateColumns,
   draftResultImageHeight,
   draftResultImageWidth,
   draftResultTemplateLayout,
   draftResultTemplateSrc,
+  type BanzukeTemplateCell,
+  type BanzukeTemplateRow,
   type DraftResultTemplateColumn,
 } from "../_lib/resultImage"
 
@@ -30,6 +37,7 @@ export function DraftCandidateSortResult() {
   const [activeTab, setActiveTab] = useState<ResultTab>("banzuke")
   const [copyStatus, setCopyStatus] = useState<string>("")
   const [imageUrl, setImageUrl] = useState<string>("")
+  const [banzukeImageUrl, setBanzukeImageUrl] = useState<string>("")
 
   useEffect(() => {
     const saved = loadDraftSortSession()
@@ -50,6 +58,11 @@ export function DraftCandidateSortResult() {
   const resultColumns = useMemo(() => {
     if (!session) return []
     return buildDraftResultTemplateColumns(session, candidateById)
+  }, [candidateById, session])
+
+  const banzukeRows = useMemo(() => {
+    if (!session) return []
+    return buildBanzukeTemplateRows(session, candidateById)
   }, [candidateById, session])
 
   useEffect(() => {
@@ -73,6 +86,27 @@ export function DraftCandidateSortResult() {
     }
   }, [resultColumns])
 
+  useEffect(() => {
+    if (banzukeRows.length === 0) {
+      setBanzukeImageUrl("")
+      return
+    }
+
+    let cancelled = false
+
+    banzukeTemplateToPngDataUrl(banzukeRows)
+      .then((pngUrl) => {
+        if (!cancelled) setBanzukeImageUrl(pngUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setBanzukeImageUrl("")
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [banzukeRows])
+
   if (!session) {
     return (
       <div className="rounded border border-[#333] bg-[#1a1a1a] p-6 text-white/70">
@@ -95,6 +129,16 @@ export function DraftCandidateSortResult() {
     const link = document.createElement("a")
     link.download = "draft-2026-round-prediction.png"
     link.href = imageUrl || (await templateToPngDataUrl(resultColumns))
+    link.click()
+  }
+
+  async function downloadBanzukePng() {
+    if (banzukeRows.length === 0) return
+
+    const link = document.createElement("a")
+    link.download = "draft-2026-banzuke.png"
+    link.href =
+      banzukeImageUrl || (await banzukeTemplateToPngDataUrl(banzukeRows))
     link.click()
   }
 
@@ -127,7 +171,11 @@ export function DraftCandidateSortResult() {
       </div>
 
       {activeTab === "banzuke" ? (
-        <BanzukeResultSection session={session} candidateById={candidateById} />
+        <BanzukeResultSection
+          imageUrl={banzukeImageUrl}
+          onDownload={downloadBanzukePng}
+          hasRows={banzukeRows.length > 0}
+        />
       ) : null}
 
       {activeTab === "draftPrediction" ? (
@@ -163,6 +211,53 @@ export function DraftCandidateSortResult() {
         </button>
       </div>
     </>
+  )
+}
+
+function BanzukeResultSection({
+  imageUrl,
+  onDownload,
+  hasRows,
+}: {
+  imageUrl: string
+  onDownload: () => void
+  hasRows: boolean
+}) {
+  return (
+    <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#333] p-5">
+        <h2 className="text-xl font-bold">番付表</h2>
+      </div>
+      <div className="bg-[#111315] p-4 sm:p-6">
+        {imageUrl ? (
+          <>
+            <img
+              src={imageUrl}
+              alt="2026 ドラフト番付表"
+              className="mx-auto h-auto w-full max-w-[760px] rounded border border-white/10 bg-white"
+            />
+            <p className="mt-3 text-center text-sm text-white/70">
+              文字がない箇所を長押しすれば、画像が保存できます。
+            </p>
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={onDownload}
+                className="rounded border border-[#555] bg-[#1a1a1a] px-5 py-3 font-semibold text-white transition hover:border-[#ffff44] hover:text-[#ffff44]"
+              >
+                画像を保存
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-white/70">
+            {hasRows
+              ? "画像を生成しています。"
+              : "結果作成後、ここに番付表を表示します。"}
+          </p>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -233,6 +328,26 @@ async function templateToPngDataUrl(
   return canvas.toDataURL("image/png")
 }
 
+async function banzukeTemplateToPngDataUrl(
+  rows: BanzukeTemplateRow[],
+): Promise<string> {
+  const [templateImage] = await Promise.all([
+    loadImage(banzukeTemplateSrc),
+    waitForDraftResultFonts(),
+  ])
+  const canvas = document.createElement("canvas")
+  canvas.width = banzukeImageWidth
+  canvas.height = banzukeImageHeight
+
+  const context = canvas.getContext("2d")
+  if (!context) return ""
+
+  context.drawImage(templateImage, 0, 0, banzukeImageWidth, banzukeImageHeight)
+  drawBanzukeRows(context, rows)
+
+  return canvas.toDataURL("image/png")
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   const image = new Image()
   image.decoding = "async"
@@ -287,6 +402,67 @@ function drawTemplateRows(
       }
     })
   })
+}
+
+function drawBanzukeRows(
+  context: CanvasRenderingContext2D,
+  rows: BanzukeTemplateRow[],
+): void {
+  context.textBaseline = "alphabetic"
+  context.textAlign = "left"
+  const fontFamily = getDraftResultCanvasFontFamily()
+
+  rows.slice(0, banzukeTemplateLayout.maxRows).forEach((row, rowIndex) => {
+    const rowTop =
+      banzukeTemplateLayout.rowTop +
+      rowIndex * banzukeTemplateLayout.rowHeight
+
+    drawBanzukeCell(
+      context,
+      row.west,
+      banzukeTemplateLayout.westTextLeft,
+      rowTop,
+      fontFamily,
+    )
+    drawBanzukeCell(
+      context,
+      row.east,
+      banzukeTemplateLayout.eastTextLeft,
+      rowTop,
+      fontFamily,
+    )
+  })
+}
+
+function drawBanzukeCell(
+  context: CanvasRenderingContext2D,
+  cell: BanzukeTemplateCell | null,
+  textLeft: number,
+  rowTop: number,
+  fontFamily: string,
+): void {
+  if (!cell) return
+
+  context.fillStyle = "#000000"
+  applyOpponentBatterNameCanvasTextSettings(context)
+  context.font = `900 ${getBanzukeNameFontSize(cell.name)}px ${fontFamily}`
+  drawDraftResultPlayerName(
+    context,
+    cell.name,
+    textLeft,
+    rowTop + banzukeTemplateLayout.nameBaselineOffset,
+  )
+
+  if (cell.subText) {
+    context.fillStyle = "#000000"
+    applyOpponentBatterNameCanvasTextSettings(context)
+    context.font = `700 20px ${fontFamily}`
+    context.fillText(
+      trimForCanvas(cell.subText, 18),
+      textLeft,
+      rowTop + banzukeTemplateLayout.subTextBaselineOffset,
+    )
+  }
 }
 
 function drawDraftResultPlayerName(
@@ -351,6 +527,14 @@ function getTemplateNameFontSize(name: string): number {
   return 64
 }
 
+function getBanzukeNameFontSize(name: string): number {
+  const length = Array.from(name).length
+  if (length >= 10) return 36
+  if (length >= 8) return 40
+  if (length >= 6) return 45
+  return 49
+}
+
 function trimForCanvas(value: string, maxLength: number): string {
   const chars = Array.from(value)
   if (chars.length <= maxLength) return value
@@ -379,68 +563,6 @@ function ResultTabButton({
     >
       {children}
     </button>
-  )
-}
-
-function BanzukeResultSection({
-  session,
-  candidateById,
-}: {
-  session: DraftSortSession
-  candidateById: Map<string, CandidateForSort>
-}) {
-  return (
-    <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-        <div className="border-b border-[#333] p-5">
-          <h2 className="text-xl font-bold">番付表</h2>
-        </div>
-        {session.banzukeResult.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-sm">
-              <thead>
-                <tr className="bg-[#111315] text-white/70">
-                  <th className="w-[40%] border-b border-[#333] p-3 text-left">
-                    東
-                  </th>
-                  <th className="w-[20%] border-b border-[#333] p-3 text-center">
-                    番付
-                  </th>
-                  <th className="w-[40%] border-b border-[#333] p-3 text-right">
-                    西
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {session.banzukeResult.map((row) => (
-                  <tr key={`${row.rankLabel}-${row.eastId}-${row.westId}`}>
-                    <td className="border-b border-[#333] p-3 align-top">
-                      <BanzukeCandidate
-                        candidate={row.eastId ? candidateById.get(row.eastId) : null}
-                        fallbackId={row.eastId}
-                        align="left"
-                      />
-                    </td>
-                    <td className="border-b border-[#333] p-3 text-center align-middle font-bold text-[#ffff44]">
-                      {row.rankLabel}
-                    </td>
-                    <td className="border-b border-[#333] p-3 align-top">
-                      <BanzukeCandidate
-                        candidate={row.westId ? candidateById.get(row.westId) : null}
-                        fallbackId={row.westId}
-                        align="right"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="p-5 text-sm text-white/70">
-            結果作成後、ここに番付表を表示します。
-          </p>
-        )}
-      </section>
   )
 }
 
@@ -496,40 +618,6 @@ function ResultCandidate({
   return (
     <div>
       <p className="font-bold">{candidate.name}</p>
-      <p className="mt-1 text-xs text-white/65">{candidate.schoolOrTeam}</p>
-      <p className="mt-1 text-xs text-white/50">
-        {getCandidatePositionGroupLabel(candidate.positionGroup)}
-      </p>
-    </div>
-  )
-}
-
-function BanzukeCandidate({
-  candidate,
-  fallbackId,
-  align,
-}: {
-  candidate: CandidateForSort | null | undefined
-  fallbackId: string | null
-  align: "left" | "right"
-}) {
-  const textAlign = align === "right" ? "text-right" : "text-left"
-
-  if (!fallbackId) {
-    return <div className={`text-white/35 ${textAlign}`}>-</div>
-  }
-
-  if (!candidate) {
-    return (
-      <div className={textAlign}>
-        <p className="font-bold">{fallbackId}</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className={textAlign}>
-      <p className="text-base font-bold">{candidate.name}</p>
       <p className="mt-1 text-xs text-white/65">{candidate.schoolOrTeam}</p>
       <p className="mt-1 text-xs text-white/50">
         {getCandidatePositionGroupLabel(candidate.positionGroup)}

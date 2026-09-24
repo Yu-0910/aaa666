@@ -3,6 +3,7 @@ import {
   type CandidateForSort,
 } from "./candidateData"
 import type { DraftSortSession } from "./draftSortStorage"
+import type { BanzukeRow } from "./resultBuilder"
 
 export type DraftResultTemplateRow = {
   rank: number
@@ -15,10 +16,26 @@ export type DraftResultTemplateColumn = {
   rows: DraftResultTemplateRow[]
 }
 
+export type BanzukeTemplateCell = {
+  name: string
+  subText: string
+}
+
+export type BanzukeTemplateRow = {
+  rankLabel: string
+  west: BanzukeTemplateCell | null
+  east: BanzukeTemplateCell | null
+}
+
 export const draftResultTemplateSrc =
   "/draft-candidate-sort/result-template-2026.jpg"
 export const draftResultImageWidth = 1536
 export const draftResultImageHeight = 2048
+
+export const banzukeTemplateSrc =
+  "/draft-candidate-sort/banzuke-template-2026.jpg"
+export const banzukeImageWidth = 960
+export const banzukeImageHeight = 1280
 
 export const draftResultTemplateLayout = {
   columns: [
@@ -32,6 +49,16 @@ export const draftResultTemplateLayout = {
   subTextBaselineOffset: 109,
 } as const
 
+export const banzukeTemplateLayout = {
+  rowTop: 164,
+  rowHeight: 86.35,
+  westTextLeft: 68,
+  eastTextLeft: 580,
+  nameBaselineOffset: 38,
+  subTextBaselineOffset: 66,
+  maxRows: 12,
+} as const
+
 export function buildDraftResultTemplateColumns(
   session: DraftSortSession,
   candidateById: Map<string, CandidateForSort>,
@@ -40,6 +67,36 @@ export function buildDraftResultTemplateColumns(
     round: round as 1 | 2 | 3,
     rows: buildRowsForRound(session, candidateById, round as 1 | 2 | 3),
   }))
+}
+
+export function buildBanzukeTemplateRows(
+  session: DraftSortSession,
+  candidateById: Map<string, CandidateForSort>,
+): BanzukeTemplateRow[] {
+  return session.banzukeResult
+    .slice(0, banzukeTemplateLayout.maxRows)
+    .map((row) => ({
+      rankLabel: row.rankLabel,
+      west: buildBanzukeTemplateCell(row, "west", candidateById),
+      east: buildBanzukeTemplateCell(row, "east", candidateById),
+    }))
+}
+
+function buildBanzukeTemplateCell(
+  row: BanzukeRow,
+  side: "west" | "east",
+  candidateById: Map<string, CandidateForSort>,
+): BanzukeTemplateCell | null {
+  const candidateId = side === "west" ? row.westId : row.eastId
+  if (!candidateId) return null
+
+  const candidate = candidateById.get(candidateId)
+  if (!candidate) return { name: candidateId, subText: "" }
+
+  return {
+    name: candidate.name,
+    subText: `${getCandidatePositionGroupLabel(candidate.positionGroup)}／${candidate.schoolOrTeam}`,
+  }
 }
 
 function buildRowsForRound(
