@@ -29,12 +29,12 @@ import {
   type DraftResultTemplateColumn,
 } from "../_lib/resultImage"
 
-type ResultTab = "banzuke" | "draftPrediction" | "unknown"
+type ResultTab = "draftPrediction" | "banzuke" | "text"
 
 export function DraftCandidateSortResult() {
   const router = useRouter()
   const [session, setSession] = useState<DraftSortSession | null>(null)
-  const [activeTab, setActiveTab] = useState<ResultTab>("banzuke")
+  const [activeTab, setActiveTab] = useState<ResultTab>("draftPrediction")
   const [copyStatus, setCopyStatus] = useState<string>("")
   const [imageUrl, setImageUrl] = useState<string>("")
   const [banzukeImageUrl, setBanzukeImageUrl] = useState<string>("")
@@ -151,22 +151,22 @@ export function DraftCandidateSortResult() {
     <>
       <div className="mb-4 flex flex-wrap gap-2">
         <ResultTabButton
-          active={activeTab === "banzuke"}
-          onClick={() => setActiveTab("banzuke")}
-        >
-          番付表
-        </ResultTabButton>
-        <ResultTabButton
           active={activeTab === "draftPrediction"}
           onClick={() => setActiveTab("draftPrediction")}
         >
           ドラ1〜3予想
         </ResultTabButton>
         <ResultTabButton
-          active={activeTab === "unknown"}
-          onClick={() => setActiveTab("unknown")}
+          active={activeTab === "banzuke"}
+          onClick={() => setActiveTab("banzuke")}
         >
-          未評価が多い候補
+          番付表
+        </ResultTabButton>
+        <ResultTabButton
+          active={activeTab === "text"}
+          onClick={() => setActiveTab("text")}
+        >
+          テキストで見る
         </ResultTabButton>
       </div>
 
@@ -185,8 +185,8 @@ export function DraftCandidateSortResult() {
         />
       ) : null}
 
-      {activeTab === "unknown" ? (
-        <UnknownResultSection session={session} candidateById={candidateById} />
+      {activeTab === "text" ? (
+        <TextResultSection session={session} candidateById={candidateById} />
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
@@ -566,7 +566,7 @@ function ResultTabButton({
   )
 }
 
-function UnknownResultSection({
+function TextResultSection({
   session,
   candidateById,
 }: {
@@ -574,33 +574,115 @@ function UnknownResultSection({
   candidateById: Map<string, CandidateForSort>
 }) {
   return (
-    <section className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#333] p-5">
-        <h2 className="text-xl font-bold">未評価が多い候補</h2>
+    <section className="space-y-5">
+      <div className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="border-b border-[#333] p-5">
+          <h2 className="text-xl font-bold">ドラ1〜3予想</h2>
+        </div>
+        {session.draftPredictionResult.length > 0 ? (
+          <div className="divide-y divide-white/10">
+            {[1, 2, 3].map((round) => {
+              const rows = session.draftPredictionResult.filter(
+                (row) => row.round === round,
+              )
+              if (rows.length === 0) return null
+
+              return (
+                <div key={round} className="p-4 sm:p-5">
+                  <h3 className="mb-3 text-base font-bold text-[#ffff44]">
+                    ドラフト{round}位予想
+                  </h3>
+                  <ol className="grid gap-3 sm:grid-cols-2">
+                    {rows.map((row) => (
+                      <li
+                        key={`${round}-${row.candidateId}`}
+                        className="rounded border border-[#333] bg-[#111315] p-3"
+                      >
+                        <p className="text-xs font-bold text-white/45">
+                          {row.displayRank}位
+                        </p>
+                        <ResultCandidate
+                          candidate={candidateById.get(row.candidateId)}
+                          fallbackId={row.candidateId}
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="p-5 text-sm text-white/70">
+            結果作成後、ここにドラ1〜3予想を表示します。
+          </p>
+        )}
       </div>
-      {session.unknownResult.length > 0 ? (
-        <ol className="divide-y divide-white/10">
-          {session.unknownResult.map((row) => (
-            <li
-              key={row.candidateId}
-              className="flex items-start justify-between gap-4 p-4"
-            >
-              <ResultCandidate
-                candidate={candidateById.get(row.candidateId)}
-                fallbackId={row.candidateId}
-              />
-              <span className="rounded bg-[#111315] px-3 py-1 text-sm font-bold text-[#ffff44]">
-                {row.unknownCount}回
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="p-5 text-sm text-white/70">
-          両方知らないを選んだ候補はありません。
-        </p>
-      )}
+
+      <div className="rounded border border-[#333] bg-[#1a1a1a] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+        <div className="border-b border-[#333] p-5">
+          <h2 className="text-xl font-bold">番付表</h2>
+        </div>
+        {session.banzukeResult.length > 0 ? (
+          <ol className="divide-y divide-white/10">
+            {session.banzukeResult.map((row) => (
+              <li
+                key={`${row.rankLabel}-${row.eastId}-${row.westId}`}
+                className="p-4 sm:p-5"
+              >
+                <p className="mb-3 text-center text-base font-bold text-[#ffff44]">
+                  {row.rankLabel}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <BanzukeTextCandidate
+                    label="西"
+                    candidate={
+                      row.westId ? candidateById.get(row.westId) : null
+                    }
+                    fallbackId={row.westId}
+                  />
+                  <BanzukeTextCandidate
+                    label="東"
+                    candidate={
+                      row.eastId ? candidateById.get(row.eastId) : null
+                    }
+                    fallbackId={row.eastId}
+                  />
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="p-5 text-sm text-white/70">
+            結果作成後、ここに番付表を表示します。
+          </p>
+        )}
+      </div>
     </section>
+  )
+}
+
+function BanzukeTextCandidate({
+  label,
+  candidate,
+  fallbackId,
+}: {
+  label: "西" | "東"
+  candidate: CandidateForSort | null | undefined
+  fallbackId: string | null
+}) {
+  return (
+    <div className="rounded border border-[#333] bg-[#111315] p-3">
+      <p className="mb-2 text-xs font-bold text-white/45">{label}</p>
+      {fallbackId ? (
+        <ResultCandidate
+          candidate={candidate ?? undefined}
+          fallbackId={fallbackId}
+        />
+      ) : (
+        <p className="text-sm text-white/35">-</p>
+      )}
+    </div>
   )
 }
 
@@ -642,15 +724,18 @@ function buildResultText(
     )
     .join("\n")
 
-  const unknown = session.unknownResult
-    .map((row) => `${candidateName(row.candidateId)}: ${row.unknownCount}回`)
+  const draftPrediction = session.draftPredictionResult
+    .map(
+      (row) =>
+        `ドラフト${row.round}位 ${row.displayRank}位: ${candidateName(row.candidateId)}`,
+    )
     .join("\n")
 
   return [
+    "ドラ1〜3予想",
+    draftPrediction || "なし",
+    "",
     "番付表",
     banzuke || "なし",
-    "",
-    "未評価が多い候補",
-    unknown || "なし",
   ].join("\n")
 }
